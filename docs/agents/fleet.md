@@ -36,9 +36,9 @@ One per pull request, in a fresh thread that never built or helped build it. It 
 | --- | --- | --- |
 | Harness | Codex | `--provider codex` |
 | Model | Sol 6.1 | `--model gpt-6.1-sol` |
-| Effort | XHigh | `--reasoning-level xhigh` |
+| Effort | High | `--reasoning-level high` |
 
-Source: Jake, 2026-11-10 (CX1): new reviews use Codex Sol 6.1, XHigh, independently on the exact head while Claude is unavailable ([private record](https://github.com/jparker2006/ClosedWiz/issues/325#issuecomment-6759733342)).
+Source: Jake, 2026-11-10 (CX1): new reviews use Codex Sol 6.1, XHigh, independently on the exact head while Claude is unavailable ([private record](https://github.com/jparker2006/ClosedWiz/issues/325#issuecomment-6759733342)). Jake, 2026-11-10: new reviewers use Sol 6.1 at High effort, like builders ([private record](https://github.com/jparker2006/ClosedWiz/issues/325#issuecomment-6763080255)).
 
 ## Reviewer for GPT-built
 
@@ -48,9 +48,9 @@ Use the verified builder's provider, from its branch-matching `start checked` re
 | --- | --- | --- |
 | Harness | Codex | `--provider codex` |
 | Model | Sol 6.1 | `--model gpt-6.1-sol` |
-| Effort | XHigh | `--reasoning-level xhigh` |
+| Effort | High | `--reasoning-level high` |
 
-Source: Jake, 2026-11-10 (CX1): while Claude is unavailable, reviews do not wait for Claude; fresh Codex Sol 6.1, XHigh reviewers review the exact head, and GPT-built pull requests receive `gpt-reviewed` for a later Claude re-check ([private record](https://github.com/jparker2006/ClosedWiz/issues/325#issuecomment-6759733342)). All other review rules and the M1 base rule below stay unchanged.
+Source: Jake, 2026-11-10 (CX1): while Claude is unavailable, reviews do not wait for Claude; fresh Codex Sol 6.1, XHigh reviewers review the exact head, and GPT-built pull requests receive `gpt-reviewed` for a later Claude re-check ([private record](https://github.com/jparker2006/ClosedWiz/issues/325#issuecomment-6759733342)). Jake, 2026-11-10: new reviewers use Sol 6.1 at High effort, like builders ([private record](https://github.com/jparker2006/ClosedWiz/issues/325#issuecomment-6763080255)). All other review rules and the M1 base rule below stay unchanged.
 
 ## Builder helpers
 
@@ -107,7 +107,7 @@ Source: [`wizbar/package.json`](../../wizbar/package.json) scripts and [`.github
 
 | Check | Runs | Required on |
 | --- | --- | --- |
-| `wizbar-checks` | Workflow `WizBar`, job `checks`: lockfile install, typecheck and the full plugin test suite, sequentially in `wizbar/` with at most two test workers | none |
+| `wizbar-checks` | Workflow `WizBar`, job `checks`: lockfile install, typecheck and the full plugin test suite, sequentially in `wizbar/` with at most two test workers | `main`, through the ruleset "CI must pass" |
 
 The workflow runs for every pull request against `main` and push to `main`, without path filters. Checkout uses the exact pull request head SHA (the pushed SHA on `main`), with read-only repository permissions and no persisted checkout credentials. Node 24.22.1 matches WZ2's verified toolchain. It uses no application secrets, host login/state or private checkout, and adds no live application calls.
 
@@ -122,19 +122,19 @@ The workflow runs for every pull request against `main` and push to `main`, with
 | [`bb-app` 0.49.0 metadata](https://registry.npmjs.org/bb-app/0.49.0) (latest observed) | Exports `bb`, `bb-app`, `bb-server` and `bb-host-daemon`, without a `room-cli` binary; inspecting all 2,476 entries in its published archive found no `room-cli` path. The locked 0.37.0 is unchanged |
 | [`room-cli` 0.0.1 metadata](https://registry.npmjs.org/room-cli/0.0.1) | Unrelated Android Room generator; not Cloudroom tooling |
 
-These checks do not prove that no distribution can exist. They establish no supported published route for this workflow, so CI keeps install/typecheck/tests only, as WD2 permits. No package or desktop app was installed for this investigation. Actual plugin build proof remains for #9; #7 remains open without build receipts. Passing `wizbar-checks` proves typecheck and fixture tests only, not build, installation, live behavior or publication readiness.
+These checks do not prove that no distribution can exist. They establish no supported published route for this workflow, so CI keeps install/typecheck/tests only, as WD2 permits. No package or desktop app was installed for this investigation. Actual plugin build proof remains for #9; #7 closed on the merge of its CI pull request. Passing `wizbar-checks` proves typecheck and fixture tests only, not build, installation, live behavior or publication readiness.
 
-This change adds no required check and changes no ruleset, spending limit, review rule or merge authority. Existing standing merge rules below continue to apply. Run `setup` again when the workflow or required checks change.
+**Required since 2026-11-10:** the repository ruleset "CI must pass" requires `wizbar-checks` on the default branch, blocks force pushes and branch deletion, and allows no bypass. Every pull request, docs-only ones included, needs `wizbar-checks` green on its head before it can merge. Run `setup` again when the workflow or required checks change.
 
-Source: [`.github/workflows/wizbar.yml`](../../.github/workflows/wizbar.yml), [`wizbar/contracts/wizbar.v1.md`](../../wizbar/contracts/wizbar.v1.md), the [initial CI scope ruling](https://github.com/openwizdev/wizplugins/issues/7#issuecomment-6762459622), and the [WD2 follow-up](https://github.com/openwizdev/wizplugins/issues/7#issuecomment-6762540703). The previously recorded absence of required checks is unchanged by this workflow.
+Source: [`.github/workflows/wizbar.yml`](../../.github/workflows/wizbar.yml), [`wizbar/contracts/wizbar.v1.md`](../../wizbar/contracts/wizbar.v1.md), the [initial CI scope ruling](https://github.com/openwizdev/wizplugins/issues/7#issuecomment-6762459622), and the [WD2 follow-up](https://github.com/openwizdev/wizplugins/issues/7#issuecomment-6762540703). The required check: `gh api repos/openwizdev/wizplugins/rulesets`, read 2026-11-10.
 
 ## Standing merge rules
 
 | Pull request | Review | Merged by, and when |
 | --- | --- | --- |
 | A ticket in an approved plan graph, once a ruleset requires CI checks on `main` | The reviewer above, on its exact head | The loop, as soon as the reviewer's APPROVE names that exact commit and every required CI check is green on it, it has no conflict with `main`, and `main` has moved since that CI run only by merges that were themselves green. Then the merge is read back |
-| A ticket in an approved plan graph, while no CI check is required on `main` | The reviewer above, on its exact head | The loop, as soon as the reviewer's APPROVE names that exact commit and the pull request has no conflict with `main`. Then the merge is read back. This ends when a ruleset requires a CI check on `main`: from then on the row above applies. Jake, 2026-11-10 (WM1): until the CI ticket lands, exact-head review approval alone permits a ticket merge ([private record](https://github.com/jparker2006/ClosedWiz/issues/325#issuecomment-6760290221)) |
-| Any other pull request while no CI check is required on `main` | None for docs-only changes by the orchestrator; otherwise the reviewer above | The orchestrator for docs-only changes; otherwise Jake only |
+| A ticket in an approved plan graph, while no CI check is required on `main` | The reviewer above, on its exact head | The loop, as soon as the reviewer's APPROVE names that exact commit and the pull request has no conflict with `main`. Then the merge is read back. This ends when a ruleset requires a CI check on `main`: from then on the row above applies. Jake, 2026-11-10 (WM1): until the CI ticket lands, exact-head review approval alone permits a ticket merge ([private record](https://github.com/jparker2006/ClosedWiz/issues/325#issuecomment-6760290221)). **Ended 2026-11-10**, when the ruleset above began requiring `wizbar-checks` |
+| Any other pull request | None for docs-only changes by the orchestrator; otherwise the reviewer above | The orchestrator for docs-only changes, once every required CI check is green on its head; otherwise Jake only |
 | Anything to a release, and every release or publication | None by rule | Jake only |
 
 - **How a merge is done:** `gh pr merge <N> -R openwizdev/wizplugins --merge --match-head-commit <approved head>`, then read back: only `merged`, at the approved head, is a verified merge.
