@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#14161a">
+<title>WizBar synthetic identity preview</title>
+<style>
+:root { color-scheme: dark; font-family: system-ui, sans-serif; color: #f1f3f5; background: #14161a; }
+* { box-sizing: border-box; }
+body { margin: 0; padding: 32px 16px; }
+main { max-width: 720px; margin: auto; }
+h1 { font-size: 24px; font-weight: 600; margin: 0 0 24px; }
+h2 { font-size: 24px; font-weight: 600; margin: 0; }
+h3 { font-size: 18px; margin: 0 0 16px; }
+p { font-size: 14px; margin: 8px 0 0; line-height: 1.6; overflow-wrap: anywhere; }
+small { display: block; color: #b9c0ca; font-size: 12px; line-height: 1.6; margin-bottom: 16px; }
+section { background: #20242b; border: 1px solid #616b7a; border-radius: 12px; padding: 24px; margin-top: 16px; }
+.identity { display: flex; gap: 16px; align-items: center; margin-bottom: 24px; }
+.identity svg { height: 32px; width: 32px; flex: none; }
+.brand { color: #b9c0ca; }
+#slot { color: #b9c0ca; font-size: 14px; }
+#slot svg { width: 16px; height: 16px; }
+#slot button { font: inherit; color: inherit; background: transparent; border: 1px solid #718399; border-radius: 6px; padding: 8px; margin-bottom: 16px; }
+#slot [role="status"] { margin-top: 8px; }
+@media (max-width: 480px) { body { padding-top: 24px; } section { padding: 16px; } }
+</style>
+<main>
+<small>Fixture render • no application connection</small>
+<h1>Synthetic identity preview</h1>
+<section>
+<div class="identity">
+<svg id="icon" role="img" aria-label="Zap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m13 2-3 8H4l7 12 3-8h6L13 2Z"/></svg>
+<div><h2 id="name"></h2><p class="brand">OpenWiz</p></div>
+</div>
+<p>Package: <span id="package"></span></p>
+<p>Namespace: <span id="namespace"></span></p>
+</section>
+<section><h3>Sidebar title: <span id="title"></span></h3><div id="slot"></div></section>
+</main>
+<script type="module" src="./preview.mjs"></script>
+</html>

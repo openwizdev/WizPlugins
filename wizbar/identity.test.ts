@@ -1,11 +1,9 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
 import { loadPluginApp } from "@get-bb/plugin-sdk/testing/app";
-
 import manifest from "./package.json";
 
 const app = await loadPluginApp(() => import("./app"));
-
 
 describe("WizBar identity", () => {
   it("declares its own package identity, source and display branding", () => {
@@ -28,5 +26,4 @@ describe("WizBar identity", () => {
       "children",
     ]);
   });
-
 });
