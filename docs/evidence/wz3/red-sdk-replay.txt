@@ -1,0 +1,503 @@
+SDK harness replay against the original WZ2 server at 9ee3e84. Production restored after this run.
+
+
+> bb-plugin-wizbar@0.1.0 test
+> vitest run --config vitest.config.ts --maxWorkers=2 src/server.test.ts
+
+
+ RUN  v4.1.10 <checkout>/wizbar
+
+ ❯ |bb-plugin-wizbar| src/server.test.ts (77 tests | 75 failed) 4026ms
+     × refuses activeWorkflowCount without changing an existing row 81ms
+     × refuses activeBackgroundAgentCount without changing an existing row 73ms
+     × refuses activeBackgroundCommandCount without changing an existing row 69ms
+     × refuses activePlanModeCount without changing an existing row 70ms
+     × refuses activeGoalCount without changing an existing row 69ms
+     × refuses runtime active 55ms
+     × refuses runtime starting 55ms
+     × refuses runtime stopping 53ms
+     × refuses runtime provisioning 55ms
+     × refuses runtime host-reconnecting 52ms
+     × refuses a pending interaction 69ms
+     × refuses incomplete or invalid authority: {} 72ms
+     × refuses incomplete or invalid authority: {} 69ms
+     × refuses incomplete or invalid authority: {"hasPendingInteraction":"false"} 68ms
+     × refuses incomplete or invalid authority: {"runtime":{"displayStatus":"future-status"}} 68ms
+     × refuses incomplete or invalid authority: {"runtime":{"displayStatus":"waiting-for-host"}} 69ms
+     × refuses incomplete or invalid authority: {"activity":{"activeWorkflowCount":0,"activeBackgroundAgentCount":0,"activeBackgroundCommandCount":0,"activePlanModeCount":0,"activeGoalCount":-1}} 69ms
+     × refuses incomplete or invalid authority: {"activity":{"activeWorkflowCount":null,"activeBackgroundAgentCount":0,"activeBackgroundCommandCount":0,"activePlanModeCount":0,"activeGoalCount":0}} 68ms
+     × refuses failed authoritative reads 52ms
+     × refuses activeWorkflowCount without changing an existing row 69ms
+     × refuses activeBackgroundAgentCount without changing an existing row 70ms
+     × refuses activeBackgroundCommandCount without changing an existing row 68ms
+     × refuses activePlanModeCount without changing an existing row 68ms
+     × refuses activeGoalCount without changing an existing row 69ms
+     × refuses runtime active 52ms
+     × refuses runtime starting 56ms
+     × refuses runtime stopping 76ms
+     × refuses runtime provisioning 54ms
+     × refuses runtime host-reconnecting 52ms
+     × refuses a pending interaction 68ms
+     × refuses incomplete or invalid authority: {} 69ms
+     × refuses incomplete or invalid authority: {} 72ms
+     × refuses incomplete or invalid authority: {"hasPendingInteraction":"false"} 69ms
+     × refuses incomplete or invalid authority: {"runtime":{"displayStatus":"future-status"}} 68ms
+     × refuses incomplete or invalid authority: {"runtime":{"displayStatus":"waiting-for-host"}} 69ms
+     × refuses incomplete or invalid authority: {"activity":{"activeWorkflowCount":0,"activeBackgroundAgentCount":0,"activeBackgroundCommandCount":0,"activePlanModeCount":0,"activeGoalCount":-1}} 72ms
+     × refuses incomplete or invalid authority: {"activity":{"activeWorkflowCount":null,"activeBackgroundAgentCount":0,"activeBackgroundCommandCount":0,"activePlanModeCount":0,"activeGoalCount":0}} 70ms
+     × refuses failed authoritative reads 52ms
+     × processes every ID in order, isolates failures and exits nonzero 36ms
+     × keeps successful results around working and waiting refusals 35ms
+     × reports one text line per ID and escapes control characters 38ms
+     × repeating settle reaches the same end state 35ms
+     × repeating snooze reaches the same end state 35ms
+     × repeating unsettle reaches the same end state 35ms
+     × repeating unsnooze reaches the same end state 35ms
+     × shares SQLite and lifecycle refresh across RPC, CLI, undo and deletion 54ms
+     × resolves --until hour to the sidebar time 35ms
+     × resolves --until evening to the sidebar time 35ms
+     × resolves --until tomorrow to the sidebar time 34ms
+     × resolves --until next-week to the sidebar time 35ms
+     × resolves --until 2030-05-07T11:00:00+02:00 to the sidebar time 35ms
+     × rejects invalid or past --until 2020-01-01T00:00:00Z without writing 51ms
+     × rejects invalid or past --until 2030-05-06T10:00:00Z without writing 52ms
+     × rejects invalid or past --until 2030-02-30T12:00:00Z without writing 55ms
+     × rejects invalid or past --until 2030-05-07 without writing 48ms
+     × rejects invalid or past --until soon without writing 56ms
+     × refuses the evening preset once the sidebar omits it 33ms
+     × rejects malformed command undefined before any write 35ms
+     × rejects malformed command "settle" before any write 43ms
+     × rejects malformed command "no-such-operation" before any write 27ms
+     × rejects malformed command "snooze" before any write 37ms
+     × rejects malformed command "snooze" before any write 34ms
+     × rejects malformed command "settle" before any write 35ms
+     × rejects malformed command "settle" before any write 35ms
+     × wakes a snooze on timer 35ms
+     × wakes a snooze on attention 38ms
+     × wakes a snooze on work 35ms
+     × wakes a snooze on waiting 36ms
+     × does not wake on equal attention, then wakes settled work on newer attention 35ms
+     × treats --json after -- as a literal ID, not an output flag 35ms
+     × uses calendar time across a daylight saving transition 37ms
+     × reads later pages for a named thread 34ms
+     × refuses a repeated page rather than treating incomplete data as idle 35ms
+     × refuses a snooze that expires during the authoritative read 35ms
+     × rejects past times on the raw sidebar RPC too 69ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 75 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > settle server guard > refuses activeWorkflowCount without changing an existing row
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > settle server guard > refuses activeBackgroundAgentCount without changing an existing row
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > settle server guard > refuses activeBackgroundCommandCount without changing an existing row
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > settle server guard > refuses activePlanModeCount without changing an existing row
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > settle server guard > refuses activeGoalCount without changing an existing row
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > snooze server guard > refuses activeWorkflowCount without changing an existing row
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > snooze server guard > refuses activeBackgroundAgentCount without changing an existing row
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > snooze server guard > refuses activeBackgroundCommandCount without changing an existing row
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > snooze server guard > refuses activePlanModeCount without changing an existing row
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > snooze server guard > refuses activeGoalCount without changing an existing row
+AssertionError: promise resolved "{ ok: true }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "ok": true,
+  }
+
+ ❯ src/server.test.ts:56:63
+     54|     const live = thread(); live.activity[signal] = 1;
+     55|     const host = setup([live]); host.seed(); const before = host.rows(…
+     56|     await expect(host.harness.behavior.callRpc(method, input)).rejects…
+       |                                                               ^
+     57|     expect(host.rows()).toEqual(before); expect(host.publications).toE…
+     58|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/75]⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > settle server guard > refuses runtime active
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > settle server guard > refuses runtime starting
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > settle server guard > refuses runtime stopping
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > settle server guard > refuses runtime provisioning
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > settle server guard > refuses runtime host-reconnecting
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > snooze server guard > refuses runtime active
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > snooze server guard > refuses runtime starting
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > snooze server guard > refuses runtime stopping
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > snooze server guard > refuses runtime provisioning
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > snooze server guard > refuses runtime host-reconnecting
+AssertionError: promise resolved "{ ok: true }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "ok": true,
+  }
+
+ ❯ src/server.test.ts:62:63
+     60|     const live = thread(); live.runtime.displayStatus = status;
+     61|     const host = setup([live]);
+     62|     await expect(host.harness.behavior.callRpc(method, input)).rejects…
+       |                                                               ^
+     63|     expect(host.rows()).toEqual([]); expect(host.publications).toEqual…
+     64|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/75]⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > settle server guard > refuses a pending interaction
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > snooze server guard > refuses a pending interaction
+AssertionError: promise resolved "{ ok: true }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "ok": true,
+  }
+
+ ❯ src/server.test.ts:68:63
+     66|     const live = thread(); live.hasPendingInteraction = true;
+     67|     const host = setup([live]); host.seed(); const before = host.rows(…
+     68|     await expect(host.harness.behavior.callRpc(method, input)).rejects…
+       |                                                               ^
+     69|     expect(host.rows()).toEqual(before); expect(host.publications).toE…
+     70|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/75]⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > settle server guard > refuses incomplete or invalid authority: {}
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > settle server guard > refuses incomplete or invalid authority: {}
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > settle server guard > refuses incomplete or invalid authority: {"hasPendingInteraction":"false"}
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > settle server guard > refuses incomplete or invalid authority: {"runtime":{"displayStatus":"future-status"}}
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > settle server guard > refuses incomplete or invalid authority: {"runtime":{"displayStatus":"waiting-for-host"}}
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > settle server guard > refuses incomplete or invalid authority: {"activity":{"activeWorkflowCount":0,"activeBackgroundAgentCount":0,"activeBackgroundCommandCount":0,"activePlanModeCount":0,"activeGoalCount":-1}}
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > settle server guard > refuses incomplete or invalid authority: {"activity":{"activeWorkflowCount":null,"activeBackgroundAgentCount":0,"activeBackgroundCommandCount":0,"activePlanModeCount":0,"activeGoalCount":0}}
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > snooze server guard > refuses incomplete or invalid authority: {}
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > snooze server guard > refuses incomplete or invalid authority: {}
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > snooze server guard > refuses incomplete or invalid authority: {"hasPendingInteraction":"false"}
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > snooze server guard > refuses incomplete or invalid authority: {"runtime":{"displayStatus":"future-status"}}
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > snooze server guard > refuses incomplete or invalid authority: {"runtime":{"displayStatus":"waiting-for-host"}}
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > snooze server guard > refuses incomplete or invalid authority: {"activity":{"activeWorkflowCount":0,"activeBackgroundAgentCount":0,"activeBackgroundCommandCount":0,"activePlanModeCount":0,"activeGoalCount":-1}}
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > snooze server guard > refuses incomplete or invalid authority: {"activity":{"activeWorkflowCount":null,"activeBackgroundAgentCount":0,"activeBackgroundCommandCount":0,"activePlanModeCount":0,"activeGoalCount":0}}
+AssertionError: promise resolved "{ ok: true }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "ok": true,
+  }
+
+ ❯ src/server.test.ts:79:63
+     77|   ])("refuses incomplete or invalid authority: %j", async (override) =…
+     78|     const host = setup([{ ...thread(), ...override }]); host.seed(); c…
+     79|     await expect(host.harness.behavior.callRpc(method, input)).rejects…
+       |                                                               ^
+     80|     expect(host.rows()).toEqual(before); expect(host.publications).toE…
+     81|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/75]⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > settle server guard > refuses failed authoritative reads
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > snooze server guard > refuses failed authoritative reads
+AssertionError: promise resolved "{ ok: true }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "ok": true,
+  }
+
+ ❯ src/server.test.ts:84:63
+     82|   it("refuses failed authoritative reads", async () => {
+     83|     const host = setup(); host.list.mockRejectedValue(new Error("synth…
+     84|     await expect(host.harness.behavior.callRpc(method, input)).rejects…
+       |                                                               ^
+     85|     expect(host.rows()).toEqual([]); expect(host.publications).toEqual…
+     86|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/75]⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > processes every ID in order, isolates failures and exits nonzero
+Error: plugin "wizbar" registers no CLI command
+ ❯ Object.runCli node_modules/@get-bb/plugin-sdk/dist/testing/index.js:1416:15
+ ❯ Object.run src/server.test.ts:35:52
+     33|   return {
+     34|     harness: host.harness,
+     35|     run: (argv: string[]) => host.harness.behavior.runCli(argv),
+       |                                                    ^
+     36|     rows, seed, get, list,
+     37|     publications: host.harness.inspection.realtimeSignals,
+ ❯ src/server.test.ts:94:31
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/75]⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > keeps successful results around working and waiting refusals
+Error: plugin "wizbar" registers no CLI command
+ ❯ Object.runCli node_modules/@get-bb/plugin-sdk/dist/testing/index.js:1416:15
+ ❯ Object.run src/server.test.ts:35:52
+     33|   return {
+     34|     harness: host.harness,
+     35|     run: (argv: string[]) => host.harness.behavior.runCli(argv),
+       |                                                    ^
+     36|     rows, seed, get, list,
+     37|     publications: host.harness.inspection.realtimeSignals,
+ ❯ src/server.test.ts:111:31
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/75]⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > reports one text line per ID and escapes control characters
+Error: plugin "wizbar" registers no CLI command
+ ❯ Object.runCli node_modules/@get-bb/plugin-sdk/dist/testing/index.js:1416:15
+ ❯ Object.run src/server.test.ts:35:52
+     33|   return {
+     34|     harness: host.harness,
+     35|     run: (argv: string[]) => host.harness.behavior.runCli(argv),
+       |                                                    ^
+     36|     rows, seed, get, list,
+     37|     publications: host.harness.inspection.realtimeSignals,
+ ❯ src/server.test.ts:118:31
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/75]⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > repeating settle reaches the same end state
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > repeating snooze reaches the same end state
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > repeating unsettle reaches the same end state
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > repeating unsnooze reaches the same end state
+Error: plugin "wizbar" registers no CLI command
+ ❯ Object.runCli node_modules/@get-bb/plugin-sdk/dist/testing/index.js:1416:15
+ ❯ Object.run src/server.test.ts:35:52
+     33|   return {
+     34|     harness: host.harness,
+     35|     run: (argv: string[]) => host.harness.behavior.runCli(argv),
+       |                                                    ^
+     36|     rows, seed, get, list,
+     37|     publications: host.harness.inspection.realtimeSignals,
+ ❯ src/server.test.ts:128:16
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/75]⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > shares SQLite and lifecycle refresh across RPC, CLI, undo and deletion
+Error: plugin "wizbar" registers no CLI command
+ ❯ Object.runCli node_modules/@get-bb/plugin-sdk/dist/testing/index.js:1416:15
+ ❯ Object.run src/server.test.ts:35:52
+     33|   return {
+     34|     harness: host.harness,
+     35|     run: (argv: string[]) => host.harness.behavior.runCli(argv),
+       |                                                    ^
+     36|     rows, seed, get, list,
+     37|     publications: host.harness.inspection.realtimeSignals,
+ ❯ src/server.test.ts:138:31
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/75]⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > resolves --until hour to the sidebar time
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > resolves --until evening to the sidebar time
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > resolves --until tomorrow to the sidebar time
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > resolves --until next-week to the sidebar time
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > resolves --until 2030-05-07T11:00:00+02:00 to the sidebar time
+Error: plugin "wizbar" registers no CLI command
+ ❯ Object.runCli node_modules/@get-bb/plugin-sdk/dist/testing/index.js:1416:15
+ ❯ Object.run src/server.test.ts:35:52
+     33|   return {
+     34|     harness: host.harness,
+     35|     run: (argv: string[]) => host.harness.behavior.runCli(argv),
+       |                                                    ^
+     36|     rows, seed, get, list,
+     37|     publications: host.harness.inspection.realtimeSignals,
+ ❯ src/server.test.ts:161:31
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/75]⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > rejects invalid or past --until 2020-01-01T00:00:00Z without writing
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > rejects invalid or past --until 2030-05-06T10:00:00Z without writing
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > rejects invalid or past --until 2030-02-30T12:00:00Z without writing
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > rejects invalid or past --until 2030-05-07 without writing
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > rejects invalid or past --until soon without writing
+Error: plugin "wizbar" registers no CLI command
+ ❯ Object.runCli node_modules/@get-bb/plugin-sdk/dist/testing/index.js:1416:15
+ ❯ Object.run src/server.test.ts:35:52
+     33|   return {
+     34|     harness: host.harness,
+     35|     run: (argv: string[]) => host.harness.behavior.runCli(argv),
+       |                                                    ^
+     36|     rows, seed, get, list,
+     37|     publications: host.harness.inspection.realtimeSignals,
+ ❯ src/server.test.ts:168:31
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/75]⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > refuses the evening preset once the sidebar omits it
+Error: plugin "wizbar" registers no CLI command
+ ❯ Object.runCli node_modules/@get-bb/plugin-sdk/dist/testing/index.js:1416:15
+ ❯ Object.run src/server.test.ts:35:52
+     33|   return {
+     34|     harness: host.harness,
+     35|     run: (argv: string[]) => host.harness.behavior.runCli(argv),
+       |                                                    ^
+     36|     rows, seed, get, list,
+     37|     publications: host.harness.inspection.realtimeSignals,
+ ❯ src/server.test.ts:175:53
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/75]⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > rejects malformed command undefined before any write
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > rejects malformed command "settle" before any write
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > rejects malformed command "no-such-operation" before any write
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > rejects malformed command "snooze" before any write
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > rejects malformed command "snooze" before any write
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > rejects malformed command "settle" before any write
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > rejects malformed command "settle" before any write
+Error: plugin "wizbar" registers no CLI command
+ ❯ Object.runCli node_modules/@get-bb/plugin-sdk/dist/testing/index.js:1416:15
+ ❯ Object.run src/server.test.ts:35:52
+     33|   return {
+     34|     harness: host.harness,
+     35|     run: (argv: string[]) => host.harness.behavior.runCli(argv),
+       |                                                    ^
+     36|     rows, seed, get, list,
+     37|     publications: host.harness.inspection.realtimeSignals,
+ ❯ src/server.test.ts:179:53
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/75]⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > list reflects upstream wake rules > wakes a snooze on timer
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > list reflects upstream wake rules > wakes a snooze on attention
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > list reflects upstream wake rules > wakes a snooze on work
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > list reflects upstream wake rules > wakes a snooze on waiting
+Error: plugin "wizbar" registers no CLI command
+ ❯ Object.runCli node_modules/@get-bb/plugin-sdk/dist/testing/index.js:1416:15
+ ❯ Object.run src/server.test.ts:35:52
+     33|   return {
+     34|     harness: host.harness,
+     35|     run: (argv: string[]) => host.harness.behavior.runCli(argv),
+       |                                                    ^
+     36|     rows, seed, get, list,
+     37|     publications: host.harness.inspection.realtimeSignals,
+ ❯ src/server.test.ts:188:16
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/75]⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > list reflects upstream wake rules > does not wake on equal attention, then wakes settled work on newer attention
+Error: plugin "wizbar" registers no CLI command
+ ❯ Object.runCli node_modules/@get-bb/plugin-sdk/dist/testing/index.js:1416:15
+ ❯ Object.run src/server.test.ts:35:52
+     33|   return {
+     34|     harness: host.harness,
+     35|     run: (argv: string[]) => host.harness.behavior.runCli(argv),
+       |                                                    ^
+     36|     rows, seed, get, list,
+     37|     publications: host.harness.inspection.realtimeSignals,
+ ❯ src/server.test.ts:199:16
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[16/75]⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > argument and authority edge cases > treats --json after -- as a literal ID, not an output flag
+Error: plugin "wizbar" registers no CLI command
+ ❯ Object.runCli node_modules/@get-bb/plugin-sdk/dist/testing/index.js:1416:15
+ ❯ Object.run src/server.test.ts:35:52
+     33|   return {
+     34|     harness: host.harness,
+     35|     run: (argv: string[]) => host.harness.behavior.runCli(argv),
+       |                                                    ^
+     36|     rows, seed, get, list,
+     37|     publications: host.harness.inspection.realtimeSignals,
+ ❯ src/server.test.ts:213:31
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[17/75]⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > argument and authority edge cases > uses calendar time across a daylight saving transition
+Error: plugin "wizbar" registers no CLI command
+ ❯ Object.runCli node_modules/@get-bb/plugin-sdk/dist/testing/index.js:1416:15
+ ❯ Object.run src/server.test.ts:35:52
+     33|   return {
+     34|     harness: host.harness,
+     35|     run: (argv: string[]) => host.harness.behavior.runCli(argv),
+       |                                                    ^
+     36|     rows, seed, get, list,
+     37|     publications: host.harness.inspection.realtimeSignals,
+ ❯ src/server.test.ts:221:31
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[18/75]⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > argument and authority edge cases > reads later pages for a named thread
+Error: plugin "wizbar" registers no CLI command
+ ❯ Object.runCli node_modules/@get-bb/plugin-sdk/dist/testing/index.js:1416:15
+ ❯ Object.run src/server.test.ts:35:52
+     33|   return {
+     34|     harness: host.harness,
+     35|     run: (argv: string[]) => host.harness.behavior.runCli(argv),
+       |                                                    ^
+     36|     rows, seed, get, list,
+     37|     publications: host.harness.inspection.realtimeSignals,
+ ❯ src/server.test.ts:228:31
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[19/75]⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > argument and authority edge cases > refuses a repeated page rather than treating incomplete data as idle
+Error: plugin "wizbar" registers no CLI command
+ ❯ Object.runCli node_modules/@get-bb/plugin-sdk/dist/testing/index.js:1416:15
+ ❯ Object.run src/server.test.ts:35:52
+     33|   return {
+     34|     harness: host.harness,
+     35|     run: (argv: string[]) => host.harness.behavior.runCli(argv),
+       |                                                    ^
+     36|     rows, seed, get, list,
+     37|     publications: host.harness.inspection.realtimeSignals,
+ ❯ src/server.test.ts:235:31
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[20/75]⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > argument and authority edge cases > refuses a snooze that expires during the authoritative read
+Error: plugin "wizbar" registers no CLI command
+ ❯ Object.runCli node_modules/@get-bb/plugin-sdk/dist/testing/index.js:1416:15
+ ❯ Object.run src/server.test.ts:35:52
+     33|   return {
+     34|     harness: host.harness,
+     35|     run: (argv: string[]) => host.harness.behavior.runCli(argv),
+       |                                                    ^
+     36|     rows, seed, get, list,
+     37|     publications: host.harness.inspection.realtimeSignals,
+ ❯ src/server.test.ts:243:31
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[21/75]⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > argument and authority edge cases > rejects past times on the raw sidebar RPC too
+AssertionError: promise resolved "{ ok: true }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "ok": true,
+  }
+
+ ❯ src/server.test.ts:254:108
+    252|   it("rejects past times on the raw sidebar RPC too", async () => {
+    253|     const host = setup(); host.seed(); const before = host.rows();
+    254|     await expect(host.harness.behavior.callRpc("snooze", { threadId: "…
+       |                                                                                                            ^
+    255|     expect(host.rows()).toEqual(before); expect(host.publications).toE…
+    256|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[22/75]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  75 failed | 2 passed (77)
+   Start at  08:34:26
+   Duration  4.24s (transform 45ms, setup 0ms, import 116ms, tests 4.03s, environment 0ms)
+

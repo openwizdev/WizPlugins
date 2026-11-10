@@ -6,6 +6,8 @@
 // understands. Here, uninstalling the plugin removes its state with it.
 import { defineRpcContract, type BbPluginApi } from "@get-bb/plugin-sdk";
 import { z } from "zod";
+import { canPark, resolveShelf, type ThreadActivitySignals } from "./lifecycle";
+import { createLifecycleCommand, LifecycleError, type LifecycleOperation, type LifecycleSuccess } from "./command";
 
 const migrations = [
   `CREATE TABLE IF NOT EXISTS thread_lifecycle (
@@ -62,9 +64,101 @@ export const t3sidebarRpcContract = defineRpcContract({
 /** Channel the frontend re-reads on. */
 export const LIFECYCLE_CHANNEL = "lifecycle";
 
+const threadRouteSchema = z.object({
+  id: z.string(), projectId: z.string().min(1),
+  archivedAt: z.number().nullable(), deletedAt: z.number().nullable(),
+});
+const liveThreadSchema = threadRouteSchema.extend({
+  hasPendingInteraction: z.boolean(),
+  latestAttentionAt: z.number().finite(),
+  lastReadAt: z.number().finite().nullable(),
+  runtime: z.object({ displayStatus: z.enum([
+    "idle", "error", "active", "starting", "stopping", "provisioning",
+    "host-reconnecting", "waiting-for-host",
+  ]) }),
+  activity: z.object({
+    activeWorkflowCount: z.number().int().nonnegative(),
+    activeBackgroundAgentCount: z.number().int().nonnegative(),
+    activeBackgroundCommandCount: z.number().int().nonnegative(),
+    activePlanModeCount: z.number().int().nonnegative(),
+    activeGoalCount: z.number().int().nonnegative(),
+  }).strict(),
+});
+const unavailable = () => new LifecycleError("state_unavailable", "Working or waiting state is unavailable.");
+
+// Read current server data, never a client-supplied eligibility assertion.
+// `get` locates the thread; only `list` carries ALL work and waiting inputs.
+async function readRoute(bb: BbPluginApi, threadId: string, signal?: AbortSignal) {
+  try {
+    const route = threadRouteSchema.safeParse(await bb.sdk.threads.get({ threadId, signal }));
+    if (!route.success || route.data.id !== threadId) throw unavailable();
+    if (route.data.deletedAt !== null) throw new LifecycleError("unknown_id", "Unknown thread ID.");
+    return route.data;
+  } catch (error) {
+    if (error instanceof LifecycleError) throw error;
+    if (typeof error === "object" && error !== null && "status" in error && error.status === 404) {
+      throw new LifecycleError("unknown_id", "Unknown thread ID.");
+    }
+    throw unavailable();
+  }
+}
+
+async function readSignals(bb: BbPluginApi, threadId: string, signal?: AbortSignal): Promise<ThreadActivitySignals> {
+  const route = await readRoute(bb, threadId, signal);
+  try {
+    const seen = new Set<string>();
+    for (let offset = 0; ; offset += 100) {
+      const page = await bb.sdk.threads.list({
+        projectId: route.projectId, archived: route.archivedAt !== null,
+        includeHidden: true, limit: 100, offset, signal,
+      });
+      if (!Array.isArray(page)) throw unavailable();
+      const matches = page.filter((row) => row?.id === threadId);
+      if (matches.length > 1) throw unavailable();
+      if (matches.length === 1) {
+        const parsed = liveThreadSchema.safeParse(matches[0]);
+        if (!parsed.success) throw unavailable();
+        const row = parsed.data;
+        if (row.projectId !== route.projectId || row.deletedAt !== null) throw unavailable();
+        // A disconnected host cannot provide a verified idle state.
+        if (row.runtime.displayStatus === "waiting-for-host" || row.runtime.displayStatus === "host-reconnecting") throw unavailable();
+        return {
+          hasPendingInteraction: row.hasPendingInteraction,
+          isWorking: row.runtime.displayStatus !== "idle" && row.runtime.displayStatus !== "error" ||
+            Object.values(row.activity).some((count) => count > 0),
+          isUnread: (row.lastReadAt ?? 0) < row.latestAttentionAt,
+          latestAttentionAt: row.latestAttentionAt,
+        };
+      }
+      if (page.length < 100) throw unavailable();
+      for (const row of page) {
+        if (!row || typeof row.id !== "string" || seen.has(row.id)) throw unavailable();
+        seen.add(row.id);
+      }
+    }
+  } catch (error) {
+    if (error instanceof LifecycleError) throw error;
+    if (typeof error === "object" && error !== null && "status" in error && error.status === 404) {
+      throw new LifecycleError("unknown_id", "Unknown thread ID.");
+    }
+    throw unavailable();
+  }
+}
+
 export default function plugin(bb: BbPluginApi) {
   const db = bb.storage.database();
   bb.storage.migrate(db, migrations);
+
+  // Keep each revision (including deletion) until all reads that captured it
+  // have drained. Then discard it; later requests must obtain fresh host data.
+  const pendingParks = new Map<string, { revision: number; pending: number; deleted: boolean }>();
+  const invalidateParks = (threadId: string, deleted = false): void => {
+    const state = pendingParks.get(threadId);
+    if (state) {
+      state.revision++;
+      state.deleted ||= deleted;
+    }
+  };
 
   const readAll = (): StoredLifecycleRow[] =>
     (
@@ -94,51 +188,79 @@ export default function plugin(bb: BbPluginApi) {
     bb.realtime.publish(LIFECYCLE_CHANNEL, { threadId: row.threadId });
   };
 
-  const clear = (threadId: string): void => {
+  const clear = (threadId: string, deleted = false): void => {
+    // Deletion invalidates even when its database cleanup fails. A manual
+    // wake invalidates only after its delete succeeds.
+    if (deleted) invalidateParks(threadId, true);
     db.prepare(`DELETE FROM thread_lifecycle WHERE thread_id = ?`).run(
       threadId,
     );
+    if (!deleted) invalidateParks(threadId);
     bb.realtime.publish(LIFECYCLE_CHANNEL, { threadId });
   };
 
-  bb.rpc.register(t3sidebarRpcContract, {
-    async listLifecycle() {
-      return { rows: readAll() };
-    },
-    async settle({ threadId }) {
-      // Settling clears any snooze: they are two answers to the same
-      // question, and holding both would make the shelf order ambiguous.
-      write({
-        threadId,
-        settledAt: Date.now(),
-        snoozedUntil: null,
-        snoozedAt: null,
-      });
-      return { ok: true };
-    },
-    async unsettle({ threadId }) {
+  const perform = async (
+    operation: LifecycleOperation, rawId: string, snoozedUntil?: number, signal?: AbortSignal,
+  ): Promise<LifecycleSuccess> => {
+    const parsed = threadIdSchema.safeParse({ threadId: rawId });
+    if (!parsed.success) throw new LifecycleError("invalid_id", "Thread ID must be nonempty.");
+    const threadId = parsed.data.threadId;
+    if (operation === "unsettle" || operation === "unsnooze") {
+      await readRoute(bb, threadId, signal);
+      if (signal?.aborted) throw unavailable();
       clear(threadId);
-      return { ok: true };
-    },
-    async snooze({ threadId, snoozedUntil }) {
+      return { threadId, ok: true, shelf: "active", snoozedUntil: null };
+    }
+
+    // Capture before the first awaited host read, for both CLI and RPC parks.
+    const state = operation === "list" ? undefined : pendingParks.get(threadId) ?? {
+      revision: 0, pending: 0, deleted: false,
+    };
+    if (state?.deleted) throw new LifecycleError("unknown_id", "Unknown thread ID.");
+    const revision = state?.revision;
+    if (state) {
+      state.pending++;
+      pendingParks.set(threadId, state);
+    }
+    try {
+      const signals = await readSignals(bb, threadId, signal);
+      if (signal?.aborted) throw unavailable();
       const now = Date.now();
-      write({
-        threadId,
-        settledAt: null,
-        snoozedUntil,
-        snoozedAt: now,
-      });
-      return { ok: true };
-    },
-    async unsnooze({ threadId }) {
-      clear(threadId);
-      return { ok: true };
-    },
+      if (operation !== "list") {
+        if (!canPark(signals)) throw new LifecycleError(signals.hasPendingInteraction ? "waiting" : "working",
+          signals.hasPendingInteraction ? "Thread is waiting for input." : "Thread is working.");
+        if (operation === "snooze" && (!Number.isSafeInteger(snoozedUntil) || !Number.isFinite(new Date(snoozedUntil!).getTime()) || snoozedUntil! <= now)) {
+          throw new LifecycleError("invalid_until", "Snooze time must be a valid future date.");
+        }
+        if (state!.deleted || state!.revision !== revision) {
+          throw new LifecycleError("stale_operation", "Thread lifecycle changed during parking validation.");
+        }
+        // No asynchronous boundary between revision/eligibility checks and
+        // the plugin-only write/publication.
+        write({ threadId, settledAt: operation === "settle" ? now : null,
+          snoozedUntil: operation === "snooze" ? snoozedUntil! : null,
+          snoozedAt: operation === "snooze" ? now : null });
+      }
+      const row = readAll().find((row) => row.threadId === threadId);
+      const shelf = resolveShelf(row, signals, now);
+      return { threadId, ok: true, shelf, snoozedUntil: shelf === "snoozed" ? row!.snoozedUntil : null };
+    } finally {
+      if (state && --state.pending === 0) pendingParks.delete(threadId);
+    }
+  };
+
+  bb.rpc.register(t3sidebarRpcContract, {
+    async listLifecycle() { return { rows: readAll() }; },
+    async settle({ threadId }) { await perform("settle", threadId); return { ok: true }; },
+    async unsettle({ threadId }) { await perform("unsettle", threadId); return { ok: true }; },
+    async snooze({ threadId, snoozedUntil }) { await perform("snooze", threadId, snoozedUntil); return { ok: true }; },
+    async unsnooze({ threadId }) { await perform("unsnooze", threadId); return { ok: true }; },
   });
+  bb.cli.register(createLifecycleCommand(perform));
 
   // A deleted thread must not leave a row behind that would park a future
   // thread reusing the id, and stale rows accumulate otherwise.
   bb.events.on("thread.deleted", ({ thread }) => {
-    clear(thread.id);
+    clear(thread.id, true);
   });
 }

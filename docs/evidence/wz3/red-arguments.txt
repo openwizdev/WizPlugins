@@ -1,0 +1,38 @@
+
+> bb-plugin-wizbar@0.1.0 test
+> vitest run --config vitest.config.ts --maxWorkers=2 src/server.test.ts
+
+
+ RUN  v4.1.10 <checkout>/wizbar
+
+ ❯ |bb-plugin-wizbar| src/server.test.ts (77 tests | 1 failed) 79ms
+     × treats --json after -- as a literal ID, not an output flag 5ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > argument and authority edge cases > treats --json after -- as a literal ID, not an output flag
+AssertionError: expected '{"results":[{"threadId":"--json","ok"…' to be '"--json": settled\n' // Object.is equality
+
+- Expected
++ Received
+
+- "--json": settled
++ {"results":[{"threadId":"--json","ok":true,"shelf":"settled","snoozedUntil":null}]}
+
+
+ ❯ src/server.test.ts:220:27
+    218|     const result = await host.run(["settle", "--", "--json"]);
+    219|     expect(result.exitCode).toBe(0);
+    220|     expect(result.stdout).toBe('"--json": settled\n');
+       |                           ^
+    221|   });
+    222|   it("uses calendar time across a daylight saving transition", async (…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 76 passed (77)
+   Start at  08:28:02
+   Duration  307ms (transform 73ms, setup 0ms, import 127ms, tests 79ms, environment 0ms)
+
