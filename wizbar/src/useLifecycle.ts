@@ -95,8 +95,13 @@ export function useLifecycle(
       const known = ["idle", "error", "active", "pending", "starting", "stopping"];
       const counts = [thread.activity?.workflows, thread.activity?.backgroundAgents,
         thread.activity?.backgroundCommands, thread.activity?.planMode, thread.activity?.goals];
+      // Ordinary shelves retain the SDK's pending runtime handling. Mute
+      // requires the narrower runtime authority also accepted by the server.
+      const runtimeStatuses = muted
+        ? ["idle", "error", "active", "starting", "stopping", "provisioning"]
+        : [...known, "provisioning"];
       const authority = known.includes(thread.status) &&
-        ["idle", "error", "active", "starting", "stopping", "provisioning"].includes(thread.runtimeStatus) &&
+        runtimeStatuses.includes(thread.runtimeStatus) &&
         ["none", "waiting", "failed"].includes(thread.queuedWork) &&
         typeof thread.hasPendingInteraction === "boolean" &&
         typeof thread.isUnread === "boolean" && Number.isFinite(thread.latestAttentionAt) &&
