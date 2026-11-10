@@ -217,3 +217,36 @@ footer, execution count or private content is pictured. The generated sheet is
 sizes are illustrative: the existing source dimensions remain authoritative.
 Actual host assets, resolved color contrast, keyboard behavior and responsive
 HTML screenshots remain Unverified until their separate proofs are permitted.
+
+## Implementation proof slice after SDK merge
+
+2026-11-10: #13 merged as `19c0ceefde9af81f18f57973d476225bdda65b60`;
+that main was merged into this branch before implementation. The installed
+published SDK is 0.6.33. Its app declaration for `PluginSidebarThread` has a
+nullable `environment` containing `providerId: string | null`. The sidebar hook
+returns that declared thread type. The older prerequisite statements above are
+historical; the latest [proceed ruling](https://github.com/openwizdev/wizplugins/issues/5#issuecomment-6763874405)
+permits implementation using WD5's nested field rule.
+
+WD5's approved observed pattern: a present environment with null or empty
+provider ID is Cloud; a set string is Local. Missing environment or missing/
+unreadable provider ID yields no icon. This is an owner-approved mapping from
+an observed desktop pattern, not a classification guaranteed by SDK docs.
+Private record: https://github.com/jparker2006/ClosedWiz/issues/325#issuecomment-6763200469
+
+Before writing tests: the observable claim is each applicable visible row's
+accessible Cloud/Local marker, with no marker for unknown data. A plausible bug
+is treating a missing environment as Cloud, relying on branch presence or host
+name, or inserting the marker in cards but omitting compact rows. The existing
+188 tests do not assert these markers. One table at the registered thread-list
+boundary owns the mapping across Inbox, Snoozed and Settled forms, with a frozen
+clock and controlled lifecycle rows. It also covers branch/no-branch, filtering,
+collapse/reopen and navigation/park/restore regression checks. No fixture computes
+its expected label with the implementation's classification logic.
+
+Icon source: the copied plugin uses Hugeicons for its named icons. The SDK has a
+generic named icon renderer but does not publish an exported default sidebar
+Cloud/Local component or guarantee a Cloud registry name. Use the existing icon
+library's neutral outline cloud and laptop as the visual equivalent, matching
+the target's silhouette. This adds no dependency or host lookup. Live host icon
+fidelity remains a separate observation; no exact-host-artwork claim is made.
