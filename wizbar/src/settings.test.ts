@@ -18,7 +18,7 @@ function setup() {
 describe("N1: actual WizBar settings declarations and persistent reload", () => {
   it("declares exactly two named boolean switches with defaults", () => {
     const host = setup();
-    const descriptors = host.harness.inspection.settingsDescriptors;
+    const descriptors = host.harness.inspection.registrations.settingsDescriptors;
     expect(Object.keys(descriptors).sort()).toEqual(["footerCountEnabled", "machineIconsEnabled"]);
     expect(descriptors.footerCountEnabled).toMatchObject({ type: "boolean", label: "Footer count", default: true });
     expect(descriptors.machineIconsEnabled).toMatchObject({ type: "boolean", label: "Cloud/Local row icons", default: true });

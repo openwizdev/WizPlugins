@@ -5,20 +5,30 @@
 
  RUN  v4.1.10 <repository>/wizbar
 
- ❯ |bb-plugin-wizbar| src/settings.test.ts (3 tests | 3 failed) 116ms
-     × declares exactly two named boolean switches with defaults 45ms
-     × keeps both values across actual server reload and independent partial writes 31ms
-     × rejects wrong types and unknown keys without changing saved settings 39ms
+ ❯ |bb-plugin-wizbar| src/settings.test.ts (3 tests | 3 failed) 88ms
+     × declares exactly two named boolean switches with defaults 37ms
+     × keeps both values across actual server reload and independent partial writes 25ms
+     × rejects wrong types and unknown keys without changing saved settings 25ms
 
 ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
 
  FAIL  |bb-plugin-wizbar| src/settings.test.ts > N1: actual WizBar settings declarations and persistent reload > declares exactly two named boolean switches with defaults
-TypeError: Cannot convert undefined or null to object
- ❯ src/settings.test.ts:22:19
+AssertionError: expected [] to deeply equal [ 'footerCountEnabled', …(1) ]
+
+- Expected
++ Received
+
+- [
+-   "footerCountEnabled",
+-   "machineIconsEnabled",
+- ]
++ []
+
+ ❯ src/settings.test.ts:22:45
      20|     const host = setup();
-     21|     const descriptors = host.harness.inspection.settingsDescriptors;
+     21|     const descriptors = host.harness.inspection.registrations.settings…
      22|     expect(Object.keys(descriptors).sort()).toEqual(["footerCountEnabl…
-       |                   ^
+       |                                             ^
      23|     expect(descriptors.footerCountEnabled).toMatchObject({ type: "bool…
      24|     expect(descriptors.machineIconsEnabled).toMatchObject({ type: "boo…
 
@@ -55,6 +65,6 @@ Error: unknown setting "footerCountEnabled"
 
  Test Files  1 failed (1)
       Tests  3 failed (3)
-   Start at  22:00:48
-   Duration  405ms (transform 41ms, setup 0ms, import 178ms, tests 116ms, environment 0ms)
+   Start at  22:01:24
+   Duration  372ms (transform 75ms, setup 0ms, import 172ms, tests 88ms, environment 0ms)
 
