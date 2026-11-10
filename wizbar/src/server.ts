@@ -6,6 +6,7 @@
 // understands. Here, uninstalling the plugin removes its state with it.
 import { defineRpcContract, type BbPluginApi } from "@get-bb/plugin-sdk";
 import { z } from "zod";
+import { canPark, type ThreadActivitySignals } from "./lifecycle";
 
 const migrations = [
   `CREATE TABLE IF NOT EXISTS thread_lifecycle (
@@ -62,6 +63,78 @@ export const t3sidebarRpcContract = defineRpcContract({
 /** Channel the frontend re-reads on. */
 export const LIFECYCLE_CHANNEL = "lifecycle";
 
+class LifecycleError extends Error {
+  constructor(readonly code: string, message: string) { super(message); }
+}
+
+const threadRouteSchema = z.object({
+  id: z.string(), projectId: z.string().min(1),
+  archivedAt: z.number().nullable(), deletedAt: z.number().nullable(),
+});
+const liveThreadSchema = threadRouteSchema.extend({
+  hasPendingInteraction: z.boolean(),
+  latestAttentionAt: z.number().finite(),
+  lastReadAt: z.number().finite().nullable(),
+  runtime: z.object({ displayStatus: z.enum([
+    "idle", "error", "active", "starting", "stopping", "provisioning",
+    "host-reconnecting", "waiting-for-host",
+  ]) }),
+  activity: z.object({
+    activeWorkflowCount: z.number().int().nonnegative(),
+    activeBackgroundAgentCount: z.number().int().nonnegative(),
+    activeBackgroundCommandCount: z.number().int().nonnegative(),
+    activePlanModeCount: z.number().int().nonnegative(),
+    activeGoalCount: z.number().int().nonnegative(),
+  }),
+});
+const unavailable = () => new LifecycleError("state_unavailable", "Working or waiting state is unavailable.");
+
+// Read current server data, never a client-supplied eligibility assertion.
+// `get` locates the thread; only `list` carries ALL work and waiting inputs.
+async function readSignals(bb: BbPluginApi, threadId: string, signal?: AbortSignal): Promise<ThreadActivitySignals> {
+  try {
+    const route = threadRouteSchema.safeParse(await bb.sdk.threads.get({ threadId, signal }));
+    if (!route.success || route.data.id !== threadId) throw unavailable();
+    if (route.data.deletedAt !== null) throw new LifecycleError("unknown_id", "Unknown thread ID.");
+    const seen = new Set<string>();
+    for (let offset = 0; ; offset += 100) {
+      const page = await bb.sdk.threads.list({
+        projectId: route.data.projectId, archived: route.data.archivedAt !== null,
+        includeHidden: true, limit: 100, offset, signal,
+      });
+      if (!Array.isArray(page)) throw unavailable();
+      const matches = page.filter((row) => row?.id === threadId);
+      if (matches.length > 1) throw unavailable();
+      if (matches.length === 1) {
+        const parsed = liveThreadSchema.safeParse(matches[0]);
+        if (!parsed.success) throw unavailable();
+        const row = parsed.data;
+        if (row.projectId !== route.data.projectId || row.deletedAt !== null) throw unavailable();
+        // A disconnected host cannot provide a verified idle state.
+        if (row.runtime.displayStatus === "waiting-for-host" || row.runtime.displayStatus === "host-reconnecting") throw unavailable();
+        return {
+          hasPendingInteraction: row.hasPendingInteraction,
+          isWorking: row.runtime.displayStatus !== "idle" && row.runtime.displayStatus !== "error" ||
+            Object.values(row.activity).some((count) => count > 0),
+          isUnread: (row.lastReadAt ?? 0) < row.latestAttentionAt,
+          latestAttentionAt: row.latestAttentionAt,
+        };
+      }
+      if (page.length < 100) throw unavailable();
+      for (const row of page) {
+        if (!row || typeof row.id !== "string" || seen.has(row.id)) throw unavailable();
+        seen.add(row.id);
+      }
+    }
+  } catch (error) {
+    if (error instanceof LifecycleError) throw error;
+    if (typeof error === "object" && error !== null && "status" in error && error.status === 404) {
+      throw new LifecycleError("unknown_id", "Unknown thread ID.");
+    }
+    throw unavailable();
+  }
+}
+
 export default function plugin(bb: BbPluginApi) {
   const db = bb.storage.database();
   bb.storage.migrate(db, migrations);
@@ -106,6 +179,9 @@ export default function plugin(bb: BbPluginApi) {
       return { rows: readAll() };
     },
     async settle({ threadId }) {
+      const signals = await readSignals(bb, threadId);
+      if (!canPark(signals)) throw new LifecycleError(signals.hasPendingInteraction ? "waiting" : "working",
+        signals.hasPendingInteraction ? "Thread is waiting for input." : "Thread is working.");
       // Settling clears any snooze: they are two answers to the same
       // question, and holding both would make the shelf order ambiguous.
       write({
@@ -121,7 +197,13 @@ export default function plugin(bb: BbPluginApi) {
       return { ok: true };
     },
     async snooze({ threadId, snoozedUntil }) {
+      const signals = await readSignals(bb, threadId);
+      if (!canPark(signals)) throw new LifecycleError(signals.hasPendingInteraction ? "waiting" : "working",
+        signals.hasPendingInteraction ? "Thread is waiting for input." : "Thread is working.");
       const now = Date.now();
+      if (!Number.isSafeInteger(snoozedUntil) || snoozedUntil <= now) {
+        throw new LifecycleError("invalid_until", "Snooze time must be in the future.");
+      }
       write({
         threadId,
         settledAt: null,
