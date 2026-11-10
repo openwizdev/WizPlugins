@@ -1,7 +1,8 @@
 # WZ4 target and proof plan
 
-Status: target preparation only, 2026-11-10. No implementation, behavioral proof,
-verified Cloud/Local mapping, host-icon match or live acceptance is claimed.
+Status: row implementation and synthetic fixture verification, 2026-11-10.
+The target-stage plan below is retained with its later SDK/mapping ruling.
+Live host acceptance and exact host-icon fidelity remain Unverified.
 Source baseline: `9ee3e843220968ab9e997cda16a25854921f1d26`.
 The [scope ruling](https://github.com/openwizdev/wizplugins/issues/5#issuecomment-6762459842)
 authorizes this target and plan while the field decision remains blocked.
