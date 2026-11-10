@@ -244,8 +244,9 @@ describe("review regressions R1/R3", () => {
     live.status = "idle"; live.runtime.displayStatus = "idle"; live.latestAttentionAt = 200;
     const second = new Database(path); databases.push(second);
     const loaded = setup([live], second);
-    expect(await loaded.rows()).toEqual([]);
+    // The first CLI request may arrive before the startup task has drained.
     expect((await loaded.run(["list", live.id])).output.results[0].shelf).toBe("active");
+    expect(await loaded.rows()).toEqual([]);
     live.lastReadAt = 200;
     expect((await loaded.run(["list", live.id])).output.results[0].shelf).toBe("active");
     expect(loaded.publications).toEqual([{ channel: "lifecycle", payload: { threadId: live.id } }]);
