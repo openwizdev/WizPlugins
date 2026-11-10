@@ -25,3 +25,7 @@ The checklist was applied to authority validation, per-ID failures, transactiona
 Remaining limits: [the keeper observation](https://github.com/jparker2006/ClosedWiz/pull/2375#issuecomment-6779925149) does not yet record the three breakthrough shapes. [Builder question](https://github.com/openwizdev/wizplugins/issues/26#issuecomment-6780291275) remains open and `needs-info` stays beside `ready-for-agent`. The finished-attention combination is a declared synthetic contract, not observed host semantics. Real keeper commands, live event delivery, host persistence, actual Inbox/count behavior and screenshots remain Unverified for #9. The supported desktop plugin build is still Unverified under the existing repository boundary and was not run or substituted. No installation, activation, publishing or release occurred.
 
 Npm reported 13 vulnerabilities in the inherited graph (seven moderate, six high); no audit fix or unrelated dependency update was made. Fixture server and owned browser tabs were stopped after capture.
+
+## Round 1 corrections
+
+The initial receipts above describe the first handoff. The accepted review findings R1–R3 and their new red/green proof, final 306-test run and current-source screenshots are recorded in [review-r1-r3.md](review-r1-r3.md). No host-evidence gap was promoted to verified.
