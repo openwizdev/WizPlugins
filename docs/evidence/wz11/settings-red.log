@@ -102,4 +102,3 @@ AssertionError: N1: the plugin must register its settings section: expected unde
       Tests  8 failed (8)
    Start at  21:59:56
    Duration  2.08s (transform 140ms, setup 0ms, import 699ms, tests 11ms, environment 1.22s)
-

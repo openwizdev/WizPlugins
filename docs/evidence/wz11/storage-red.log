@@ -67,4 +67,3 @@ Error: unknown setting "footerCountEnabled"
       Tests  3 failed | 5 skipped (8)
    Start at  22:03:20
    Duration  357ms (transform 48ms, setup 0ms, import 143ms, tests 101ms, environment 0ms)
-

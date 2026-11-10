@@ -84,4 +84,3 @@ AssertionError: expected { footer: 'unavailable', …(1) } to deeply equal { foo
       Tests  3 failed | 2 passed | 3 skipped (8)
    Start at  22:01:54
    Duration  256ms (transform 44ms, setup 0ms, import 136ms, tests 13ms, environment 0ms)
-
