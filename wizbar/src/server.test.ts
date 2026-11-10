@@ -278,7 +278,7 @@ describe.each([
   ])("refuses a stale %s response after %s", async (read, barrier) => {
     const host = setup(); host.seed();
     const entered = deferred<void>();
-    const getReply = deferred<unknown>();
+    const getReply = deferred<ReturnType<typeof thread>>();
     const listReply = deferred<unknown[]>();
     if (read === "get") {
       host.get.mockImplementationOnce(() => { entered.resolve(); return getReply.promise; });

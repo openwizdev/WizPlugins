@@ -149,6 +149,17 @@ export default function plugin(bb: BbPluginApi) {
   const db = bb.storage.database();
   bb.storage.migrate(db, migrations);
 
+  // Keep each revision (including deletion) until all reads that captured it
+  // have drained. Then discard it; later requests must obtain fresh host data.
+  const pendingParks = new Map<string, { revision: number; pending: number; deleted: boolean }>();
+  const invalidateParks = (threadId: string, deleted = false): void => {
+    const state = pendingParks.get(threadId);
+    if (state) {
+      state.revision++;
+      state.deleted ||= deleted;
+    }
+  };
+
   const readAll = (): StoredLifecycleRow[] =>
     (
       db
@@ -177,10 +188,14 @@ export default function plugin(bb: BbPluginApi) {
     bb.realtime.publish(LIFECYCLE_CHANNEL, { threadId: row.threadId });
   };
 
-  const clear = (threadId: string): void => {
+  const clear = (threadId: string, deleted = false): void => {
+    // Deletion invalidates even when its database cleanup fails. A manual
+    // wake invalidates only after its delete succeeds.
+    if (deleted) invalidateParks(threadId, true);
     db.prepare(`DELETE FROM thread_lifecycle WHERE thread_id = ?`).run(
       threadId,
     );
+    if (!deleted) invalidateParks(threadId);
     bb.realtime.publish(LIFECYCLE_CHANNEL, { threadId });
   };
 
@@ -196,23 +211,42 @@ export default function plugin(bb: BbPluginApi) {
       clear(threadId);
       return { threadId, ok: true, shelf: "active", snoozedUntil: null };
     }
-    const signals = await readSignals(bb, threadId, signal);
-    if (signal?.aborted) throw unavailable();
-    const now = Date.now();
-    if (operation !== "list") {
-      if (!canPark(signals)) throw new LifecycleError(signals.hasPendingInteraction ? "waiting" : "working",
-        signals.hasPendingInteraction ? "Thread is waiting for input." : "Thread is working.");
-      if (operation === "snooze" && (!Number.isSafeInteger(snoozedUntil) || !Number.isFinite(new Date(snoozedUntil!).getTime()) || snoozedUntil! <= now)) {
-        throw new LifecycleError("invalid_until", "Snooze time must be a valid future date.");
-      }
-      // No asynchronous boundary between eligibility and the plugin-only write.
-      write({ threadId, settledAt: operation === "settle" ? now : null,
-        snoozedUntil: operation === "snooze" ? snoozedUntil! : null,
-        snoozedAt: operation === "snooze" ? now : null });
+
+    // Capture before the first awaited host read, for both CLI and RPC parks.
+    const state = operation === "list" ? undefined : pendingParks.get(threadId) ?? {
+      revision: 0, pending: 0, deleted: false,
+    };
+    if (state?.deleted) throw new LifecycleError("unknown_id", "Unknown thread ID.");
+    const revision = state?.revision;
+    if (state) {
+      state.pending++;
+      pendingParks.set(threadId, state);
     }
-    const row = readAll().find((row) => row.threadId === threadId);
-    const shelf = resolveShelf(row, signals, now);
-    return { threadId, ok: true, shelf, snoozedUntil: shelf === "snoozed" ? row!.snoozedUntil : null };
+    try {
+      const signals = await readSignals(bb, threadId, signal);
+      if (signal?.aborted) throw unavailable();
+      const now = Date.now();
+      if (operation !== "list") {
+        if (!canPark(signals)) throw new LifecycleError(signals.hasPendingInteraction ? "waiting" : "working",
+          signals.hasPendingInteraction ? "Thread is waiting for input." : "Thread is working.");
+        if (operation === "snooze" && (!Number.isSafeInteger(snoozedUntil) || !Number.isFinite(new Date(snoozedUntil!).getTime()) || snoozedUntil! <= now)) {
+          throw new LifecycleError("invalid_until", "Snooze time must be a valid future date.");
+        }
+        if (state!.deleted || state!.revision !== revision) {
+          throw new LifecycleError("stale_operation", "Thread lifecycle changed during parking validation.");
+        }
+        // No asynchronous boundary between revision/eligibility checks and
+        // the plugin-only write/publication.
+        write({ threadId, settledAt: operation === "settle" ? now : null,
+          snoozedUntil: operation === "snooze" ? snoozedUntil! : null,
+          snoozedAt: operation === "snooze" ? now : null });
+      }
+      const row = readAll().find((row) => row.threadId === threadId);
+      const shelf = resolveShelf(row, signals, now);
+      return { threadId, ok: true, shelf, snoozedUntil: shelf === "snoozed" ? row!.snoozedUntil : null };
+    } finally {
+      if (state && --state.pending === 0) pendingParks.delete(threadId);
+    }
   };
 
   bb.rpc.register(t3sidebarRpcContract, {
@@ -227,6 +261,6 @@ export default function plugin(bb: BbPluginApi) {
   // A deleted thread must not leave a row behind that would park a future
   // thread reusing the id, and stale rows accumulate otherwise.
   bb.events.on("thread.deleted", ({ thread }) => {
-    clear(thread.id);
+    clear(thread.id, true);
   });
 }
