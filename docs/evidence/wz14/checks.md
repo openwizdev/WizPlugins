@@ -29,3 +29,7 @@ Npm reported 13 vulnerabilities in the inherited graph (seven moderate, six high
 ## Round 1 corrections
 
 The initial receipts above describe the first handoff. The accepted review findings R1–R3 and their new red/green proof, final 306-test run and current-source screenshots are recorded in [review-r1-r3.md](review-r1-r3.md). No host-evidence gap was promoted to verified.
+
+## R4 compatibility correction
+
+The next re-check resolved R1–R3 and identified R4. Its new red-first ordinary-pending shelf table and scoped fix are recorded in [review-r4.md](review-r4.md), with separate current-source check receipts. Earlier receipts remain historical evidence.

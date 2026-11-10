@@ -88,7 +88,7 @@ Ignored nodes: comments, script, style
                   <span
                     class="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"
                   >
-                     
+
                   </span>
                   <span
                     class="flex w-7 shrink-0 items-center justify-end"
@@ -211,7 +211,7 @@ Ignored nodes: comments, script, style
                   <span
                     class="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"
                   >
-                     
+
                   </span>
                   <span
                     class="flex w-7 shrink-0 items-center justify-end"
@@ -348,7 +348,7 @@ Ignored nodes: comments, script, style
                   <span
                     class="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"
                   >
-                     
+
                   </span>
                   <span
                     class="flex w-7 shrink-0 items-center justify-end"
@@ -471,7 +471,7 @@ Ignored nodes: comments, script, style
                   <span
                     class="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"
                   >
-                     
+
                   </span>
                   <span
                     class="flex w-7 shrink-0 items-center justify-end"
