@@ -1,0 +1,123 @@
+
+> bb-plugin-wizbar@0.1.0 test
+> vitest run --config vitest.config.ts --maxWorkers=2 src/server.test.ts -t pending parking
+
+
+ RUN  v4.1.10 <checkout>/wizbar
+
+ ❯ |bb-plugin-wizbar| src/server.test.ts (106 tests | 25 failed | 80 skipped) 2294ms
+     × refuses a stale get response after deleted 101ms
+     × refuses a stale list response after deleted 98ms
+     × refuses a stale get response after unsettle 91ms
+     × refuses a stale list response after unsettle 99ms
+     × refuses a stale get response after unsnooze 90ms
+     × refuses a stale list response after unsnooze 89ms
+     × refuses a stale get response after deleted 90ms
+     × refuses a stale list response after deleted 89ms
+     × refuses a stale get response after unsettle 98ms
+     × refuses a stale list response after unsettle 89ms
+     × refuses a stale get response after unsnooze 88ms
+     × refuses a stale list response after unsnooze 89ms
+     × refuses a stale get response after deleted 88ms
+     × refuses a stale list response after deleted 89ms
+     × refuses a stale get response after unsettle 89ms
+     × refuses a stale list response after unsettle 92ms
+     × refuses a stale get response after unsnooze 88ms
+     × refuses a stale list response after unsnooze 89ms
+     × refuses a stale get response after deleted 89ms
+     × refuses a stale list response after deleted 90ms
+     × refuses a stale get response after unsettle 89ms
+     × refuses a stale list response after unsettle 89ms
+     × refuses a stale get response after unsnooze 89ms
+     × refuses a stale list response after unsnooze 87ms
+     × retains deletion until all older validations have drained 55ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 25 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > CLI settle pending parking > refuses a stale get response after deleted
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > CLI settle pending parking > refuses a stale list response after deleted
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > CLI settle pending parking > refuses a stale get response after unsettle
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > CLI settle pending parking > refuses a stale list response after unsettle
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > CLI settle pending parking > refuses a stale get response after unsnooze
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > CLI settle pending parking > refuses a stale list response after unsnooze
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > CLI snooze pending parking > refuses a stale get response after deleted
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > CLI snooze pending parking > refuses a stale list response after deleted
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > CLI snooze pending parking > refuses a stale get response after unsettle
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > CLI snooze pending parking > refuses a stale list response after unsettle
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > CLI snooze pending parking > refuses a stale get response after unsnooze
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > CLI snooze pending parking > refuses a stale list response after unsnooze
+AssertionError: expected +0 to be 1 // Object.is equality
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ src/server.test.ts:303:37
+    301|     const outcome = await pending;
+    302|     if (transport === "CLI") {
+    303|       expect(outcome.cli!.exitCode).toBe(1);
+       |                                     ^
+    304|       expect(JSON.parse(outcome.cli!.stdout).results[0]).toMatchObject…
+    305|         threadId: "example-a", ok: false, error: { code: "stale_operat…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/25]⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > RPC settle pending parking > refuses a stale get response after deleted
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > RPC settle pending parking > refuses a stale list response after deleted
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > RPC settle pending parking > refuses a stale get response after unsettle
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > RPC settle pending parking > refuses a stale list response after unsettle
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > RPC settle pending parking > refuses a stale get response after unsnooze
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > RPC settle pending parking > refuses a stale list response after unsnooze
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > RPC snooze pending parking > refuses a stale get response after deleted
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > RPC snooze pending parking > refuses a stale list response after deleted
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > RPC snooze pending parking > refuses a stale get response after unsettle
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > RPC snooze pending parking > refuses a stale list response after unsettle
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > RPC snooze pending parking > refuses a stale get response after unsnooze
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > RPC snooze pending parking > refuses a stale list response after unsnooze
+AssertionError: expected undefined to match object { code: 'handler_error', …(1) }
+
+- Expected:
+{
+  "code": "handler_error",
+  "message": StringMatching /lifecycle changed/i,
+}
+
++ Received:
+undefined
+
+ ❯ src/server.test.ts:308:29
+    306|       });
+    307|     } else {
+    308|       expect(outcome.error).toMatchObject({ code: "handler_error", mes…
+       |                             ^
+    309|     }
+    310|     expect(host.rows()).toEqual([]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/25]⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > pending parking invalidation lifetime > retains deletion until all older validations have drained
+AssertionError: expected +0 to be 1 // Object.is equality
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ src/server.test.ts:329:36
+    327|     await host.deleted();
+    328|     firstReply.resolve([thread()]);
+    329|     expect((await first).exitCode).toBe(1);
+       |                                    ^
+    330|     // A new request while the second old read remains pending must st…
+    331|     // respect deletion, even if the fixture SDK keeps serving an old …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/25]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  25 failed | 1 passed | 80 skipped (106)
+   Start at  08:57:57
+   Duration  2.51s (transform 48ms, setup 0ms, import 122ms, tests 2.29s, environment 0ms)

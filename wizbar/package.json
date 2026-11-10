@@ -1,24 +1,24 @@
 {
-  "name": "bb-plugin-t3sidebar",
+  "name": "bb-plugin-wizbar",
   "version": "0.1.0",
   "type": "module",
-  "description": "An inbox-style sidebar: one flat list of cards that never re-orders.",
+  "description": "OpenWiz inbox-style sidebar: one flat list of cards that never re-orders.",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/SawyerHood/sawyer-plugins.git",
-    "directory": "plugins/t3sidebar"
+    "url": "git+https://github.com/openwizdev/wizplugins.git",
+    "directory": "wizbar"
   },
-  "homepage": "https://github.com/SawyerHood/sawyer-plugins/tree/main/plugins/t3sidebar",
+  "homepage": "https://github.com/openwizdev/wizplugins/tree/main/wizbar",
   "engines": {
     "bb": ">=0.37.0",
     "bbPluginSdk": ">=0.4.3"
   },
   "bb": {
-    "name": "T3 Sidebar",
-    "description": "An inbox-style sidebar: one flat list of cards that never re-orders.",
+    "name": "WizBar",
+    "description": "OpenWiz inbox-style sidebar: one flat list of cards that never re-orders.",
     "branding": {
-      "icon": "PanelLeft"
+      "icon": "Zap"
     },
     "app": "./app.tsx",
     "server": "./src/server.ts"
@@ -27,7 +27,7 @@
     "bb-plugin"
   ],
   "scripts": {
-    "build": "bb plugin build",
+    "build": "room-cli plugin build .",
     "test": "vitest run --config vitest.config.ts",
     "typecheck": "tsc --noEmit"
   },
@@ -39,11 +39,12 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@get-bb/plugin-sdk": "0.4.4",
+    "@get-bb/plugin-sdk": "0.6.33",
     "@testing-library/react": "^16.3.2",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "bb-app": "0.37.0",
+    "cron-parser": "^5.5.0",
     "jsdom": "^29.0.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

@@ -24,11 +24,17 @@ function thread(
     projectId: "proj_1",
     title: "A thread",
     titleFallback: null,
+    displayTitle: "A thread",
     parentThreadId: null,
+    lifecycleOwnerThreadId: null,
+    sourceThreadId: null,
     sectionId: null,
     originKind: null,
     originPluginId: null,
     providerId: "codex",
+    status: "idle",
+    runtimeStatus: "idle",
+    queuedWork: "none",
     hasPendingInteraction: false,
     activity: {
       workflows: 0,
@@ -41,7 +47,12 @@ function thread(
     indicatorLabel: null,
     isUnread: false,
     isPinned: false,
+    pinnedAt: null,
+    pinSortKey: null,
     isArchived: false,
+    archivedAt: null,
+    href: "/projects/proj_1/threads/thr_1",
+    isHidden: false,
     environment: null,
     host: null,
     createdAt: 100,
@@ -62,7 +73,15 @@ const listProps = {
 
 function render(
   threads: PluginSidebarThread[],
-  projects = [{ id: "proj_1", name: "bb", isPersonal: false }],
+  projects = [
+    {
+      id: "proj_1",
+      name: "bb",
+      isPersonal: false,
+      href: "/projects/proj_1",
+      settingsHref: "/projects/proj_1/settings",
+    },
+  ],
 ) {
   return renderSlot(inbox, listProps, {
     sidebarThreads: { status: "ready", threads, projects },
@@ -113,7 +132,15 @@ describe("ThreadInbox", () => {
         sidebarThreads: {
           status: "ready",
           threads: [thread({ id: "thr_open" })],
-          projects: [{ id: "proj_1", name: "bb", isPersonal: false }],
+          projects: [
+            {
+              id: "proj_1",
+              name: "bb",
+              isPersonal: false,
+              href: "/projects/proj_1",
+              settingsHref: "/projects/proj_1/settings",
+            },
+          ],
         },
         rpc: { listLifecycle: () => ({ rows: [] }) },
       },
@@ -159,7 +186,15 @@ describe("ThreadInbox", () => {
             thread({ id: "a", title: "Sidebar work" }),
             thread({ id: "b", title: "Something else" }),
           ],
-          projects: [{ id: "proj_1", name: "bb", isPersonal: false }],
+          projects: [
+            {
+              id: "proj_1",
+              name: "bb",
+              isPersonal: false,
+              href: "/projects/proj_1",
+              settingsHref: "/projects/proj_1/settings",
+            },
+          ],
         },
         rpc: { listLifecycle: () => ({ rows: [] }) },
       },
@@ -185,8 +220,20 @@ describe("ThreadInbox", () => {
         thread({ id: "b", title: "In other", projectId: "proj_2" }),
       ],
       [
-        { id: "proj_1", name: "bb", isPersonal: false },
-        { id: "proj_2", name: "other", isPersonal: false },
+        {
+          id: "proj_1",
+          name: "bb",
+          isPersonal: false,
+          href: "/projects/proj_1",
+          settingsHref: "/projects/proj_1/settings",
+        },
+        {
+          id: "proj_2",
+          name: "other",
+          isPersonal: false,
+          href: "/projects/proj_2",
+          settingsHref: "/projects/proj_2/settings",
+        },
       ],
     );
     // Radix opens on keyboard too, which jsdom can drive without pointer
@@ -214,7 +261,15 @@ describe("parking threads", () => {
       sidebarThreads: {
         status: "ready",
         threads: [thread({ id: "thr_done", title: "Finished work" })],
-        projects: [{ id: "proj_1", name: "bb", isPersonal: false }],
+        projects: [
+          {
+            id: "proj_1",
+            name: "bb",
+            isPersonal: false,
+            href: "/projects/proj_1",
+            settingsHref: "/projects/proj_1/settings",
+          },
+        ],
       },
       rpc: {
         listLifecycle: () => ({
@@ -256,7 +311,15 @@ describe("parking threads", () => {
             },
           }),
         ],
-        projects: [{ id: "proj_1", name: "bb", isPersonal: false }],
+        projects: [
+          {
+            id: "proj_1",
+            name: "bb",
+            isPersonal: false,
+            href: "/projects/proj_1",
+            settingsHref: "/projects/proj_1/settings",
+          },
+        ],
       },
       // Settled in the store, but still working: it must stay visible.
       rpc: {
@@ -291,7 +354,15 @@ describe("parking threads", () => {
       sidebarThreads: {
         status: "ready",
         threads: [thread({ id: "thr_park", title: "Quiet" })],
-        projects: [{ id: "proj_1", name: "bb", isPersonal: false }],
+        projects: [
+          {
+            id: "proj_1",
+            name: "bb",
+            isPersonal: false,
+            href: "/projects/proj_1",
+            settingsHref: "/projects/proj_1/settings",
+          },
+        ],
       },
       rpc: {
         listLifecycle: () => ({ rows: [] }),
@@ -311,7 +382,15 @@ describe("parking threads", () => {
       sidebarThreads: {
         status: "ready",
         threads: [thread({ id: "thr_snz", title: "Later" })],
-        projects: [{ id: "proj_1", name: "bb", isPersonal: false }],
+        projects: [
+          {
+            id: "proj_1",
+            name: "bb",
+            isPersonal: false,
+            href: "/projects/proj_1",
+            settingsHref: "/projects/proj_1/settings",
+          },
+        ],
       },
       rpc: {
         listLifecycle: () => ({
@@ -394,6 +473,9 @@ describe("card metadata", () => {
           id: "env_1",
           name: "Worktree",
           branchName: "bb/feature",
+          path: null,
+          isWorktree: null,
+          providerId: null,
           workspaceDisplayKind: "managed-worktree",
         },
       }),
@@ -487,7 +569,15 @@ describe("pull request badge", () => {
       sidebarThreads: {
         status: "ready",
         threads: [thread({ id: "thr_pr" })],
-        projects: [{ id: "proj_1", name: "bb", isPersonal: false }],
+        projects: [
+          {
+            id: "proj_1",
+            name: "bb",
+            isPersonal: false,
+            href: "/projects/proj_1",
+            settingsHref: "/projects/proj_1/settings",
+          },
+        ],
       },
       rpc: { listLifecycle: () => ({ rows: [] }) },
       sidebarPullRequests: {
