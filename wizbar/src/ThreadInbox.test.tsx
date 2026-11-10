@@ -644,6 +644,16 @@ describe("explicit muted shelf", () => {
     await waitFor(() => expect(screen.queryByRole("region", { name: "Muted" })).toBeNull());
     expect(screen.getByText("Write guide")).toBeDefined();
   });
+  // R2: attention indicators outrank runtime indicators in the host projection.
+  // The earlier busy fixture always supplied a runtime indicator and missed this.
+  it("R2 retains running attention on Muted using runtime authority", async () => {
+    renderSlot(inbox, listProps, {
+      sidebarThreads: { status: "ready", threads: [{ ...busy(), indicator: "unread-success" }], projects: [] },
+      rpc: { listLifecycle: () => ({ rows: [mutedRow] }) },
+    });
+    await screen.findByRole("region", { name: "Muted" });
+    expect(screen.queryByText("Write guide")).toBeNull();
+  });
   it.each([
     { hasPendingInteraction: true, indicator: "waiting-for-input" },
     { runtimeStatus: "error", status: "error", indicator: "unread-error" },

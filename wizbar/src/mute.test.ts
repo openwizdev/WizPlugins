@@ -183,3 +183,105 @@ describe("pending mute safety", () => {
     expect(await host.rows()).toEqual([]);
   });
 });
+
+// Review R1/R3: these drive real registered events/CLI with held host snapshots.
+// Earlier tests covered idle transitions but missed background-only completion,
+// missed events during reload, and a CLI observation racing a new selection.
+describe("review regressions R1/R3", () => {
+  it("R1 refuses stale background completion observed before mute is stored", async () => {
+    const initial = { ...running(), status: "idle", runtime: { displayStatus: "idle" },
+      activity: { ...running().activity, activeBackgroundCommandCount: 1 } };
+    const live = structuredClone(initial);
+    const host = setup([live]);
+    const entered = deferred<void>(), reply = deferred<any[]>();
+    host.list.mockImplementationOnce(() => { entered.resolve(); return reply.promise; });
+    const pending = host.run(["mute", live.id]);
+    await entered.promise;
+    live.activity.activeBackgroundCommandCount = 0;
+    live.latestAttentionAt = 200;
+    await host.event("experimental_thread.events");
+    reply.resolve([initial]);
+    const result = await pending;
+    expect(result.exitCode).toBe(1);
+    expect(result.output.results[0].error.code).toBe("stale_operation");
+    expect(await host.rows()).toEqual([]);
+    expect(host.publications).toEqual([]);
+  });
+  it("R1 preserves a stored mute through ordinary running activity events", async () => {
+    const live = running(); const host = setup([live]);
+    await host.run(["mute", live.id]);
+    const selected = await host.rows(); const publications = [...host.publications];
+    live.latestAttentionAt = 200;
+    await host.event("experimental_thread.events");
+    expect(await host.rows()).toEqual(selected);
+    expect(host.publications).toEqual(publications);
+    expect((await host.run(["list", live.id])).output.results[0].shelf).toBe("muted");
+  });
+  it.each(["question", "failure", "finished"])("R3 retires %s found by CLI without an event", async (kind) => {
+    const live = running(); const host = setup([live]);
+    await host.run(["mute", live.id]);
+    if (kind === "question") live.hasPendingInteraction = true;
+    if (kind === "failure") live.queuedWork = "failed";
+    if (kind === "finished") { live.status = "idle"; live.runtime.displayStatus = "idle"; live.latestAttentionAt = 200; }
+    const observed = await host.run(["list", live.id]);
+    expect(observed.output.results[0].shelf).toBe("active");
+    expect(await host.rows()).toEqual([]);
+    live.hasPendingInteraction = false; live.queuedWork = "none";
+    live.lastReadAt = 200; live.status = "active"; live.runtime.displayStatus = "active";
+    expect((await host.run(["list", live.id])).output.results[0].shelf).toBe("active");
+    expect(host.publications).toEqual([
+      { channel: "lifecycle", payload: { threadId: live.id } },
+      { channel: "lifecycle", payload: { threadId: live.id } },
+    ]);
+  });
+  it("R3 reconciles finished attention after reopening the database before serving sidebar rows", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "wizbar-mute-reload-")); directories.push(dir);
+    const path = join(dir, "state.sqlite");
+    const first = new Database(path); databases.push(first);
+    const live = running(); const original = setup([live], first);
+    await original.run(["mute", live.id]);
+    await original.host.harness.lifecycle.dispose(); first.close();
+    live.status = "idle"; live.runtime.displayStatus = "idle"; live.latestAttentionAt = 200;
+    const second = new Database(path); databases.push(second);
+    const loaded = setup([live], second);
+    expect(await loaded.rows()).toEqual([]);
+    expect((await loaded.run(["list", live.id])).output.results[0].shelf).toBe("active");
+    live.lastReadAt = 200;
+    expect((await loaded.run(["list", live.id])).output.results[0].shelf).toBe("active");
+    expect(loaded.publications).toEqual([{ channel: "lifecycle", payload: { threadId: live.id } }]);
+  });
+  it("R3 retains selection and publishes nothing when authority fails after reload", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "wizbar-mute-offline-")); directories.push(dir);
+    const path = join(dir, "state.sqlite");
+    const first = new Database(path); databases.push(first);
+    const original = setup([running()], first); await original.run(["mute", "sample-a"]);
+    const selected = await original.rows();
+    await original.host.harness.lifecycle.dispose(); first.close();
+    const second = new Database(path); databases.push(second);
+    const loaded = setup([{ ...running(), activity: undefined }], second);
+    expect(await loaded.rows()).toEqual(selected);
+    expect((await loaded.run(["list", "sample-a"])).exitCode).toBe(1);
+    expect(await loaded.rows()).toEqual(selected);
+    expect(loaded.publications).toEqual([]);
+  });
+  it.each(["CLI", "event"])("R3 a stale %s observation cannot retire an identical re-mute selection", async (transport) => {
+    const live = running(); const host = setup([live]); await host.run(["mute", live.id]);
+    const selected = await host.rows();
+    const entered = deferred<void>(), reply = deferred<any[]>();
+    host.list.mockImplementationOnce(() => { entered.resolve(); return reply.promise; });
+    const pending = transport === "CLI" ? host.run(["list", live.id]) : host.event("experimental_thread.events");
+    await entered.promise;
+    await host.rpc("unmute");
+    await host.run(["mute", live.id]); // Same clock and attention baseline: identity fields alone are insufficient.
+    expect(await host.rows()).toEqual(selected);
+    const publications = [...host.publications];
+    reply.resolve([{ ...running(), status: "idle", runtime: { displayStatus: "idle" }, latestAttentionAt: 200 }]);
+    const result = await pending;
+    if ("exitCode" in result) {
+      expect(result.exitCode).toBe(1);
+      expect(result.output.results[0].error.code).toBe("stale_operation");
+    }
+    expect(await host.rows()).toEqual(selected);
+    expect(host.publications).toEqual(publications);
+  });
+});
