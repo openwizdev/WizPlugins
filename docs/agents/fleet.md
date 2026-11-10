@@ -94,24 +94,28 @@ The plugin's own scripts, as upstream defines them in [`wizbar/package.json`](..
 
 | # | Folder | Command | CI check |
 | --- | --- | --- | --- |
-| 1 | `wizbar` | `npm ci` | none yet |
-| 2 | `wizbar` | `npm run typecheck` | none yet |
-| 3 | `wizbar` | `npm test` | none yet |
-| 4 | `wizbar` | `npm run build` | none yet |
+| 1 | `wizbar` | `npm ci` | `wizbar-checks` |
+| 2 | `wizbar` | `npm run typecheck` | `wizbar-checks` |
+| 3 | `wizbar` | `npm test` | `wizbar-checks` |
+| 4 | `wizbar` | `npm run build` | Unverified; owner toolchain decision open |
 
 The unchanged upstream plugin files are copied into `wizbar/`; the commands above run from that folder. WZ2 retains identity, SDK and contract preparation. Its copied build script still names the legacy executable: do not run it until WZ2 establishes the supported `room-cli` build boundary. Command 1 is npm's standard install from the folder's lockfile; commands 2 to 4 are upstream's scripts.
 
-Source: [`wizbar/package.json`](../../wizbar/package.json) scripts, and `.github/workflows/` (none upstream).
+Source: [`wizbar/package.json`](../../wizbar/package.json) scripts and [`.github/workflows/wizbar.yml`](../../.github/workflows/wizbar.yml); bounded workers are a workflow argument to the existing test script.
 
 ## CI checks
 
 | Check | Runs | Required on |
 | --- | --- | --- |
-| none | Upstream has no CI workflow, and this repository has no ruleset or branch protection yet | none |
+| `wizbar-checks` | Workflow `WizBar`, job `checks`: lockfile install, typecheck and the full plugin test suite, sequentially in `wizbar/` with at most two test workers | none |
 
-The spec asks for CI that runs the typecheck, the test suite and the plugin build. Until a ticket adds that workflow and a ruleset requires its check on `main`, no pull request has a required check. Run `setup` again when the workflow or the ruleset changes.
+The workflow runs for every pull request against `main` and push to `main`, without path filters. Checkout uses the exact pull request head SHA (the pushed SHA on `main`), with read-only repository permissions and no persisted checkout credentials. Node 24.22.1 matches WZ2's verified toolchain. It uses no application secrets, host login/state or private checkout, and adds no live application calls.
 
-Source: `.github/workflows/` (absent), `gh api 'repos/openwizdev/wizplugins/rulesets'` (none) and the default branch's protection (none), read 2026-11-10.
+**Plugin build: Unverified; owner decision open.** The pinned package still names the legacy build executable, prohibited by the #3 ruling. Per the [#7 ruling](https://github.com/openwizdev/wizplugins/issues/7#issuecomment-6762459622), this workflow has no build step or substitute success check. A supported reproducible `room-cli` build toolchain must be decided before adding that step. #7 stays open for build alone after this CI change merges; #9 still needs verified build receipts. Passing `wizbar-checks` proves typecheck and fixture tests only, not build, installation, live behavior or publication readiness.
+
+This change adds no required check and changes no ruleset, spending limit, review rule or merge authority. Existing standing merge rules below continue to apply. Run `setup` again when the workflow or required checks change.
+
+Source: [`.github/workflows/wizbar.yml`](../../.github/workflows/wizbar.yml), [`wizbar/contracts/wizbar.v1.md`](../../wizbar/contracts/wizbar.v1.md), and the [2026-11-10 scope ruling on #7](https://github.com/openwizdev/wizplugins/issues/7#issuecomment-6762459622). The previously recorded absence of required checks is unchanged by this workflow.
 
 ## Standing merge rules
 
