@@ -4,8 +4,8 @@ Fixture verification for #4 after WD1 enabled the pinned SDK backend harness. Th
 
 - `npm ci`: passed with the approved development peer and resulting lockfile.
 - `npm run typecheck`: passed.
-- `npm test -- --maxWorkers=2`: 162 tests pass in seven files, including all 82 baseline tests and 80 SDK server-boundary cases. Exact receipts are adjacent.
-- `git diff --check`: passed.
+- `npm test -- --maxWorkers=2`: 188 tests pass in seven files, including all 82 baseline tests and 106 SDK server-boundary cases. Current receipts are in `r1-checks.txt`; earlier receipts remain adjacent.
+- R1 delta whitespace: `git diff --check cdecf96 -- wizbar/src/server.ts wizbar/src/server.test.ts docs/evidence/wz3/r1.md docs/evidence/wz3/red-r1.txt docs/evidence/wz3/r1-checks.txt docs/evidence/wz3/progress.md` passed. The pre-existing full-PR evidence whitespace finding remains tracked by #15.
 - Build: Unverified and not run. #3 prohibits the inherited legacy build command; no substitute is used.
 - SDK fake integration: passed after WD1 approved `cron-parser` `^5.5.0` as development-only. The existing proof suite now uses SDK CLI/RPC schema validation, SQLite and realtime behavior; the interim bespoke registration capture was removed. See `dependencies.md` for the exact lockfile delta.
 - No plugin installation, activation, live command execution, publishing, automatic parking or ownership inference occurred. Live state completeness and shelf refresh remain Unverified for #9.
@@ -24,4 +24,4 @@ The command registers the existing SDK CLI namespace `wizbar` with five operatio
 Shared RPC names and schemas, table, channel, existing lifecycle helpers and frontend files are unchanged. Registered RPC parking methods now use the same guarded operation as the CLI. Unpark validates nonempty IDs before a delete and verifies existence, but does not require idle activity. #8 can use the command/result details recorded here; #9 retains all live approval gates.
 
 
-Validated source commit: `f164fd32ce7166e2826050648e66facec6a6f319`. The hand-back commit adds only final check receipts.
+Validated source commit: `5f07279a3508feb77336c4c0fc21c6c69540b604`. The hand-back commit adds only final check receipts. R1 ordering proof and implementation details are in `r1.md`; its red run is `red-r1.txt`.
