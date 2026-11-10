@@ -1,0 +1,36 @@
+{
+  "state": "synthetic pointer hover",
+  "deviceScaleFactor": 1,
+  "captures": [
+    {
+      "file": "phone.png",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "measured": {
+        "contentWidth": 390,
+        "countColor": "rgb(228, 228, 231)",
+        "numberFont": "12px",
+        "tooltipColor": "rgb(228, 228, 231)",
+        "tooltipBackground": "rgb(36, 36, 42)",
+        "animation": "wizbar-running-spin"
+      }
+    },
+    {
+      "file": "desktop.png",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "measured": {
+        "contentWidth": 1440,
+        "countColor": "rgb(228, 228, 231)",
+        "numberFont": "12px",
+        "tooltipColor": "rgb(228, 228, 231)",
+        "tooltipBackground": "rgb(36, 36, 42)",
+        "animation": "wizbar-running-spin"
+      }
+    }
+  ]
+}
