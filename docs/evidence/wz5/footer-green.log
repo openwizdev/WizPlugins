@@ -1,0 +1,13 @@
+
+> bb-plugin-wizbar@0.1.0 test
+> vitest run --config vitest.config.ts --maxWorkers=2 src/FooterCounter.test.tsx
+
+
+ RUN  v4.1.10 <plugin>
+
+
+ Test Files  1 passed (1)
+      Tests  8 passed (8)
+   Start at  17:26:01
+   Duration  1.36s (transform 169ms, setup 0ms, import 477ms, tests 321ms, environment 465ms)
+

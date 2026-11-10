@@ -8,8 +8,17 @@ import { definePluginApp } from "@get-bb/plugin-sdk/app";
 import { ThreadInbox } from "./src/ThreadInbox";
 import { ParentChip } from "./src/ParentChip";
 import { SubagentsChip } from "./src/SubagentsChip";
+import { FooterCounter } from "./src/FooterCounter";
 
 export default definePluginApp((app) => {
+  // WF1 candidate artwork only. Complete global inputs and the in-thread agent
+  // mapping are unverified. Do not register a footer action/disclosure: even an
+  // empty host button would substitute chrome for the required live counter.
+  app.experimental_icons.register({
+    name: "wizbar-running-count",
+    component: FooterCounter,
+  });
+
   app.slots.experimental_threadList({
     id: "inbox",
     title: "WizBar",

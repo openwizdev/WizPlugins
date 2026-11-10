@@ -1,0 +1,46 @@
+
+> bb-plugin-wizbar@0.1.0 test
+> vitest run --config vitest.config.ts --maxWorkers=2 src/FooterCounter.test.tsx
+
+
+ RUN  v4.1.10 <plugin>
+
+ ❯ |bb-plugin-wizbar| src/FooterCounter.test.tsx (8 tests | 1 failed) 288ms
+     × updates from five to zero and clears old numbers/splits when inputs become unknown 16ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/FooterCounter.test.tsx > W3: synthetic footer artwork through the SDK rendering harness > updates from five to zero and clears old numbers/splits when inputs become unknown
+AssertionError: expected <span id="_r_2_" …(2)></span> to be null
+
+- Expected:
+null
+
++ Received:
+<span
+  id="_r_2_"
+  role="tooltip"
+  style="position: absolute; bottom: calc(100% + 6px); left: 0px; white-space: nowrap; padding: 4px 8px; border-radius: 6px; z-index: 50; background: var(--popover); color: var(--popover-foreground); border: 1px solid var(--border); pointer-events: none;"
+>
+  2
+   threads, 
+  3
+   subagents
+</span>
+
+ ❯ src/FooterCounter.test.tsx:59:43
+     57|     rendered.rerender(<FooterCounterArtwork source={positiveSource} />…
+     58|     expect(screen.getByRole("status", { name: "5 running" })).toBeDefi…
+     59|     expect(screen.queryByRole("tooltip")).toBeNull();
+       |                                           ^
+     60|   });
+     61|   it("does not narrow synthetic input when inbox search, project and s…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 7 passed (8)
+   Start at  17:27:48
+   Duration  1.31s (transform 150ms, setup 0ms, import 424ms, tests 288ms, environment 496ms)
+

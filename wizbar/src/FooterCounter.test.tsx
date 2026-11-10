@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
+import { createElement } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { loadPluginApp, renderSlot } from "@get-bb/plugin-sdk/testing/app";
 import { positiveSource, positiveThreads } from "../../docs/evidence/wz5/fixtures";
 
 const app = await loadPluginApp(() => import("../app"));
-const { FooterCounter, FooterCounterArtwork } = await import("./FooterCounter");
+const { FooterCounterArtwork } = await import("./FooterCounter");
 const candidate = { component: FooterCounterArtwork };
 const empty = { complete: true, threads: [], subagentsByThread: new Map<string, number>() };
 afterEach(cleanup);
@@ -55,12 +56,13 @@ describe("W3: synthetic footer artwork through the SDK rendering harness", () =>
     }
     rendered.rerender(<FooterCounterArtwork source={positiveSource} />);
     expect(screen.getByRole("status", { name: "5 running" })).toBeDefined();
+    expect(screen.queryByRole("tooltip")).toBeNull();
   });
   it("does not narrow synthetic input when inbox search, project and shelves change", async () => {
     const footer = renderSlot(candidate, { source: positiveSource });
     const inbox = renderSlot(app.threadLists[0]!, {
       activeThreadId: null, activeProjectId: null, isCompactViewport: false,
-      searchQuery: "no matching row", onNavigate() {},
+      searchQuery: "", onNavigate() {},
     }, {
       sidebarThreads: { status: "ready", threads: positiveThreads, projects: [
         { id: "sample-project-a", name: "Sample A", isPersonal: false, href: "/projects/sample-project-a", settingsHref: "/projects/sample-project-a/settings" },
@@ -72,10 +74,16 @@ describe("W3: synthetic footer artwork through the SDK rendering harness", () =>
         { threadId: "sample-idle", settledAt: 200, snoozedUntil: null, snoozedAt: null },
       ] }) },
     });
-    await screen.findByRole("region", { name: "Settled" });
-    expect(inbox.container.querySelectorAll('[role="listitem"]')).toHaveLength(0);
+    const shelf = await screen.findByRole("region", { name: "Settled" });
+    fireEvent.click(shelf.querySelector("button")!);
+    expect(footer.container.querySelector('[role="status"]')?.textContent).toBe("5");
     fireEvent.keyDown(screen.getByLabelText(/Project scope/), { key: "Enter" });
     fireEvent.click(screen.getByRole("option", { name: "Sample B" }));
+    inbox.rerender(createElement(app.threadLists[0]!.component, {
+      activeThreadId: null, activeProjectId: "sample-project-b", isCompactViewport: false,
+      searchQuery: "no matching row", onNavigate() {},
+    }));
+    expect(inbox.container.querySelectorAll('[role="listitem"]')).toHaveLength(0);
     expect(footer.container.querySelector('[role="status"]')?.textContent).toBe("5");
   });
 });
@@ -89,7 +97,7 @@ describe("WF1: registered production app fails closed", () => {
   it.each(["ready", "loading", "error"] as const)("renders nothing for an unverified %s host feed", (status) => {
     const icon = app.icons.find(({ name }) => name === "wizbar-running-count");
     expect(icon).toBeDefined();
-    const rendered = renderSlot({ component: icon?.component ?? FooterCounter }, {}, {
+    const rendered = renderSlot({ component: icon!.component }, {}, {
       sidebarThreads: { status, threads: positiveThreads },
     });
     expect(rendered.container.innerHTML).toBe("");
