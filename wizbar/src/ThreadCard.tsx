@@ -8,6 +8,7 @@ import { Icon, type IconName } from "./components/Icon";
 import { cn } from "./lib/utils";
 import { RowContextMenu } from "./RowContextMenu";
 import { ProviderGlyph } from "./ProviderGlyph";
+import { MachineIcon } from "./MachineIcon";
 import { STATUS_SLOT_CLASS, StatusOrTime } from "./StatusSlot";
 import { threadDisplayTitle } from "./inbox";
 import { resolveSnoozePresets } from "./lifecycle";
@@ -80,6 +81,7 @@ export function ThreadCard({
             <span className="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground">
               {projectName ?? " "}
             </span>
+            <MachineIcon environment={thread.environment} />
             {/* Status at rest, park actions on hover. Only the status yields,
                 so the project name never shifts. */}
             {canPark ? (

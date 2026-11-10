@@ -1,0 +1,12 @@
+
+> bb-plugin-wizbar@0.1.0 test
+> vitest run --config vitest.config.ts src/ThreadCard.test.tsx --maxWorkers=2
+
+
+ RUN  v4.1.10 <repo>/wizbar
+
+
+ Test Files  1 passed (1)
+      Tests  39 passed (39)
+   Start at  09:41:11
+   Duration  3.97s (transform 1.45s, setup 0ms, import 1.75s, tests 1.64s, environment 483ms)

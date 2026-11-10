@@ -1,0 +1,182 @@
+{
+  "viewports": [
+    {
+      "width": 390,
+      "contentWidth": 390,
+      "labels": [
+        "Cloud",
+        "Local",
+        "Cloud",
+        "Local",
+        "Cloud",
+        "Local"
+      ],
+      "icons": [
+        {
+          "x": 320,
+          "y": 102,
+          "width": 14,
+          "height": 14,
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        {
+          "x": 320,
+          "y": 179,
+          "width": 14,
+          "height": 14,
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        {
+          "x": 318,
+          "y": 283,
+          "width": 14,
+          "height": 14,
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        {
+          "x": 318,
+          "y": 316,
+          "width": 14,
+          "height": 14,
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        {
+          "x": 318,
+          "y": 378,
+          "width": 14,
+          "height": 14,
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        {
+          "x": 318,
+          "y": 411,
+          "width": 14,
+          "height": 14,
+          "opacity": "1",
+          "visibility": "visible"
+        }
+      ],
+      "primary": "rgb(241, 243, 245)",
+      "subdued": "rgb(185, 192, 202)",
+      "shelf": "rgb(146, 152, 161)",
+      "ground": "rgb(24, 25, 28)",
+      "selected": "rgb(44, 46, 52)"
+    },
+    {
+      "width": 1440,
+      "contentWidth": 1440,
+      "labels": [
+        "Cloud",
+        "Local",
+        "Cloud",
+        "Local",
+        "Cloud",
+        "Local"
+      ],
+      "icons": [
+        {
+          "x": 249,
+          "y": 102,
+          "width": 14,
+          "height": 14,
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        {
+          "x": 249,
+          "y": 179,
+          "width": 14,
+          "height": 14,
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        {
+          "x": 247,
+          "y": 283,
+          "width": 14,
+          "height": 14,
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        {
+          "x": 247,
+          "y": 316,
+          "width": 14,
+          "height": 14,
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        {
+          "x": 247,
+          "y": 378,
+          "width": 14,
+          "height": 14,
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        {
+          "x": 247,
+          "y": 411,
+          "width": 14,
+          "height": 14,
+          "opacity": "1",
+          "visibility": "visible"
+        }
+      ],
+      "primary": "rgb(241, 243, 245)",
+      "subdued": "rgb(185, 192, 202)",
+      "shelf": "rgb(146, 152, 161)",
+      "ground": "rgb(24, 25, 28)",
+      "selected": "rgb(44, 46, 52)"
+    }
+  ],
+  "hover": {
+    "label": "Local",
+    "width": 14,
+    "opacity": "1",
+    "controls": "flex",
+    "hitThread": "sample-b"
+  },
+  "focus": {
+    "control": "Wake thread now",
+    "focused": true,
+    "buttonOpacity": "1",
+    "markerWidth": 14,
+    "markerOpacity": "1",
+    "focusColor": "rgb(181, 197, 231)"
+  },
+  "navigation": {
+    "normalRow": [
+      {
+        "method": "open",
+        "threadId": "sample-b"
+      },
+      {
+        "method": "open",
+        "threadId": "sample-b",
+        "options": {
+          "split": false
+        }
+      }
+    ],
+    "iconArea": [
+      {
+        "method": "open",
+        "threadId": "sample-b"
+      },
+      {
+        "method": "open",
+        "threadId": "sample-b",
+        "options": {
+          "split": false
+        }
+      }
+    ],
+    "same": true
+  }
+}

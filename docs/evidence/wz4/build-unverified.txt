@@ -1,0 +1,1 @@
+Unknown command plugin. Commands: room-cli thread, automation (loop), mac, secret, files, preview, computer-use, gpu, usage, feedback. Add --help to any of them. Other threads, projects, and settings live on the user's Mac: see the room-cli skill.

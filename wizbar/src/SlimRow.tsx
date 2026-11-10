@@ -5,6 +5,7 @@ import {
 import { Icon } from "./components/Icon";
 import { cn } from "./lib/utils";
 import { RowContextMenu } from "./RowContextMenu";
+import { MachineIcon } from "./MachineIcon";
 import { STATUS_SLOT_CLASS, StatusOrTime } from "./StatusSlot";
 import { threadDisplayTitle } from "./inbox";
 import { snoozeWakeLabel } from "./lifecycle";
@@ -68,6 +69,7 @@ export function SlimRow({
           >
             {title}
           </span>
+          <MachineIcon environment={thread.environment} />
           {/* The same slot as a card, so a shelf keeps the card's column. A
               snoozed row spends it on the wake time: when the thread comes
               BACK is that shelf's whole question, and it outranks an age the
