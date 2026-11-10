@@ -1,6 +1,6 @@
 # WZ3 proof plan
 
-Evidence is synthetic fixture testing unless explicitly stated otherwise. Direct registered-handler tests are an interim proof authorized on #4; they do not replace the pending SDK harness integration or live acceptance.
+Evidence is synthetic fixture testing unless explicitly stated otherwise. The original direct-handler proofs were authorized as interim work on #4. They are now run through the pinned SDK fake for CLI/RPC validation, SQLite and realtime integration; live acceptance remains separate.
 
 | Claim | Observable proof | Plausible regression missed by the baseline |
 | --- | --- | --- |
@@ -15,4 +15,4 @@ Evidence is synthetic fixture testing unless explicitly stated otherwise. Direct
 
 Authority boundary: SDK 0.4.4 declares `threads.list` activity counts and `hasPendingInteraction`; `threads.get` alone is insufficient. Published bb-app 0.37.0's sidebar hooks map the same activity counters and runtime display statuses. Array-wide sidebar declarations explicitly exclude per-client draft indicators. No client-supplied eligibility is trusted. Missing, invalid, disconnected or unreadable state must refuse parking. Fixture success proves neither current live host completeness nor installed behavior; those remain Unverified for #9.
 
-No new dependency, live plugin execution, installation, build substitution or PR is authorized by the interim ruling. The SDK backend harness awaits the owner's dependency decision. No helpers were used.
+WD1 on #4 subsequently approved the development-only cron-parser peer and its lockfile changes, enabling the SDK backend harness. No live plugin execution, installation or build substitution is authorized. No helpers were used.

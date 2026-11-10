@@ -1,5 +1,4 @@
-import Database from "better-sqlite3";
-import type { BbPluginApi } from "@get-bb/plugin-sdk";
+import { createFakePluginHost, makeThreadResponse, type FakePluginHost } from "@get-bb/plugin-sdk/testing";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import plugin from "./server";
 
@@ -16,39 +15,35 @@ function thread(id = "example-a") {
     hasPendingInteraction: false,
   };
 }
-// Interim direct-handler proof under #4's ruling. Real SQLite and the actual
-// plugin factory; SDK transport/schema integration remains pending.
+// The owning W5/W6 proof uses the pinned SDK's real registration, RPC/CLI
+// validation, SQLite and realtime boundary. SDK reads are synthetic inputs.
 function setup(threads: unknown[] = [thread()]) {
-  const db = new Database(":memory:"); databases.push(db);
-  let rpc: Record<string, (input: any) => Promise<any>> = {};
-  let cli: { run: (argv: string[], ctx: object) => any } | undefined;
-  let deleted: ((event: { thread: { id: string } }) => void) | undefined;
-  const publications: { channel: string; payload: unknown }[] = [];
   const get = vi.fn(async ({ threadId }: { threadId: string }) => {
     const found = threads.find((t: any) => t.id === threadId);
     if (!found) throw Object.assign(new Error("not found"), { status: 404 });
     return found;
   });
   const list = vi.fn(async () => threads);
-  const bb = {
-    storage: {
-      database: () => db,
-      migrate: (_db: unknown, migrations: string[]) => migrations.forEach((m) => db.exec(m)),
-    },
-    realtime: { publish: (channel: string, payload: unknown) => publications.push({ channel, payload }) },
-    rpc: { register: (_contract: unknown, handlers: typeof rpc) => { rpc = handlers; } },
-    cli: { register: (registration: NonNullable<typeof cli>) => { cli = registration; } },
-    events: { on: (_name: string, handler: NonNullable<typeof deleted>) => { deleted = handler; } },
-    sdk: { threads: { get, list } },
-  };
-  plugin(bb as unknown as BbPluginApi);
+  const host = createFakePluginHost({ pluginId: "wizbar", sdk: { threads: { get, list } } });
+  hosts.push(host);
+  plugin(host.bb);
+  const db = host.bb.storage.database();
   const rows = () => db.prepare("SELECT * FROM thread_lifecycle ORDER BY thread_id").all();
   const seed = () => db.prepare("INSERT INTO thread_lifecycle VALUES (?, ?, ?, ?)").run("example-a", 200, null, null);
-  return { rpc, run: (argv: string[]) => cli!.run(argv, {}), db, rows, seed, publications, get, list, deleted: () => deleted!({ thread: { id: "example-a" } }) };
+  return {
+    harness: host.harness,
+    run: (argv: string[]) => host.harness.behavior.runCli(argv),
+    rows, seed, get, list,
+    publications: host.harness.inspection.realtimeSignals,
+    deleted: () => host.harness.behavior.emitThreadEvent("thread.deleted", { thread: makeThreadResponse({ id: "example-a" }) }),
+  };
 }
-const databases: Database.Database[] = [];
+const hosts: FakePluginHost[] = [];
 beforeEach(() => { vi.stubEnv("TZ", "UTC"); vi.useFakeTimers(); vi.setSystemTime(NOW); });
-afterEach(() => { databases.splice(0).forEach((db) => db.close()); vi.useRealTimers(); vi.unstubAllEnvs(); });
+afterEach(async () => {
+  for (const host of hosts.splice(0)) await host.harness.lifecycle.dispose();
+  vi.useRealTimers(); vi.unstubAllEnvs();
+});
 
 describe.each(["settle", "snooze"])("%s server guard", (method) => {
   const input = { threadId: "example-a", snoozedUntil: NOW + 3_600_000 };
@@ -58,19 +53,19 @@ describe.each(["settle", "snooze"])("%s server guard", (method) => {
   ] as const)("refuses %s without changing an existing row", async (signal) => {
     const live = thread(); live.activity[signal] = 1;
     const host = setup([live]); host.seed(); const before = host.rows();
-    await expect(host.rpc[method]!(input)).rejects.toThrow(/working/i);
+    await expect(host.harness.behavior.callRpc(method, input)).rejects.toThrow(/working/i);
     expect(host.rows()).toEqual(before); expect(host.publications).toEqual([]);
   });
   it.each(["active", "starting", "stopping", "provisioning", "host-reconnecting"])("refuses runtime %s", async (status) => {
     const live = thread(); live.runtime.displayStatus = status;
     const host = setup([live]);
-    await expect(host.rpc[method]!(input)).rejects.toThrow(/working|unavailable/i);
+    await expect(host.harness.behavior.callRpc(method, input)).rejects.toThrow(/working|unavailable/i);
     expect(host.rows()).toEqual([]); expect(host.publications).toEqual([]);
   });
   it("refuses a pending interaction", async () => {
     const live = thread(); live.hasPendingInteraction = true;
     const host = setup([live]); host.seed(); const before = host.rows();
-    await expect(host.rpc[method]!(input)).rejects.toThrow(/waiting/i);
+    await expect(host.harness.behavior.callRpc(method, input)).rejects.toThrow(/waiting/i);
     expect(host.rows()).toEqual(before); expect(host.publications).toEqual([]);
   });
   it.each([
@@ -81,12 +76,12 @@ describe.each(["settle", "snooze"])("%s server guard", (method) => {
     { activity: { ...thread().activity, activeWorkflowCount: Number.NaN } },
   ])("refuses incomplete or invalid authority: %j", async (override) => {
     const host = setup([{ ...thread(), ...override }]); host.seed(); const before = host.rows();
-    await expect(host.rpc[method]!(input)).rejects.toThrow(/unavailable/i);
+    await expect(host.harness.behavior.callRpc(method, input)).rejects.toThrow(/unavailable/i);
     expect(host.rows()).toEqual(before); expect(host.publications).toEqual([]);
   });
   it("refuses failed authoritative reads", async () => {
     const host = setup(); host.list.mockRejectedValue(new Error("synthetic read failure"));
-    await expect(host.rpc[method]!(input)).rejects.toThrow(/unavailable/i);
+    await expect(host.harness.behavior.callRpc(method, input)).rejects.toThrow(/unavailable/i);
     expect(host.rows()).toEqual([]); expect(host.publications).toEqual([]);
   });
 });
@@ -139,19 +134,19 @@ describe("registered WizBar command", () => {
   });
   it("shares SQLite and lifecycle refresh across RPC, CLI, undo and deletion", async () => {
     const host = setup();
-    await host.rpc.snooze!({ threadId: "example-a", snoozedUntil: NOW + 3_600_000 });
+    await host.harness.behavior.callRpc("snooze", { threadId: "example-a", snoozedUntil: NOW + 3_600_000 });
     const listed = await host.run(["list", "example-a", "--json"]);
     expect(JSON.parse(listed.stdout).results).toEqual([
       { threadId: "example-a", ok: true, shelf: "snoozed", snoozedUntil: NOW + 3_600_000 },
     ]);
     await host.run(["settle", "example-a"]);
-    expect(await host.rpc.listLifecycle!({})).toEqual({ rows: [{ threadId: "example-a", settledAt: NOW, snoozedUntil: null, snoozedAt: null }] });
-    await host.rpc.unsettle!({ threadId: "example-a" });
+    expect(await host.harness.behavior.callRpc("listLifecycle", {})).toEqual({ rows: [{ threadId: "example-a", settledAt: NOW, snoozedUntil: null, snoozedAt: null }] });
+    await host.harness.behavior.callRpc("unsettle", { threadId: "example-a" });
     expect(host.rows()).toEqual([]);
     await host.run(["snooze", "example-a", "--until", "hour"]);
     await host.run(["unsnooze", "example-a"]);
     expect(host.rows()).toEqual([]);
-    await host.run(["settle", "example-a"]); host.deleted();
+    await host.run(["settle", "example-a"]); await host.deleted();
     expect(host.rows()).toEqual([]);
     expect(host.publications).toEqual(Array.from({ length: 7 }, () => ({ channel: "lifecycle", payload: { threadId: "example-a" } })));
   });
@@ -250,13 +245,13 @@ describe("argument and authority edge cases", () => {
   });
   it.each(["unsettle", "unsnooze"])("rejects empty IDs before %s can delete", async (operation) => {
     const host = setup(); host.seed(); const before = host.rows();
-    await expect(host.rpc[operation]!({ threadId: " " })).rejects.toThrow(/nonempty/i);
+    await expect(host.harness.behavior.callRpc(operation, { threadId: " " })).rejects.toMatchObject({ code: "invalid_input" });
     expect(host.rows()).toEqual(before); expect(host.publications).toEqual([]);
     expect(host.get).not.toHaveBeenCalled();
   });
   it("rejects past times on the raw sidebar RPC too", async () => {
     const host = setup(); host.seed(); const before = host.rows();
-    await expect(host.rpc.snooze!({ threadId: "example-a", snoozedUntil: NOW - 1 })).rejects.toThrow(/future/i);
+    await expect(host.harness.behavior.callRpc("snooze", { threadId: "example-a", snoozedUntil: NOW - 1 })).rejects.toThrow(/future/i);
     expect(host.rows()).toEqual(before); expect(host.publications).toEqual([]);
   });
 });
