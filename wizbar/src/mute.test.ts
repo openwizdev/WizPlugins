@@ -166,7 +166,7 @@ function deferred<T>() {
   return { promise, resolve };
 }
 describe("pending mute safety", () => {
-  it.each(["unmute", "unsettle", "unsnooze", "thread.deleted", "interaction.pending", "thread.failed"])("a stale validation cannot override %s", async (barrier) => {
+  it.each(["unmute", "unsettle", "unsnooze", "thread.deleted", "interaction.pending", "thread.failed", "thread.idle"])("a stale validation cannot override %s", async (barrier) => {
     const host = setup();
     const entered = deferred<void>(), response = deferred<any[]>();
     host.list.mockImplementationOnce(() => { entered.resolve(); return response.promise; });
