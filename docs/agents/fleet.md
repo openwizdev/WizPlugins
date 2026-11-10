@@ -90,28 +90,43 @@ Source: the fleet skills, `plan-graph` and `launch-fleet`, which put it on and t
 
 ## Test commands
 
-The plugin's own scripts, as upstream defines them in [`wizbar/package.json`](../../wizbar/package.json) (`build`, `test`, `typecheck`). Upstream names no Node version and has no lockfile-install script; the plugin folder has its own `package-lock.json`. A builder runs the red/green proof and the commands its change can affect, then opens the ready pull request.
+The plugin's current scripts in [`wizbar/package.json`](../../wizbar/package.json) (`build`, `test`, `typecheck`). Upstream names no Node version and has no lockfile-install script; the plugin folder has its own `package-lock.json`. A builder runs the red/green proof and the commands its change can affect, then opens the ready pull request.
 
 | # | Folder | Command | CI check |
 | --- | --- | --- | --- |
-| 1 | `wizbar` | `npm ci` | none yet |
-| 2 | `wizbar` | `npm run typecheck` | none yet |
-| 3 | `wizbar` | `npm test` | none yet |
-| 4 | `wizbar` | `npm run build` | none yet |
+| 1 | `wizbar` | `npm ci` | `wizbar-checks` |
+| 2 | `wizbar` | `npm run typecheck` | `wizbar-checks` |
+| 3 | `wizbar` | `npm test` | `wizbar-checks` |
+| 4 | `wizbar` | `npm run build` | Unverified; execution remains for #9 |
 
-The unchanged upstream plugin files are copied into `wizbar/`; the commands above run from that folder. WZ2 retains identity, SDK and contract preparation. Its copied build script still names the legacy executable: do not run it until WZ2 establishes the supported `room-cli` build boundary. Command 1 is npm's standard install from the folder's lockfile; commands 2 to 4 are upstream's scripts.
+The unchanged upstream plugin files are copied into `wizbar/`; the commands above run from that folder. WZ2 retains identity, SDK and contract preparation. The build script now names `room-cli plugin build .`, authorized by the [WD2 ruling on #7](https://github.com/openwizdev/wizplugins/issues/7#issuecomment-6762540703); execution requires the desktop CLI and remains Unverified. Command 1 is npm's standard install from the folder's lockfile; commands 2 to 4 are the plugin's current scripts.
 
-Source: [`wizbar/package.json`](../../wizbar/package.json) scripts, and `.github/workflows/` (none upstream).
+Source: [`wizbar/package.json`](../../wizbar/package.json) scripts and [`.github/workflows/wizbar.yml`](../../.github/workflows/wizbar.yml); bounded workers are a workflow argument to the existing test script.
 
 ## CI checks
 
 | Check | Runs | Required on |
 | --- | --- | --- |
-| none | Upstream has no CI workflow, and this repository has no ruleset or branch protection yet | none |
+| `wizbar-checks` | Workflow `WizBar`, job `checks`: lockfile install, typecheck and the full plugin test suite, sequentially in `wizbar/` with at most two test workers | none |
 
-The spec asks for CI that runs the typecheck, the test suite and the plugin build. Until a ticket adds that workflow and a ruleset requires its check on `main`, no pull request has a required check. Run `setup` again when the workflow or the ruleset changes.
+The workflow runs for every pull request against `main` and push to `main`, without path filters. Checkout uses the exact pull request head SHA (the pushed SHA on `main`), with read-only repository permissions and no persisted checkout credentials. Node 24.22.1 matches WZ2's verified toolchain. It uses no application secrets, host login/state or private checkout, and adds no live application calls.
 
-Source: `.github/workflows/` (absent), `gh api 'repos/openwizdev/wizplugins/rulesets'` (none) and the default branch's protection (none), read 2026-11-10.
+**Plugin build: Unverified; desktop command identified.** The [WD2 ruling on #7](https://github.com/openwizdev/wizplugins/issues/7#issuecomment-6762540703) records desktop help for `room-cli plugin build [path]`: it builds into `dist/` without a running server. That is help-text evidence, not an executed build. The package's `build` script is now `room-cli plugin build .`. The CLI available here does not expose `plugin`; neither the legacy executable nor an alias is used.
+
+**Published CI toolchain check, 2026-11-10:** no supported standalone package installation route was found in the sources checked:
+
+| Source | Observed result |
+| --- | --- |
+| [Cloudroom setup docs](https://www.cloudroom.dev/docs/get-started#use-the-cli) | The CLI ships with the desktop app; no standalone npm installation is documented there |
+| [SDK 0.4.4 metadata](https://registry.npmjs.org/@get-bb%2fplugin-sdk/0.4.4) | No CLI binary exported |
+| [`bb-app` 0.49.0 metadata](https://registry.npmjs.org/bb-app/0.49.0) (latest observed) | Exports `bb`, `bb-app`, `bb-server` and `bb-host-daemon`, without a `room-cli` binary; inspecting all 2,476 entries in its published archive found no `room-cli` path. The locked 0.37.0 is unchanged |
+| [`room-cli` 0.0.1 metadata](https://registry.npmjs.org/room-cli/0.0.1) | Unrelated Android Room generator; not Cloudroom tooling |
+
+These checks do not prove that no distribution can exist. They establish no supported published route for this workflow, so CI keeps install/typecheck/tests only, as WD2 permits. No package or desktop app was installed for this investigation. Actual plugin build proof remains for #9; #7 remains open without build receipts. Passing `wizbar-checks` proves typecheck and fixture tests only, not build, installation, live behavior or publication readiness.
+
+This change adds no required check and changes no ruleset, spending limit, review rule or merge authority. Existing standing merge rules below continue to apply. Run `setup` again when the workflow or required checks change.
+
+Source: [`.github/workflows/wizbar.yml`](../../.github/workflows/wizbar.yml), [`wizbar/contracts/wizbar.v1.md`](../../wizbar/contracts/wizbar.v1.md), the [initial CI scope ruling](https://github.com/openwizdev/wizplugins/issues/7#issuecomment-6762459622), and the [WD2 follow-up](https://github.com/openwizdev/wizplugins/issues/7#issuecomment-6762540703). The previously recorded absence of required checks is unchanged by this workflow.
 
 ## Standing merge rules
 
