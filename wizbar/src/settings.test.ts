@@ -52,3 +52,39 @@ describe("N1: actual WizBar settings declarations and persistent reload", () => 
     expect(await handle.get()).toEqual({ footerCountEnabled: false, machineIconsEnabled: true });
   });
 });
+
+// N1: a string truthiness bug could silently turn a disabled feature on;
+// a source-status cache could retain "live" after its source unmounts.
+// These pure boundary cases complement the rendered controls, not storage.
+describe("N1: boolean settings and source status boundary", () => {
+  it.each([
+    [undefined, { footerCountEnabled: true, machineIconsEnabled: true }],
+    [{}, { footerCountEnabled: true, machineIconsEnabled: true }],
+    [{ footerCountEnabled: false }, { footerCountEnabled: false, machineIconsEnabled: true }],
+    [{ footerCountEnabled: "true", machineIconsEnabled: 1 }, { footerCountEnabled: false, machineIconsEnabled: false }],
+  ] as const)("reads exact booleans from %j", async (values, expected) => {
+    const { readWizBarSettings } = await import("./settings");
+    expect(readWizBarSettings(values)).toEqual(expected);
+  });
+
+  it("publishes explicit status, aggregates conservatively, cleans up and isolates plugins", async () => {
+    const { getSourceStatuses, reportFeatureSourceStatus } = await import("./settings");
+    const id = "synthetic-source-status";
+    expect(getSourceStatuses(id)).toEqual({ footer: "unavailable", icons: "unverified" });
+    const live = reportFeatureSourceStatus(id, "footer", "live");
+    expect(getSourceStatuses(id)).toEqual({ footer: "live", icons: "unverified" });
+    expect(getSourceStatuses("synthetic-other-plugin")).toEqual({ footer: "unavailable", icons: "unverified" });
+    const unknown = reportFeatureSourceStatus(id, "footer", "unverified");
+    expect(getSourceStatuses(id).footer).toBe("unverified");
+    const failed = reportFeatureSourceStatus(id, "footer", "unavailable");
+    expect(getSourceStatuses(id).footer).toBe("unavailable");
+    failed();
+    expect(getSourceStatuses(id).footer).toBe("unverified");
+    unknown();
+    expect(getSourceStatuses(id).footer).toBe("live");
+    unknown(); // stale/repeated disposal must not clear another report.
+    expect(getSourceStatuses(id).footer).toBe("live");
+    live();
+    expect(getSourceStatuses(id)).toEqual({ footer: "unavailable", icons: "unverified" });
+  });
+});
