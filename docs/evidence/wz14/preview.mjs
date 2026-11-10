@@ -20,7 +20,7 @@ const threads = ["Review parser", "Write guide", "Guide notes"].map((title, i) =
   status: i === 1 ? "active" : "idle", runtimeStatus: i === 1 ? "active" : "idle",
   queuedWork: "none", hasPendingInteraction: i === 0,
   activity: { workflows: 0, backgroundAgents: 0, backgroundCommands: 0, planMode: 0, goals: 0 },
-  indicator: i === 0 ? "waiting-for-input" : i === 1 ? "runtime" : "none",
+  indicator: i === 0 ? "waiting-for-input" : i === 1 ? (params.has("running-attention") ? "unread-success" : "runtime") : "none",
   indicatorLabel: i === 0 ? "Thread needs user input" : i === 1 ? "Thread working" : null,
   isUnread: i !== 2, isPinned: false, pinnedAt: null, pinSortKey: null,
   isArchived: false, archivedAt: null, isHidden: false,

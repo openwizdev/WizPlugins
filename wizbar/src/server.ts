@@ -297,6 +297,10 @@ export default function plugin(bb: BbPluginApi) {
       return { threadId, ok: true, shelf: "active", snoozedUntil: null };
     }
 
+    // Initial CLI reads observe the settled startup reconciliation rather
+    // than racing it and rejecting an otherwise valid first observation.
+    if (operation === "list") await startupReconciliation;
+
     // CLI observations can retire a mute too: capture their selection and
     // revision before the first asynchronous host read, just as mutations do.
     const stored = readAll().find((row) => row.threadId === threadId);
