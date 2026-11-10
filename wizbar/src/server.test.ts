@@ -74,6 +74,7 @@ describe.each(["settle", "snooze"])("%s server guard", (method) => {
     { runtime: { displayStatus: "waiting-for-host" } },
     { activity: { ...thread().activity, activeGoalCount: -1 } },
     { activity: { ...thread().activity, activeWorkflowCount: Number.NaN } },
+    { activity: { ...thread().activity, futureWorkCount: 1 } },
   ])("refuses incomplete or invalid authority: %j", async (override) => {
     const host = setup([{ ...thread(), ...override }]); host.seed(); const before = host.rows();
     await expect(host.harness.behavior.callRpc(method, input)).rejects.toThrow(/unavailable/i);
@@ -249,9 +250,11 @@ describe("argument and authority edge cases", () => {
     expect(host.rows()).toEqual(before); expect(host.publications).toEqual([]);
     expect(host.get).not.toHaveBeenCalled();
   });
-  it("rejects past times on the raw sidebar RPC too", async () => {
+  // The SDK schema admits safe integers beyond JavaScript's date range;
+  // accepting one would make subsequent text listing fail after persistence.
+  it.each([NOW - 1, 8_640_000_000_000_001])("rejects invalid raw snooze time %s", async (until) => {
     const host = setup(); host.seed(); const before = host.rows();
-    await expect(host.harness.behavior.callRpc("snooze", { threadId: "example-a", snoozedUntil: NOW - 1 })).rejects.toThrow(/future/i);
+    await expect(host.harness.behavior.callRpc("snooze", { threadId: "example-a", snoozedUntil: until })).rejects.toThrow(/future/i);
     expect(host.rows()).toEqual(before); expect(host.publications).toEqual([]);
   });
 });
