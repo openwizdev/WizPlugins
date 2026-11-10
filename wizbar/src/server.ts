@@ -82,7 +82,7 @@ const liveThreadSchema = threadRouteSchema.extend({
     activeBackgroundCommandCount: z.number().int().nonnegative(),
     activePlanModeCount: z.number().int().nonnegative(),
     activeGoalCount: z.number().int().nonnegative(),
-  }),
+  }).strict(),
 });
 const unavailable = () => new LifecycleError("state_unavailable", "Working or waiting state is unavailable.");
 
@@ -202,8 +202,8 @@ export default function plugin(bb: BbPluginApi) {
     if (operation !== "list") {
       if (!canPark(signals)) throw new LifecycleError(signals.hasPendingInteraction ? "waiting" : "working",
         signals.hasPendingInteraction ? "Thread is waiting for input." : "Thread is working.");
-      if (operation === "snooze" && (!Number.isSafeInteger(snoozedUntil) || snoozedUntil! <= now)) {
-        throw new LifecycleError("invalid_until", "Snooze time must be in the future.");
+      if (operation === "snooze" && (!Number.isSafeInteger(snoozedUntil) || !Number.isFinite(new Date(snoozedUntil!).getTime()) || snoozedUntil! <= now)) {
+        throw new LifecycleError("invalid_until", "Snooze time must be a valid future date.");
       }
       // No asynchronous boundary between eligibility and the plugin-only write.
       write({ threadId, settledAt: operation === "settle" ? now : null,
