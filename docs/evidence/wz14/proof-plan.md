@@ -1,6 +1,6 @@
 # N2 proof plan
 
-Base: `0e1cecc81e9e3e9f739d99c6a970e39fcd668290`. No pre-existing #26 branch or pull request was found before the fresh branch was created. No project AGENTS.md/CLAUDE.md exists in this base; docs/agents supplies the policy. Build-ticket skill source was checked against ClosedWiz main by blob identity; no private source text is copied.
+Base: `0e1cecc81e9e3e9f739d99c6a970e39fcd668290`. No pre-existing #26 branch or pull request was found before the fresh branch was created. No project AGENTS.md/CLAUDE.md exists in this base; docs/agents supplies the policy. Workflow source was checked against its current main by blob identity; no private source text is copied.
 
 | Claim | Owning observable proof | Plausible missed regression |
 | --- | --- | --- |
