@@ -209,3 +209,54 @@ describe("list reflects upstream wake rules", () => {
     expect(JSON.parse(result.stdout).results[0].shelf).toBe("active");
   });
 });
+
+// These edge cases protect the real argument and authority boundaries. In
+// particular, searching argv globally for --json misinterprets literal IDs.
+describe("argument and authority edge cases", () => {
+  it("treats --json after -- as a literal ID, not an output flag", async () => {
+    const host = setup([thread("--json")]);
+    const result = await host.run(["settle", "--", "--json"]);
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toBe('"--json": settled\n');
+  });
+  it("uses calendar time across a daylight saving transition", async () => {
+    vi.stubEnv("TZ", "America/New_York");
+    vi.setSystemTime(Date.parse("2030-03-09T12:00:00-05:00"));
+    const host = setup();
+    const result = await host.run(["snooze", "example-a", "--until", "tomorrow", "--json"]);
+    expect(result.exitCode).toBe(0);
+    expect(JSON.parse(result.stdout).results[0].snoozedUntil).toBe(Date.parse("2030-03-10T09:00:00-04:00"));
+  });
+  it("reads later pages for a named thread", async () => {
+    const host = setup();
+    host.list.mockResolvedValueOnce(Array.from({ length: 100 }, (_, i) => thread(`other-${i}`)));
+    const result = await host.run(["settle", "example-a"]);
+    expect(result.exitCode).toBe(0);
+    expect(host.rows()).toHaveLength(1);
+  });
+  it("refuses a repeated page rather than treating incomplete data as idle", async () => {
+    const host = setup();
+    host.list.mockResolvedValue(Array.from({ length: 100 }, (_, i) => thread(`other-${i}`)));
+    const result = await host.run(["settle", "example-a", "--json"]);
+    expect(result.exitCode).toBe(1);
+    expect(JSON.parse(result.stdout).results[0].error.code).toBe("state_unavailable");
+    expect(host.rows()).toEqual([]); expect(host.publications).toEqual([]);
+  });
+  it("refuses a snooze that expires during the authoritative read", async () => {
+    const host = setup();
+    host.list.mockImplementation(async () => { vi.setSystemTime(NOW + 3_600_000); return [thread()]; });
+    const result = await host.run(["snooze", "example-a", "--until", "hour", "--json"]);
+    expect(result.exitCode).toBe(1); expect(host.rows()).toEqual([]);
+  });
+  it.each(["unsettle", "unsnooze"])("rejects empty IDs before %s can delete", async (operation) => {
+    const host = setup(); host.seed(); const before = host.rows();
+    await expect(host.rpc[operation]!({ threadId: " " })).rejects.toThrow(/nonempty/i);
+    expect(host.rows()).toEqual(before); expect(host.publications).toEqual([]);
+    expect(host.get).not.toHaveBeenCalled();
+  });
+  it("rejects past times on the raw sidebar RPC too", async () => {
+    const host = setup(); host.seed(); const before = host.rows();
+    await expect(host.rpc.snooze!({ threadId: "example-a", snoozedUntil: NOW - 1 })).rejects.toThrow(/future/i);
+    expect(host.rows()).toEqual(before); expect(host.publications).toEqual([]);
+  });
+});
