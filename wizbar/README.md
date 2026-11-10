@@ -1,97 +1,77 @@
-# T3 Sidebar
+# WizBar
 
-An inbox-style replacement for bb's sidebar thread list, and the reference
-example for `app.slots.experimental_threadList`.
+WizBar is the Cloudroom sidebar plugin in
+[openwizdev/wizplugins](https://github.com/openwizdev/wizplugins). It keeps
+T3 Sidebar's Inbox, Snoozed and Settled shelves, manual parking and parent/child
+header chips, and adds batch lifecycle commands and Cloud/Local row markers.
+Working or waiting threads cannot currently be parked; unreadable activity fails
+closed. Parked threads return when work or new attention requires it.
 
-This plugin started as an example in the BB repository. Install its public
-release from GitHub:
+![WizBar rendered with synthetic example rows](../docs/images/wizbar.png)
+
+This is the actual React UI with synthetic fixture data and styling, not an
+installed-app screenshot. The production footer counter is blank. Current row
+markers use an observed `environment.providerId` mapping with unknown data left
+unmarked; correct live Cloud classification remains pending. Settings switches,
+explicit running-fleet mute and a real running-thread footer count are planned
+in [#25](https://github.com/openwizdev/wizplugins/issues/25),
+[#26](https://github.com/openwizdev/wizplugins/issues/26),
+[#28](https://github.com/openwizdev/wizplugins/issues/28) and
+[#29](https://github.com/openwizdev/wizplugins/issues/29).
+
+## Install and activate — Unverified
+
+Build, installation beside T3 Sidebar, activation and live command execution
+remain **Unverified** pending [#9](https://github.com/openwizdev/wizplugins/issues/9).
+The desktop CLI's help supplies these preparation commands. Read the
+[install and rollback kit](https://github.com/openwizdev/wizplugins/issues/9#issuecomment-6768833446)
+and current desktop help before running them:
 
 ```sh
-bb plugin install git:https://github.com/SawyerHood/bb-plugin-t3sidebar.git@^0.1.0
+git clone https://github.com/openwizdev/wizplugins.git
+cd wizplugins/wizbar
+npm ci
+room-cli plugin build .
+room-cli plugin install .
+room-cli plugin list
 ```
 
-Turn it on in **Settings → Appearance → Sidebar**. bb's own list stays the
-default, and comes back the moment you switch away or disable this plugin.
+Record the current sidebar settings first. Select WizBar in
+**Settings → Appearance → Sidebar**, or use
+`room-cli settings ui set sidebar.threadListProvider "<wizbar-plugin-id>"`
+with its ID from `plugin list`. Change `sidebar.navigationProvider` only if
+T3 Sidebar is selected there. Keep T3 Sidebar installed until replacement is
+accepted; follow #9 for disabling it and rollback. WizBar imports no T3 parked
+rows; separate runtime IDs and data still need live verification.
 
-The plugin replaces the scrolling list only. bb's New-thread button, search
-field, plugin nav rows, and footer stay exactly where they are — this list
-filters by the host's search and adds just one control of its own, a project
-scope picker.
+## Commands
 
-## The idea
+The registered namespace is `wizbar`. Each operation accepts one or many IDs:
 
-The list never re-orders itself. Threads sort by creation time, newest first,
-and hold that place until you park them. Status lives inside each card instead
-of in its position, so the sidebar only moves when you act — no row slides
-away under your cursor because an agent finished something.
+```text
+wizbar settle <id>... [--json]
+wizbar unsettle <id>... [--json]
+wizbar snooze <id>... --until <time> [--json]
+wizbar unsnooze <id>... [--json]
+wizbar list <id>... [--json]
+```
 
-Three shelves:
+`--until` takes a future ISO timestamp with a timezone, or an available sidebar
+preset: `hour`, `evening`, `tomorrow`, `next-week`. Results are per ID; one failure
+does not suppress other results and produces a nonzero exit status. `list`
+reports the resolved shelf and snooze wake time. Commands and sidebar share the
+plugin store and refresh channel; live dispatch and visible refresh remain
+unverified in #9.
 
-- **Inbox** — three-line cards: project and one fixed-width status slot on the
-  first line; title on the second; then branch (or the machine, when a thread
-  has no worktree), activity counts, the pull-request number, and the agent
-  glyph. Pinned threads sit above.
+## Credit and licence
 
-  One slot, one marker, one width, so the whole column lines up. The slot
-  shows the status glyph while a thread has something to say, and the age
-  ("now", "7m") once it does not. The glyphs are bb's own: the red circle-x
-  for a failure, the circle-question for a raised hand, the spinner for live
-  work, and a blue notification dot for a thread that finished while you were
-  not looking. Both lists sit in the same window, so they speak one language.
+Derived from [Sawyer Hood's T3 Sidebar](https://github.com/SawyerHood/sawyer-plugins/tree/d3424f24e2cebe91da4e72cb38feb023da808922/plugins/t3sidebar),
+copied from `plugins/t3sidebar` at commit
+`d3424f24e2cebe91da4e72cb38feb023da808922`. The source tag is
+`t3sidebar/v0.1.0` (a different commit from that copied snapshot). WizBar starts
+with a fresh history and adds its own changes after the copy.
 
-- **Snoozed** — hidden until a wake time you chose. A snoozed thread comes
-  back early if it starts working or asks you something.
-- **Settled** — work you are done with, collapsed to one line each.
-
-## Child threads live in the header
-
-A flat inbox has nowhere to nest a child thread, so the list hides a child
-while its parent is on screen. Two chips in the thread header carry that
-relation instead:
-
-- On a parent: a chip with one coloured disc per child. It opens the list of
-  children.
-- On a child: a chip that names the parent and opens it. Without it the child
-  is a dead end, because it is not in the list.
-
-The parent chip sits on the left of the children chip, so the header reads up
-then down. A child that has children of its own shows both. Each disc takes
-its colour from the thread id, so the same thread keeps one colour in the list
-and in both chips.
-
-An orphan — a child whose parent is deleted — stays in the list, and its
-header shows no parent chip.
-
-## What it demonstrates
-
-| Plugin API                                         | Used for                                                                                    |
-| -------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| `experimental_threadList`                          | the sidebar's scrolling list (bb keeps the New-thread button, search, nav rows, and footer) |
-| `experimental_threadHeaderAction`                  | the two header chips: children on a parent, and the way back on a child                     |
-| `experimental_useSidebarThreads`                   | live threads and projects, from the host's own cache                                        |
-| `experimental_useSidebarThreadActions`             | open, open-in-split, new thread                                                             |
-| `experimental_useSidebarThreadSplit`               | dragging a card out to a split pane                                                         |
-| `experimental_useSidebarThreadPullRequest`         | the `#412` badge, coloured by bb's attention state                                          |
-| `@radix-ui/react-context-menu` (shimmed)           | this plugin's own right-click menu, built on the action hook                                |
-| `bb.storage.database()` + `bb.rpc` + `bb.realtime` | the settled/snoozed store                                                                   |
-
-The plugin API ships **no components**. Status glyphs and the right-click menu
-are both this plugin's own: `indicator` arrives as data, and every menu item is
-one call on `experimental_useSidebarThreadActions`. Choosing them is the point
-of a replaced sidebar. Deletion still routes through `requestDelete`, so BB
-shows its confirmation dialog rather than a plugin deleting a subtree silently.
-The small icon and select components also live in this example. The example
-does not import BB's private shared UI package.
-
-## Where the lifecycle lives
-
-Settled and snoozed state is in **this plugin's** SQLite database, never on
-bb's thread. Putting it on the thread would mean a schema change, a wire
-change, and a `HOST_DAEMON_PROTOCOL_VERSION` bump for a concept only this
-sidebar understands. Uninstalling the plugin takes its state with it.
-
-One rule matters more than the rest: **a thread that is working can never be
-parked.** bb has more kinds of live work than a session status — workflows,
-background agents, background commands, plan mode, goals — and every one of
-them blocks parking and wakes a parked thread. Hiding running work is the one
-failure this feature cannot afford. See `canPark` in `src/lifecycle.ts`.
+MIT: the [root LICENSE](../LICENSE) retains Sawyer Hood's original notice and
+adds the WizBar notice; [wizbar/LICENSE](LICENSE) retains Michael Yong's original
+plugin notice. Both original notices remain intact. See the
+[public privacy and attribution audit](../docs/verification/public-audit.md).

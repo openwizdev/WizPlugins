@@ -1,0 +1,18 @@
+
+> bb-plugin-wizbar@0.1.0 typecheck
+> tsc --noEmit
+
+src/FooterCounter.test.tsx(34,21): error TS2339: Property 'sidebarActionCalls' does not exist on type 'RenderedSlot'.
+src/ParentChip.test.tsx(101,21): error TS2339: Property 'sidebarActionCalls' does not exist on type 'RenderedSlot'.
+src/ParentChip.tsx(2,3): error TS2724: '"@get-bb/plugin-sdk/app"' has no exported member named 'experimental_useSidebarThreadActions'. Did you mean 'experimental_useSidebarThreads'?
+src/RowContextMenu.tsx(4,3): error TS2724: '"@get-bb/plugin-sdk/app"' has no exported member named 'experimental_useSidebarThreadActions'. Did you mean 'experimental_useSidebarThreads'?
+src/SlimRow.tsx(2,3): error TS2724: '"@get-bb/plugin-sdk/app"' has no exported member named 'experimental_useSidebarThreadActions'. Did you mean 'experimental_useSidebarThreads'?
+src/SubagentsChip.tsx(3,3): error TS2724: '"@get-bb/plugin-sdk/app"' has no exported member named 'experimental_useSidebarThreadActions'. Did you mean 'experimental_useSidebarThreads'?
+src/ThreadCard.test.tsx(169,21): error TS2339: Property 'sidebarActionCalls' does not exist on type '{ settle: Mock<() => { ok: boolean; }>; snooze: Mock<() => { ok: boolean; }>; unsnooze: Mock<() => { ok: boolean; }>; unsettle: Mock<() => { ok: boolean; }>; onNavigate: Mock<Procedure>; ... 67 more ...; composer: ComposerLog; }'.
+src/ThreadCard.test.tsx(179,21): error TS2339: Property 'sidebarActionCalls' does not exist on type '{ settle: Mock<() => { ok: boolean; }>; snooze: Mock<() => { ok: boolean; }>; unsnooze: Mock<() => { ok: boolean; }>; unsettle: Mock<() => { ok: boolean; }>; onNavigate: Mock<Procedure>; ... 67 more ...; composer: ComposerLog; }'.
+src/ThreadCard.test.tsx(193,21): error TS2339: Property 'sidebarActionCalls' does not exist on type '{ settle: Mock<() => { ok: boolean; }>; snooze: Mock<() => { ok: boolean; }>; unsnooze: Mock<() => { ok: boolean; }>; unsettle: Mock<() => { ok: boolean; }>; onNavigate: Mock<Procedure>; ... 67 more ...; composer: ComposerLog; }'.
+src/ThreadCard.tsx(4,3): error TS2724: '"@get-bb/plugin-sdk/app"' has no exported member named 'experimental_useSidebarThreadActions'. Did you mean 'experimental_useSidebarThreads'?
+src/ThreadInbox.test.tsx(149,21): error TS2339: Property 'sidebarActionCalls' does not exist on type 'RenderedSlot'.
+src/ThreadInbox.test.tsx(160,21): error TS2339: Property 'sidebarActionCalls' does not exist on type 'RenderedSlot'.
+src/ThreadInbox.test.tsx(436,23): error TS2339: Property 'sidebarActionCalls' does not exist on type 'RenderedSlot'.
+src/ThreadInbox.tsx(3,3): error TS2724: '"@get-bb/plugin-sdk/app"' has no exported member named 'experimental_useSidebarThreadActions'. Did you mean 'experimental_useSidebarThreads'?
