@@ -23,3 +23,5 @@ The command registers the existing SDK CLI namespace `wizbar` with five operatio
 
 Shared RPC names and schemas, table, channel, existing lifecycle helpers and frontend files are unchanged. Registered RPC parking methods now use the same guarded operation as the CLI. Unpark validates nonempty IDs before a delete and verifies existence, but does not require idle activity. #8 can use the command/result details recorded here; #9 retains all live approval gates.
 
+
+Validated source commit: `f164fd32ce7166e2826050648e66facec6a6f319`. The hand-back commit adds only final check receipts.
