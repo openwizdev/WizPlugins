@@ -27,3 +27,9 @@ The pre-fix diagnostics are in `typecheck-red.txt`, recorded at cb27554 before f
 Build remains **Unverified** under the existing build-boundary rulings: the documented `room-cli plugin build .` attempt exits 2 with `Unknown command plugin`. The inherited legacy `npm run build` script is not executed. #7 owns its supported-script selection and the build receipt remains an owner gate; no fake or substituted successful build is claimed.
 
 No plugin is installed or run against a live app, and nothing is published. Fixture/type evidence does not establish live compatibility, Cloud/Local mapping, complete global inputs, or inline footer-number support. Those existing gates remain unchanged.
+
+## Batch lifecycle integration
+
+Merged main at `3a99284` (#14) without rebase. The only conflict was adjacent lockfile entries for SDK-required `cross-spawn` and main's development-only `cron-parser`. Both dependency trees are retained; `cron-parser` and `luxon` lock entries exactly match main. The package manifest still differs from main only in the SDK pin.
+
+Verified merged source commit: `aa301690fecfd10211d4f8bdeefe4d180cea3cfb`. Tree: `79efccdb98b8f86ba8fea449a8cab1b4e9fa0e5e`. `npm ci`, `npm run typecheck`, and `npm test -- --maxWorkers=2` pass: **188 tests in seven files**, including the unchanged batch lifecycle tests. No additional type/import or runtime edits were needed. All 22 runtime/config TypeScript files and the new server test file compare byte-identical to current main. Both notices and README credits remain unchanged. The branch diff against main is inside #13's owned paths. #12 remains open; its later merge must also be preserved.

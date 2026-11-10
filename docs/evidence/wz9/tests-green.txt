@@ -6,6 +6,5 @@
  RUN  v4.1.10 <plugin>
 
 
- Test Files  6 passed (6)
-      Tests  82 passed (82)
-
+ Test Files  7 passed (7)
+      Tests  188 passed (188)
