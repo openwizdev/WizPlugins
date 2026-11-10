@@ -1,0 +1,57 @@
+
+> bb-plugin-t3sidebar@0.1.0 test
+> vitest run --config vitest.config.ts --maxWorkers=2 identity.test.ts
+
+
+ RUN  v4.1.10 <plugin-folder>
+
+ ❯ |bb-plugin-t3sidebar| identity.test.ts (2 tests | 2 failed) 9ms
+     × declares its own package identity, source and display branding 5ms
+     × registers the WizBar sidebar while retaining the two header chips 3ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-t3sidebar| identity.test.ts > WizBar identity > declares its own package identity, source and display branding
+AssertionError: expected 'bb-plugin-t3sidebar' to be 'bb-plugin-wizbar' // Object.is equality
+
+Expected: "bb-plugin-wizbar"
+Received: "bb-plugin-t3sidebar"
+
+ ❯ identity.test.ts:12:27
+     10| describe("WizBar identity", () => {
+     11|   it("declares its own package identity, source and display branding",…
+     12|     expect(manifest.name).toBe("bb-plugin-wizbar");
+       |                           ^
+     13|     expect(manifest.bb.name).toBe("WizBar");
+     14|     expect(manifest.bb.branding.icon).toBe("Zap");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  |bb-plugin-t3sidebar| identity.test.ts > WizBar identity > registers the WizBar sidebar while retaining the two header chips
+AssertionError: expected [ Array(1) ] to deeply equal [ { id: 'inbox', title: 'WizBar' } ]
+
+- Expected
++ Received
+
+  [
+    {
+      "id": "inbox",
+-     "title": "WizBar",
++     "title": "T3 Sidebar",
+    },
+  ]
+
+ ❯ identity.test.ts:23:69
+     21|
+     22|   it("registers the WizBar sidebar while retaining the two header chip…
+     23|     expect(app.threadLists.map(({ id, title }) => ({ id, title }))).to…
+       |                                                                     ^
+     24|       { id: "inbox", title: "WizBar" },
+     25|     ]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed (2)
+
