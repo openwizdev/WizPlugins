@@ -1,0 +1,29 @@
+# Explicit mute v1 — WZ14
+
+Defined before implementation. Scope: [approved revision 8](https://github.com/openwizdev/wizplugins/issues/1#issuecomment-6780025774). Fixture semantics below do not establish live host behavior. The keeper's [existing observation](https://github.com/jparker2006/ClosedWiz/pull/2375#issuecomment-6779925149) does not document breakthrough shapes; [builder question](https://github.com/openwizdev/wizplugins/issues/26#issuecomment-6780291275) tracks that limit. Live acceptance remains #9.
+
+## Command and RPC
+
+`wizbar mute <id>... [--json]` explicitly selects running fleet threads. `wizbar unmute <id>... [--json]` undoes it. These extend the existing registered command, not a new executable. `--until` remains exclusive to `snooze`; `--` introduces literal IDs. Existing settle/unsettle/snooze/unsnooze/list keep their syntax, result shape and per-ID isolation.
+
+Each success is `{ threadId, ok: true, shelf, snoozedUntil }`; shelf adds `muted`, wake time is null for it. Failures retain `{ threadId, ok: false, error: { code, message } }`. Exit 0 means every ID succeeded, 1 means any ID failed, 2 means invalid command syntax. Text output has one escaped-ID result line per ID. List reports the resolved shelf, not just a stored flag.
+
+`t3sidebarRpcContract` adds `mute` and `unmute`, both using the existing trimmed nonempty `threadId` input and `{ ok: true }` output. The same executor validates CLI and RPC. No client eligibility assertions are accepted. Unmute and existing wake operations clear both parking and mute state after existence validation, even if work authority is unavailable. Empty IDs cannot clear anything.
+
+## Persistent representation and compatibility
+
+Keep the shipped migration unchanged. Append a migration creating `thread_mute(thread_id TEXT PRIMARY KEY, muted_at INTEGER NOT NULL, attention_at INTEGER NOT NULL)` in the same plugin database. `attention_at` is the authoritative latest attention value at selection, not wall clock. A mute transaction removes ordinary parking for that ID; an ordinary park removes its mute. Wake/deletion removes both. Reload runs only unapplied migrations and preserves rows; no host thread or fleet ownership field is written.
+
+`listLifecycle` combines both tables into the existing row stream. A mute row has `{ threadId, settledAt: null, snoozedUntil: null, snoozedAt: null, mutedAt, muteAttentionAt }`. Old ordinary rows keep their exact shape; the two new properties are optional for backward compatibility. Realtime uses the existing `lifecycle` channel and newest-response rule. Mute has no timer. Muted running work remains working for counting; `isWorking` is unchanged.
+
+## Eligibility and breakthrough rules
+
+Only explicitly named, verifiably running, unpinned threads without a pending interaction or failure may be muted. SDK list authority must include pin time, status, queued-work state and all existing work/waiting/read/attention fields. Missing, disconnected, invalid or unknown authority is refused without writes/publications. Failure means status/runtime error or queued-work failed. An ordinary unread/attention update while running is not by itself an action item. The plugin infers no fleet/child ownership; selection is keeper policy.
+
+For a stored mute, unknown authority or pinning resolves visibly to Inbox. Pending interaction and explicit failure always break through, even while other work continues. Finished attention means work is no longer running, is unread, and has attention newer than the captured selection baseline. A bare attention timestamp change while running cannot wake mute. Quiet idle work without newer unread attention stays on Muted; continued/restarted work also stays there. This combination is a synthetic contract pending the keeper's mapping confirmation, not a claim of observed host semantics.
+
+The server listens for pending interaction, thread failure and activity/idle observations. Confirmed breakthrough removes only mute and publishes, so later running/read/refresh updates cannot restore it. Ordinary settle/snooze wake semantics are preserved. Event validation must not clear a newer mute: capture the stored mute and compare it after asynchronous authority reads. Successful wakes/deletions and attention events invalidate pending mute writes under the existing revision guard; no stale read can re-hide a manually woken/deleted thread. A failed authority read cannot persist a new mute or falsely clear a row.
+
+## Sidebar
+
+Add a collapsed Muted shelf using the existing compact shelf pattern. Its expanded rows keep navigation and provide an explicit Unmute action. No new automatic parking or row selection policy is added. Pinned rows always remain visible. Existing creation order, child navigation and ordinary shelf controls remain intact. The shelf reads the same persistent RPC rows as the CLI and uses the same pure classification rule. Loading/error state does not assert successful authority.
