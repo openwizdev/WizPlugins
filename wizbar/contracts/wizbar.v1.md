@@ -77,6 +77,16 @@ All park writes need authoritative current working/waiting inputs. Types exposin
 
 Orchestrator selection of its own finished work is external policy. The plugin does not infer who started a thread. Manual parking remains available; no automatic rule is introduced.
 
+## Explicit running-thread mute — WZ14
+
+The approved next iteration supersedes the baseline no-mute rule only for explicit keeper selection. See [mute.v1.md](mute.v1.md) for the contract defined before implementation, syntax, persistent representation and evidence limits.
+
+- `wizbar mute <id>... [--json]` and `wizbar unmute <id>... [--json]` extend the existing command and `t3sidebarRpcContract`. Both RPCs use the existing nonempty ID schema and `{ ok: true }` result. All five ordinary command operations retain per-ID results and nonzero failure status.
+- An append-only migration adds `thread_mute` in the same plugin database. `listLifecycle` projects its rows with optional `mutedAt` and `muteAttentionAt`; ordinary rows retain their shape. Mutations transactionally keep mute and ordinary parking exclusive, and publish the existing channel. Manual undo and deletion clear both states under the revision guard.
+- Only verified running, unpinned threads without pending input or failure can be muted. Working attention timestamps alone leave mute intact. Pending input, explicit failure and newer unread attention after working stops resolve to Inbox. Confirmed server attention observations clear mute so it cannot return on a later working update. Unavailable authority cannot authorize mute.
+- The sidebar adds a collapsed Muted shelf with navigation and explicit Unmute. The exported `isWorking` predicate and raw host work inputs are unchanged; visibility does not affect counting. Timed snooze and completed-work settle keep their ordinary rules.
+- Keeper selection is external policy: explicit fleet mute, with no inferred owner/child rule or automatic parking. The revised keeper policy also permits settling finished threads generally; waiting, failed and pinned work remains available. Fixture semantics do not establish real keeper operation; live mapping and acceptance remain #9 and the linked question in the mute contract.
+
 ## Future count inputs and footer boundary — #6
 
 Use the existing `isWorking` predicate as the single working definition. The required total is one for every working thread, including child threads, plus one for each running in-thread subagent. It spans every project and includes working threads hidden or parked in the list. Search, project selection and shelf filters cannot narrow the input. Use one pure counting function, not duplicated calculations in UI and tests.

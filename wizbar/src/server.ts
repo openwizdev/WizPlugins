@@ -228,8 +228,8 @@ export default function plugin(bb: BbPluginApi) {
   // Explicit attention events invalidate older validations even if no mute
   // has reached storage yet. Ordinary parking retains its original row.
   const breakMute = (threadId: string): void => {
-    const result = db.prepare("DELETE FROM thread_mute WHERE thread_id = ?").run(threadId);
     invalidateParks(threadId);
+    const result = db.prepare("DELETE FROM thread_mute WHERE thread_id = ?").run(threadId);
     if (result.changes) publish(threadId);
   };
 
@@ -326,7 +326,11 @@ export default function plugin(bb: BbPluginApi) {
       if (--state.pending === 0) pendingParks.delete(threadId);
     }
   };
-  bb.events.on("thread.idle", ({ thread }) => observeMute(thread.id));
+  bb.events.on("thread.idle", ({ thread }) => {
+    // A completion can arrive before the validating mute has written a row.
+    invalidateParks(thread.id);
+    return observeMute(thread.id);
+  });
   bb.events.on("experimental_thread.events", ({ thread }) => observeMute(thread.id));
 
   // A deleted thread must not leave a row behind that would park a future

@@ -35,7 +35,7 @@ export interface ThreadActivitySignals {
 export type ThreadShelf = "active" | "snoozed" | "settled" | "muted";
 
 /**
- * Whether a thread may be parked at all.
+ * Whether a thread may be settled or snoozed (explicit mute is separate).
  *
  * bb has more kinds of live work than a single session status — workflows,
  * background agents, background commands, plan mode, goals — and every one of
@@ -55,8 +55,8 @@ export function canMute(signals: ThreadActivitySignals): boolean {
 /**
  * Which shelf a thread belongs on right now.
  *
- * Order matters. Live work and a raised hand always win, so a parked thread
- * that starts working or asks a question comes straight back. Then snooze,
+ * Explicit mute keeps ordinary running updates hidden, but attention wins.
+ * For ordinary parking, live work and a raised hand always win. Then snooze,
  * because a wake time is a stronger statement than a settle. Then settled.
  */
 export function resolveShelf(

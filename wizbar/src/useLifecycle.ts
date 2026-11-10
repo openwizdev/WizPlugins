@@ -10,7 +10,7 @@ import {
   type ThreadShelf,
 } from "./lifecycle";
 
-/** Any live work at all, which blocks parking and wakes a parked thread. */
+/** Any live work at all, independent of shelf visibility and explicit mute. */
 export function isWorking(thread: PluginSidebarThread): boolean {
   const { activity } = thread;
   return (
@@ -90,16 +90,28 @@ export function useLifecycle(
   }, [now, rows]);
 
   return useMemo<LifecycleApi>(() => {
-    const signalsFor = (thread: PluginSidebarThread) => ({
-      hasPendingInteraction: thread.hasPendingInteraction,
-      isWorking: isWorking(thread),
-      isUnread: thread.isUnread,
-      latestAttentionAt: thread.latestAttentionAt,
-      isPinned: thread.isPinned,
-      hasFailed: thread.runtimeStatus === "waiting-for-host" ? undefined :
-        thread.status === "error" || thread.runtimeStatus === "error" ||
-        thread.queuedWork === "failed" || thread.indicator === "unread-error",
-    });
+    const signalsFor = (thread: PluginSidebarThread) => {
+      const known = ["idle", "error", "active", "pending", "starting", "stopping"];
+      const counts = [thread.activity?.workflows, thread.activity?.backgroundAgents,
+        thread.activity?.backgroundCommands, thread.activity?.planMode, thread.activity?.goals];
+      const authority = known.includes(thread.status) &&
+        [...known, "provisioning"].includes(thread.runtimeStatus) &&
+        ["none", "waiting", "failed"].includes(thread.queuedWork) &&
+        typeof thread.hasPendingInteraction === "boolean" &&
+        typeof thread.isUnread === "boolean" && Number.isFinite(thread.latestAttentionAt) &&
+        thread.activity && Object.keys(thread.activity).length === 5 &&
+        counts.every((n) => Number.isInteger(n) && n >= 0);
+      return {
+        hasPendingInteraction: thread.hasPendingInteraction || thread.indicator === "waiting-for-input",
+        isWorking: authority ? isWorking(thread) : true,
+        isUnread: thread.isUnread,
+        latestAttentionAt: thread.latestAttentionAt,
+        isPinned: thread.isPinned,
+        hasFailed: !authority ? undefined :
+          thread.status === "error" || thread.runtimeStatus === "error" ||
+          thread.queuedWork === "failed" || thread.indicator === "unread-error",
+      };
+    };
     // One read per mutation: the write publishes on the realtime channel, and
     // that subscription already triggers a refresh for every client.
     const mutate = async (

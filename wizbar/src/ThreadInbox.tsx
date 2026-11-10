@@ -25,6 +25,7 @@ import {
   partitionPinned,
   searchThreadsByTitle,
   sortByCreatedAtDescending,
+  threadDisplayTitle,
   visibleInboxThreads,
 } from "./inbox";
 
@@ -317,7 +318,7 @@ function MutedRow({ thread, isActive, onNavigate, onUnmute }: {
   const actions = useSidebarThreadActions();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState(false);
-  const title = thread.title?.trim() || thread.titleFallback?.trim() || "Untitled thread";
+  const title = threadDisplayTitle(thread);
   return (
     <li className="list-none">
       <div className={cn("relative flex h-8 items-center gap-2 rounded-md px-2.5 text-xs",
