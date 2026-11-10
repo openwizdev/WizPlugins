@@ -1,0 +1,254 @@
+
+> bb-plugin-wizbar@0.1.0 test
+> vitest run --config vitest.config.ts --maxWorkers=2 src/FooterCounter.test.tsx
+
+
+ RUN  v4.1.10 <plugin>
+
+ ❯ |bb-plugin-wizbar| src/FooterCounter.test.tsx (8 tests | 8 failed) 1137ms
+     × shows a dim zero with a stopped spinner 82ms
+     × shows a total, spinning icon and split on hover, with inert clicks 4ms
+     × updates from five to zero and clears old numbers/splits when inputs become unknown 3ms
+     × does not narrow synthetic input when inbox search, project and shelves change 1043ms
+     × registers namespaced candidate artwork without an empty footer button or disclosure 2ms
+     × renders nothing for an unverified ready host feed 1ms
+     × renders nothing for an unverified loading host feed 0ms
+     × renders nothing for an unverified error host feed 0ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 8 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/FooterCounter.test.tsx > W3: synthetic footer artwork through the SDK rendering harness > shows a dim zero with a stopped spinner
+TestingLibraryElementError: Unable to find an accessible element with the role "status" and name "0 running"
+
+There are no accessible roles. But there might be some inaccessible roles. If you wish to access them, then set the `hidden` option to `true`. Learn more about this here: https://testing-library.com/docs/dom-testing-library/api-queries#byrole
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div />[39m
+[36m</body>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/FooterCounter.test.tsx:16:28
+     14|   it("shows a dim zero with a stopped spinner", () => {
+     15|     const rendered = renderSlot(candidate, { source: empty });
+     16|     const counter = screen.getByRole("status", { name: "0 running" });
+       |                            ^
+     17|     expect(counter.textContent).toBe("0");
+     18|     expect(counter.style.color).toBe("var(--muted-foreground)");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/8]⎯
+
+ FAIL  |bb-plugin-wizbar| src/FooterCounter.test.tsx > W3: synthetic footer artwork through the SDK rendering harness > shows a total, spinning icon and split on hover, with inert clicks
+TestingLibraryElementError: Unable to find an accessible element with the role "status" and name "5 running"
+
+There are no accessible roles. But there might be some inaccessible roles. If you wish to access them, then set the `hidden` option to `true`. Learn more about this here: https://testing-library.com/docs/dom-testing-library/api-queries#byrole
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div />[39m
+[36m</body>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/FooterCounter.test.tsx:25:28
+     23|   it("shows a total, spinning icon and split on hover, with inert clic…
+     24|     const rendered = renderSlot(candidate, { source: positiveSource });
+     25|     const counter = screen.getByRole("status", { name: "5 running" });
+       |                            ^
+     26|     expect(counter.textContent).toBe("5");
+     27|     expect(rendered.container.querySelector("svg")?.style.animation).t…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/8]⎯
+
+ FAIL  |bb-plugin-wizbar| src/FooterCounter.test.tsx > W3: synthetic footer artwork through the SDK rendering harness > updates from five to zero and clears old numbers/splits when inputs become unknown
+TestingLibraryElementError: Unable to find an accessible element with the role "status"
+
+There are no accessible roles. But there might be some inaccessible roles. If you wish to access them, then set the `hidden` option to `true`. Learn more about this here: https://testing-library.com/docs/dom-testing-library/api-queries#byrole
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div />[39m
+[36m</body>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/FooterCounter.test.tsx:47:33
+     45|   it("updates from five to zero and clears old numbers/splits when inp…
+     46|     const rendered = renderSlot(candidate, { source: positiveSource });
+     47|     fireEvent.mouseEnter(screen.getByRole("status"));
+       |                                 ^
+     48|     rendered.rerender(<FooterCounterArtwork source={empty} />);
+     49|     expect(screen.getByRole("status", { name: "0 running" })).toBeDefi…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/8]⎯
+
+ FAIL  |bb-plugin-wizbar| src/FooterCounter.test.tsx > W3: synthetic footer artwork through the SDK rendering harness > does not narrow synthetic input when inbox search, project and shelves change
+TestingLibraryElementError: Unable to find role="region" and name "Settled"
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div />[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"flex min-h-0 flex-1 flex-col"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex shrink-0 items-center gap-1 px-2 pb-1"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-autocomplete[39m=[32m"none"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"Project scope: All projects"[39m
+          [33mclass[39m=[32m"flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"[39m
+          [33mdata-state[39m=[32m"closed"[39m
+          [33mdir[39m=[32m"ltr"[39m
+          [33mrole[39m=[32m"combobox"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33mstyle[39m=[32m"pointer-events: none;"[39m
+          [36m>[39m
+            [0mAll projects[0m
+          [36m</span>[39m
+          [36m<svg[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"size-4 opacity-50"[39m
+            [33mcolor[39m=[32m"currentColor"[39m
+            [33mdata-icon[39m=[32m"ChevronDown"[39m
+            [33mfill[39m=[32m"none"[39m
+            [33mheight[39m=[32m"24"[39m
+            [33mviewBox[39m=[32m"0 0 24 24"[39m
+            [33mwidth[39m=[32m"24"[39m
+            [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+          [36m>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"[39m
+              [33mstroke[39m=[32m"currentColor"[39m
+              [33mstroke-linecap[39m=[32m"round"[39m
+              [33mstroke-linejoin[39m=[32m"round"[39m
+              [33mstroke-width[39m=[32m"1.5"[39m
+            [36m/>[39m
+          [36m</svg>[39m
+        [36m</button>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"min-h-0 flex-1 overflow-y-auto px-1.5 pb-2"[39m
+      [36m>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"px-2 py-6 text-center text-xs text-muted-foreground"[39m
+          [33mrole[39m=[32m"status"[39m
+        [36m>[39m
+          [0mNo threads found[0m
+        [36m</p>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div />[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"flex min-h-0 flex-1 flex-col"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex shrink-0 items-center gap-1 px-2 pb-1"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-autocomplete[39m=[32m"none"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"Project scope: All projects"[39m
+          [33mclass[39m=[32m"flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"[39m
+          [33mdata-state[39m=[32m"closed"[39m
+          [33mdir[39m=[32m"ltr"[39m
+          [33mrole[39m=[32m"combobox"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33mstyle[39m=[32m"pointer-events: none;"[39m
+          [36m>[39m
+            [0mAll projects[0m
+          [36m</span>[39m
+          [36m<svg[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"size-4 opacity-50"[39m
+            [33mcolor[39m=[32m"currentColor"[39m
+            [33mdata-icon[39m=[32m"ChevronDown"[39m
+            [33mfill[39m=[32m"none"[39m
+            [33mheight[39m=[32m"24"[39m
+            [33mviewBox[39m=[32m"0 0 24 24"[39m
+            [33mwidth[39m=[32m"24"[39m
+            [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+          [36m>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"[39m
+              [33mstroke[39m=[32m"currentColor"[39m
+              [33mstroke-linecap[39m=[32m"round"[39m
+              [33mstroke-linejoin[39m=[32m"round"[39m
+              [33mstroke-width[39m=[32m"1.5"[39m
+            [36m/>[39m
+          [36m</svg>[39m
+        [36m</button>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"min-h-0 flex-1 overflow-y-auto px-1.5 pb-2"[39m
+      [36m>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"px-2 py-6 text-center text-xs text-muted-foreground"[39m
+          [33mrole[39m=[32m"status"[39m
+        [36m>[39m
+          [0mNo threads found[0m
+        [36m</p>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/FooterCounter.test.tsx:75:18
+     73|       ] }) },
+     74|     });
+     75|     await screen.findByRole("region", { name: "Settled" });
+       |                  ^
+     76|     expect(inbox.container.querySelectorAll('[role="listitem"]')).toHa…
+     77|     fireEvent.keyDown(screen.getByLabelText(/Project scope/), { key: "…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/8]⎯
+
+ FAIL  |bb-plugin-wizbar| src/FooterCounter.test.tsx > WF1: registered production app fails closed > registers namespaced candidate artwork without an empty footer button or disclosure
+AssertionError: expected [] to include 'wizbar-running-count'
+ ❯ src/FooterCounter.test.tsx:85:47
+     83| describe("WF1: registered production app fails closed", () => {
+     84|   it("registers namespaced candidate artwork without an empty footer b…
+     85|     expect(app.icons.map(({ name }) => name)).toContain("wizbar-runnin…
+       |                                               ^
+     86|     expect(app.sidebarFooterActions).toEqual([]);
+     87|     expect(app.experimentalSidebarFooterItems).toEqual([]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/8]⎯
+
+ FAIL  |bb-plugin-wizbar| src/FooterCounter.test.tsx > WF1: registered production app fails closed > renders nothing for an unverified ready host feed
+ FAIL  |bb-plugin-wizbar| src/FooterCounter.test.tsx > WF1: registered production app fails closed > renders nothing for an unverified loading host feed
+ FAIL  |bb-plugin-wizbar| src/FooterCounter.test.tsx > WF1: registered production app fails closed > renders nothing for an unverified error host feed
+AssertionError: expected undefined to be defined
+ ❯ src/FooterCounter.test.tsx:91:18
+     89|   it.each(["ready", "loading", "error"] as const)("renders nothing for…
+     90|     const icon = app.icons.find(({ name }) => name === "wizbar-running…
+     91|     expect(icon).toBeDefined();
+       |                  ^
+     92|     const rendered = renderSlot({ component: icon?.component ?? Footer…
+     93|       sidebarThreads: { status, threads: positiveThreads },
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/8]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  8 failed (8)
+   Start at  17:25:02
+   Duration  2.85s (transform 174ms, setup 0ms, import 668ms, tests 1.14s, environment 930ms)
+
