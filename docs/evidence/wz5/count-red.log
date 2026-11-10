@@ -1,0 +1,173 @@
+
+> bb-plugin-wizbar@0.1.0 test
+> vitest run --config vitest.config.ts --maxWorkers=2 src/running-count.test.ts
+
+
+ RUN  v4.1.10 <plugin>
+
+ ❯ |bb-plugin-wizbar| src/running-count.test.ts (18 tests | 12 failed) 17ms
+     × counts projects, a hidden child and in-thread agents independently 6ms
+     × counts one thread for workflows without guessing its subagents 1ms
+     × counts one thread for background agents without guessing its subagents 1ms
+     × counts one thread for background commands without guessing its subagents 1ms
+     × counts one thread for plan mode without guessing its subagents 1ms
+     × counts one thread for goals without guessing its subagents 1ms
+     × counts one thread for runtime without guessing its subagents 1ms
+     × counts one thread for working draft without guessing its subagents 4ms
+     × counts a thread once even when several working signals hold 1ms
+     × does not infer work from waiting, status or unread alone 0ms
+     × adds known in-thread agents even without a parent working signal 0ms
+     × distinguishes a verified empty snapshot from unavailable inputs 0ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 12 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/running-count.test.ts > W2: global running count on explicitly synthetic complete inputs > counts projects, a hidden child and in-thread agents independently
+AssertionError: expected null to deeply equal { threads: 2, subagents: 3, total: 5 }
+
+- Expected:
+{
+  "subagents": 3,
+  "threads": 2,
+  "total": 5,
+}
+
++ Received:
+null
+
+ ❯ src/running-count.test.ts:9:42
+      7| describe("W2: global running count on explicitly synthetic complete in…
+      8|   it("counts projects, a hidden child and in-thread agents independent…
+      9|     expect(countRunning(positiveSource)).toEqual({ threads: 2, subagen…
+       |                                          ^
+     10|   });
+     11|   it.each([
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/12]⎯
+
+ FAIL  |bb-plugin-wizbar| src/running-count.test.ts > W2: global running count on explicitly synthetic complete inputs > counts one thread for workflows without guessing its subagents
+ FAIL  |bb-plugin-wizbar| src/running-count.test.ts > W2: global running count on explicitly synthetic complete inputs > counts one thread for background agents without guessing its subagents
+ FAIL  |bb-plugin-wizbar| src/running-count.test.ts > W2: global running count on explicitly synthetic complete inputs > counts one thread for background commands without guessing its subagents
+ FAIL  |bb-plugin-wizbar| src/running-count.test.ts > W2: global running count on explicitly synthetic complete inputs > counts one thread for plan mode without guessing its subagents
+ FAIL  |bb-plugin-wizbar| src/running-count.test.ts > W2: global running count on explicitly synthetic complete inputs > counts one thread for goals without guessing its subagents
+ FAIL  |bb-plugin-wizbar| src/running-count.test.ts > W2: global running count on explicitly synthetic complete inputs > counts one thread for runtime without guessing its subagents
+ FAIL  |bb-plugin-wizbar| src/running-count.test.ts > W2: global running count on explicitly synthetic complete inputs > counts one thread for working draft without guessing its subagents
+AssertionError: expected null to deeply equal { threads: 1, subagents: 2, total: 3 }
+
+- Expected:
+{
+  "subagents": 2,
+  "threads": 1,
+  "total": 3,
+}
+
++ Received:
+null
+
+ ❯ src/running-count.test.ts:20:143
+     18|     ["working draft", idle.activity, "working-draft"],
+     19|   ] as const)("counts one thread for %s without guessing its subagents…
+     20|     expect(countRunning({ complete: true, threads: [syntheticThread({ …
+       |                                                                                                                                               ^
+     21|   });
+     22|   it("counts a thread once even when several working signals hold", ()…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/12]⎯
+
+ FAIL  |bb-plugin-wizbar| src/running-count.test.ts > W2: global running count on explicitly synthetic complete inputs > counts a thread once even when several working signals hold
+AssertionError: expected null to deeply equal { threads: 1, subagents: 4, total: 5 }
+
+- Expected:
+{
+  "subagents": 4,
+  "threads": 1,
+  "total": 5,
+}
+
++ Received:
+null
+
+ ❯ src/running-count.test.ts:24:119
+     22|   it("counts a thread once even when several working signals hold", ()…
+     23|     const thread = syntheticThread({ indicator: "runtime", activity: {…
+     24|     expect(countRunning({ complete: true, threads: [thread, thread], s…
+       |                                                                                                                       ^
+     25|   });
+     26|   it("does not infer work from waiting, status or unread alone", () =>…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/12]⎯
+
+ FAIL  |bb-plugin-wizbar| src/running-count.test.ts > W2: global running count on explicitly synthetic complete inputs > does not infer work from waiting, status or unread alone
+AssertionError: expected null to deeply equal { threads: +0, subagents: +0, …(1) }
+
+- Expected:
+{
+  "subagents": 0,
+  "threads": 0,
+  "total": 0,
+}
+
++ Received:
+null
+
+ ❯ src/running-count.test.ts:28:111
+     26|   it("does not infer work from waiting, status or unread alone", () =>…
+     27|     const thread = syntheticThread({ status: "active", hasPendingInter…
+     28|     expect(countRunning({ complete: true, threads: [thread], subagents…
+       |                                                                                                               ^
+     29|   });
+     30|   it("adds known in-thread agents even without a parent working signal…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/12]⎯
+
+ FAIL  |bb-plugin-wizbar| src/running-count.test.ts > W2: global running count on explicitly synthetic complete inputs > adds known in-thread agents even without a parent working signal
+AssertionError: expected null to deeply equal { threads: +0, subagents: 2, total: 2 }
+
+- Expected:
+{
+  "subagents": 2,
+  "threads": 0,
+  "total": 2,
+}
+
++ Received:
+null
+
+ ❯ src/running-count.test.ts:31:107
+     29|   });
+     30|   it("adds known in-thread agents even without a parent working signal…
+     31|     expect(countRunning({ complete: true, threads: [idle], subagentsBy…
+       |                                                                                                           ^
+     32|   });
+     33|   it("distinguishes a verified empty snapshot from unavailable inputs"…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/12]⎯
+
+ FAIL  |bb-plugin-wizbar| src/running-count.test.ts > W2: global running count on explicitly synthetic complete inputs > distinguishes a verified empty snapshot from unavailable inputs
+AssertionError: expected null to deeply equal { threads: +0, subagents: +0, …(1) }
+
+- Expected:
+{
+  "subagents": 0,
+  "threads": 0,
+  "total": 0,
+}
+
++ Received:
+null
+
+ ❯ src/running-count.test.ts:34:89
+     32|   });
+     33|   it("distinguishes a verified empty snapshot from unavailable inputs"…
+     34|     expect(countRunning({ complete: true, threads: [], subagentsByThre…
+       |                                                                                         ^
+     35|     expect(countRunning(null)).toBeNull();
+     36|     expect(countRunning({ ...positiveSource, complete: false })).toBeN…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/12]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  12 failed | 6 passed (18)
+   Start at  17:23:46
+   Duration  190ms (transform 27ms, setup 0ms, import 39ms, tests 17ms, environment 0ms)
+
