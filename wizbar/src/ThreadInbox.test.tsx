@@ -620,6 +620,24 @@ describe("pull request badge", () => {
   });
 });
 
+// R4: mute's stricter runtime authority must not change ordinary parking.
+// The existing shelf fixtures used idle runtime and missed the valid pending state.
+describe("mute compatibility with ordinary pending runtime", () => {
+  it.each(["settled", "snoozed"])("preserves the ordinary %s shelf", async (shelf) => {
+    const now = Date.now();
+    const row = { threadId: "sample-pending", settledAt: shelf === "settled" ? now : null,
+      snoozedUntil: shelf === "snoozed" ? now + 3_600_000 : null,
+      snoozedAt: shelf === "snoozed" ? now : null };
+    renderSlot(inbox, listProps, {
+      sidebarThreads: { status: "ready", threads: [thread({ id: "sample-pending", title: "Pending setup",
+        status: "pending", runtimeStatus: "pending", indicator: "none", isUnread: false })], projects: [] },
+      rpc: { listLifecycle: () => ({ rows: [row] }) },
+    });
+    await screen.findByRole("region", { name: shelf === "settled" ? "Settled" : "Snoozed" });
+    expect(screen.queryByText("Pending setup")).toBeNull();
+  });
+});
+
 // N2: existing shelf tests store ordinary parks, not persistent running mute.
 describe("explicit muted shelf", () => {
   const mutedRow = { threadId: "sample-mute", settledAt: null, snoozedUntil: null,
@@ -660,6 +678,7 @@ describe("explicit muted shelf", () => {
     { indicator: "none", status: "idle", runtimeStatus: "idle", isUnread: true },
     { isPinned: true },
     { runtimeStatus: "waiting-for-host" },
+    { status: "pending", runtimeStatus: "pending", indicator: "none" },
     { runtimeStatus: "future-status" as never },
     { queuedWork: "future-status" as never },
   ] as Partial<PluginSidebarThread>[])("keeps attention/pinned/unavailable work in Inbox: %j", async (changes) => {
