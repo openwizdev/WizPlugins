@@ -258,3 +258,94 @@ describe("argument and authority edge cases", () => {
     expect(host.rows()).toEqual(before); expect(host.publications).toEqual([]);
   });
 });
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((done) => { resolve = done; });
+  return { promise, resolve };
+}
+
+// R1: sequential cleanup did not cover a previously started park whose
+// authoritative read completes after deletion or a successful manual wake.
+describe.each([
+  ["CLI", "settle"], ["CLI", "snooze"],
+  ["RPC", "settle"], ["RPC", "snooze"],
+])("%s %s pending parking", (transport, operation) => {
+  it.each([
+    ["get", "deleted"], ["list", "deleted"],
+    ["get", "unsettle"], ["list", "unsettle"],
+    ["get", "unsnooze"], ["list", "unsnooze"],
+  ])("refuses a stale %s response after %s", async (read, barrier) => {
+    const host = setup(); host.seed();
+    const entered = deferred<void>();
+    const getReply = deferred<unknown>();
+    const listReply = deferred<unknown[]>();
+    if (read === "get") {
+      host.get.mockImplementationOnce(() => { entered.resolve(); return getReply.promise; });
+    } else {
+      host.list.mockImplementationOnce(() => { entered.resolve(); return listReply.promise; });
+    }
+    // Attach the RPC rejection handler before releasing either read.
+    const pending = transport === "CLI"
+      ? host.run([operation!, "example-a", ...(operation === "snooze" ? ["--until", "hour"] : []), "--json"])
+          .then((cli) => ({ cli, error: undefined }))
+      : host.harness.behavior.callRpc(operation!, { threadId: "example-a", snoozedUntil: NOW + 3_600_000 })
+          .then(() => ({ cli: undefined, error: undefined }), (error) => ({ cli: undefined, error }));
+    await entered.promise;
+    if (barrier === "deleted") await host.deleted();
+    else await host.harness.behavior.callRpc(barrier!, { threadId: "example-a" });
+    expect(await host.harness.behavior.callRpc("listLifecycle", {})).toEqual({ rows: [] });
+    const afterClear = [...host.publications];
+    if (read === "get") getReply.resolve(thread());
+    else listReply.resolve([thread()]);
+    const outcome = await pending;
+    if (transport === "CLI") {
+      expect(outcome.cli!.exitCode).toBe(1);
+      expect(JSON.parse(outcome.cli!.stdout).results[0]).toMatchObject({
+        threadId: "example-a", ok: false, error: { code: "stale_operation" },
+      });
+    } else {
+      expect(outcome.error).toMatchObject({ code: "handler_error", message: expect.stringMatching(/lifecycle changed/i) });
+    }
+    expect(host.rows()).toEqual([]);
+    expect(host.publications).toEqual(afterClear);
+  });
+});
+
+describe("pending parking invalidation lifetime", () => {
+  it("retains deletion until all older validations have drained", async () => {
+    const host = setup();
+    const firstEntered = deferred<void>(), secondEntered = deferred<void>();
+    const firstReply = deferred<unknown[]>(), secondReply = deferred<unknown[]>();
+    host.list
+      .mockImplementationOnce(() => { firstEntered.resolve(); return firstReply.promise; })
+      .mockImplementationOnce(() => { secondEntered.resolve(); return secondReply.promise; });
+    const first = host.run(["settle", "example-a", "--json"]);
+    await firstEntered.promise;
+    const second = host.run(["snooze", "example-a", "--until", "hour", "--json"]);
+    await secondEntered.promise;
+    await host.deleted();
+    firstReply.resolve([thread()]);
+    expect((await first).exitCode).toBe(1);
+    // A new request while the second old read remains pending must still
+    // respect deletion, even if the fixture SDK keeps serving an old row.
+    const duringDrain = await host.run(["settle", "example-a", "--json"]);
+    expect(duringDrain.exitCode).toBe(1);
+    expect(JSON.parse(duringDrain.stdout).results[0].error.code).toBe("unknown_id");
+    secondReply.resolve([thread()]);
+    expect((await second).exitCode).toBe(1);
+    expect(host.rows()).toEqual([]);
+    expect(host.publications).toEqual([{ channel: "lifecycle", payload: { threadId: "example-a" } }]);
+  });
+  it("does not invalidate a different thread's pending park", async () => {
+    const host = setup([thread(), thread("example-b")]);
+    const entered = deferred<void>(), reply = deferred<unknown[]>();
+    host.list.mockImplementationOnce(() => { entered.resolve(); return reply.promise; });
+    const pending = host.run(["settle", "example-a", "--json"]);
+    await entered.promise;
+    await host.harness.behavior.callRpc("unsettle", { threadId: "example-b" });
+    reply.resolve([thread()]);
+    expect((await pending).exitCode).toBe(0);
+    expect(host.rows()).toEqual([{ thread_id: "example-a", settled_at: NOW, snoozed_until: null, snoozed_at: null }]);
+  });
+});
