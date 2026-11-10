@@ -38,7 +38,8 @@ export function createLifecycleCommand(execute: Execute): PluginCliRegistration 
     summary: "List or change WizBar thread shelves.",
     commands: operations.map((name) => ({ name, summary: `${name} one or many threads`, usage: `${name} <id>...${name === "snooze" ? " --until <time>" : ""} [--json]` })),
     async run(argv, ctx): Promise<PluginCliResult> {
-      const json = argv.includes("--json");
+      const endOfOptions = argv.indexOf("--");
+      const json = argv.slice(1, endOfOptions < 0 ? undefined : endOfOptions).includes("--json");
       const failUsage = (): PluginCliResult => ({
         exitCode: 2,
         ...(json ? { stdout: JSON.stringify({ error: { code: "usage", message: usage } }) + "\n" } : { stderr: usage + "\n" }),
