@@ -47,8 +47,8 @@ function setup(threads: unknown[] = [thread()]) {
   return { rpc, run: (argv: string[]) => cli!.run(argv, {}), db, rows, seed, publications, get, list, deleted: () => deleted!({ thread: { id: "example-a" } }) };
 }
 const databases: Database.Database[] = [];
-beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(NOW); });
-afterEach(() => { databases.splice(0).forEach((db) => db.close()); vi.useRealTimers(); });
+beforeEach(() => { vi.stubEnv("TZ", "UTC"); vi.useFakeTimers(); vi.setSystemTime(NOW); });
+afterEach(() => { databases.splice(0).forEach((db) => db.close()); vi.useRealTimers(); vi.unstubAllEnvs(); });
 
 describe.each(["settle", "snooze"])("%s server guard", (method) => {
   const input = { threadId: "example-a", snoozedUntil: NOW + 3_600_000 };
@@ -88,5 +88,124 @@ describe.each(["settle", "snooze"])("%s server guard", (method) => {
     const host = setup(); host.list.mockRejectedValue(new Error("synthetic read failure"));
     await expect(host.rpc[method]!(input)).rejects.toThrow(/unavailable/i);
     expect(host.rows()).toEqual([]); expect(host.publications).toEqual([]);
+  });
+});
+
+// W5/W6: baseline tests exercise UI shelves only; they cannot detect absent CLI
+// registration, batch-wide aborts, wrong exit status or a separate command store.
+describe("registered WizBar command", () => {
+  it("processes every ID in order, isolates failures and exits nonzero", async () => {
+    const host = setup([thread(), thread("example-b")]);
+    const result = await host.run(["settle", "example-a", "unknown", "", "example-b", "--json"]);
+    expect(result.exitCode).toBe(1);
+    expect(JSON.parse(result.stdout).results).toEqual([
+      { threadId: "example-a", ok: true, shelf: "settled", snoozedUntil: null },
+      { threadId: "unknown", ok: false, error: { code: "unknown_id", message: "Unknown thread ID." } },
+      { threadId: "", ok: false, error: { code: "invalid_id", message: "Thread ID must be nonempty." } },
+      { threadId: "example-b", ok: true, shelf: "settled", snoozedUntil: null },
+    ]);
+    expect(host.rows()).toEqual([
+      { thread_id: "example-a", settled_at: NOW, snoozed_until: null, snoozed_at: null },
+      { thread_id: "example-b", settled_at: NOW, snoozed_until: null, snoozed_at: null },
+    ]);
+  });
+  it("keeps successful results around working and waiting refusals", async () => {
+    const busy = thread("busy"); busy.activity.activeGoalCount = 1;
+    const waiting = thread("waiting"); waiting.hasPendingInteraction = true;
+    const host = setup([busy, thread(), waiting]);
+    const result = await host.run(["settle", "busy", "example-a", "waiting", "--json"]);
+    expect(result.exitCode).toBe(1);
+    expect(JSON.parse(result.stdout).results.map((r: any) => r.error?.code ?? r.shelf)).toEqual(["working", "settled", "waiting"]);
+    expect(host.rows()).toEqual([{ thread_id: "example-a", settled_at: NOW, snoozed_until: null, snoozed_at: null }]);
+  });
+  it("reports one text line per ID and escapes control characters", async () => {
+    const host = setup();
+    const result = await host.run(["settle", "example-a", "bad\nvalue"]);
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout.trim().split("\n")).toEqual([
+      '"example-a": settled',
+      '"bad\\nvalue": ERROR unknown_id: Unknown thread ID.',
+    ]);
+  });
+  it.each(["settle", "snooze", "unsettle", "unsnooze"])("repeating %s reaches the same end state", async (operation) => {
+    const host = setup();
+    const argv = operation === "snooze" ? [operation, "example-a", "--until", "2030-05-07T09:00:00Z", "--json"] : [operation, "example-a", "--json"];
+    await host.run(argv); vi.setSystemTime(NOW + 500);
+    const result = await host.run(argv);
+    expect(result.exitCode).toBe(0);
+    const shelf = operation === "settle" ? "settled" : operation === "snooze" ? "snoozed" : "active";
+    expect(JSON.parse(result.stdout).results[0].shelf).toBe(shelf);
+    expect(host.rows()).toHaveLength(shelf === "active" ? 0 : 1);
+  });
+  it("shares SQLite and lifecycle refresh across RPC, CLI, undo and deletion", async () => {
+    const host = setup();
+    await host.rpc.snooze!({ threadId: "example-a", snoozedUntil: NOW + 3_600_000 });
+    const listed = await host.run(["list", "example-a", "--json"]);
+    expect(JSON.parse(listed.stdout).results).toEqual([
+      { threadId: "example-a", ok: true, shelf: "snoozed", snoozedUntil: NOW + 3_600_000 },
+    ]);
+    await host.run(["settle", "example-a"]);
+    expect(await host.rpc.listLifecycle!({})).toEqual({ rows: [{ threadId: "example-a", settledAt: NOW, snoozedUntil: null, snoozedAt: null }] });
+    await host.rpc.unsettle!({ threadId: "example-a" });
+    expect(host.rows()).toEqual([]);
+    await host.run(["snooze", "example-a", "--until", "hour"]);
+    await host.run(["unsnooze", "example-a"]);
+    expect(host.rows()).toEqual([]);
+    await host.run(["settle", "example-a"]); host.deleted();
+    expect(host.rows()).toEqual([]);
+    expect(host.publications).toEqual(Array.from({ length: 7 }, () => ({ channel: "lifecycle", payload: { threadId: "example-a" } })));
+  });
+  it.each([
+    ["hour", "2030-05-06T11:00:00Z"],
+    ["evening", "2030-05-06T18:00:00Z"],
+    ["tomorrow", "2030-05-07T09:00:00Z"],
+    ["next-week", "2030-05-13T09:00:00Z"],
+    ["2030-05-07T11:00:00+02:00", "2030-05-07T09:00:00Z"],
+  ])("resolves --until %s to the sidebar time", async (until, expected) => {
+    const host = setup();
+    const result = await host.run(["snooze", "--until", until!, "example-a", "--json"]);
+    expect(result.exitCode).toBe(0);
+    expect(JSON.parse(result.stdout).results[0].snoozedUntil).toBe(Date.parse(expected!));
+    expect(host.rows()).toEqual([{ thread_id: "example-a", settled_at: null, snoozed_until: Date.parse(expected!), snoozed_at: NOW }]);
+  });
+  it.each(["2020-01-01T00:00:00Z", "2030-05-06T10:00:00Z", "2030-02-30T12:00:00Z", "2030-05-07", "soon"])("rejects invalid or past --until %s without writing", async (until) => {
+    const host = setup(); host.seed(); const before = host.rows();
+    const result = await host.run(["snooze", "example-a", "--until", until, "--json"]);
+    expect(result.exitCode).toBe(1);
+    expect(JSON.parse(result.stdout).results[0].error.code).toBe("invalid_until");
+    expect(host.rows()).toEqual(before); expect(host.publications).toEqual([]);
+  });
+  it("refuses the evening preset once the sidebar omits it", async () => {
+    vi.setSystemTime(Date.parse("2030-05-06T17:00:00Z"));
+    const host = setup(); const result = await host.run(["snooze", "example-a", "--until", "evening", "--json"]);
+    expect(result.exitCode).toBe(1); expect(host.rows()).toEqual([]);
+  });
+  it.each([[], ["settle"], ["no-such-operation", "example-a"], ["snooze", "example-a"], ["snooze", "--until"], ["settle", "example-a", "--until", "hour"], ["settle", "--other", "example-a"]])("rejects malformed command %j before any write", async (...argv) => {
+    const host = setup(); const result = await host.run(argv);
+    expect(result.exitCode).toBe(2); expect(host.rows()).toEqual([]); expect(host.publications).toEqual([]);
+  });
+});
+
+// W5 list must report resolved shelves, not merely echo parked rows.
+describe("list reflects upstream wake rules", () => {
+  it.each(["timer", "attention", "work", "waiting"])("wakes a snooze on %s", async (wake) => {
+    const live = thread(); const host = setup([live]);
+    await host.run(["snooze", "example-a", "--until", "hour"]);
+    if (wake === "timer") vi.setSystemTime(NOW + 3_600_000);
+    if (wake === "attention") live.latestAttentionAt = NOW + 1;
+    if (wake === "work") live.activity.activeBackgroundCommandCount = 1;
+    if (wake === "waiting") live.hasPendingInteraction = true;
+    const result = await host.run(["list", "example-a", "--json"]);
+    expect(JSON.parse(result.stdout).results).toEqual([{ threadId: "example-a", ok: true, shelf: "active", snoozedUntil: null }]);
+    expect(host.rows()).toHaveLength(1); // Resolution does not delete upstream rows.
+  });
+  it("does not wake on equal attention, then wakes settled work on newer attention", async () => {
+    const live = thread(); const host = setup([live]);
+    await host.run(["settle", "example-a"]); live.latestAttentionAt = NOW;
+    let result = await host.run(["list", "example-a", "--json"]);
+    expect(JSON.parse(result.stdout).results[0].shelf).toBe("settled");
+    live.latestAttentionAt = NOW + 1;
+    result = await host.run(["list", "example-a", "--json"]);
+    expect(JSON.parse(result.stdout).results[0].shelf).toBe("active");
   });
 });
