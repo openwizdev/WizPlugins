@@ -4,6 +4,7 @@ import type { PluginSidebarThread } from "@get-bb/plugin-sdk";
 import type { t3sidebarRpcContract } from "./server";
 import {
   canPark,
+  hasRuntimeWork,
   nextWakeDelayMs,
   resolveShelf,
   type ThreadLifecycleRow,
@@ -90,12 +91,12 @@ export function useLifecycle(
   }, [now, rows]);
 
   return useMemo<LifecycleApi>(() => {
-    const signalsFor = (thread: PluginSidebarThread) => {
+    const signalsFor = (thread: PluginSidebarThread, muted = false) => {
       const known = ["idle", "error", "active", "pending", "starting", "stopping"];
       const counts = [thread.activity?.workflows, thread.activity?.backgroundAgents,
         thread.activity?.backgroundCommands, thread.activity?.planMode, thread.activity?.goals];
       const authority = known.includes(thread.status) &&
-        [...known, "provisioning"].includes(thread.runtimeStatus) &&
+        ["idle", "error", "active", "starting", "stopping", "provisioning"].includes(thread.runtimeStatus) &&
         ["none", "waiting", "failed"].includes(thread.queuedWork) &&
         typeof thread.hasPendingInteraction === "boolean" &&
         typeof thread.isUnread === "boolean" && Number.isFinite(thread.latestAttentionAt) &&
@@ -103,7 +104,9 @@ export function useLifecycle(
         counts.every((n) => Number.isInteger(n) && n >= 0);
       return {
         hasPendingInteraction: thread.hasPendingInteraction || thread.indicator === "waiting-for-input",
-        isWorking: authority ? isWorking(thread) : true,
+        isWorking: !authority ? true : muted
+          ? hasRuntimeWork(thread.runtimeStatus, counts)
+          : isWorking(thread),
         isUnread: thread.isUnread,
         latestAttentionAt: thread.latestAttentionAt,
         isPinned: thread.isPinned,
@@ -121,8 +124,10 @@ export function useLifecycle(
       await rpc.call(method, { threadId });
     };
     return {
-      shelfFor: (thread) =>
-        resolveShelf(rows.get(thread.id), signalsFor(thread), now),
+      shelfFor: (thread) => {
+        const row = rows.get(thread.id);
+        return resolveShelf(row, signalsFor(thread, row?.mutedAt !== undefined), now);
+      },
       canPark: (thread) => canPark(signalsFor(thread)),
       wakeAtFor: (thread) => rows.get(thread.id)?.snoozedUntil ?? null,
       settle: (threadId) => void mutate("settle", threadId),

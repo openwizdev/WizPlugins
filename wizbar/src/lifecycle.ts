@@ -46,6 +46,13 @@ export function canPark(signals: ThreadActivitySignals): boolean {
   return !signals.hasPendingInteraction && !signals.isWorking;
 }
 
+/** Raw runtime/counter work, independent of attention-priority indicators.
+ * Callers validate the runtime and counters before using this for mute.
+ */
+export function hasRuntimeWork(runtimeStatus: string, counts: readonly number[]): boolean {
+  return runtimeStatus !== "idle" && runtimeStatus !== "error" || counts.some((count) => count > 0);
+}
+
 /** Explicit selection is the only exception to the working parking guard. */
 export function canMute(signals: ThreadActivitySignals): boolean {
   return signals.isWorking && !signals.hasPendingInteraction &&

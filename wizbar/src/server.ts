@@ -6,7 +6,7 @@
 // understands. Here, uninstalling the plugin removes its state with it.
 import { defineRpcContract, type BbPluginApi } from "@get-bb/plugin-sdk";
 import { z } from "zod";
-import { canMute, canPark, resolveShelf, type ThreadActivitySignals } from "./lifecycle";
+import { canMute, canPark, hasRuntimeWork, resolveShelf, type ThreadActivitySignals } from "./lifecycle";
 import { createLifecycleCommand, LifecycleError, type LifecycleOperation, type LifecycleSuccess } from "./command";
 
 const migrations = [
@@ -142,8 +142,7 @@ async function readSignals(bb: BbPluginApi, threadId: string, signal?: AbortSign
         if (row.runtime.displayStatus === "waiting-for-host" || row.runtime.displayStatus === "host-reconnecting") throw unavailable();
         return {
           hasPendingInteraction: row.hasPendingInteraction,
-          isWorking: row.runtime.displayStatus !== "idle" && row.runtime.displayStatus !== "error" ||
-            Object.values(row.activity).some((count) => count > 0),
+          isWorking: hasRuntimeWork(row.runtime.displayStatus, Object.values(row.activity)),
           isUnread: (row.lastReadAt ?? 0) < row.latestAttentionAt,
           latestAttentionAt: row.latestAttentionAt,
           isPinned: mute.success ? mute.data.pinnedAt !== null : undefined,
@@ -172,7 +171,8 @@ export default function plugin(bb: BbPluginApi) {
 
   // Keep each revision (including deletion) until all reads that captured it
   // have drained. Then discard it; later requests must obtain fresh host data.
-  const pendingParks = new Map<string, { revision: number; pending: number; deleted: boolean }>();
+  type Revision = { revision: number; pending: number; deleted: boolean };
+  const pendingParks = new Map<string, Revision>();
   const invalidateParks = (threadId: string, deleted = false): void => {
     const state = pendingParks.get(threadId);
     if (state) {
@@ -233,6 +233,57 @@ export default function plugin(bb: BbPluginApi) {
     if (result.changes) publish(threadId);
   };
 
+  // An authoritative observation can retire only the selection captured before
+  // its read. The revision also catches undo/re-mute with identical timestamps.
+  const retireMute = (
+    row: StoredLifecycleRow | undefined, signals: ThreadActivitySignals,
+    state: Revision, revision: number,
+  ): void => {
+    if (row?.mutedAt === undefined || state.deleted || state.revision !== revision ||
+        resolveShelf(row, signals, Date.now()) !== "active") return;
+    const result = db.prepare(`DELETE FROM thread_mute
+      WHERE thread_id = ? AND muted_at = ? AND attention_at = ?`
+    ).run(row.threadId, row.mutedAt, row.muteAttentionAt!);
+    if (result.changes) {
+      invalidateParks(row.threadId);
+      publish(row.threadId);
+    }
+  };
+
+  const observeMute = async (threadId: string, signal?: AbortSignal): Promise<void> => {
+    const row = readMutes().find((row) => row.threadId === threadId);
+    if (!row || signal?.aborted) return;
+    const state = pendingParks.get(threadId) ?? { revision: 0, pending: 0, deleted: false };
+    const revision = state.revision;
+    state.pending++;
+    pendingParks.set(threadId, state);
+    try {
+      const signals = await readSignals(bb, threadId, signal, true);
+      if (!signal?.aborted) retireMute(row, signals, state, revision);
+    } catch (error) {
+      // Unknown authority retains the selection, without a false publication.
+      if (!(error instanceof LifecycleError)) throw error;
+    } finally {
+      if (--state.pending === 0) pendingParks.delete(threadId);
+    }
+  };
+
+  // Reconcile missed events once per plugin load. This finite task is tracked,
+  // cancelled and drained before disposal closes the plugin database.
+  const startupAbort = new AbortController();
+  const startupReconciliation = (async () => {
+    for (const row of readMutes()) {
+      if (startupAbort.signal.aborted) break;
+      await observeMute(row.threadId, startupAbort.signal);
+    }
+  })().catch(() => {
+    if (!startupAbort.signal.aborted) bb.log.warn("Could not reconcile stored mutes.");
+  });
+  bb.onDispose(async () => {
+    startupAbort.abort();
+    await startupReconciliation;
+  });
+
   const perform = async (
     operation: LifecycleOperation, rawId: string, snoozedUntil?: number, signal?: AbortSignal,
   ): Promise<LifecycleSuccess> => {
@@ -246,23 +297,27 @@ export default function plugin(bb: BbPluginApi) {
       return { threadId, ok: true, shelf: "active", snoozedUntil: null };
     }
 
-    // Capture before the first awaited host read, for both CLI and RPC parks.
-    const state = operation === "list" ? undefined : pendingParks.get(threadId) ?? {
+    // CLI observations can retire a mute too: capture their selection and
+    // revision before the first asynchronous host read, just as mutations do.
+    const stored = readAll().find((row) => row.threadId === threadId);
+    const state = pendingParks.get(threadId) ?? {
       revision: 0, pending: 0, deleted: false,
     };
-    if (state?.deleted) throw new LifecycleError("unknown_id", "Unknown thread ID.");
-    const revision = state?.revision;
-    if (state) {
-      state.pending++;
-      pendingParks.set(threadId, state);
-    }
+    if (state.deleted) throw new LifecycleError("unknown_id", "Unknown thread ID.");
+    const revision = state.revision;
+    state.pending++;
+    pendingParks.set(threadId, state);
     try {
-      const stored = readAll().find((row) => row.threadId === threadId);
       const signals = await readSignals(bb, threadId, signal,
         operation === "mute" || stored?.mutedAt !== undefined);
       if (signal?.aborted) throw unavailable();
       const now = Date.now();
-      if (operation !== "list") {
+      if (state.deleted || state.revision !== revision) {
+        throw new LifecycleError("stale_operation", "Thread lifecycle changed during validation.");
+      }
+      if (operation === "list") {
+        retireMute(stored, signals, state, revision);
+      } else {
         if (operation === "mute" && !canMute(signals)) {
           if (signals.isPinned) throw new LifecycleError("pinned", "Thread is pinned.");
           if (signals.hasPendingInteraction) throw new LifecycleError("waiting", "Thread is waiting for input.");
@@ -273,9 +328,6 @@ export default function plugin(bb: BbPluginApi) {
           signals.hasPendingInteraction ? "Thread is waiting for input." : "Thread is working.");
         if (operation === "snooze" && (!Number.isSafeInteger(snoozedUntil) || !Number.isFinite(new Date(snoozedUntil!).getTime()) || snoozedUntil! <= now)) {
           throw new LifecycleError("invalid_until", "Snooze time must be a valid future date.");
-        }
-        if (state!.deleted || state!.revision !== revision) {
-          throw new LifecycleError("stale_operation", "Thread lifecycle changed during parking validation.");
         }
         // No asynchronous boundary between revision/eligibility checks and
         // the plugin-only write/publication.
@@ -288,12 +340,15 @@ export default function plugin(bb: BbPluginApi) {
       const shelf = resolveShelf(row, signals, now);
       return { threadId, ok: true, shelf, snoozedUntil: shelf === "snoozed" ? row!.snoozedUntil : null };
     } finally {
-      if (state && --state.pending === 0) pendingParks.delete(threadId);
+      if (--state.pending === 0) pendingParks.delete(threadId);
     }
   };
 
   bb.rpc.register(t3sidebarRpcContract, {
-    async listLifecycle() { return { rows: readAll() }; },
+    async listLifecycle() {
+      await startupReconciliation;
+      return { rows: readAll() };
+    },
     async settle({ threadId }) { await perform("settle", threadId); return { ok: true }; },
     async unsettle({ threadId }) { await perform("unsettle", threadId); return { ok: true }; },
     async snooze({ threadId, snoozedUntil }) { await perform("snooze", threadId, snoozedUntil); return { ok: true }; },
@@ -305,33 +360,17 @@ export default function plugin(bb: BbPluginApi) {
 
   bb.events.on("interaction.pending", ({ thread }) => breakMute(thread.id));
   bb.events.on("thread.failed", ({ thread }) => breakMute(thread.id));
-  // Read all authoritative inputs on an activity observation. Never interpret
-  // an arbitrary attention timestamp as a completed turn while work continues.
-  const observeMute = async (threadId: string): Promise<void> => {
-    const row = readMutes().find((row) => row.threadId === threadId);
-    if (!row) return;
-    const state = pendingParks.get(threadId) ?? { revision: 0, pending: 0, deleted: false };
-    const revision = state.revision;
-    state.pending++;
-    pendingParks.set(threadId, state);
-    try {
-      const signals = await readSignals(bb, threadId, undefined, true);
-      if (!state.deleted && state.revision === revision &&
-          resolveShelf(row, signals, Date.now()) === "active") breakMute(threadId);
-    } catch (error) {
-      // Unknown reads cannot authorize a mutation. The sidebar separately
-      // shows disconnected/unknown inputs; a later event can retry observation.
-      if (!(error instanceof LifecycleError)) throw error;
-    } finally {
-      if (--state.pending === 0) pendingParks.delete(threadId);
-    }
-  };
   bb.events.on("thread.idle", ({ thread }) => {
     // A completion can arrive before the validating mute has written a row.
     invalidateParks(thread.id);
     return observeMute(thread.id);
   });
-  bb.events.on("experimental_thread.events", ({ thread }) => observeMute(thread.id));
+  bb.events.on("experimental_thread.events", ({ thread }) => {
+    // Background-only completion need not cause a thread.idle transition.
+    // Invalidate pending validations even before there is a stored mute row.
+    invalidateParks(thread.id);
+    return observeMute(thread.id);
+  });
 
   // A deleted thread must not leave a row behind that would park a future
   // thread reusing the id, and stale rows accumulate otherwise.
