@@ -8,7 +8,7 @@ sidebar accessory, overlay, or another location.
 
 Discovery date: 2026-11-10. Scope:
 [WZ1 (#2)](https://github.com/openwizdev/wizplugins/issues/2), within the
-[approved plan (#10)](https://github.com/openwizdev/wizplugins/issues/10).
+[approved plan (#1)](https://github.com/openwizdev/wizplugins/issues/1).
 
 ## Inspected distribution
 
@@ -22,8 +22,11 @@ Evidence came from the shipped `frontend-core-slots.md` and
 `frontend-registration.md` references, bundled frontend registration and
 footer-renderer code, and the two artifact metadata records. These are
 distribution-relative artifact names, not locations on a discovery machine.
-The raw artifacts and their SHA-256 hashes are retained privately; shipped
-documentation is summarized here rather than copied into this repository.
+The earlier discovery report describes a private handoff of the raw artifacts
+and their SHA-256 hashes; archival has not been verified. Shipped documentation
+is summarized here rather than copied into this repository. The
+[discovery summary on WZ1](https://github.com/openwizdev/wizplugins/issues/2#issuecomment-6761065879)
+records the SDK findings and the unclear outcome.
 
 ## SDK and renderer evidence
 
@@ -44,7 +47,7 @@ limit.
 
 ## Live observation and limits
 
-A read-only live status observation established access to a real application.
+Earlier discovery recorded a read-only status response from a real application.
 No footer rendering was observed. Identifying provenance and inspection
 limitations remain in private evidence. No permission, setting or application
 state was changed to obtain additional evidence. Consequently:
@@ -61,23 +64,35 @@ actions, workload, release, publication, or additional paid discovery service
 was started. Inspection used read-only commands against existing artifacts and
 application status.
 
+This report hand-back performed no additional live access. The separate
+read-only footer look remains pending on
+[WZ1 (#2)](https://github.com/openwizdev/wizplugins/issues/2); no new rendering
+result was posted there at hand-back. Any later result must be recorded with
+its evidence class before the outcome or WZ5 gate changes.
+
 ## W11 evidence handoff
 
-Private evidence reference: **WZ1-W11-2026-11-10**. The evidence record contains
-the inspected artifact contents and hashes, version metadata, executable
-provenance, and the raw read-only status response. It is retained outside
-public Git. No identifying evidence or screenshot is included here.
+Private evidence reference: **WZ1-W11-2026-11-10**. The earlier report identifies
+the handoff as containing artifact contents and hashes, version metadata,
+provenance, and the raw read-only status response. Its contents and retention
+have not been independently verified during this hand-back. No identifying
+evidence or screenshot is included here.
 
 **Private-record archival is pending.** The orchestrator must archive and verify
 the evidence under the existing private-record rules. The opaque reference is
 an evidence handoff key, not a claim that archival is complete. W11's
 private-record requirement remains open until that handoff is verified; the
-handoff question stays on [WZ1 (#2)](https://github.com/openwizdev/wizplugins/issues/2).
+handoff remains tracked on [WZ1 (#2)](https://github.com/openwizdev/wizplugins/issues/2).
+
+The outstanding read-only observation is recorded in the
+[private coordination record](https://github.com/jparker2006/ClosedWiz/issues/325#issuecomment-6761652883).
+That pointer records the remaining work; it is not the archived W11 evidence
+or proof of live footer rendering.
 
 | Claim | Evidence class | Result |
 | --- | --- | --- |
 | Inspected SDK generation and footer contracts identified | Shipped artifact inspection | SDK 0.6.51 metadata and the contracts above recorded |
-| A real application was reached without product mutation | Read-only live status; inspection procedure | Status received; no product writes issued |
+| Earlier discovery reached a real application without product mutation | Reported read-only status and inspection procedure | Recorded in the earlier report; raw evidence readback pending |
 | A live number is supported in the footer row | Live observation | Unverified; outcome unclear |
 | Raw identifying evidence has a verified private-repository record | Private archival/readback | Pending owner handoff |
 | WZ5 may proceed | Plan gate review | No; positive live footer-number evidence is absent |
