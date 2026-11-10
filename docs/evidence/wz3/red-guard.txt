@@ -1,0 +1,198 @@
+
+> bb-plugin-wizbar@0.1.0 test
+> vitest run --config vitest.config.ts --maxWorkers=2 src/server.test.ts
+
+
+ RUN  v4.1.10 <checkout>/wizbar
+
+ ❯ |bb-plugin-wizbar| src/server.test.ts (38 tests | 38 failed) 41ms
+     × refuses activeWorkflowCount without changing an existing row 10ms
+     × refuses activeBackgroundAgentCount without changing an existing row 1ms
+     × refuses activeBackgroundCommandCount without changing an existing row 1ms
+     × refuses activePlanModeCount without changing an existing row 1ms
+     × refuses activeGoalCount without changing an existing row 1ms
+     × refuses runtime active 1ms
+     × refuses runtime starting 1ms
+     × refuses runtime stopping 1ms
+     × refuses runtime provisioning 1ms
+     × refuses runtime host-reconnecting 1ms
+     × refuses a pending interaction 1ms
+     × refuses incomplete or invalid authority: {} 1ms
+     × refuses incomplete or invalid authority: {} 1ms
+     × refuses incomplete or invalid authority: {"hasPendingInteraction":"false"} 1ms
+     × refuses incomplete or invalid authority: {"runtime":{"displayStatus":"future-status"}} 1ms
+     × refuses incomplete or invalid authority: {"runtime":{"displayStatus":"waiting-for-host"}} 1ms
+     × refuses incomplete or invalid authority: {"activity":{"activeWorkflowCount":0,"activeBackgroundAgentCount":0,"activeBackgroundCommandCount":0,"activePlanModeCount":0,"activeGoalCount":-1}} 2ms
+     × refuses incomplete or invalid authority: {"activity":{"activeWorkflowCount":null,"activeBackgroundAgentCount":0,"activeBackgroundCommandCount":0,"activePlanModeCount":0,"activeGoalCount":0}} 1ms
+     × refuses failed authoritative reads 1ms
+     × refuses activeWorkflowCount without changing an existing row 1ms
+     × refuses activeBackgroundAgentCount without changing an existing row 1ms
+     × refuses activeBackgroundCommandCount without changing an existing row 1ms
+     × refuses activePlanModeCount without changing an existing row 1ms
+     × refuses activeGoalCount without changing an existing row 1ms
+     × refuses runtime active 1ms
+     × refuses runtime starting 1ms
+     × refuses runtime stopping 1ms
+     × refuses runtime provisioning 1ms
+     × refuses runtime host-reconnecting 1ms
+     × refuses a pending interaction 1ms
+     × refuses incomplete or invalid authority: {} 1ms
+     × refuses incomplete or invalid authority: {} 1ms
+     × refuses incomplete or invalid authority: {"hasPendingInteraction":"false"} 1ms
+     × refuses incomplete or invalid authority: {"runtime":{"displayStatus":"future-status"}} 1ms
+     × refuses incomplete or invalid authority: {"runtime":{"displayStatus":"waiting-for-host"}} 1ms
+     × refuses incomplete or invalid authority: {"activity":{"activeWorkflowCount":0,"activeBackgroundAgentCount":0,"activeBackgroundCommandCount":0,"activePlanModeCount":0,"activeGoalCount":-1}} 1ms
+     × refuses incomplete or invalid authority: {"activity":{"activeWorkflowCount":null,"activeBackgroundAgentCount":0,"activeBackgroundCommandCount":0,"activePlanModeCount":0,"activeGoalCount":0}} 1ms
+     × refuses failed authoritative reads 1ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 38 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > settle server guard > refuses activeWorkflowCount without changing an existing row
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > settle server guard > refuses activeBackgroundAgentCount without changing an existing row
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > settle server guard > refuses activeBackgroundCommandCount without changing an existing row
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > settle server guard > refuses activePlanModeCount without changing an existing row
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > settle server guard > refuses activeGoalCount without changing an existing row
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > snooze server guard > refuses activeWorkflowCount without changing an existing row
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > snooze server guard > refuses activeBackgroundAgentCount without changing an existing row
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > snooze server guard > refuses activeBackgroundCommandCount without changing an existing row
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > snooze server guard > refuses activePlanModeCount without changing an existing row
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > snooze server guard > refuses activeGoalCount without changing an existing row
+AssertionError: promise resolved "{ ok: true }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "ok": true,
+  }
+
+ ❯ src/server.test.ts:61:43
+     59|     const live = thread(); live.activity[signal] = 1;
+     60|     const host = setup([live]); host.seed(); const before = host.rows(…
+     61|     await expect(host.rpc[method]!(input)).rejects.toThrow(/working/i);
+       |                                           ^
+     62|     expect(host.rows()).toEqual(before); expect(host.publications).toE…
+     63|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/38]⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > settle server guard > refuses runtime active
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > settle server guard > refuses runtime starting
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > settle server guard > refuses runtime stopping
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > settle server guard > refuses runtime provisioning
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > settle server guard > refuses runtime host-reconnecting
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > snooze server guard > refuses runtime active
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > snooze server guard > refuses runtime starting
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > snooze server guard > refuses runtime stopping
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > snooze server guard > refuses runtime provisioning
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > snooze server guard > refuses runtime host-reconnecting
+AssertionError: promise resolved "{ ok: true }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "ok": true,
+  }
+
+ ❯ src/server.test.ts:67:43
+     65|     const live = thread(); live.runtime.displayStatus = status;
+     66|     const host = setup([live]);
+     67|     await expect(host.rpc[method]!(input)).rejects.toThrow(/working|un…
+       |                                           ^
+     68|     expect(host.rows()).toEqual([]); expect(host.publications).toEqual…
+     69|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/38]⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > settle server guard > refuses a pending interaction
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > snooze server guard > refuses a pending interaction
+AssertionError: promise resolved "{ ok: true }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "ok": true,
+  }
+
+ ❯ src/server.test.ts:73:43
+     71|     const live = thread(); live.hasPendingInteraction = true;
+     72|     const host = setup([live]); host.seed(); const before = host.rows(…
+     73|     await expect(host.rpc[method]!(input)).rejects.toThrow(/waiting/i);
+       |                                           ^
+     74|     expect(host.rows()).toEqual(before); expect(host.publications).toE…
+     75|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/38]⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > settle server guard > refuses incomplete or invalid authority: {}
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > settle server guard > refuses incomplete or invalid authority: {}
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > settle server guard > refuses incomplete or invalid authority: {"hasPendingInteraction":"false"}
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > settle server guard > refuses incomplete or invalid authority: {"runtime":{"displayStatus":"future-status"}}
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > settle server guard > refuses incomplete or invalid authority: {"runtime":{"displayStatus":"waiting-for-host"}}
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > settle server guard > refuses incomplete or invalid authority: {"activity":{"activeWorkflowCount":0,"activeBackgroundAgentCount":0,"activeBackgroundCommandCount":0,"activePlanModeCount":0,"activeGoalCount":-1}}
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > settle server guard > refuses incomplete or invalid authority: {"activity":{"activeWorkflowCount":null,"activeBackgroundAgentCount":0,"activeBackgroundCommandCount":0,"activePlanModeCount":0,"activeGoalCount":0}}
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > snooze server guard > refuses incomplete or invalid authority: {}
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > snooze server guard > refuses incomplete or invalid authority: {}
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > snooze server guard > refuses incomplete or invalid authority: {"hasPendingInteraction":"false"}
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > snooze server guard > refuses incomplete or invalid authority: {"runtime":{"displayStatus":"future-status"}}
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > snooze server guard > refuses incomplete or invalid authority: {"runtime":{"displayStatus":"waiting-for-host"}}
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > snooze server guard > refuses incomplete or invalid authority: {"activity":{"activeWorkflowCount":0,"activeBackgroundAgentCount":0,"activeBackgroundCommandCount":0,"activePlanModeCount":0,"activeGoalCount":-1}}
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > snooze server guard > refuses incomplete or invalid authority: {"activity":{"activeWorkflowCount":null,"activeBackgroundAgentCount":0,"activeBackgroundCommandCount":0,"activePlanModeCount":0,"activeGoalCount":0}}
+AssertionError: promise resolved "{ ok: true }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "ok": true,
+  }
+
+ ❯ src/server.test.ts:84:43
+     82|   ])("refuses incomplete or invalid authority: %j", async (override) =…
+     83|     const host = setup([{ ...thread(), ...override }]); host.seed(); c…
+     84|     await expect(host.rpc[method]!(input)).rejects.toThrow(/unavailabl…
+       |                                           ^
+     85|     expect(host.rows()).toEqual(before); expect(host.publications).toE…
+     86|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/38]⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > settle server guard > refuses failed authoritative reads
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > snooze server guard > refuses failed authoritative reads
+AssertionError: promise resolved "{ ok: true }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "ok": true,
+  }
+
+ ❯ src/server.test.ts:89:43
+     87|   it("refuses failed authoritative reads", async () => {
+     88|     const host = setup(); host.list.mockRejectedValue(new Error("synth…
+     89|     await expect(host.rpc[method]!(input)).rejects.toThrow(/unavailabl…
+       |                                           ^
+     90|     expect(host.rows()).toEqual([]); expect(host.publications).toEqual…
+     91|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/38]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  38 failed (38)
+   Start at  08:23:15
+   Duration  291ms (transform 26ms, setup 0ms, import 74ms, tests 41ms, environment 0ms)
+

@@ -1,0 +1,211 @@
+
+> bb-plugin-wizbar@0.1.0 test
+> vitest run --config vitest.config.ts --maxWorkers=2 src/server.test.ts
+
+
+ RUN  v4.1.10 <checkout>/wizbar
+
+ ❯ |bb-plugin-wizbar| src/server.test.ts (69 tests | 31 failed) 56ms
+     × processes every ID in order, isolates failures and exits nonzero 3ms
+     × keeps successful results around working and waiting refusals 1ms
+     × reports one text line per ID and escapes control characters 1ms
+     × repeating settle reaches the same end state 1ms
+     × repeating snooze reaches the same end state 1ms
+     × repeating unsettle reaches the same end state 1ms
+     × repeating unsnooze reaches the same end state 0ms
+     × shares SQLite and lifecycle refresh across RPC, CLI, undo and deletion 1ms
+     × resolves --until hour to the sidebar time 1ms
+     × resolves --until evening to the sidebar time 0ms
+     × resolves --until tomorrow to the sidebar time 0ms
+     × resolves --until next-week to the sidebar time 1ms
+     × resolves --until 2030-05-07T11:00:00+02:00 to the sidebar time 0ms
+     × rejects invalid or past --until 2020-01-01T00:00:00Z without writing 1ms
+     × rejects invalid or past --until 2030-05-06T10:00:00Z without writing 1ms
+     × rejects invalid or past --until 2030-02-30T12:00:00Z without writing 2ms
+     × rejects invalid or past --until 2030-05-07 without writing 1ms
+     × rejects invalid or past --until soon without writing 0ms
+     × refuses the evening preset once the sidebar omits it 0ms
+     × rejects malformed command undefined before any write 0ms
+     × rejects malformed command "settle" before any write 0ms
+     × rejects malformed command "no-such-operation" before any write 0ms
+     × rejects malformed command "snooze" before any write 0ms
+     × rejects malformed command "snooze" before any write 0ms
+     × rejects malformed command "settle" before any write 0ms
+     × rejects malformed command "settle" before any write 0ms
+     × wakes a snooze on timer 1ms
+     × wakes a snooze on attention 0ms
+     × wakes a snooze on work 0ms
+     × wakes a snooze on waiting 0ms
+     × does not wake on equal attention, then wakes settled work on newer attention 0ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 31 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > processes every ID in order, isolates failures and exits nonzero
+TypeError: Cannot read properties of undefined (reading 'run')
+ ❯ Object.run src/server.test.ts:47:47
+     45|   const rows = () => db.prepare("SELECT * FROM thread_lifecycle ORDER …
+     46|   const seed = () => db.prepare("INSERT INTO thread_lifecycle VALUES (…
+     47|   return { rpc, run: (argv: string[]) => cli!.run(argv, {}), db, rows,…
+       |                                               ^
+     48| }
+     49| const databases: Database.Database[] = [];
+ ❯ src/server.test.ts:99:31
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/31]⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > keeps successful results around working and waiting refusals
+TypeError: Cannot read properties of undefined (reading 'run')
+ ❯ Object.run src/server.test.ts:47:47
+     45|   const rows = () => db.prepare("SELECT * FROM thread_lifecycle ORDER …
+     46|   const seed = () => db.prepare("INSERT INTO thread_lifecycle VALUES (…
+     47|   return { rpc, run: (argv: string[]) => cli!.run(argv, {}), db, rows,…
+       |                                               ^
+     48| }
+     49| const databases: Database.Database[] = [];
+ ❯ src/server.test.ts:116:31
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/31]⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > reports one text line per ID and escapes control characters
+TypeError: Cannot read properties of undefined (reading 'run')
+ ❯ Object.run src/server.test.ts:47:47
+     45|   const rows = () => db.prepare("SELECT * FROM thread_lifecycle ORDER …
+     46|   const seed = () => db.prepare("INSERT INTO thread_lifecycle VALUES (…
+     47|   return { rpc, run: (argv: string[]) => cli!.run(argv, {}), db, rows,…
+       |                                               ^
+     48| }
+     49| const databases: Database.Database[] = [];
+ ❯ src/server.test.ts:123:31
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/31]⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > repeating settle reaches the same end state
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > repeating snooze reaches the same end state
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > repeating unsettle reaches the same end state
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > repeating unsnooze reaches the same end state
+TypeError: Cannot read properties of undefined (reading 'run')
+ ❯ Object.run src/server.test.ts:47:47
+     45|   const rows = () => db.prepare("SELECT * FROM thread_lifecycle ORDER …
+     46|   const seed = () => db.prepare("INSERT INTO thread_lifecycle VALUES (…
+     47|   return { rpc, run: (argv: string[]) => cli!.run(argv, {}), db, rows,…
+       |                                               ^
+     48| }
+     49| const databases: Database.Database[] = [];
+ ❯ src/server.test.ts:133:16
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/31]⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > shares SQLite and lifecycle refresh across RPC, CLI, undo and deletion
+TypeError: Cannot read properties of undefined (reading 'run')
+ ❯ Object.run src/server.test.ts:47:47
+     45|   const rows = () => db.prepare("SELECT * FROM thread_lifecycle ORDER …
+     46|   const seed = () => db.prepare("INSERT INTO thread_lifecycle VALUES (…
+     47|   return { rpc, run: (argv: string[]) => cli!.run(argv, {}), db, rows,…
+       |                                               ^
+     48| }
+     49| const databases: Database.Database[] = [];
+ ❯ src/server.test.ts:143:31
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/31]⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > resolves --until hour to the sidebar time
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > resolves --until evening to the sidebar time
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > resolves --until tomorrow to the sidebar time
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > resolves --until next-week to the sidebar time
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > resolves --until 2030-05-07T11:00:00+02:00 to the sidebar time
+TypeError: Cannot read properties of undefined (reading 'run')
+ ❯ Object.run src/server.test.ts:47:47
+     45|   const rows = () => db.prepare("SELECT * FROM thread_lifecycle ORDER …
+     46|   const seed = () => db.prepare("INSERT INTO thread_lifecycle VALUES (…
+     47|   return { rpc, run: (argv: string[]) => cli!.run(argv, {}), db, rows,…
+       |                                               ^
+     48| }
+     49| const databases: Database.Database[] = [];
+ ❯ src/server.test.ts:166:31
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/31]⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > rejects invalid or past --until 2020-01-01T00:00:00Z without writing
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > rejects invalid or past --until 2030-05-06T10:00:00Z without writing
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > rejects invalid or past --until 2030-02-30T12:00:00Z without writing
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > rejects invalid or past --until 2030-05-07 without writing
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > rejects invalid or past --until soon without writing
+TypeError: Cannot read properties of undefined (reading 'run')
+ ❯ Object.run src/server.test.ts:47:47
+     45|   const rows = () => db.prepare("SELECT * FROM thread_lifecycle ORDER …
+     46|   const seed = () => db.prepare("INSERT INTO thread_lifecycle VALUES (…
+     47|   return { rpc, run: (argv: string[]) => cli!.run(argv, {}), db, rows,…
+       |                                               ^
+     48| }
+     49| const databases: Database.Database[] = [];
+ ❯ src/server.test.ts:173:31
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/31]⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > refuses the evening preset once the sidebar omits it
+TypeError: Cannot read properties of undefined (reading 'run')
+ ❯ Object.run src/server.test.ts:47:47
+     45|   const rows = () => db.prepare("SELECT * FROM thread_lifecycle ORDER …
+     46|   const seed = () => db.prepare("INSERT INTO thread_lifecycle VALUES (…
+     47|   return { rpc, run: (argv: string[]) => cli!.run(argv, {}), db, rows,…
+       |                                               ^
+     48| }
+     49| const databases: Database.Database[] = [];
+ ❯ src/server.test.ts:180:53
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/31]⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > rejects malformed command undefined before any write
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > rejects malformed command "settle" before any write
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > rejects malformed command "no-such-operation" before any write
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > rejects malformed command "snooze" before any write
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > rejects malformed command "snooze" before any write
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > rejects malformed command "settle" before any write
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > registered WizBar command > rejects malformed command "settle" before any write
+TypeError: Cannot read properties of undefined (reading 'run')
+ ❯ Object.run src/server.test.ts:47:47
+     45|   const rows = () => db.prepare("SELECT * FROM thread_lifecycle ORDER …
+     46|   const seed = () => db.prepare("INSERT INTO thread_lifecycle VALUES (…
+     47|   return { rpc, run: (argv: string[]) => cli!.run(argv, {}), db, rows,…
+       |                                               ^
+     48| }
+     49| const databases: Database.Database[] = [];
+ ❯ src/server.test.ts:184:53
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/31]⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > list reflects upstream wake rules > wakes a snooze on timer
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > list reflects upstream wake rules > wakes a snooze on attention
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > list reflects upstream wake rules > wakes a snooze on work
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > list reflects upstream wake rules > wakes a snooze on waiting
+TypeError: Cannot read properties of undefined (reading 'run')
+ ❯ Object.run src/server.test.ts:47:47
+     45|   const rows = () => db.prepare("SELECT * FROM thread_lifecycle ORDER …
+     46|   const seed = () => db.prepare("INSERT INTO thread_lifecycle VALUES (…
+     47|   return { rpc, run: (argv: string[]) => cli!.run(argv, {}), db, rows,…
+       |                                               ^
+     48| }
+     49| const databases: Database.Database[] = [];
+ ❯ src/server.test.ts:193:16
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/31]⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > list reflects upstream wake rules > does not wake on equal attention, then wakes settled work on newer attention
+TypeError: Cannot read properties of undefined (reading 'run')
+ ❯ Object.run src/server.test.ts:47:47
+     45|   const rows = () => db.prepare("SELECT * FROM thread_lifecycle ORDER …
+     46|   const seed = () => db.prepare("INSERT INTO thread_lifecycle VALUES (…
+     47|   return { rpc, run: (argv: string[]) => cli!.run(argv, {}), db, rows,…
+       |                                               ^
+     48| }
+     49| const databases: Database.Database[] = [];
+ ❯ src/server.test.ts:204:16
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/31]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  31 failed | 38 passed (69)
+   Start at  08:25:33
+   Duration  296ms (transform 39ms, setup 0ms, import 93ms, tests 56ms, environment 0ms)
+

@@ -1,0 +1,65 @@
+
+> bb-plugin-wizbar@0.1.0 test
+> vitest run --config vitest.config.ts --maxWorkers=2 src/server.test.ts
+
+
+ RUN  v4.1.10 <checkout>/wizbar
+
+ ❯ |bb-plugin-wizbar| src/server.test.ts (80 tests | 3 failed) 4175ms
+     × refuses incomplete or invalid authority: {"activity":{"activeWorkflowCount":0,"activeBackgroundAgentCount":0,"activeBackgroundCommandCount":0,"activePlanModeCount":0,"activeGoalCount":0,"futureWorkCount":1}} 76ms
+     × refuses incomplete or invalid authority: {"activity":{"activeWorkflowCount":0,"activeBackgroundAgentCount":0,"activeBackgroundCommandCount":0,"activePlanModeCount":0,"activeGoalCount":0,"futureWorkCount":1}} 72ms
+     × rejects invalid raw snooze time 8640000000000001 69ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > settle server guard > refuses incomplete or invalid authority: {"activity":{"activeWorkflowCount":0,"activeBackgroundAgentCount":0,"activeBackgroundCommandCount":0,"activePlanModeCount":0,"activeGoalCount":0,"futureWorkCount":1}}
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > snooze server guard > refuses incomplete or invalid authority: {"activity":{"activeWorkflowCount":0,"activeBackgroundAgentCount":0,"activeBackgroundCommandCount":0,"activePlanModeCount":0,"activeGoalCount":0,"futureWorkCount":1}}
+AssertionError: promise resolved "{ ok: true }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "ok": true,
+  }
+
+ ❯ src/server.test.ts:80:63
+     78|   ])("refuses incomplete or invalid authority: %j", async (override) =…
+     79|     const host = setup([{ ...thread(), ...override }]); host.seed(); c…
+     80|     await expect(host.harness.behavior.callRpc(method, input)).rejects…
+       |                                                               ^
+     81|     expect(host.rows()).toEqual(before); expect(host.publications).toE…
+     82|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > argument and authority edge cases > rejects invalid raw snooze time 8640000000000001
+AssertionError: promise resolved "{ ok: true }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "ok": true,
+  }
+
+ ❯ src/server.test.ts:257:106
+    255|   it.each([NOW - 1, 8_640_000_000_000_001])("rejects invalid raw snooz…
+    256|     const host = setup(); host.seed(); const before = host.rows();
+    257|     await expect(host.harness.behavior.callRpc("snooze", { threadId: "…
+       |                                                                                                          ^
+    258|     expect(host.rows()).toEqual(before); expect(host.publications).toE…
+    259|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 77 passed (80)
+   Start at  08:36:11
+   Duration  4.40s (transform 45ms, setup 0ms, import 120ms, tests 4.17s, environment 0ms)
+
