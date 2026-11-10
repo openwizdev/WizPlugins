@@ -619,3 +619,53 @@ describe("pull request badge", () => {
     ).toContain("success");
   });
 });
+
+// N2: existing shelf tests store ordinary parks, not persistent running mute.
+describe("explicit muted shelf", () => {
+  const mutedRow = { threadId: "sample-mute", settledAt: null, snoozedUntil: null,
+    snoozedAt: null, mutedAt: 1000, muteAttentionAt: 100 };
+  const busy = () => thread({ id: "sample-mute", title: "Write guide", indicator: "runtime",
+    status: "active", runtimeStatus: "active", latestAttentionAt: 200, isUnread: true });
+  it("keeps running attention muted through refresh and offers navigation and explicit undo", async () => {
+    let rows = [mutedRow];
+    const rendered = renderSlot(inbox, listProps, {
+      sidebarThreads: { status: "ready", threads: [busy()], projects: [] },
+      rpc: { listLifecycle: () => ({ rows }), unmute: () => { rows = []; return { ok: true }; } },
+    });
+    const shelf = await screen.findByRole("region", { name: "Muted" });
+    expect(screen.queryByText("Write guide")).toBeNull();
+    fireEvent.click(within(shelf).getByRole("button", { name: "Muted (1)" }));
+    await rendered.emitRealtime("lifecycle", {});
+    fireEvent.click(within(shelf).getByRole("link", { name: "Write guide" }), { metaKey: true });
+    expect(rendered.sidebarActionCalls).toContainEqual({ method: "open", threadId: "sample-mute", options: { split: true } });
+    fireEvent.click(within(shelf).getByRole("button", { name: "Unmute thread" }));
+    await waitFor(() => expect(rendered.rpcCalls.some((c) => c.method === "unmute")).toBe(true));
+    await rendered.emitRealtime("lifecycle", {});
+    await waitFor(() => expect(screen.queryByRole("region", { name: "Muted" })).toBeNull());
+    expect(screen.getByText("Write guide")).toBeDefined();
+  });
+  it.each([
+    { hasPendingInteraction: true, indicator: "waiting-for-input" },
+    { runtimeStatus: "error", status: "error", indicator: "unread-error" },
+    { indicator: "none", status: "idle", runtimeStatus: "idle", isUnread: true },
+    { isPinned: true },
+    { runtimeStatus: "waiting-for-host" },
+  ] as Partial<PluginSidebarThread>[])("keeps attention/pinned/unavailable work in Inbox: %j", async (changes) => {
+    renderSlot(inbox, listProps, {
+      sidebarThreads: { status: "ready", threads: [{ ...busy(), ...changes }], projects: [] },
+      rpc: { listLifecycle: () => ({ rows: [mutedRow] }) },
+    });
+    expect(await screen.findByText("Write guide")).toBeDefined();
+    await waitFor(() => expect(screen.queryByRole("region", { name: "Muted" })).toBeNull());
+  });
+  it("loads a stored mute on a fresh mount", async () => {
+    const options = { sidebarThreads: { status: "ready" as const, threads: [busy()], projects: [] },
+      rpc: { listLifecycle: () => ({ rows: [mutedRow] }) } };
+    const first = renderSlot(inbox, listProps, options);
+    await screen.findByRole("region", { name: "Muted" });
+    first.unmount();
+    renderSlot(inbox, listProps, options);
+    await screen.findByRole("button", { name: "Muted (1)" });
+    expect(screen.queryByText("Write guide")).toBeNull();
+  });
+});

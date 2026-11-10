@@ -198,3 +198,23 @@ describe("nextWakeDelayMs", () => {
     expect(nextWakeDelayMs([Number.MAX_SAFE_INTEGER], 0)).toBe(MAX_TIMEOUT_MS);
   });
 });
+
+// N2: ordinary parking wakes on work; explicit mute changes only visibility.
+describe("explicit mute shelf", () => {
+  const muted = { ...row(), mutedAt: 1000, muteAttentionAt: 100 };
+  const working = { ...quiet, isWorking: true, isPinned: false, hasFailed: false };
+  it.each([
+    ["continued work", { latestAttentionAt: 100 }, "muted"],
+    ["running attention", { latestAttentionAt: 200, isUnread: true }, "muted"],
+    ["question", { hasPendingInteraction: true }, "active"],
+    ["failure with other work", { hasFailed: true }, "active"],
+    ["pinned", { isPinned: true }, "active"],
+    ["unknown failure state", { hasFailed: undefined }, "active"],
+    ["unknown pin state", { isPinned: undefined }, "active"],
+    ["finished attention", { isWorking: false, isUnread: true, latestAttentionAt: 101 }, "active"],
+    ["quiet completion", { isWorking: false, isUnread: false, latestAttentionAt: 200 }, "muted"],
+    ["old unread", { isWorking: false, isUnread: true, latestAttentionAt: 100 }, "muted"],
+  ] as const)("%s", (_name, changes, expected) => {
+    expect(resolveShelf(muted, { ...working, ...changes }, 2000)).toBe(expected);
+  });
+});

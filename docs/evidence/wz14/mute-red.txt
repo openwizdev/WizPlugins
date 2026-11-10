@@ -1,0 +1,944 @@
+
+> bb-plugin-wizbar@0.1.0 test
+> vitest run --config vitest.config.ts --maxWorkers=2 src/mute.test.ts src/lifecycle.test.ts src/ThreadInbox.test.tsx
+
+
+ RUN  v4.1.10 <checkout>/wizbar
+
+ ❯ |bb-plugin-wizbar| src/mute.test.ts (23 tests | 19 failed) 1403ms
+     × isolates mixed IDs and shares the persistent RPC row 95ms
+     × survives a fresh database handle and plugin load, ordinary attention and restarted work 65ms
+     × refuses unavailable authority without writes: {} 53ms
+     × refuses unavailable authority without writes: {} 44ms
+     × refuses unavailable authority without writes: {} 56ms
+     × refuses unavailable authority without writes: {"queuedWork":"future"} 47ms
+     × refuses unavailable authority without writes: {"pinnedAt":"no"} 51ms
+     × refuses unavailable authority without writes: {} 55ms
+     × refuses unavailable authority without writes: {} 45ms
+     × refuses unavailable authority without writes: {"runtime":{"displayStatus":"waiting-for-host"}} 61ms
+     × rejects an RPC mute of queued failure even while runtime is active 72ms
+     × keeps ordinary parking guards and undo usable 92ms
+     × unmutes with failed work reads and rejects empty undo IDs 91ms
+     × a stale validation cannot override unmute 48ms
+     × a stale validation cannot override unsettle 60ms
+     × a stale validation cannot override unsnooze 48ms
+     × a stale validation cannot override thread.deleted 44ms
+     × a stale validation cannot override interaction.pending 52ms
+     × a stale validation cannot override thread.failed 47ms
+ ❯ |bb-plugin-wizbar| src/lifecycle.test.ts (32 tests | 4 failed) 13ms
+     × continued work 5ms
+     × running attention 1ms
+     × quiet completion 0ms
+     × old unread 0ms
+ ❯ |bb-plugin-wizbar| src/ThreadInbox.test.tsx (40 tests | 2 failed) 2889ms
+     × keeps running attention muted through refresh and offers navigation and explicit undo 1011ms
+     × loads a stored mute on a fresh mount 1011ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 25 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/ThreadInbox.test.tsx > explicit muted shelf > keeps running attention muted through refresh and offers navigation and explicit undo
+TestingLibraryElementError: Unable to find role="region" and name "Muted"
+
+Ignored nodes: comments, script, style
+[36m<body[39m
+  [33mstyle[39m=[32m""[39m
+[36m>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"flex min-h-0 flex-1 flex-col"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex shrink-0 items-center gap-1 px-2 pb-1"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-autocomplete[39m=[32m"none"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"Project scope: All projects"[39m
+          [33mclass[39m=[32m"flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"[39m
+          [33mdata-state[39m=[32m"closed"[39m
+          [33mdir[39m=[32m"ltr"[39m
+          [33mrole[39m=[32m"combobox"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33mstyle[39m=[32m"pointer-events: none;"[39m
+          [36m>[39m
+            [0mAll projects[0m
+          [36m</span>[39m
+          [36m<svg[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"size-4 opacity-50"[39m
+            [33mcolor[39m=[32m"currentColor"[39m
+            [33mdata-icon[39m=[32m"ChevronDown"[39m
+            [33mfill[39m=[32m"none"[39m
+            [33mheight[39m=[32m"24"[39m
+            [33mviewBox[39m=[32m"0 0 24 24"[39m
+            [33mwidth[39m=[32m"24"[39m
+            [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+          [36m>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"[39m
+              [33mstroke[39m=[32m"currentColor"[39m
+              [33mstroke-linecap[39m=[32m"round"[39m
+              [33mstroke-linejoin[39m=[32m"round"[39m
+              [33mstroke-width[39m=[32m"1.5"[39m
+            [36m/>[39m
+          [36m</svg>[39m
+        [36m</button>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"min-h-0 flex-1 overflow-y-auto px-1.5 pb-2"[39m
+      [36m>[39m
+        [36m<section>[39m
+          [36m<ul[39m
+            [33mclass[39m=[32m"flex flex-col gap-px"[39m
+          [36m>[39m
+            [36m<li[39m
+              [33mclass[39m=[32m"list-none"[39m
+              [33mdata-state[39m=[32m"closed"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"[39m
+              [36m>[39m
+                [36m<a[39m
+                  [33maria-label[39m=[32m"Write guide"[39m
+                  [33mclass[39m=[32m"absolute inset-0 cursor-pointer rounded-md"[39m
+                  [33mdata-sidebar-thread-id[39m=[32m"sample-mute"[39m
+                  [33mdata-sidebar-thread-shortcut-target[39m=[32m""[39m
+                  [33mhref[39m=[32m"#"[39m
+                [36m/>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"pointer-events-none relative flex h-5 items-center gap-1.5"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"[39m
+                  [36m>[39m
+                    [0m [0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"flex w-7 shrink-0 items-center justify-end"[39m
+                  [36m>[39m
+                    [36m<svg[39m
+                      [33mclass[39m=[32m"size-3.5 shrink-0 animate-spin text-muted-foreground/50"[39m
+                      [33mcolor[39m=[32m"currentColor"[39m
+                      [33mdata-icon[39m=[32m"Loading"[39m
+                      [33mfill[39m=[32m"none"[39m
+                      [33mheight[39m=[32m"24"[39m
+                      [33mviewBox[39m=[32m"0 0 24 24"[39m
+                      [33mwidth[39m=[32m"24"[39m
+                      [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                    [36m>[39m
+                      [36m<path[39m
+                        [33md[39m=[32m"M12 3V6"[39m
+                        [33mstroke[39m=[32m"currentColor"[39m
+                        [33mstroke-linecap[39m=[32m"round"[39m
+                        [33mstroke-width[39m=[32m"1.5"[39m
+                      [36m/>[39m
+                      [36m<path[39m
+                        [33md[39m=[32m"M12 18V21"[39m
+                        [33mstroke[39m=[32m"currentColor"[39m
+                        [33mstroke-linecap[39m=[32m"round"[39m
+                        [33mstroke-width[39m=[32m"1.5"[39m
+                      [36m/>[39m
+                      [36m<path[39m
+                        [33md[39m=[32m"M21 12L18 12"[39m
+                        [33mstroke[39m=[32m"currentColor"[39m
+                        [33mstroke-linecap[39m=[32m"round"[39m
+                        [33mstroke-width[39m=[32m"1.5"[39m
+                      [36m/>[39m
+                      [36m<path[39m
+                        [33md[39m=[32m"M6 12L3 12"[39m
+                        [33mstroke[39m=[32m"currentColor"[39m
+                        [33mstroke-linecap[39m=[32m"round"[39m
+                        [33mstroke-width[39m=[32m"1.5"[39m
+                      [36m/>[39m
+                      [36m<path[39m
+                        [33md[39m=[32m"M18.3635 5.63672L16.2422 7.75804"[39m
+                        [33mstroke[39m=[32m"currentColor"[39m
+                        [33mstroke-linecap[39m=[32m"round"[39m
+                        [33mstroke-width[39m=[32m"1.5"[39m
+                      [36m/>[39m
+                      [36m<path[39m
+                        [33md[39m=[32m"M7.75804 16.2422L5.63672 18.3635"[39m
+                        [33mstroke[39m=[32m"currentColor"[39m
+                        [33mstroke-linecap[39m=[32m"round"[39m
+                        [33mstroke-width[39m=[32m"1.5"[39m
+                      [36m/>[39m
+                      [36m<path[39m
+                        [33md[39m=[32m"M18.3635 18.3635L16.2422 16.2422"[39m
+                        [33mstroke[39m=[32m"currentColor"[39m
+                        [33mstroke-linecap[39m=[32m"round"[39m
+                        [33mstroke-width[39m=[32m"1.5"[39m
+                      [36m/>[39m
+                      [36m<path[39m
+                        [33md[39m=[32m"M7.75804 7.75804L5.63672 5.63672"[39m
+                        [33mstroke[39m=[32m"currentColor"[39m
+                        [33mstroke-linecap[39m=[32m"round"[39m
+                        [33mstroke-width[39m=[32m"1.5"[39m
+                      [36m/>[39m
+                    [36m</svg>[39m
+                  [36m</span>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"pointer-events-none relative mt-0.5 truncate text-sm text-foreground font-medium"[39m
+                [36m>[39m
+                  [0mWrite guide[0m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"pointer-events-none relative mt-0.5 flex h-4 items-center gap-1.5 text-2xs text-muted-foreground"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"flex-1"[39m
+                  [36m/>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"flex size-3.5 shrink-0 items-center justify-center"[39m
+                  [36m>[39m
+                    [36m<svg[39m
+                      [33maria-label[39m=[32m"Codex"[39m
+                      [33mclass[39m=[32m"size-3 text-muted-foreground/70"[39m
+                      [33mfill[39m=[32m"currentColor"[39m
+                      [33mfill-rule[39m=[32m"evenodd"[39m
+                      [33mrole[39m=[32m"img"[39m
+                      [33mviewBox[39m=[32m"0 0 24 24"[39m
+                    [36m>[39m
+                      [36m<path[39m
+                        [33md[39m=[32m"M22.28 9.82a5.98 5.98 0 0 0-.51-4.91 6.05 6.05 0 0 0-6.51-2.9A6.07 6.07 0 0 0 4.98 4.18a5.98 5.98 0 0 0-4 2.9 6.05 6.05 0 0 0 .74 7.1 5.98 5.98 0 0 0 .51 4.91 6.05 6.05 0 0 0 6.52 2.9A5.98 5.98 0 0 0 13.26 24a6.06 6.06 0 0 0 5.77-4.21 5.99 5.99 0 0 0 4-2.9 6.06 6.06 0 0 0-.75-7.07zm-9.02 12.6a4.48 4.48 0 0 1-2.88-1.03l.14-.08 4.78-2.76a.79.79 0 0 0 .4-.68v-6.74l2.02 1.17a.07.07 0 0 1 .03.05v5.58a4.5 4.5 0 0 1-4.49 4.5zM3.6 18.3a4.47 4.47 0 0 1-.54-3.02l.15.09 4.78 2.76a.77.77 0 0 0 .78 0l5.84-3.37v2.33a.08.08 0 0 1-.03.06L9.74 19.95a4.5 4.5 0 0 1-6.14-1.65zM2.34 7.9a4.49 4.49 0 0 1 2.37-1.98v5.68a.77.77 0 0 0 .39.68l5.81 3.35-2.02 1.17a.08.08 0 0 1-.07 0l-4.83-2.79A4.5 4.5 0 0 1 2.34 7.9zm16.6 3.86L13.1 8.36l2.02-1.16a.08.08 0 0 1 .07 0l4.83 2.79a4.49 4.49 0 0 1-.68 8.1v-5.67a.79.79 0 0 0-.4-.67zm2.01-3.03l-.14-.08-4.77-2.78a.78.78 0 0 0-.79 0L9.41 9.23V6.9a.07.07 0 0 1 .03-.06l4.83-2.79a4.5 4.5 0 0 1 6.68 4.66zM8.31 12.86l-2.02-1.16a.08.08 0 0 1-.04-.06V6.07a4.5 4.5 0 0 1 7.38-3.45l-.14.08L8.7 5.46a.79.79 0 0 0-.4.68zm1.1-2.36l2.6-1.5 2.6 1.5v3l-2.6 1.5-2.6-1.5z"[39m
+                      [36m/>[39m
+                    [36m</svg>[39m
+                  [36m</span>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+            [36m</li>[39m
+          [36m</ul>[39m
+        [36m</section>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<body[39m
+  [33mstyle[39m=[32m""[39m
+[36m>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"flex min-h-0 flex-1 flex-col"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex shrink-0 items-center gap-1 px-2 pb-1"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-autocomplete[39m=[32m"none"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"Project scope: All projects"[39m
+          [33mclass[39m=[32m"flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"[39m
+          [33mdata-state[39m=[32m"closed"[39m
+          [33mdir[39m=[32m"ltr"[39m
+          [33mrole[39m=[32m"combobox"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33mstyle[39m=[32m"pointer-events: none;"[39m
+          [36m>[39m
+            [0mAll projects[0m
+          [36m</span>[39m
+          [36m<svg[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"size-4 opacity-50"[39m
+            [33mcolor[39m=[32m"currentColor"[39m
+            [33mdata-icon[39m=[32m"ChevronDown"[39m
+            [33mfill[39m=[32m"none"[39m
+            [33mheight[39m=[32m"24"[39m
+            [33mviewBox[39m=[32m"0 0 24 24"[39m
+            [33mwidth[39m=[32m"24"[39m
+            [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+          [36m>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"[39m
+              [33mstroke[39m=[32m"currentColor"[39m
+              [33mstroke-linecap[39m=[32m"round"[39m
+              [33mstroke-linejoin[39m=[32m"round"[39m
+              [33mstroke-width[39m=[32m"1.5"[39m
+            [36m/>[39m
+          [36m</svg>[39m
+        [36m</button>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"min-h-0 flex-1 overflow-y-auto px-1.5 pb-2"[39m
+      [36m>[39m
+        [36m<section>[39m
+          [36m<ul[39m
+            [33mclass[39m=[32m"flex flex-col gap-px"[39m
+          [36m>[39m
+            [36m<li[39m
+              [33mclass[39m=[32m"list-none"[39m
+              [33mdata-state[39m=[32m"closed"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"[39m
+              [36m>[39m
+                [36m<a[39m
+                  [33maria-label[39m=[32m"Write guide"[39m
+                  [33mclass[39m=[32m"absolute inset-0 cursor-pointer rounded-md"[39m
+                  [33mdata-sidebar-thread-id[39m=[32m"sample-mute"[39m
+                  [33mdata-sidebar-thread-shortcut-target[39m=[32m""[39m
+                  [33mhref[39m=[32m"#"[39m
+                [36m/>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"pointer-events-none relative flex h-5 items-center gap-1.5"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"[39m
+                  [36m>[39m
+                    [0m [0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"flex w-7 shrink-0 items-center justify-end"[39m
+                  [36m>[39m
+                    [36m<svg[39m
+                      [33mclass[39m=[32m"size-3.5 shrink-0 animate-spin text-muted-foreground/50"[39m
+                      [33mcolor[39m=[32m"currentColor"[39m
+                      [33mdata-icon[39m=[32m"Loading"[39m
+                      [33mfill[39m=[32m"none"[39m
+                      [33mheight[39m=[32m"24"[39m
+                      [33mviewBox[39m=[32m"0 0 24 24"[39m
+                      [33mwidth[39m=[32m"24"[39m
+                      [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                    [36m>[39m
+                      [36m<path[39m
+                        [33md[39m=[32m"M12 3V6"[39m
+                        [33mstroke[39m=[32m"currentColor"[39m
+                        [33mstroke-linecap[39m=[32m"round"[39m
+                        [33mstroke-width[39m=[32m"1.5"[39m
+                      [36m/>[39m
+                      [36m<path[39m
+                        [33md[39m=[32m"M12 18V21"[39m
+                        [33mstroke[39m=[32m"currentColor"[39m
+                        [33mstroke-linecap[39m=[32m"round"[39m
+                        [33mstroke-width[39m=[32m"1.5"[39m
+                      [36m/>[39m
+                      [36m<path[39m
+                        [33md[39m=[32m"M21 12L18 12"[39m
+                        [33mstroke[39m=[32m"currentColor"[39m
+                        [33mstroke-linecap[39m=[32m"round"[39m
+                        [33mstroke-width[39m=[32m"1.5"[39m
+                      [36m/>[39m
+                      [36m<path[39m
+                        [33md[39m=[32m"M6 12L3 12"[39m
+                        [33mstroke[39m=[32m"currentColor"[39m
+                        [33mstroke-linecap[39m=[32m"round"[39m
+                        [33mstroke-width[39m=[32m"1.5"[39m
+                      [36m/>[39m
+                      [36m<path[39m
+                        [33md[39m=[32m"M18.3635 5.63672L16.2422 7.75804"[39m
+                        [33mstroke[39m=[32m"currentColor"[39m
+                        [33mstroke-linecap[39m=[32m"round"[39m
+                        [33mstroke-width[39m=[32m"1.5"[39m
+                      [36m/>[39m
+                      [36m<path[39m
+                        [33md[39m=[32m"M7.75804 16.2422L5.63672 18.3635"[39m
+                        [33mstroke[39m=[32m"currentColor"[39m
+                        [33mstroke-linecap[39m=[32m"round"[39m
+                        [33mstroke-width[39m=[32m"1.5"[39m
+                      [36m/>[39m
+                      [36m<path[39m
+                        [33md[39m=[32m"M18.3635 18.3635L16.2422 16.2422"[39m
+                        [33mstroke[39m=[32m"currentColor"[39m
+                        [33mstroke-linecap[39m=[32m"round"[39m
+                        [33mstroke-width[39m=[32m"1.5"[39m
+                      [36m/>[39m
+                      [36m<path[39m
+                        [33md[39m=[32m"M7.75804 7.75804L5.63672 5.63672"[39m
+                        [33mstroke[39m=[32m"currentColor"[39m
+                        [33mstroke-linecap[39m=[32m"round"[39m
+                        [33mstroke-width[39m=[32m"1.5"[39m
+                      [36m/>[39m
+                    [36m</svg>[39m
+                  [36m</span>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"pointer-events-none relative mt-0.5 truncate text-sm text-foreground font-medium"[39m
+                [36m>[39m
+                  [0mWrite guide[0m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"pointer-events-none relative mt-0.5 flex h-4 items-center gap-1.5 text-2xs text-muted-foreground"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"flex-1"[39m
+                  [36m/>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"flex size-3.5 shrink-0 items-center justify-center"[39m
+                  [36m>[39m
+                    [36m<svg[39m
+                      [33maria-label[39m=[32m"Codex"[39m
+                      [33mclass[39m=[32m"size-3 text-muted-foreground/70"[39m
+                      [33mfill[39m=[32m"currentColor"[39m
+                      [33mfill-rule[39m=[32m"evenodd"[39m
+                      [33mrole[39m=[32m"img"[39m
+                      [33mviewBox[39m=[32m"0 0 24 24"[39m
+                    [36m>[39m
+                      [36m<path[39m
+                        [33md[39m=[32m"M22.28 9.82a5.98 5.98 0 0 0-.51-4.91 6.05 6.05 0 0 0-6.51-2.9A6.07 6.07 0 0 0 4.98 4.18a5.98 5.98 0 0 0-4 2.9 6.05 6.05 0 0 0 .74 7.1 5.98 5.98 0 0 0 .51 4.91 6.05 6.05 0 0 0 6.52 2.9A5.98 5.98 0 0 0 13.26 24a6.06 6.06 0 0 0 5.77-4.21 5.99 5.99 0 0 0 4-2.9 6.06 6.06 0 0 0-.75-7.07zm-9.02 12.6a4.48 4.48 0 0 1-2.88-1.03l.14-.08 4.78-2.76a.79.79 0 0 0 .4-.68v-6.74l2.02 1.17a.07.07 0 0 1 .03.05v5.58a4.5 4.5 0 0 1-4.49 4.5zM3.6 18.3a4.47 4.47 0 0 1-.54-3.02l.15.09 4.78 2.76a.77.77 0 0 0 .78 0l5.84-3.37v2.33a.08.08 0 0 1-.03.06L9.74 19.95a4.5 4.5 0 0 1-6.14-1.65zM2.34 7.9a4.49 4.49 0 0 1 2.37-1.98v5.68a.77.77 0 0 0 .39.68l5.81 3.35-2.02 1.17a.08.08 0 0 1-.07 0l-4.83-2.79A4.5 4.5 0 0 1 2.34 7.9zm16.6 3.86L13.1 8.36l2.02-1.16a.08.08 0 0 1 .07 0l4.83 2.79a4.49 4.49 0 0 1-.68 8.1v-5.67a.79.79 0 0 0-.4-.67zm2.01-3.03l-.14-.08-4.77-2.78a.78.78 0 0 0-.79 0L9.41 9.23V6.9a.07.07 0 0 1 .03-.06l4.83-2.79a4.5 4.5 0 0 1 6.68 4.66zM8.31 12.86l-2.02-1.16a.08.08 0 0 1-.04-.06V6.07a4.5 4.5 0 0 1 7.38-3.45l-.14.08L8.7 5.46a.79.79 0 0 0-.4.68zm1.1-2.36l2.6-1.5 2.6 1.5v3l-2.6 1.5-2.6-1.5z"[39m
+                      [36m/>[39m
+                    [36m</svg>[39m
+                  [36m</span>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+            [36m</li>[39m
+          [36m</ul>[39m
+        [36m</section>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/ThreadInbox.test.tsx:635:32
+    633|       rpc: { listLifecycle: () => ({ rows }), unmute: () => { rows = […
+    634|     });
+    635|     const shelf = await screen.findByRole("region", { name: "Muted" });
+       |                                ^
+    636|     expect(screen.queryByText("Write guide")).toBeNull();
+    637|     fireEvent.click(within(shelf).getByRole("button", { name: "Muted (…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/25]⎯
+
+ FAIL  |bb-plugin-wizbar| src/ThreadInbox.test.tsx > explicit muted shelf > loads a stored mute on a fresh mount
+TestingLibraryElementError: Unable to find role="region" and name "Muted"
+
+Ignored nodes: comments, script, style
+[36m<body[39m
+  [33mstyle[39m=[32m""[39m
+[36m>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"flex min-h-0 flex-1 flex-col"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex shrink-0 items-center gap-1 px-2 pb-1"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-autocomplete[39m=[32m"none"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"Project scope: All projects"[39m
+          [33mclass[39m=[32m"flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"[39m
+          [33mdata-state[39m=[32m"closed"[39m
+          [33mdir[39m=[32m"ltr"[39m
+          [33mrole[39m=[32m"combobox"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33mstyle[39m=[32m"pointer-events: none;"[39m
+          [36m>[39m
+            [0mAll projects[0m
+          [36m</span>[39m
+          [36m<svg[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"size-4 opacity-50"[39m
+            [33mcolor[39m=[32m"currentColor"[39m
+            [33mdata-icon[39m=[32m"ChevronDown"[39m
+            [33mfill[39m=[32m"none"[39m
+            [33mheight[39m=[32m"24"[39m
+            [33mviewBox[39m=[32m"0 0 24 24"[39m
+            [33mwidth[39m=[32m"24"[39m
+            [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+          [36m>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"[39m
+              [33mstroke[39m=[32m"currentColor"[39m
+              [33mstroke-linecap[39m=[32m"round"[39m
+              [33mstroke-linejoin[39m=[32m"round"[39m
+              [33mstroke-width[39m=[32m"1.5"[39m
+            [36m/>[39m
+          [36m</svg>[39m
+        [36m</button>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"min-h-0 flex-1 overflow-y-auto px-1.5 pb-2"[39m
+      [36m>[39m
+        [36m<section>[39m
+          [36m<ul[39m
+            [33mclass[39m=[32m"flex flex-col gap-px"[39m
+          [36m>[39m
+            [36m<li[39m
+              [33mclass[39m=[32m"list-none"[39m
+              [33mdata-state[39m=[32m"closed"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"[39m
+              [36m>[39m
+                [36m<a[39m
+                  [33maria-label[39m=[32m"Write guide"[39m
+                  [33mclass[39m=[32m"absolute inset-0 cursor-pointer rounded-md"[39m
+                  [33mdata-sidebar-thread-id[39m=[32m"sample-mute"[39m
+                  [33mdata-sidebar-thread-shortcut-target[39m=[32m""[39m
+                  [33mhref[39m=[32m"#"[39m
+                [36m/>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"pointer-events-none relative flex h-5 items-center gap-1.5"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"[39m
+                  [36m>[39m
+                    [0m [0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"flex w-7 shrink-0 items-center justify-end"[39m
+                  [36m>[39m
+                    [36m<svg[39m
+                      [33mclass[39m=[32m"size-3.5 shrink-0 animate-spin text-muted-foreground/50"[39m
+                      [33mcolor[39m=[32m"currentColor"[39m
+                      [33mdata-icon[39m=[32m"Loading"[39m
+                      [33mfill[39m=[32m"none"[39m
+                      [33mheight[39m=[32m"24"[39m
+                      [33mviewBox[39m=[32m"0 0 24 24"[39m
+                      [33mwidth[39m=[32m"24"[39m
+                      [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                    [36m>[39m
+                      [36m<path[39m
+                        [33md[39m=[32m"M12 3V6"[39m
+                        [33mstroke[39m=[32m"currentColor"[39m
+                        [33mstroke-linecap[39m=[32m"round"[39m
+                        [33mstroke-width[39m=[32m"1.5"[39m
+                      [36m/>[39m
+                      [36m<path[39m
+                        [33md[39m=[32m"M12 18V21"[39m
+                        [33mstroke[39m=[32m"currentColor"[39m
+                        [33mstroke-linecap[39m=[32m"round"[39m
+                        [33mstroke-width[39m=[32m"1.5"[39m
+                      [36m/>[39m
+                      [36m<path[39m
+                        [33md[39m=[32m"M21 12L18 12"[39m
+                        [33mstroke[39m=[32m"currentColor"[39m
+                        [33mstroke-linecap[39m=[32m"round"[39m
+                        [33mstroke-width[39m=[32m"1.5"[39m
+                      [36m/>[39m
+                      [36m<path[39m
+                        [33md[39m=[32m"M6 12L3 12"[39m
+                        [33mstroke[39m=[32m"currentColor"[39m
+                        [33mstroke-linecap[39m=[32m"round"[39m
+                        [33mstroke-width[39m=[32m"1.5"[39m
+                      [36m/>[39m
+                      [36m<path[39m
+                        [33md[39m=[32m"M18.3635 5.63672L16.2422 7.75804"[39m
+                        [33mstroke[39m=[32m"currentColor"[39m
+                        [33mstroke-linecap[39m=[32m"round"[39m
+                        [33mstroke-width[39m=[32m"1.5"[39m
+                      [36m/>[39m
+                      [36m<path[39m
+                        [33md[39m=[32m"M7.75804 16.2422L5.63672 18.3635"[39m
+                        [33mstroke[39m=[32m"currentColor"[39m
+                        [33mstroke-linecap[39m=[32m"round"[39m
+                        [33mstroke-width[39m=[32m"1.5"[39m
+                      [36m/>[39m
+                      [36m<path[39m
+                        [33md[39m=[32m"M18.3635 18.3635L16.2422 16.2422"[39m
+                        [33mstroke[39m=[32m"currentColor"[39m
+                        [33mstroke-linecap[39m=[32m"round"[39m
+                        [33mstroke-width[39m=[32m"1.5"[39m
+                      [36m/>[39m
+                      [36m<path[39m
+                        [33md[39m=[32m"M7.75804 7.75804L5.63672 5.63672"[39m
+                        [33mstroke[39m=[32m"currentColor"[39m
+                        [33mstroke-linecap[39m=[32m"round"[39m
+                        [33mstroke-width[39m=[32m"1.5"[39m
+                      [36m/>[39m
+                    [36m</svg>[39m
+                  [36m</span>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"pointer-events-none relative mt-0.5 truncate text-sm text-foreground font-medium"[39m
+                [36m>[39m
+                  [0mWrite guide[0m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"pointer-events-none relative mt-0.5 flex h-4 items-center gap-1.5 text-2xs text-muted-foreground"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"flex-1"[39m
+                  [36m/>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"flex size-3.5 shrink-0 items-center justify-center"[39m
+                  [36m>[39m
+                    [36m<svg[39m
+                      [33maria-label[39m=[32m"Codex"[39m
+                      [33mclass[39m=[32m"size-3 text-muted-foreground/70"[39m
+                      [33mfill[39m=[32m"currentColor"[39m
+                      [33mfill-rule[39m=[32m"evenodd"[39m
+                      [33mrole[39m=[32m"img"[39m
+                      [33mviewBox[39m=[32m"0 0 24 24"[39m
+                    [36m>[39m
+                      [36m<path[39m
+                        [33md[39m=[32m"M22.28 9.82a5.98 5.98 0 0 0-.51-4.91 6.05 6.05 0 0 0-6.51-2.9A6.07 6.07 0 0 0 4.98 4.18a5.98 5.98 0 0 0-4 2.9 6.05 6.05 0 0 0 .74 7.1 5.98 5.98 0 0 0 .51 4.91 6.05 6.05 0 0 0 6.52 2.9A5.98 5.98 0 0 0 13.26 24a6.06 6.06 0 0 0 5.77-4.21 5.99 5.99 0 0 0 4-2.9 6.06 6.06 0 0 0-.75-7.07zm-9.02 12.6a4.48 4.48 0 0 1-2.88-1.03l.14-.08 4.78-2.76a.79.79 0 0 0 .4-.68v-6.74l2.02 1.17a.07.07 0 0 1 .03.05v5.58a4.5 4.5 0 0 1-4.49 4.5zM3.6 18.3a4.47 4.47 0 0 1-.54-3.02l.15.09 4.78 2.76a.77.77 0 0 0 .78 0l5.84-3.37v2.33a.08.08 0 0 1-.03.06L9.74 19.95a4.5 4.5 0 0 1-6.14-1.65zM2.34 7.9a4.49 4.49 0 0 1 2.37-1.98v5.68a.77.77 0 0 0 .39.68l5.81 3.35-2.02 1.17a.08.08 0 0 1-.07 0l-4.83-2.79A4.5 4.5 0 0 1 2.34 7.9zm16.6 3.86L13.1 8.36l2.02-1.16a.08.08 0 0 1 .07 0l4.83 2.79a4.49 4.49 0 0 1-.68 8.1v-5.67a.79.79 0 0 0-.4-.67zm2.01-3.03l-.14-.08-4.77-2.78a.78.78 0 0 0-.79 0L9.41 9.23V6.9a.07.07 0 0 1 .03-.06l4.83-2.79a4.5 4.5 0 0 1 6.68 4.66zM8.31 12.86l-2.02-1.16a.08.08 0 0 1-.04-.06V6.07a4.5 4.5 0 0 1 7.38-3.45l-.14.08L8.7 5.46a.79.79 0 0 0-.4.68zm1.1-2.36l2.6-1.5 2.6 1.5v3l-2.6 1.5-2.6-1.5z"[39m
+                      [36m/>[39m
+                    [36m</svg>[39m
+                  [36m</span>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+            [36m</li>[39m
+          [36m</ul>[39m
+        [36m</section>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<body[39m
+  [33mstyle[39m=[32m""[39m
+[36m>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"flex min-h-0 flex-1 flex-col"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex shrink-0 items-center gap-1 px-2 pb-1"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-autocomplete[39m=[32m"none"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"Project scope: All projects"[39m
+          [33mclass[39m=[32m"flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"[39m
+          [33mdata-state[39m=[32m"closed"[39m
+          [33mdir[39m=[32m"ltr"[39m
+          [33mrole[39m=[32m"combobox"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33mstyle[39m=[32m"pointer-events: none;"[39m
+          [36m>[39m
+            [0mAll projects[0m
+          [36m</span>[39m
+          [36m<svg[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"size-4 opacity-50"[39m
+            [33mcolor[39m=[32m"currentColor"[39m
+            [33mdata-icon[39m=[32m"ChevronDown"[39m
+            [33mfill[39m=[32m"none"[39m
+            [33mheight[39m=[32m"24"[39m
+            [33mviewBox[39m=[32m"0 0 24 24"[39m
+            [33mwidth[39m=[32m"24"[39m
+            [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+          [36m>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"[39m
+              [33mstroke[39m=[32m"currentColor"[39m
+              [33mstroke-linecap[39m=[32m"round"[39m
+              [33mstroke-linejoin[39m=[32m"round"[39m
+              [33mstroke-width[39m=[32m"1.5"[39m
+            [36m/>[39m
+          [36m</svg>[39m
+        [36m</button>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"min-h-0 flex-1 overflow-y-auto px-1.5 pb-2"[39m
+      [36m>[39m
+        [36m<section>[39m
+          [36m<ul[39m
+            [33mclass[39m=[32m"flex flex-col gap-px"[39m
+          [36m>[39m
+            [36m<li[39m
+              [33mclass[39m=[32m"list-none"[39m
+              [33mdata-state[39m=[32m"closed"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"[39m
+              [36m>[39m
+                [36m<a[39m
+                  [33maria-label[39m=[32m"Write guide"[39m
+                  [33mclass[39m=[32m"absolute inset-0 cursor-pointer rounded-md"[39m
+                  [33mdata-sidebar-thread-id[39m=[32m"sample-mute"[39m
+                  [33mdata-sidebar-thread-shortcut-target[39m=[32m""[39m
+                  [33mhref[39m=[32m"#"[39m
+                [36m/>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"pointer-events-none relative flex h-5 items-center gap-1.5"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"[39m
+                  [36m>[39m
+                    [0m [0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"flex w-7 shrink-0 items-center justify-end"[39m
+                  [36m>[39m
+                    [36m<svg[39m
+                      [33mclass[39m=[32m"size-3.5 shrink-0 animate-spin text-muted-foreground/50"[39m
+                      [33mcolor[39m=[32m"currentColor"[39m
+                      [33mdata-icon[39m=[32m"Loading"[39m
+                      [33mfill[39m=[32m"none"[39m
+                      [33mheight[39m=[32m"24"[39m
+                      [33mviewBox[39m=[32m"0 0 24 24"[39m
+                      [33mwidth[39m=[32m"24"[39m
+                      [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                    [36m>[39m
+                      [36m<path[39m
+                        [33md[39m=[32m"M12 3V6"[39m
+                        [33mstroke[39m=[32m"currentColor"[39m
+                        [33mstroke-linecap[39m=[32m"round"[39m
+                        [33mstroke-width[39m=[32m"1.5"[39m
+                      [36m/>[39m
+                      [36m<path[39m
+                        [33md[39m=[32m"M12 18V21"[39m
+                        [33mstroke[39m=[32m"currentColor"[39m
+                        [33mstroke-linecap[39m=[32m"round"[39m
+                        [33mstroke-width[39m=[32m"1.5"[39m
+                      [36m/>[39m
+                      [36m<path[39m
+                        [33md[39m=[32m"M21 12L18 12"[39m
+                        [33mstroke[39m=[32m"currentColor"[39m
+                        [33mstroke-linecap[39m=[32m"round"[39m
+                        [33mstroke-width[39m=[32m"1.5"[39m
+                      [36m/>[39m
+                      [36m<path[39m
+                        [33md[39m=[32m"M6 12L3 12"[39m
+                        [33mstroke[39m=[32m"currentColor"[39m
+                        [33mstroke-linecap[39m=[32m"round"[39m
+                        [33mstroke-width[39m=[32m"1.5"[39m
+                      [36m/>[39m
+                      [36m<path[39m
+                        [33md[39m=[32m"M18.3635 5.63672L16.2422 7.75804"[39m
+                        [33mstroke[39m=[32m"currentColor"[39m
+                        [33mstroke-linecap[39m=[32m"round"[39m
+                        [33mstroke-width[39m=[32m"1.5"[39m
+                      [36m/>[39m
+                      [36m<path[39m
+                        [33md[39m=[32m"M7.75804 16.2422L5.63672 18.3635"[39m
+                        [33mstroke[39m=[32m"currentColor"[39m
+                        [33mstroke-linecap[39m=[32m"round"[39m
+                        [33mstroke-width[39m=[32m"1.5"[39m
+                      [36m/>[39m
+                      [36m<path[39m
+                        [33md[39m=[32m"M18.3635 18.3635L16.2422 16.2422"[39m
+                        [33mstroke[39m=[32m"currentColor"[39m
+                        [33mstroke-linecap[39m=[32m"round"[39m
+                        [33mstroke-width[39m=[32m"1.5"[39m
+                      [36m/>[39m
+                      [36m<path[39m
+                        [33md[39m=[32m"M7.75804 7.75804L5.63672 5.63672"[39m
+                        [33mstroke[39m=[32m"currentColor"[39m
+                        [33mstroke-linecap[39m=[32m"round"[39m
+                        [33mstroke-width[39m=[32m"1.5"[39m
+                      [36m/>[39m
+                    [36m</svg>[39m
+                  [36m</span>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"pointer-events-none relative mt-0.5 truncate text-sm text-foreground font-medium"[39m
+                [36m>[39m
+                  [0mWrite guide[0m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"pointer-events-none relative mt-0.5 flex h-4 items-center gap-1.5 text-2xs text-muted-foreground"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"flex-1"[39m
+                  [36m/>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"flex size-3.5 shrink-0 items-center justify-center"[39m
+                  [36m>[39m
+                    [36m<svg[39m
+                      [33maria-label[39m=[32m"Codex"[39m
+                      [33mclass[39m=[32m"size-3 text-muted-foreground/70"[39m
+                      [33mfill[39m=[32m"currentColor"[39m
+                      [33mfill-rule[39m=[32m"evenodd"[39m
+                      [33mrole[39m=[32m"img"[39m
+                      [33mviewBox[39m=[32m"0 0 24 24"[39m
+                    [36m>[39m
+                      [36m<path[39m
+                        [33md[39m=[32m"M22.28 9.82a5.98 5.98 0 0 0-.51-4.91 6.05 6.05 0 0 0-6.51-2.9A6.07 6.07 0 0 0 4.98 4.18a5.98 5.98 0 0 0-4 2.9 6.05 6.05 0 0 0 .74 7.1 5.98 5.98 0 0 0 .51 4.91 6.05 6.05 0 0 0 6.52 2.9A5.98 5.98 0 0 0 13.26 24a6.06 6.06 0 0 0 5.77-4.21 5.99 5.99 0 0 0 4-2.9 6.06 6.06 0 0 0-.75-7.07zm-9.02 12.6a4.48 4.48 0 0 1-2.88-1.03l.14-.08 4.78-2.76a.79.79 0 0 0 .4-.68v-6.74l2.02 1.17a.07.07 0 0 1 .03.05v5.58a4.5 4.5 0 0 1-4.49 4.5zM3.6 18.3a4.47 4.47 0 0 1-.54-3.02l.15.09 4.78 2.76a.77.77 0 0 0 .78 0l5.84-3.37v2.33a.08.08 0 0 1-.03.06L9.74 19.95a4.5 4.5 0 0 1-6.14-1.65zM2.34 7.9a4.49 4.49 0 0 1 2.37-1.98v5.68a.77.77 0 0 0 .39.68l5.81 3.35-2.02 1.17a.08.08 0 0 1-.07 0l-4.83-2.79A4.5 4.5 0 0 1 2.34 7.9zm16.6 3.86L13.1 8.36l2.02-1.16a.08.08 0 0 1 .07 0l4.83 2.79a4.49 4.49 0 0 1-.68 8.1v-5.67a.79.79 0 0 0-.4-.67zm2.01-3.03l-.14-.08-4.77-2.78a.78.78 0 0 0-.79 0L9.41 9.23V6.9a.07.07 0 0 1 .03-.06l4.83-2.79a4.5 4.5 0 0 1 6.68 4.66zM8.31 12.86l-2.02-1.16a.08.08 0 0 1-.04-.06V6.07a4.5 4.5 0 0 1 7.38-3.45l-.14.08L8.7 5.46a.79.79 0 0 0-.4.68zm1.1-2.36l2.6-1.5 2.6 1.5v3l-2.6 1.5-2.6-1.5z"[39m
+                      [36m/>[39m
+                    [36m</svg>[39m
+                  [36m</span>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+            [36m</li>[39m
+          [36m</ul>[39m
+        [36m</section>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/ThreadInbox.test.tsx:665:18
+    663|       rpc: { listLifecycle: () => ({ rows: [mutedRow] }) } };
+    664|     const first = renderSlot(inbox, listProps, options);
+    665|     await screen.findByRole("region", { name: "Muted" });
+       |                  ^
+    666|     first.unmount();
+    667|     renderSlot(inbox, listProps, options);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/25]⎯
+
+ FAIL  |bb-plugin-wizbar| src/lifecycle.test.ts > explicit mute shelf > continued work
+ FAIL  |bb-plugin-wizbar| src/lifecycle.test.ts > explicit mute shelf > running attention
+ FAIL  |bb-plugin-wizbar| src/lifecycle.test.ts > explicit mute shelf > quiet completion
+ FAIL  |bb-plugin-wizbar| src/lifecycle.test.ts > explicit mute shelf > old unread
+AssertionError: expected 'active' to be 'muted' // Object.is equality
+
+Expected: "muted"
+Received: "active"
+
+ ❯ src/lifecycle.test.ts:218:67
+    216|     ["old unread", { isWorking: false, isUnread: true, latestAttention…
+    217|   ] as const)("%s", (_name, changes, expected) => {
+    218|     expect(resolveShelf(muted, { ...working, ...changes }, 2000)).toBe…
+       |                                                                   ^
+    219|   });
+    220| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/25]⎯
+
+ FAIL  |bb-plugin-wizbar| src/mute.test.ts > explicit mute through registered command and RPC > isolates mixed IDs and shares the persistent RPC row
+AssertionError: expected 2 to be 1 // Object.is equality
+
+- Expected
++ Received
+
+- 1
++ 2
+
+ ❯ src/mute.test.ts:67:29
+     65|     const host = setup([running(), pinned, waiting, failed, idle, runn…
+     66|     const result = await host.run(["mute", "sample-a", "pinned", "wait…
+     67|     expect(result.exitCode).toBe(1);
+       |                             ^
+     68|     expect(result.output.results.map((r: any) => r.ok ? r.shelf : r.er…
+     69|       "muted", "pinned", "waiting", "attention", "not_working", "unkno…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/25]⎯
+
+ FAIL  |bb-plugin-wizbar| src/mute.test.ts > explicit mute through registered command and RPC > survives a fresh database handle and plugin load, ordinary attention and restarted work
+AssertionError: expected 2 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 2
+
+ ❯ src/mute.test.ts:85:62
+     83|     const live = running();
+     84|     const original = setup([live], first);
+     85|     expect((await original.run(["mute", live.id])).exitCode).toBe(0);
+       |                                                              ^
+     86|     first.close();
+     87|     const second = new Database(path); databases.push(second);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/25]⎯
+
+ FAIL  |bb-plugin-wizbar| src/mute.test.ts > explicit mute through registered command and RPC > refuses unavailable authority without writes: {}
+ FAIL  |bb-plugin-wizbar| src/mute.test.ts > explicit mute through registered command and RPC > refuses unavailable authority without writes: {}
+ FAIL  |bb-plugin-wizbar| src/mute.test.ts > explicit mute through registered command and RPC > refuses unavailable authority without writes: {}
+ FAIL  |bb-plugin-wizbar| src/mute.test.ts > explicit mute through registered command and RPC > refuses unavailable authority without writes: {"queuedWork":"future"}
+ FAIL  |bb-plugin-wizbar| src/mute.test.ts > explicit mute through registered command and RPC > refuses unavailable authority without writes: {"pinnedAt":"no"}
+ FAIL  |bb-plugin-wizbar| src/mute.test.ts > explicit mute through registered command and RPC > refuses unavailable authority without writes: {}
+ FAIL  |bb-plugin-wizbar| src/mute.test.ts > explicit mute through registered command and RPC > refuses unavailable authority without writes: {}
+ FAIL  |bb-plugin-wizbar| src/mute.test.ts > explicit mute through registered command and RPC > refuses unavailable authority without writes: {"runtime":{"displayStatus":"waiting-for-host"}}
+AssertionError: expected 2 to be 1 // Object.is equality
+
+- Expected
++ Received
+
+- 1
++ 2
+
+ ❯ src/mute.test.ts:106:29
+    104|     const host = setup([{ ...running(), ...override }]);
+    105|     const result = await host.run(["mute", "sample-a"]);
+    106|     expect(result.exitCode).toBe(1);
+       |                             ^
+    107|     expect(result.output.results[0].error.code).toBe("state_unavailabl…
+    108|     expect(await host.rows()).toEqual([]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/25]⎯
+
+ FAIL  |bb-plugin-wizbar| src/mute.test.ts > explicit mute through registered command and RPC > rejects an RPC mute of queued failure even while runtime is active
+AssertionError: expected [Function] to throw error matching /attention/i but got 'plugin "wizbar" has no rpc method "mu…'
+
+- Expected:
+/attention/i
+
++ Received:
+"plugin \"wizbar\" has no rpc method \"mute\""
+
+ ❯ src/mute.test.ts:113:35
+    111|   it("rejects an RPC mute of queued failure even while runtime is acti…
+    112|     const host = setup([{ ...running(), queuedWork: "failed" }]);
+    113|     await expect(host.rpc("mute")).rejects.toThrow(/attention/i);
+       |                                   ^
+    114|     expect(await host.rows()).toEqual([]); expect(host.publications).t…
+    115|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/25]⎯
+
+ FAIL  |bb-plugin-wizbar| src/mute.test.ts > explicit mute through registered command and RPC > keeps ordinary parking guards and undo usable
+AssertionError: expected 2 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 2
+
+ ❯ src/mute.test.ts:119:58
+    117|     const live = running(); const host = setup([live]);
+    118|     expect((await host.run(["settle", live.id])).exitCode).toBe(1);
+    119|     expect((await host.run(["mute", live.id])).exitCode).toBe(0);
+       |                                                          ^
+    120|     expect((await host.run(["unsettle", live.id])).exitCode).toBe(0);
+    121|     expect(await host.rows()).toEqual([]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/25]⎯
+
+ FAIL  |bb-plugin-wizbar| src/mute.test.ts > explicit mute through registered command and RPC > unmutes with failed work reads and rejects empty undo IDs
+AssertionError: expected Error: plugin "wizbar" has no rpc method … { code: '…' } to match object { code: 'invalid_input' }
+
+- Expected
++ Received
+
+- {
+-   "code": "invalid_input",
++ Error {
++   "code": "unknown_method",
+  }
+
+ ❯ src/mute.test.ts:132:56
+    130|     const host = setup(); await host.run(["mute", "sample-a"]);
+    131|     host.list.mockRejectedValue(new Error("synthetic offline"));
+    132|     await expect(host.rpc("unmute", { threadId: " " })).rejects.toMatc…
+       |                                                        ^
+    133|     expect(await host.rows()).toHaveLength(1);
+    134|     expect((await host.run(["unmute", "sample-a"])).exitCode).toBe(0);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/25]⎯
+
+ FAIL  |bb-plugin-wizbar| src/mute.test.ts > pending mute safety > a stale validation cannot override unmute
+ FAIL  |bb-plugin-wizbar| src/mute.test.ts > pending mute safety > a stale validation cannot override unsettle
+ FAIL  |bb-plugin-wizbar| src/mute.test.ts > pending mute safety > a stale validation cannot override unsnooze
+ FAIL  |bb-plugin-wizbar| src/mute.test.ts > pending mute safety > a stale validation cannot override thread.deleted
+ FAIL  |bb-plugin-wizbar| src/mute.test.ts > pending mute safety > a stale validation cannot override interaction.pending
+ FAIL  |bb-plugin-wizbar| src/mute.test.ts > pending mute safety > a stale validation cannot override thread.failed
+AssertionError: expected 'returned' to be 'reading' // Object.is equality
+
+Expected: "reading"
+Received: "returned"
+
+ ❯ src/mute.test.ts:176:19
+    174|     // Baseline has no mute parser; fail here before awaiting a read i…
+    175|     const first = await Promise.race([pending.then(() => "returned"), …
+    176|     expect(first).toBe("reading");
+       |                   ^
+    177|     if (barrier.includes(".")) await host.event(barrier);
+    178|     else await host.rpc(barrier);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/25]⎯
+
+
+ Test Files  3 failed (3)
+      Tests  25 failed | 70 passed (95)
+   Start at  21:59:40
+   Duration  3.84s (transform 330ms, setup 0ms, import 691ms, tests 4.30s, environment 471ms)
+
