@@ -1,0 +1,27 @@
+
+> bb-plugin-wizbar@0.1.0 typecheck
+> tsc --noEmit
+
+src/ParentChip.test.tsx(17,3): error TS2322: Type '{ id: string; projectId: string; title: string | null; titleFallback: string | null; displayTitle?: string | undefined; parentThreadId: string | null; lifecycleOwnerThreadId?: string | null | undefined; ... 25 more ...; latestAttentionAt: number; }' is not assignable to type 'PluginSidebarThread'.
+  Types of property 'displayTitle' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+src/ParentChip.test.tsx(62,20): error TS2739: Type '{ id: string; name: string; isPersonal: false; }' is missing the following properties from type 'PluginSidebarProject': href, settingsHref
+src/ThreadInbox.test.tsx(22,3): error TS2322: Type '{ id: string; projectId: string; title: string | null; titleFallback: string | null; displayTitle?: string | undefined; parentThreadId: string | null; lifecycleOwnerThreadId?: string | null | undefined; ... 25 more ...; latestAttentionAt: number; }' is not assignable to type 'PluginSidebarThread'.
+  Types of property 'displayTitle' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+src/ThreadInbox.test.tsx(68,49): error TS2322: Type '{ id: string; name: string; isPersonal: boolean; }[]' is not assignable to type 'readonly PluginSidebarProject[]'.
+  Type '{ id: string; name: string; isPersonal: boolean; }' is missing the following properties from type 'PluginSidebarProject': href, settingsHref
+src/ThreadInbox.test.tsx(116,22): error TS2739: Type '{ id: string; name: string; isPersonal: false; }' is missing the following properties from type 'PluginSidebarProject': href, settingsHref
+src/ThreadInbox.test.tsx(162,22): error TS2739: Type '{ id: string; name: string; isPersonal: false; }' is missing the following properties from type 'PluginSidebarProject': href, settingsHref
+src/ThreadInbox.test.tsx(217,20): error TS2739: Type '{ id: string; name: string; isPersonal: false; }' is missing the following properties from type 'PluginSidebarProject': href, settingsHref
+src/ThreadInbox.test.tsx(259,20): error TS2739: Type '{ id: string; name: string; isPersonal: false; }' is missing the following properties from type 'PluginSidebarProject': href, settingsHref
+src/ThreadInbox.test.tsx(294,20): error TS2739: Type '{ id: string; name: string; isPersonal: false; }' is missing the following properties from type 'PluginSidebarProject': href, settingsHref
+src/ThreadInbox.test.tsx(314,20): error TS2739: Type '{ id: string; name: string; isPersonal: false; }' is missing the following properties from type 'PluginSidebarProject': href, settingsHref
+src/ThreadInbox.test.tsx(393,9): error TS2739: Type '{ id: string; name: string; branchName: string; workspaceDisplayKind: "managed-worktree"; }' is missing the following properties from type '{ id: string | null; name: string | null; branchName: string | null; path: string | null; isWorktree: boolean | null; providerId: string | null; workspaceDisplayKind: "other" | "managed-worktree" | "unmanaged-worktree" | null; }': path, isWorktree, providerId
+src/ThreadInbox.test.tsx(490,20): error TS2739: Type '{ id: string; name: string; isPersonal: false; }' is missing the following properties from type 'PluginSidebarProject': href, settingsHref
+src/inbox.test.ts(18,3): error TS2322: Type '{ id: string; projectId: string; title: string | null; titleFallback: string | null; displayTitle?: string | undefined; parentThreadId: string | null; lifecycleOwnerThreadId?: string | null | undefined; ... 25 more ...; latestAttentionAt: number; }' is not assignable to type 'PluginSidebarThread'.
+  Types of property 'displayTitle' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.

@@ -1,6 +1,6 @@
 # WZ9 proof plan
 
-The decision recorded on #13 on 2026-11-10 selects published SDK 0.6.125, the newest inspected version retaining `PluginSidebarThreadActivity.goals`. The existing working/parking predicate, including its goals check, must stay unchanged. This supersedes the original latest-version target; any behavioral change or rewrite still stops the upgrade.
+The WD6 decision recorded on #13 on 2026-11-10 selects the newest published SDK retaining the complete required API set. The declaration survey identifies 0.6.33, including `PluginSidebarThreadActivity.goals`, the header component/props, sidebar action and PR hooks, nested environment provider ID, and footer registration. The existing working/parking predicate, including its goals check, must stay unchanged. This supersedes the original latest-version target; any behavioral change or rewrite still stops the upgrade.
 
 | Claim | Evidence planned before the upgrade |
 | --- | --- |
@@ -11,6 +11,6 @@ The decision recorded on #13 on 2026-11-10 selects published SDK 0.6.125, the ne
 | Parallel changes preserved | Fetch current main before handoff; merge any intervening #4/#7 changes and rerun affected checks |
 | Upstream credit/notices intact | Byte comparison to main; no notice or attribution edits |
 
-The baseline has 82 tests in six files: the original 80 plus two identity tests. This ticket adds no behavior, new test expectations, feature implementation, or UI changes. Compiler failures are the proof for forced type edits; no behavior regression test is invented. Keep compiler red evidence before the corresponding source fix.
+The baseline has 82 tests in six files: the original 80 plus two identity tests. This ticket adds no behavior, new test expectations, feature implementation, or UI changes. Compiler failures are the proof for forced type edits; no behavior regression test is invented. An isolated scratch run must pass before applying the fixture type additions to the branch. Keep compiler red evidence before the corresponding source fix.
 
 The legacy build script must not be executed. #7 owns the documented `room-cli` script selection and its build gap; record the applicable boundary honestly. Plugin installation, live execution and publishing remain separately gated.
