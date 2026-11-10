@@ -27,7 +27,7 @@
     "bb-plugin"
   ],
   "scripts": {
-    "build": "bb plugin build",
+    "build": "room-cli plugin build .",
     "test": "vitest run --config vitest.config.ts",
     "typecheck": "tsc --noEmit"
   },
