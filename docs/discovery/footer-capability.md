@@ -1,102 +1,112 @@
 # Footer capability discovery (WZ1)
 
-**Outcome: unclear.** A live number in the footer row has **not** been
-demonstrated. [WZ5 (#6)](https://github.com/openwizdev/wizplugins/issues/6) must stop
-and return to the owner. Merging this report does not satisfy that ticket's
-positive-evidence prerequisite. Do not substitute an icon, disclosure card,
-sidebar accessory, overlay, or another location.
+**Outcome: unclear.** A plugin-drawn live number in the footer row has not been
+demonstrated. **No agent-run live look was done.** Public SDK declarations and
+the owner observations below do not prove live rendering.
 
-Discovery date: 2026-11-10. Scope:
-[WZ1 (#2)](https://github.com/openwizdev/wizplugins/issues/2), within the
-[approved plan (#1)](https://github.com/openwizdev/wizplugins/issues/1).
+Report date: 2026-11-10. Scope:
+[WZ1 (#2)](https://github.com/openwizdev/wizplugins/issues/2), under
+[plan #1, revision 7](https://github.com/openwizdev/wizplugins/issues/1).
 
-## Inspected distribution
+## Current decision (WF1)
 
-The inspected SDK metadata identifies version **0.6.51**. Identifying
-installation and application-build details remain in private evidence.
-This identifies the inspected SDK generation; it is not the older
-`@get-bb/plugin-sdk` 0.4.4 dependency inherited by this repository. No SDK
-package was installed or synchronized into a plugin.
+The 2026-11-10 [orchestrator ruling](https://github.com/openwizdev/wizplugins/pull/10#issuecomment-6768825294)
+records the owner's decision to proceed with [WZ5 (#6)](https://github.com/openwizdev/wizplugins/issues/6)
+through the pinned SDK's footer registration without waiting for this spike.
+If that slot cannot display a live-updating number, the plugin renders nothing
+there. Live proof belongs to the owner's installation in
+[WZ8 (#9)](https://github.com/openwizdev/wizplugins/issues/9). This report records
+what is established and what remains unverified; it does not claim footer
+implementation or live acceptance, or authorize another presentation.
 
-Evidence came from the shipped `frontend-core-slots.md` and
-`frontend-registration.md` references, bundled frontend registration and
-footer-renderer code, and the two artifact metadata records. These are
-distribution-relative artifact names, not locations on a discovery machine.
-The earlier discovery report describes a private handoff of the raw artifacts
-and their SHA-256 hashes; archival has not been verified. Shipped documentation
-is summarized here rather than copied into this repository. The
-[discovery summary on WZ1](https://github.com/openwizdev/wizplugins/issues/2#issuecomment-6761065879)
-records the SDK findings and the unclear outcome.
+## Public, reproducible SDK evidence
 
-## SDK and renderer evidence
+The SDK inspected for this revision is the published **`@get-bb/plugin-sdk`
+0.6.33**, also pinned by the plugin on main. This is public package inspection,
+not evidence of the SDK shipped by any live application. It replaces the
+previous report's unverified shipped-distribution attribution and renderer
+claims.
 
-| Surface | Observed contract in the shipped distribution | What it establishes |
+- [Registry metadata](https://registry.npmjs.org/@get-bb%2fplugin-sdk/0.6.33)
+- [Tarball](https://registry.npmjs.org/@get-bb/plugin-sdk/-/plugin-sdk-0.6.33.tgz)
+- Integrity: `sha512-cqEte+M3dSmR1YIJTc/k4r4Uv8ER1gXiNbyImTLqpG8C/2qHMZSxZH1alnWVmRkTaXJB80nxWO9Y4EKaEIEs9w==`
+- Inspected archive members: `package/package.json`,
+  `package/bundled-types/bb-plugin-sdk-app.d.ts` and
+  `package/bundled-types/bb-plugin-sdk.d.ts`.
+
+The downloaded archive's SHA-512 matched that integrity value, and its package
+metadata identifies the name and version above. To reproduce without installing
+or executing the package, read and verify the archive in memory:
+
+```python
+import base64, hashlib, io, json, tarfile, urllib.request
+url = "https://registry.npmjs.org/@get-bb/plugin-sdk/-/plugin-sdk-0.6.33.tgz"
+expected = "sha512-cqEte+M3dSmR1YIJTc/k4r4Uv8ER1gXiNbyImTLqpG8C/2qHMZSxZH1alnWVmRkTaXJB80nxWO9Y4EKaEIEs9w=="
+data = urllib.request.urlopen(url).read()
+actual = "sha512-" + base64.b64encode(hashlib.sha512(data).digest()).decode()
+assert actual == expected
+with tarfile.open(fileobj=io.BytesIO(data), mode="r:gz") as archive:
+    metadata = json.load(archive.extractfile("package/package.json"))
+    assert metadata["name"] == "@get-bb/plugin-sdk"
+    assert metadata["version"] == "0.6.33"
+    for name in ["bb-plugin-sdk-app.d.ts", "bb-plugin-sdk.d.ts"]:
+        print(archive.extractfile("package/bundled-types/" + name).read().decode())
+```
+
+## SDK declarations and limits
+
+The root and app declarations agree on these footer contracts:
+
+| Surface | Published contract | What it establishes |
 | --- | --- | --- |
-| `app.experimental_sidebarFooter.register` | Common fields: `id`, `label`, `icon`. An action adds `kind: "action"` and `onActivate`; a disclosure adds `kind: "disclosure"` and `component`. Registration validates the allowed keys. | Managed icon items exist in the footer. There is no separate row-content or numeric-count field in these registration forms. |
-| Disclosure `component` | Receives `dismiss`; the host mounts its content in a section positioned above the footer. | Custom card content is distinct from inline footer-row content. A number in that card would not meet WZ5. |
-| Disclosure controller | Provides `open`, `close`, `toggle`, and `setAlert`. The inspected alert renderer draws a dot and places its text in a screen-reader-only status element. | Dynamic alert text is not evidence of a visible numeric badge or count. |
-| `app.slots.sidebarFooterAction` | Compatibility form: `id`, `title`, `icon`, `run`; the callback receives `openSettings`. | The compatibility action is an icon trigger, not a declared inline text slot. |
-| Footer item renderer | Draws the icon; the item label is screen-reader-only and is also used for the tooltip. The compatibility icon takes a different rendering path from the newer footer registration. | A numeric label or tooltip alone does not prove the required visible number. |
-| `app.experimental_icons.register` and `app.contentScripts.register` | The shipped frontend also has custom icon registration and trusted content scripts. | These prevent a blanket claim that all possible rendering techniques are impossible. Neither was exercised, and neither is an approved substitute or positive footer-number proof. |
+| `app.experimental_sidebarFooter.register` | Shared fields `id`, `label`, `icon`; action adds `kind: "action"` and `onActivate`; disclosure adds `kind: "disclosure"` and `component`. | Declared host-managed footer items; these forms have no inline row-content or numeric-count field. |
+| `ExperimentalSidebarFooterItemBase.label` | Documented as tooltip and accessible text for a host-rendered icon button. | A label alone does not establish a visible number. |
+| Disclosure `component` | Documented as plugin content above the footer row; props provide `dismiss`. | A number in disclosure content would not demonstrate inline footer-row rendering. |
+| `ExperimentalSidebarFooterDisclosureController` | `open`, `close`, `toggle`. | Controls disclosure visibility; this version declares no `setAlert` member here. |
+| `app.slots.sidebarFooterAction` | Compatibility registration has `id`, `title`, `icon`, `run`; context supplies `openSettings`. | The documented compatibility surface is a host-rendered icon action. |
 
-These are static SDK/implementation observations, **not live rendering
-observations**. They support icon/card capability, but do not conclusively
-settle the required live-number presentation. The overall outcome therefore
-remains **unclear**, rather than asserting a live-confirmed icon/card-only
-limit.
+These are static declarations and their documentation, not observations of a
+running renderer. They establish the documented icon/disclosure interfaces,
+but cannot prove a live number works or that every possible technique is
+impossible. The outcome therefore remains **unclear**.
 
-## Live observation and limits
+## Owner observations (separate from agent evidence)
 
-Earlier discovery recorded a read-only status response from a real application.
-No footer rendering was observed. Identifying provenance and inspection
-limitations remain in private evidence. No permission, setting or application
-state was changed to obtain additional evidence. Consequently:
+Two sanitised observations recorded on #2 describe the owner's application:
 
-- No footer-row number was observed, either at zero or while work was running.
-- No live numerical update, spinner, hover split, or inert-click behavior was
-  verified.
-- No screenshot, DOM snapshot, fixture, or type declaration is offered as proof
-  of live footer-number support.
+- [Footer appearance](https://github.com/openwizdev/wizplugins/issues/2#issuecomment-6766179261):
+  the owner saw a card-style row with text, a changing account-state number,
+  a button and a progress bar, plus a lower row of icon buttons and compact
+  controls. This shows that the footer region contains numbers and text;
+  it does not identify which elements use plugin APIs.
+- [Preference descriptions](https://github.com/openwizdev/wizplugins/issues/2#issuecomment-6766196172):
+  the owner observations include preferences for ordering built-in and plugin
+  footer actions and moving them into the overflow menu. They establish that
+  plugin actions participate in footer organization, not that they can render
+  a live number.
 
-No plugin was installed, enabled, reloaded, built against the live application,
-or invoked. No thread or setting was changed. No process performing product
-actions, workload, release, publication, or additional paid discovery service
-was started. Inspection used read-only commands against existing artifacts and
-application status.
+Neither observation establishes a plugin-drawn number updating in the footer
+row. They are owner observations, not an agent-run live inspection or agent
+rendering proof.
 
-This report hand-back performed no additional live access. The separate
-read-only footer look remains pending on
-[WZ1 (#2)](https://github.com/openwizdev/wizplugins/issues/2); no new rendering
-result was posted there at hand-back. Any later result must be recorded with
-its evidence class before the outcome or WZ5 gate changes.
+## Live evidence and W11 status
 
-## W11 evidence handoff
+No agent-run live look was done. No identifying live evidence was collected.
+**There is no private evidence record.** There is no artifact archive or
+handoff awaiting verification for this report. The public package and the
+linked owner observations are the evidence available here; the previous
+status-response and private-archive claims are withdrawn.
 
-Private evidence reference: **WZ1-W11-2026-11-10**. The earlier report identifies
-the handoff as containing artifact contents and hashes, version metadata,
-provenance, and the raw read-only status response. Its contents and retention
-have not been independently verified during this hand-back. No identifying
-evidence or screenshot is included here.
-
-**Private-record archival is pending.** The orchestrator must archive and verify
-the evidence under the existing private-record rules. The opaque reference is
-an evidence handoff key, not a claim that archival is complete. W11's
-private-record requirement remains open until that handoff is verified; the
-handoff remains tracked on [WZ1 (#2)](https://github.com/openwizdev/wizplugins/issues/2).
-
-The outstanding read-only observation is recorded in the
-[private coordination record](https://github.com/jparker2006/ClosedWiz/issues/325#issuecomment-6761652883).
-That pointer records the remaining work; it is not the archived W11 evidence
-or proof of live footer rendering.
+No plugin was installed, enabled, reloaded or invoked for this report. No
+thread, setting or live application state was changed. No product action,
+publishing, or paid discovery service was started.
 
 | Claim | Evidence class | Result |
 | --- | --- | --- |
-| Inspected SDK generation and footer contracts identified | Shipped artifact inspection | SDK 0.6.51 metadata and the contracts above recorded |
-| Earlier discovery reached a real application without product mutation | Reported read-only status and inspection procedure | Recorded in the earlier report; raw evidence readback pending |
-| A live number is supported in the footer row | Live observation | Unverified; outcome unclear |
-| Raw identifying evidence has a verified private-repository record | Private archival/readback | Pending owner handoff |
-| WZ5 may proceed | Plan gate review | No; positive live footer-number evidence is absent |
-
-The next decision belongs to the owner through
-[WZ1 (#2)](https://github.com/openwizdev/wizplugins/issues/2). This report grants no
-authority to install a probe, modify the footer, or try another presentation.
+| Published SDK footer API identified | Public package inspection with verified integrity | SDK 0.6.33 contracts above are reproducible |
+| SDK actually shipped by the owner's application identified | Agent live inspection | Not established |
+| Footer region contains text and numbers | Owner observation | Reported appearance; plugin ownership not established |
+| Plugin footer items share ordering and visibility preferences | Owner observation | Preference descriptions recorded on #2 |
+| A plugin can draw a live number in the footer row | Agent live inspection | Not performed; outcome unclear |
+| W11 live capability proven | Live rendering evidence | Unverified; proof remains for #9 under WF1 |
+| WZ5 may proceed without this spike's live proof | Owner decision, WF1 | Yes, under the render-nothing rule; no substitute location |
