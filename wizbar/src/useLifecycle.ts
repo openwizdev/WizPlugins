@@ -32,6 +32,8 @@ export interface LifecycleApi {
   unsettle(threadId: string): void;
   snooze(threadId: string, snoozedUntil: number): void;
   unsnooze(threadId: string): void;
+  mute(threadId: string): Promise<void>;
+  unmute(threadId: string): Promise<void>;
 }
 
 /**
@@ -93,11 +95,15 @@ export function useLifecycle(
       isWorking: isWorking(thread),
       isUnread: thread.isUnread,
       latestAttentionAt: thread.latestAttentionAt,
+      isPinned: thread.isPinned,
+      hasFailed: thread.runtimeStatus === "waiting-for-host" ? undefined :
+        thread.status === "error" || thread.runtimeStatus === "error" ||
+        thread.queuedWork === "failed" || thread.indicator === "unread-error",
     });
     // One read per mutation: the write publishes on the realtime channel, and
     // that subscription already triggers a refresh for every client.
     const mutate = async (
-      method: "settle" | "unsettle" | "unsnooze",
+      method: "settle" | "unsettle" | "unsnooze" | "mute" | "unmute",
       threadId: string,
     ) => {
       await rpc.call(method, { threadId });
@@ -110,6 +116,8 @@ export function useLifecycle(
       settle: (threadId) => void mutate("settle", threadId),
       unsettle: (threadId) => void mutate("unsettle", threadId),
       unsnooze: (threadId) => void mutate("unsnooze", threadId),
+      mute: (threadId) => mutate("mute", threadId),
+      unmute: (threadId) => mutate("unmute", threadId),
       snooze: (threadId, snoozedUntil) => {
         void rpc.call("snooze", { threadId, snoozedUntil });
       },

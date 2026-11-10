@@ -6,7 +6,7 @@
 // understands. Here, uninstalling the plugin removes its state with it.
 import { defineRpcContract, type BbPluginApi } from "@get-bb/plugin-sdk";
 import { z } from "zod";
-import { canPark, resolveShelf, type ThreadActivitySignals } from "./lifecycle";
+import { canMute, canPark, resolveShelf, type ThreadActivitySignals } from "./lifecycle";
 import { createLifecycleCommand, LifecycleError, type LifecycleOperation, type LifecycleSuccess } from "./command";
 
 const migrations = [
@@ -16,6 +16,11 @@ const migrations = [
      snoozed_until  INTEGER,
      snoozed_at     INTEGER
    )`,
+  `CREATE TABLE IF NOT EXISTS thread_mute (
+     thread_id TEXT PRIMARY KEY,
+     muted_at INTEGER NOT NULL,
+     attention_at INTEGER NOT NULL
+   )`,
 ];
 
 export interface StoredLifecycleRow {
@@ -23,6 +28,8 @@ export interface StoredLifecycleRow {
   settledAt: number | null;
   snoozedUntil: number | null;
   snoozedAt: number | null;
+  mutedAt?: number;
+  muteAttentionAt?: number;
 }
 
 interface LifecycleDbRow {
@@ -44,6 +51,8 @@ export const t3sidebarRpcContract = defineRpcContract({
           settledAt: z.number().nullable(),
           snoozedUntil: z.number().nullable(),
           snoozedAt: z.number().nullable(),
+          mutedAt: z.number().optional(),
+          muteAttentionAt: z.number().optional(),
         }),
       ),
     }),
@@ -59,6 +68,8 @@ export const t3sidebarRpcContract = defineRpcContract({
     output: z.object({ ok: z.boolean() }),
   },
   unsnooze: { input: threadIdSchema, output: z.object({ ok: z.boolean() }) },
+  mute: { input: threadIdSchema, output: z.object({ ok: z.boolean() }) },
+  unmute: { input: threadIdSchema, output: z.object({ ok: z.boolean() }) },
 });
 
 /** Channel the frontend re-reads on. */
@@ -84,6 +95,11 @@ const liveThreadSchema = threadRouteSchema.extend({
     activeGoalCount: z.number().int().nonnegative(),
   }).strict(),
 });
+const muteThreadSchema = liveThreadSchema.extend({
+  pinnedAt: z.number().finite().nullable(),
+  status: z.enum(["idle", "error", "active", "pending", "starting", "stopping"]),
+  queuedWork: z.enum(["none", "waiting", "failed"]),
+});
 const unavailable = () => new LifecycleError("state_unavailable", "Working or waiting state is unavailable.");
 
 // Read current server data, never a client-supplied eligibility assertion.
@@ -103,7 +119,7 @@ async function readRoute(bb: BbPluginApi, threadId: string, signal?: AbortSignal
   }
 }
 
-async function readSignals(bb: BbPluginApi, threadId: string, signal?: AbortSignal): Promise<ThreadActivitySignals> {
+async function readSignals(bb: BbPluginApi, threadId: string, signal?: AbortSignal, muteAuthority = false): Promise<ThreadActivitySignals> {
   const route = await readRoute(bb, threadId, signal);
   try {
     const seen = new Set<string>();
@@ -119,6 +135,8 @@ async function readSignals(bb: BbPluginApi, threadId: string, signal?: AbortSign
         const parsed = liveThreadSchema.safeParse(matches[0]);
         if (!parsed.success) throw unavailable();
         const row = parsed.data;
+        const mute = muteThreadSchema.safeParse(matches[0]);
+        if (muteAuthority && !mute.success) throw unavailable();
         if (row.projectId !== route.projectId || row.deletedAt !== null) throw unavailable();
         // A disconnected host cannot provide a verified idle state.
         if (row.runtime.displayStatus === "waiting-for-host" || row.runtime.displayStatus === "host-reconnecting") throw unavailable();
@@ -128,6 +146,9 @@ async function readSignals(bb: BbPluginApi, threadId: string, signal?: AbortSign
             Object.values(row.activity).some((count) => count > 0),
           isUnread: (row.lastReadAt ?? 0) < row.latestAttentionAt,
           latestAttentionAt: row.latestAttentionAt,
+          isPinned: mute.success ? mute.data.pinnedAt !== null : undefined,
+          hasFailed: mute.success ? mute.data.status === "error" ||
+            row.runtime.displayStatus === "error" || mute.data.queuedWork === "failed" : undefined,
         };
       }
       if (page.length < 100) throw unavailable();
@@ -160,43 +181,56 @@ export default function plugin(bb: BbPluginApi) {
     }
   };
 
-  const readAll = (): StoredLifecycleRow[] =>
-    (
-      db
-        .prepare(
-          `SELECT thread_id, settled_at, snoozed_until, snoozed_at
-             FROM thread_lifecycle`,
-        )
-        .all() as LifecycleDbRow[]
-    ).map((row) => ({
-      threadId: row.thread_id,
-      settledAt: row.settled_at,
-      snoozedUntil: row.snoozed_until,
-      snoozedAt: row.snoozed_at,
-    }));
+  const readMutes = (): StoredLifecycleRow[] =>
+    (db.prepare("SELECT thread_id, muted_at, attention_at FROM thread_mute").all() as {
+      thread_id: string; muted_at: number; attention_at: number;
+    }[]).map((row) => ({ threadId: row.thread_id, settledAt: null,
+      snoozedUntil: null, snoozedAt: null, mutedAt: row.muted_at,
+      muteAttentionAt: row.attention_at }));
 
+  const readAll = (): StoredLifecycleRow[] => [
+    ...(db.prepare(`SELECT thread_id, settled_at, snoozed_until, snoozed_at
+        FROM thread_lifecycle`).all() as LifecycleDbRow[]).map((row) => ({
+      threadId: row.thread_id, settledAt: row.settled_at,
+      snoozedUntil: row.snoozed_until, snoozedAt: row.snoozed_at,
+    })),
+    ...readMutes(),
+  ];
+  const publish = (threadId: string) => bb.realtime.publish(LIFECYCLE_CHANNEL, { threadId });
   const write = (row: StoredLifecycleRow): void => {
-    db.prepare(
-      `INSERT INTO thread_lifecycle
-         (thread_id, settled_at, snoozed_until, snoozed_at)
-       VALUES (?, ?, ?, ?)
-       ON CONFLICT(thread_id) DO UPDATE SET
-         settled_at = excluded.settled_at,
-         snoozed_until = excluded.snoozed_until,
-         snoozed_at = excluded.snoozed_at`,
-    ).run(row.threadId, row.settledAt, row.snoozedUntil, row.snoozedAt);
-    bb.realtime.publish(LIFECYCLE_CHANNEL, { threadId: row.threadId });
+    db.transaction(() => {
+      if (row.mutedAt !== undefined) {
+        db.prepare("DELETE FROM thread_lifecycle WHERE thread_id = ?").run(row.threadId);
+        db.prepare(`INSERT INTO thread_mute (thread_id, muted_at, attention_at) VALUES (?, ?, ?)
+          ON CONFLICT(thread_id) DO NOTHING`).run(row.threadId, row.mutedAt, row.muteAttentionAt!);
+      } else {
+        db.prepare("DELETE FROM thread_mute WHERE thread_id = ?").run(row.threadId);
+        db.prepare(`INSERT INTO thread_lifecycle
+          (thread_id, settled_at, snoozed_until, snoozed_at) VALUES (?, ?, ?, ?)
+          ON CONFLICT(thread_id) DO UPDATE SET settled_at = excluded.settled_at,
+          snoozed_until = excluded.snoozed_until, snoozed_at = excluded.snoozed_at`
+        ).run(row.threadId, row.settledAt, row.snoozedUntil, row.snoozedAt);
+      }
+    })();
+    invalidateParks(row.threadId);
+    publish(row.threadId);
   };
 
   const clear = (threadId: string, deleted = false): void => {
-    // Deletion invalidates even when its database cleanup fails. A manual
-    // wake invalidates only after its delete succeeds.
     if (deleted) invalidateParks(threadId, true);
-    db.prepare(`DELETE FROM thread_lifecycle WHERE thread_id = ?`).run(
-      threadId,
-    );
+    db.transaction(() => {
+      db.prepare("DELETE FROM thread_lifecycle WHERE thread_id = ?").run(threadId);
+      db.prepare("DELETE FROM thread_mute WHERE thread_id = ?").run(threadId);
+    })();
     if (!deleted) invalidateParks(threadId);
-    bb.realtime.publish(LIFECYCLE_CHANNEL, { threadId });
+    publish(threadId);
+  };
+  // Explicit attention events invalidate older validations even if no mute
+  // has reached storage yet. Ordinary parking retains its original row.
+  const breakMute = (threadId: string): void => {
+    const result = db.prepare("DELETE FROM thread_mute WHERE thread_id = ?").run(threadId);
+    invalidateParks(threadId);
+    if (result.changes) publish(threadId);
   };
 
   const perform = async (
@@ -205,7 +239,7 @@ export default function plugin(bb: BbPluginApi) {
     const parsed = threadIdSchema.safeParse({ threadId: rawId });
     if (!parsed.success) throw new LifecycleError("invalid_id", "Thread ID must be nonempty.");
     const threadId = parsed.data.threadId;
-    if (operation === "unsettle" || operation === "unsnooze") {
+    if (operation === "unsettle" || operation === "unsnooze" || operation === "unmute") {
       await readRoute(bb, threadId, signal);
       if (signal?.aborted) throw unavailable();
       clear(threadId);
@@ -223,11 +257,19 @@ export default function plugin(bb: BbPluginApi) {
       pendingParks.set(threadId, state);
     }
     try {
-      const signals = await readSignals(bb, threadId, signal);
+      const stored = readAll().find((row) => row.threadId === threadId);
+      const signals = await readSignals(bb, threadId, signal,
+        operation === "mute" || stored?.mutedAt !== undefined);
       if (signal?.aborted) throw unavailable();
       const now = Date.now();
       if (operation !== "list") {
-        if (!canPark(signals)) throw new LifecycleError(signals.hasPendingInteraction ? "waiting" : "working",
+        if (operation === "mute" && !canMute(signals)) {
+          if (signals.isPinned) throw new LifecycleError("pinned", "Thread is pinned.");
+          if (signals.hasPendingInteraction) throw new LifecycleError("waiting", "Thread is waiting for input.");
+          if (signals.hasFailed) throw new LifecycleError("attention", "Thread requires attention.");
+          throw new LifecycleError("not_working", "Only running threads may be muted.");
+        }
+        if (operation !== "mute" && !canPark(signals)) throw new LifecycleError(signals.hasPendingInteraction ? "waiting" : "working",
           signals.hasPendingInteraction ? "Thread is waiting for input." : "Thread is working.");
         if (operation === "snooze" && (!Number.isSafeInteger(snoozedUntil) || !Number.isFinite(new Date(snoozedUntil!).getTime()) || snoozedUntil! <= now)) {
           throw new LifecycleError("invalid_until", "Snooze time must be a valid future date.");
@@ -239,7 +281,8 @@ export default function plugin(bb: BbPluginApi) {
         // the plugin-only write/publication.
         write({ threadId, settledAt: operation === "settle" ? now : null,
           snoozedUntil: operation === "snooze" ? snoozedUntil! : null,
-          snoozedAt: operation === "snooze" ? now : null });
+          snoozedAt: operation === "snooze" ? now : null,
+          ...(operation === "mute" ? { mutedAt: now, muteAttentionAt: signals.latestAttentionAt } : {}) });
       }
       const row = readAll().find((row) => row.threadId === threadId);
       const shelf = resolveShelf(row, signals, now);
@@ -255,8 +298,36 @@ export default function plugin(bb: BbPluginApi) {
     async unsettle({ threadId }) { await perform("unsettle", threadId); return { ok: true }; },
     async snooze({ threadId, snoozedUntil }) { await perform("snooze", threadId, snoozedUntil); return { ok: true }; },
     async unsnooze({ threadId }) { await perform("unsnooze", threadId); return { ok: true }; },
+    async mute({ threadId }) { await perform("mute", threadId); return { ok: true }; },
+    async unmute({ threadId }) { await perform("unmute", threadId); return { ok: true }; },
   });
   bb.cli.register(createLifecycleCommand(perform));
+
+  bb.events.on("interaction.pending", ({ thread }) => breakMute(thread.id));
+  bb.events.on("thread.failed", ({ thread }) => breakMute(thread.id));
+  // Read all authoritative inputs on an activity observation. Never interpret
+  // an arbitrary attention timestamp as a completed turn while work continues.
+  const observeMute = async (threadId: string): Promise<void> => {
+    const row = readMutes().find((row) => row.threadId === threadId);
+    if (!row) return;
+    const state = pendingParks.get(threadId) ?? { revision: 0, pending: 0, deleted: false };
+    const revision = state.revision;
+    state.pending++;
+    pendingParks.set(threadId, state);
+    try {
+      const signals = await readSignals(bb, threadId, undefined, true);
+      if (!state.deleted && state.revision === revision &&
+          resolveShelf(row, signals, Date.now()) === "active") breakMute(threadId);
+    } catch (error) {
+      // Unknown reads cannot authorize a mutation. The sidebar separately
+      // shows disconnected/unknown inputs; a later event can retry observation.
+      if (!(error instanceof LifecycleError)) throw error;
+    } finally {
+      if (--state.pending === 0) pendingParks.delete(threadId);
+    }
+  };
+  bb.events.on("thread.idle", ({ thread }) => observeMute(thread.id));
+  bb.events.on("experimental_thread.events", ({ thread }) => observeMute(thread.id));
 
   // A deleted thread must not leave a row behind that would park a future
   // thread reusing the id, and stale rows accumulate otherwise.

@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "./components/Select";
 import { ThreadCard } from "./ThreadCard";
+import { MachineIcon } from "./MachineIcon";
 import { SlimRow } from "./SlimRow";
 import { useLifecycle } from "./useLifecycle";
 import { TRAILING_GLYPH_BOX_CLASS } from "./StatusSlot";
@@ -60,13 +61,14 @@ export function ThreadInbox({
   const now = nowMinute * 60_000;
   const [showSnoozed, setShowSnoozed] = useState(false);
   const [showSettled, setShowSettled] = useState(false);
+  const [showMuted, setShowMuted] = useState(false);
 
   const projectNameById = useMemo(
     () => new Map(projects.map((project) => [project.id, project.name])),
     [projects],
   );
 
-  const { pinned, inbox, snoozed, settled } = useMemo(() => {
+  const { pinned, inbox, snoozed, settled, muted } = useMemo(() => {
     const scoped = filterByProject(
       visibleInboxThreads(threads),
       scope === ALL_PROJECTS ? null : scope,
@@ -80,10 +82,12 @@ export function ThreadInbox({
     const active: typeof matched = [];
     const onSnoozeShelf: typeof matched = [];
     const onSettledShelf: typeof matched = [];
+    const onMutedShelf: typeof matched = [];
     for (const thread of matched) {
       const shelf = lifecycle.shelfFor(thread);
       if (shelf === "snoozed") onSnoozeShelf.push(thread);
       else if (shelf === "settled") onSettledShelf.push(thread);
+      else if (shelf === "muted") onMutedShelf.push(thread);
       else active.push(thread);
     }
     const split = partitionPinned(active);
@@ -96,6 +100,7 @@ export function ThreadInbox({
           (lifecycle.wakeAtFor(left) ?? 0) - (lifecycle.wakeAtFor(right) ?? 0),
       ),
       settled: sortByCreatedAtDescending(onSettledShelf),
+      muted: sortByCreatedAtDescending(onMutedShelf),
     };
   }, [lifecycle, scope, searchQuery, threads]);
 
@@ -143,7 +148,7 @@ export function ThreadInbox({
           >
             Could not load threads.
           </p>
-        ) : pinned.length + inbox.length + snoozed.length + settled.length ===
+        ) : pinned.length + inbox.length + snoozed.length + settled.length + muted.length ===
           0 ? (
           <p
             role="status"
@@ -198,6 +203,16 @@ export function ThreadInbox({
               onNavigate={onNavigate}
             />
             <ParkedShelf
+              label="Muted"
+              threads={muted}
+              expanded={showMuted}
+              onToggle={() => setShowMuted((open) => !open)}
+              shelf="muted"
+              activeThreadId={activeThreadId}
+              lifecycle={lifecycle}
+              onNavigate={onNavigate}
+            />
+            <ParkedShelf
               label="Settled"
               threads={settled}
               expanded={showSettled}
@@ -233,7 +248,7 @@ function ParkedShelf({
   threads: readonly PluginSidebarThread[];
   expanded: boolean;
   onToggle: () => void;
-  shelf: "snoozed" | "settled";
+  shelf: "snoozed" | "settled" | "muted";
   activeThreadId: string | null;
   lifecycle: ReturnType<typeof useLifecycle>;
   onNavigate: () => void;
@@ -266,7 +281,11 @@ function ParkedShelf({
       </button>
       {expanded ? (
         <ul className="flex flex-col gap-px">
-          {threads.map((thread) => (
+          {threads.map((thread) => shelf === "muted" ? (
+            <MutedRow key={thread.id} thread={thread}
+              isActive={thread.id === activeThreadId} onNavigate={onNavigate}
+              onUnmute={() => lifecycle.unmute(thread.id)} />
+          ) : (
             <SlimRow
               key={thread.id}
               thread={thread}
@@ -285,6 +304,44 @@ function ParkedShelf({
         </ul>
       ) : null}
     </section>
+  );
+}
+
+/** A mute has no timer; explicit undo stays separate from row navigation. */
+function MutedRow({ thread, isActive, onNavigate, onUnmute }: {
+  thread: PluginSidebarThread;
+  isActive: boolean;
+  onNavigate: () => void;
+  onUnmute: () => Promise<void>;
+}) {
+  const actions = useSidebarThreadActions();
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState(false);
+  const title = thread.title?.trim() || thread.titleFallback?.trim() || "Untitled thread";
+  return (
+    <li className="list-none">
+      <div className={cn("relative flex h-8 items-center gap-2 rounded-md px-2.5 text-xs",
+        isActive ? "bg-sidebar-accent" : "hover:bg-sidebar-accent/60")}>
+        <a href={thread.href} aria-label={title}
+          data-sidebar-thread-shortcut-target="" data-sidebar-thread-id={thread.id}
+          className="absolute inset-0 rounded-md"
+          onClick={(event) => {
+            event.preventDefault();
+            actions.open(thread.id, { split: event.metaKey || event.ctrlKey });
+            onNavigate();
+          }} />
+        <span className="pointer-events-none relative min-w-0 flex-1 truncate text-muted-foreground">{title}</span>
+        <MachineIcon environment={thread.environment} />
+        <button type="button" aria-label="Unmute thread" disabled={pending}
+          className="relative shrink-0 rounded px-1 py-1 text-muted-foreground hover:text-foreground focus-visible:ring-1 disabled:opacity-50"
+          onClick={async () => {
+            setPending(true); setError(false);
+            try { await onUnmute(); } catch { setError(true); }
+            finally { setPending(false); }
+          }}>Unmute</button>
+      </div>
+      {error ? <p role="status" className="px-2.5 text-xs text-muted-foreground">Could not unmute thread. Try again.</p> : null}
+    </li>
   );
 }
 

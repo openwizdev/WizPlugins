@@ -14,6 +14,9 @@ export interface ThreadLifecycleRow {
   snoozedUntil: number | null;
   /** When the snooze was set — used to detect activity since. */
   snoozedAt: number | null;
+  /** Explicit mute baseline; absent on ordinary parking rows. */
+  mutedAt?: number;
+  muteAttentionAt?: number;
 }
 
 /** The activity signals that outrank a user's parking decision. */
@@ -24,9 +27,12 @@ export interface ThreadActivitySignals {
   isUnread: boolean;
   /** Newest attention timestamp bb reports for the thread. */
   latestAttentionAt: number;
+  /** Undefined means mute authority is unavailable: keep the row visible. */
+  isPinned?: boolean;
+  hasFailed?: boolean;
 }
 
-export type ThreadShelf = "active" | "snoozed" | "settled";
+export type ThreadShelf = "active" | "snoozed" | "settled" | "muted";
 
 /**
  * Whether a thread may be parked at all.
@@ -38,6 +44,12 @@ export type ThreadShelf = "active" | "snoozed" | "settled";
  */
 export function canPark(signals: ThreadActivitySignals): boolean {
   return !signals.hasPendingInteraction && !signals.isWorking;
+}
+
+/** Explicit selection is the only exception to the working parking guard. */
+export function canMute(signals: ThreadActivitySignals): boolean {
+  return signals.isWorking && !signals.hasPendingInteraction &&
+    signals.isPinned === false && signals.hasFailed === false;
 }
 
 /**
@@ -53,6 +65,13 @@ export function resolveShelf(
   now: number,
 ): ThreadShelf {
   if (row === undefined) return "active";
+  if (row.mutedAt !== undefined) {
+    if (signals.hasPendingInteraction || signals.isPinned !== false ||
+        signals.hasFailed !== false || row.muteAttentionAt === undefined) return "active";
+    const finishedAttention = !signals.isWorking && signals.isUnread &&
+      signals.latestAttentionAt > row.muteAttentionAt;
+    return finishedAttention ? "active" : "muted";
+  }
   if (!canPark(signals)) return "active";
 
   if (row.snoozedUntil !== null) {
