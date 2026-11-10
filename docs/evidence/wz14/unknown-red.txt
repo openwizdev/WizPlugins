@@ -1,0 +1,179 @@
+
+> bb-plugin-wizbar@0.1.0 test
+> vitest run --config vitest.config.ts --maxWorkers=2 src/ThreadInbox.test.tsx
+
+
+ RUN  v4.1.10 <checkout>/wizbar
+
+ ❯ |bb-plugin-wizbar| src/ThreadInbox.test.tsx (42 tests | 2 failed) 2920ms
+     × keeps attention/pinned/unavailable work in Inbox: {"runtimeStatus":"future-status"} 1013ms
+     × keeps attention/pinned/unavailable work in Inbox: {"queuedWork":"future-status"} 1014ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/ThreadInbox.test.tsx > explicit muted shelf > keeps attention/pinned/unavailable work in Inbox: {"runtimeStatus":"future-status"}
+ FAIL  |bb-plugin-wizbar| src/ThreadInbox.test.tsx > explicit muted shelf > keeps attention/pinned/unavailable work in Inbox: {"queuedWork":"future-status"}
+AssertionError: expected <section aria-label="Muted">…(1)</section> to be null
+
+Ignored nodes: comments, script, style
+[36m<html>[39m
+  [36m<head />[39m
+  [36m<body[39m
+    [33mstyle[39m=[32m""[39m
+  [36m>[39m
+    [36m<div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex min-h-0 flex-1 flex-col"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex shrink-0 items-center gap-1 px-2 pb-1"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33maria-autocomplete[39m=[32m"none"[39m
+            [33maria-expanded[39m=[32m"false"[39m
+            [33maria-label[39m=[32m"Project scope: All projects"[39m
+            [33mclass[39m=[32m"flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"[39m
+            [33mdata-state[39m=[32m"closed"[39m
+            [33mdir[39m=[32m"ltr"[39m
+            [33mrole[39m=[32m"combobox"[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [36m<span[39m
+              [33mstyle[39m=[32m"pointer-events: none;"[39m
+            [36m>[39m
+              [0mAll projects[0m
+            [36m</span>[39m
+            [36m<svg[39m
+              [33maria-hidden[39m=[32m"true"[39m
+              [33mclass[39m=[32m"size-4 opacity-50"[39m
+              [33mcolor[39m=[32m"currentColor"[39m
+              [33mdata-icon[39m=[32m"ChevronDown"[39m
+              [33mfill[39m=[32m"none"[39m
+              [33mheight[39m=[32m"24"[39m
+              [33mviewBox[39m=[32m"0 0 24 24"[39m
+              [33mwidth[39m=[32m"24"[39m
+              [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+            [36m>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"[39m
+                [33mstroke[39m=[32m"currentColor"[39m
+                [33mstroke-linecap[39m=[32m"round"[39m
+                [33mstroke-linejoin[39m=[32m"round"[39m
+                [33mstroke-width[39m=[32m"1.5"[39m
+              [36m/>[39m
+            [36m</svg>[39m
+          [36m</button>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"min-h-0 flex-1 overflow-y-auto px-1.5 pb-2"[39m
+        [36m>[39m
+          [36m<section[39m
+            [33maria-label[39m=[32m"Muted"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-expanded[39m=[32m"false"[39m
+              [33mclass[39m=[32m"mt-3 flex w-full items-center gap-2 px-2.5 pb-1 text-left"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"text-2xs font-medium text-muted-foreground/70"[39m
+              [36m>[39m
+                [0mMuted (1)[0m
+              [36m</span>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"h-px flex-1 bg-sidebar-border"[39m
+              [36m/>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"flex size-3.5 shrink-0 items-center justify-center"[39m
+              [36m>[39m
+                [36m<svg[39m
+                  [33mclass[39m=[32m"size-3 text-muted-foreground/70 transition-transform"[39m
+                  [33mcolor[39m=[32m"currentColor"[39m
+                  [33mdata-icon[39m=[32m"ChevronDown"[39m
+                  [33mfill[39m=[32m"none"[39m
+                  [33mheight[39m=[32m"24"[39m
+                  [33mviewBox[39m=[32m"0 0 24 24"[39m
+                  [33mwidth[39m=[32m"24"[39m
+                  [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                [36m>[39m
+                  [36m<path[39m
+                    [33md[39m=[32m"M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"[39m
+                    [33mstroke[39m=[32m"currentColor"[39m
+                    [33mstroke-linecap[39m=[32m"round"[39m
+                    [33mstroke-linejoin[39m=[32m"round"[39m
+                    [33mstroke-width[39m=[32m"1.5"[39m
+                  [36m/>[39m
+                [36m</svg>[39m
+              [36m</span>[39m
+            [36m</button>[39m
+          [36m</section>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</body>[39m
+[36m</html>[39m
+
+- Expected:
+null
+
++ Received:
+<section
+  aria-label="Muted"
+>
+  <button
+    aria-expanded="false"
+    class="mt-3 flex w-full items-center gap-2 px-2.5 pb-1 text-left"
+    type="button"
+  >
+    <span
+      class="text-2xs font-medium text-muted-foreground/70"
+    >
+      Muted (1)
+    </span>
+    <span
+      class="h-px flex-1 bg-sidebar-border"
+    />
+    <span
+      class="flex size-3.5 shrink-0 items-center justify-center"
+    >
+      <svg
+        class="size-3 text-muted-foreground/70 transition-transform"
+        color="currentColor"
+        data-icon="ChevronDown"
+        fill="none"
+        height="24"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="1.5"
+        />
+      </svg>
+    </span>
+  </button>
+</section>
+
+ ❯ src/ThreadInbox.test.tsx:661:81
+    659|     });
+    660|     expect(await screen.findByText("Write guide")).toBeDefined();
+    661|     await waitFor(() => expect(screen.queryByRole("region", { name: "M…
+       |                                                                                 ^
+    662|   });
+    663|   it("loads a stored mute on a fresh mount", async () => {
+ ❯ runWithExpensiveErrorDiagnosticsDisabled node_modules/@testing-library/dom/dist/config.js:47:12
+ ❯ checkCallback node_modules/@testing-library/dom/dist/wait-for.js:124:77
+ ❯ Timeout.checkRealTimersCallback node_modules/@testing-library/dom/dist/wait-for.js:118:16
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 40 passed (42)
+   Start at  22:03:11
+   Duration  3.85s (transform 107ms, setup 0ms, import 367ms, tests 2.92s, environment 468ms)
+

@@ -650,6 +650,8 @@ describe("explicit muted shelf", () => {
     { indicator: "none", status: "idle", runtimeStatus: "idle", isUnread: true },
     { isPinned: true },
     { runtimeStatus: "waiting-for-host" },
+    { runtimeStatus: "future-status" as never },
+    { queuedWork: "future-status" as never },
   ] as Partial<PluginSidebarThread>[])("keeps attention/pinned/unavailable work in Inbox: %j", async (changes) => {
     renderSlot(inbox, listProps, {
       sidebarThreads: { status: "ready", threads: [{ ...busy(), ...changes }], projects: [] },
