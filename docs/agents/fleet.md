@@ -2,6 +2,8 @@
 
 Every fleet in this repository starts from these settings. The fleet skills read this file instead of naming any project's agents, commands or rules. Each value names its source; when a source changes, run the `setup` skill again (or edit the line by hand) so the two agree. Keep the machine-read table headings, columns and agent rows unchanged.
 
+Before your first commit in this repository, set Git’s `user.email` to your GitHub `users.noreply.github.com` address; verify that both author and committer emails use that domain for every outgoing commit.
+
 ## Builder
 
 One per ticket. It builds its ticket on its own branch, and never reviews or merges.
