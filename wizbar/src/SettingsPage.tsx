@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
 import { experimental_usePluginId, useSdk, useSettings } from "@get-bb/plugin-sdk/app";
 import manifest from "../package.json";
 import {
@@ -10,8 +10,11 @@ import {
 interface SettingsAcknowledgement {
   baseline: SettingValues;
   values: SettingValues;
-  saving: boolean;
+  saveState: "idle" | "saving" | "saved" | "error";
 }
+const emptyAcknowledgement: SettingsAcknowledgement = {
+  baseline: undefined, values: undefined, saveState: "idle",
+};
 interface SettingsStore {
   snapshot: SettingsAcknowledgement;
   listeners: Set<() => void>;
@@ -23,7 +26,7 @@ function settingsStore(pluginId: string): SettingsStore {
   let store = acknowledgements.get(pluginId);
   if (!store) {
     store = {
-      snapshot: { baseline: undefined, values: undefined, saving: false },
+      snapshot: emptyAcknowledgement,
       listeners: new Set(), consumers: 0,
     };
     acknowledgements.set(pluginId, store);
@@ -32,8 +35,8 @@ function settingsStore(pluginId: string): SettingsStore {
 }
 
 function publishSettings(store: SettingsStore, snapshot: SettingsAcknowledgement) {
-  store.snapshot = store.consumers === 0 && !snapshot.saving
-    ? { baseline: undefined, values: undefined, saving: false }
+  store.snapshot = store.consumers === 0 && snapshot.saveState !== "saving"
+    ? emptyAcknowledgement
     : snapshot;
   for (const listener of store.listeners) listener();
 }
@@ -50,14 +53,14 @@ function useSettingsSnapshot() {
   useEffect(() => {
     store.consumers++;
     return () => {
-      if (--store.consumers === 0 && !store.snapshot.saving) {
-        store.snapshot = { baseline: undefined, values: undefined, saving: false };
+      if (--store.consumers === 0 && store.snapshot.saveState !== "saving") {
+        store.snapshot = emptyAcknowledgement;
       }
     };
   }, [pluginId, store]);
   // An acknowledgement bridges host refresh only for the snapshot it saved.
   const values = snapshot.baseline === host.values ? snapshot.values ?? host.values : host.values;
-  return { pluginId, host, store, values, saving: snapshot.saving };
+  return { pluginId, host, store, values, saveState: snapshot.saveState, saving: snapshot.saveState === "saving" };
 }
 
 export function useWizBarSettings(): WizBarSettings {
@@ -71,35 +74,30 @@ export function useFeatureSourceStatus(feature: Feature, status: SourceStatus) {
 }
 
 export function SettingsPage() {
-  const { pluginId, host, store, values, saving } = useSettingsSnapshot();
+  const { pluginId, host, store, values, saveState, saving } = useSettingsSnapshot();
   const sdk = useSdk();
   const settings = readWizBarSettings(values);
   const latestHost = useRef(host.values);
   latestHost.current = host.values;
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState(false);
+  const message = { idle: "", saving: "Saving…", saved: "Saved", error: "Could not save. Try again." }[saveState];
+  const error = saveState === "error";
   const subscribe = useCallback((listener: () => void) => subscribeSourceStatuses(pluginId, listener), [pluginId]);
   const statuses = useSyncExternalStore(subscribe, () => getSourceStatuses(pluginId));
   const unavailable = host.isLoading || host.values === undefined;
 
   async function save(key: keyof WizBarSettings) {
-    if (unavailable || store.snapshot.saving) return;
+    if (unavailable || store.snapshot.saveState === "saving") return;
     const baseline = host.values;
-    publishSettings(store, { baseline, values, saving: true });
-    setError(false);
-    setMessage("Saving…");
+    publishSettings(store, { baseline, values, saveState: "saving" });
     try {
       const result = await sdk.plugins.updateSettings({ pluginId, values: { [key]: !settings[key] } });
       publishSettings(store, {
         baseline,
         values: latestHost.current === baseline ? result.values : undefined,
-        saving: false,
+        saveState: "saved",
       });
-      setMessage("Saved");
     } catch {
-      publishSettings(store, { baseline, values, saving: false });
-      setError(true);
-      setMessage("Could not save. Try again.");
+      publishSettings(store, { baseline, values, saveState: "error" });
     }
   }
 

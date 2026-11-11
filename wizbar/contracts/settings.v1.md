@@ -35,6 +35,10 @@ an inline error. Controls stay mounted, disabled during a save, and keep focus.
 Closing the last consumer retains a pending save's lock until settlement. A
 reopened section stays disabled during that request. Settlement publishes to
 current consumers, or clears the acknowledgement when no consumers remain.
+Save progress and outcome share that snapshot, so the reopened section receives
+the inline rejection alert or successful-save feedback. Starting a new save
+clears the previous outcome. The outcome also clears at the last-consumer
+lifetime boundary once the request has settled.
 Unavailable/loading settings disable writes; no save success is invented.
 
 ## Visibility consumer interface
