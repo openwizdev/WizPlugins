@@ -107,7 +107,7 @@ afterEach(() => { cleanup(); vi.useRealTimers(); });
 
 // N5: projection shapes from the keeper record and the scoped source ruling.
 // Null/empty providers on an environment object are Local, never Cloud.
-const cases = [
+const cases: { name: string; input: Partial<PluginSidebarThread>; marker: string | null; inboxOnly?: boolean }[] = [
   { name: "observed idle Cloud", input: { environment: null, host: null }, marker: "Cloud" },
   ...(["active", "pending", "error", "stopping"] as const).map((runtimeStatus) => ({
     name: `recognised ${runtimeStatus} Cloud`, input: { environment: null, host: null, runtimeStatus }, marker: "Cloud",
@@ -117,12 +117,12 @@ const cases = [
     input: { environment: environment(provider, "feature/parser") }, marker: "Local",
   })),
   ...(["starting", "provisioning", "waiting-for-host"] as const).map((runtimeStatus) => ({
-    name: `Local startup ${runtimeStatus} stays unmarked`, input: { environment: null, host: null, runtimeStatus }, marker: null,
+    name: `Local startup ${runtimeStatus} stays unmarked`, input: { environment: null, host: null, runtimeStatus }, marker: null, inboxOnly: runtimeStatus === "waiting-for-host",
   })),
-  { name: "unknown runtime", input: JSON.parse('{"environment":null,"host":null,"runtimeStatus":"future-state"}'), marker: null },
-  { name: "missing runtime", input: { environment: null, host: null, runtimeStatus: undefined }, marker: null },
-  { name: "null runtime", input: JSON.parse('{"environment":null,"host":null,"runtimeStatus":null}'), marker: null },
-  { name: "empty runtime", input: JSON.parse('{"environment":null,"host":null,"runtimeStatus":""}'), marker: null },
+  { name: "unknown runtime", input: JSON.parse('{"environment":null,"host":null,"runtimeStatus":"future-state"}'), marker: null, inboxOnly: true },
+  { name: "missing runtime", input: { environment: null, host: null, runtimeStatus: undefined }, marker: null, inboxOnly: true },
+  { name: "null runtime", input: JSON.parse('{"environment":null,"host":null,"runtimeStatus":null}'), marker: null, inboxOnly: true },
+  { name: "empty runtime", input: JSON.parse('{"environment":null,"host":null,"runtimeStatus":""}'), marker: null, inboxOnly: true },
   { name: "host without environment", input: { environment: null }, marker: null },
   { name: "missing host", input: { environment: null, host: undefined }, marker: null },
   { name: "missing environment", input: { environment: undefined, host: null }, marker: null },
@@ -133,10 +133,12 @@ const cases = [
 
 for (const shelf of ["Inbox", "Snoozed", "Settled"] as const) {
   describe(`${shelf} machine markers at the registered app boundary`, () => {
-    it.each(cases)("$name", async ({ input, marker }) => {
+    it.each(cases)("$name", async ({ input, marker, inboxOnly }) => {
+      // Invalid parking authority keeps these rows in Inbox, independently of icons.
+      const shownShelf = inboxOnly ? "Inbox" : shelf;
       const sample = thread(input);
       render([sample], shelf === "Inbox" ? [] : [parkedRow(sample.id, shelf)]);
-      if (shelf !== "Inbox") {
+      if (shownShelf !== "Inbox") {
         const region = await screen.findByRole("region", { name: shelf });
         expect(within(region).queryByRole("listitem")).toBeNull();
         fireEvent.click(within(region).getByRole("button"));
@@ -144,7 +146,7 @@ for (const shelf of ["Inbox", "Snoozed", "Settled"] as const) {
       const row = screen.getByRole("listitem");
       const markers = within(row).queryAllByRole("img", { name: /^(Cloud|Local)$/ });
       expect(markers.map((icon) => icon.getAttribute("aria-label"))).toEqual(marker ? [marker] : []);
-      if (shelf !== "Inbox") {
+      if (shownShelf !== "Inbox") {
         const region = screen.getByRole("region", { name: shelf });
         fireEvent.click(within(region).getByRole("button", { name: shelf }));
         expect(within(region).queryByRole("listitem")).toBeNull();

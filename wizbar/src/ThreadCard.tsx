@@ -81,7 +81,7 @@ export function ThreadCard({
             <span className="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground">
               {projectName ?? " "}
             </span>
-            <MachineIcon environment={thread.environment} />
+            <MachineIcon environment={thread.environment} host={thread.host} runtimeStatus={thread.runtimeStatus} />
             {/* Status at rest, park actions on hover. Only the status yields,
                 so the project name never shifts. */}
             {canPark ? (

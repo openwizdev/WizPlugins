@@ -95,11 +95,44 @@ SDK 0.4.4 declares `PluginSidebarThread.activity` counters and the sidebar threa
 
 The footer must show a spinner and number, dim zero, and a hover split between threads and subagents, with no click action. It remains blocked on #2's positive evidence for a live number in the footer row. A merged report, a type or a fixture alone does not satisfy that prerequisite. Icon/card-only or unclear capability requires an owner decision; no substitute location or presentation is authorized. WZ2 registers no footer.
 
-## Future Cloud/Local field evidence — #5
+## Cloud/Local field evidence — #29
 
-The pinned sidebar type exposes `host: { id, name } | null` and optional environment metadata (`id`, `name`, `branchName`, `workspaceDisplayKind`). It has no declared Cloud/Local discriminator. Null host, branch presence and personal host names are not classification rules.
+SDK 0.6.33 exposes projected `environment`, `host` and `runtimeStatus`, but no
+raw `executionTarget`. The [keeper observation](https://github.com/jparker2006/ClosedWiz/pull/2375#issuecomment-6779925149)
+records Cloud projection nulls, three Local environment providers and a Local
+startup exception. The [2026-11-11 source ruling](https://github.com/openwizdev/wizplugins/issues/29#issuecomment-6787417378)
+resolves WZ10's blocked raw-target prerequisite for this consumer only. Its
+observed projection rule supersedes the earlier provider inversion and the
+raw-target-only requirements in `host-observation.v1.md`; that historical record
+and its evidence limits are retained.
 
-#5 must establish the authoritative field on a real host under its read-only authorization and keep identifying observations private. Its public conclusion must state the observed mapping and limits. Until then the field mapping is **Unverified**. Every row form, including collapsed shelves, needs the host's Cloud/Local icon or its approved visual equivalent. Navigation, status, parking controls and header behavior stay intact. WZ2 adds no row icon.
+- A valid SDK environment object identifies Local, independent of provider name;
+  null/empty providers on an object also identify Local. Missing or malformed
+  provider values remain unmarked.
+- Explicit `environment === null` and `host === null`, together with recognised
+  non-starting `runtimeStatus` (`active`, `idle`, `pending`, `stopping`, `error`),
+  identify observed Cloud. Neither null alone suffices.
+- `starting`, `provisioning`, `waiting-for-host`, unknown/missing runtime, missing
+  environment/host, malformed input or a host without an environment cannot
+  establish Cloud. No name, branch, agent-provider or worktree heuristic applies.
+
+Known limit: a Local thread may briefly have no icon while starting; those
+startup states never show Cloud. This is an approved observed mapping, not an
+SDK guarantee or proof that all future projection shapes distinguish machines.
+No cast, declaration patch, raw lookup, stable-ID join or extra RPC is used.
+
+`classifyMachine` in `src/machine-source.ts` is shared by row markers. The existing
+Cloud/Laptop glyphs retain meaningful Cloud/Local labels. Availability comes
+from the actual sidebar hook before applying the settings visibility guard:
+loading/error suppress icons and report unavailable; ready projected input
+reports unverified, even while hidden. An explicit authoritative machine source
+and live acceptance remain unverified, so this adapter does not publish live.
+No mounted report leaves the settings seam's default unverified status.
+
+N5 fixture proofs cover observed Cloud/Local and unknown variants, every shelf,
+navigation/status/park regressions, visibility and unavailable-source guards.
+N5-live (real rows, updates and host visual parity) remains for #9. Both header
+chips and all non-icon row behavior remain unchanged.
 
 ## Downstream seams and evidence limits
 

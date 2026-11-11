@@ -1,29 +1,17 @@
-import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
+import { experimental_useSidebarThreads as useSidebarThreads } from "@get-bb/plugin-sdk/app";
 import { Icon } from "./components/Icon";
-import { useWizBarSettings } from "./SettingsPage";
+import { useFeatureSourceStatus, useWizBarSettings } from "./SettingsPage";
+import { classifyMachine, type MachineInput } from "./machine-source";
 
-/** WD5's observed mapping, not a general SDK guarantee. Unknown stays unmarked. */
-export function MachineIcon({
-  environment,
-}: {
-  environment: PluginSidebarThread["environment"] | undefined;
-}) {
+/** Read source availability independently of the settings visibility guard. */
+export function MachineIcon(input: MachineInput) {
+  const { status } = useSidebarThreads();
+  // The approved projection mapping still lacks an explicit machine field and
+  // live acceptance. Connected input alone cannot certify its authority.
+  useFeatureSourceStatus("icons", status === "ready" ? "unverified" : "unavailable");
   const { machineIconsEnabled } = useWizBarSettings();
   if (!machineIconsEnabled) return null;
-  if (
-    !environment ||
-    typeof environment !== "object" ||
-    Array.isArray(environment)
-  ) {
-    return null;
-  }
-  const providerId = environment.providerId;
-  const kind =
-    providerId === null || providerId === ""
-      ? "Cloud"
-      : typeof providerId === "string"
-        ? "Local"
-        : null;
+  const kind = status === "ready" ? classifyMachine(input) : null;
   if (kind === null) return null;
 
   return (
