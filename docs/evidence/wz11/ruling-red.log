@@ -1,0 +1,173 @@
+
+> bb-plugin-wizbar@0.1.0 test
+> vitest run --config vitest.config.ts src/SettingsPage.test.tsx src/settings.test.ts --maxWorkers=2
+
+
+ RUN  v4.1.10 <plugin>
+
+ ❯ |bb-plugin-wizbar| src/settings.test.ts (8 tests | 3 failed) 73ms
+     × declares exactly two named boolean switches with defaults 29ms
+     × keeps both values across actual server reload and independent partial writes 18ms
+     × rejects wrong types and unknown keys without changing saved settings 20ms
+ ❯ |bb-plugin-wizbar| src/SettingsPage.test.tsx (9 tests | 9 failed) 8ms
+     × registers one section, actual version and honest independent source status 4ms
+     × persists each switch independently, updates both consumers, and survives reopening 1ms
+     × does not apply an in-flight write and retains focus until a confirmed save 0ms
+     × retains prior values after a rejected write and announces the error 0ms
+     × disables writes when host settings are unavailable 0ms
+     × tracks source reports independently of visibility and clears stale live status 0ms
+     × honors persisted values and fails closed on wrong types: {"footerCountEnabled":false,"machineIconsEnabled":true,"footer":false,"icons":true} 0ms
+     × honors persisted values and fails closed on wrong types: {"footerCountEnabled":true,"machineIconsEnabled":false,"footer":true,"icons":false} 0ms
+     × honors persisted values and fails closed on wrong types: {"footerCountEnabled":"true","machineIconsEnabled":1,"footer":false,"icons":false} 0ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 12 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/SettingsPage.test.tsx > N1: settings through the registered app > registers one section, actual version and honest independent source status
+AssertionError: N1: the plugin must register its settings section: expected undefined to be defined
+ ❯ mount src/SettingsPage.test.tsx:22:72
+     20| } = {}) {
+     21|   const section = app.settingsSections.find(({ id }) => id === "wizbar…
+     22|   expect(section, "N1: the plugin must register its settings section")…
+       |                                                                        ^
+     23|   const Page = section!.component;
+     24|   let stored = options.stored ?? { footerCountEnabled: true, machineIc…
+ ❯ src/SettingsPage.test.tsx:69:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/12]⎯
+
+ FAIL  |bb-plugin-wizbar| src/SettingsPage.test.tsx > N1: settings through the registered app > persists each switch independently, updates both consumers, and survives reopening
+AssertionError: N1: the plugin must register its settings section: expected undefined to be defined
+ ❯ mount src/SettingsPage.test.tsx:22:72
+     20| } = {}) {
+     21|   const section = app.settingsSections.find(({ id }) => id === "wizbar…
+     22|   expect(section, "N1: the plugin must register its settings section")…
+       |                                                                        ^
+     23|   const Page = section!.component;
+     24|   let stored = options.stored ?? { footerCountEnabled: true, machineIc…
+ ❯ src/SettingsPage.test.tsx:81:19
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/12]⎯
+
+ FAIL  |bb-plugin-wizbar| src/SettingsPage.test.tsx > N1: settings through the registered app > does not apply an in-flight write and retains focus until a confirmed save
+AssertionError: N1: the plugin must register its settings section: expected undefined to be defined
+ ❯ mount src/SettingsPage.test.tsx:22:72
+     20| } = {}) {
+     21|   const section = app.settingsSections.find(({ id }) => id === "wizbar…
+     22|   expect(section, "N1: the plugin must register its settings section")…
+       |                                                                        ^
+     23|   const Page = section!.component;
+     24|   let stored = options.stored ?? { footerCountEnabled: true, machineIc…
+ ❯ src/SettingsPage.test.tsx:108:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/12]⎯
+
+ FAIL  |bb-plugin-wizbar| src/SettingsPage.test.tsx > N1: settings through the registered app > retains prior values after a rejected write and announces the error
+AssertionError: N1: the plugin must register its settings section: expected undefined to be defined
+ ❯ mount src/SettingsPage.test.tsx:22:72
+     20| } = {}) {
+     21|   const section = app.settingsSections.find(({ id }) => id === "wizbar…
+     22|   expect(section, "N1: the plugin must register its settings section")…
+       |                                                                        ^
+     23|   const Page = section!.component;
+     24|   let stored = options.stored ?? { footerCountEnabled: true, machineIc…
+ ❯ src/SettingsPage.test.tsx:124:19
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/12]⎯
+
+ FAIL  |bb-plugin-wizbar| src/SettingsPage.test.tsx > N1: settings through the registered app > disables writes when host settings are unavailable
+AssertionError: N1: the plugin must register its settings section: expected undefined to be defined
+ ❯ mount src/SettingsPage.test.tsx:22:72
+     20| } = {}) {
+     21|   const section = app.settingsSections.find(({ id }) => id === "wizbar…
+     22|   expect(section, "N1: the plugin must register its settings section")…
+       |                                                                        ^
+     23|   const Page = section!.component;
+     24|   let stored = options.stored ?? { footerCountEnabled: true, machineIc…
+ ❯ src/SettingsPage.test.tsx:135:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/12]⎯
+
+ FAIL  |bb-plugin-wizbar| src/SettingsPage.test.tsx > N1: settings through the registered app > tracks source reports independently of visibility and clears stale live status
+AssertionError: N1: the plugin must register its settings section: expected undefined to be defined
+ ❯ mount src/SettingsPage.test.tsx:22:72
+     20| } = {}) {
+     21|   const section = app.settingsSections.find(({ id }) => id === "wizbar…
+     22|   expect(section, "N1: the plugin must register its settings section")…
+       |                                                                        ^
+     23|   const Page = section!.component;
+     24|   let stored = options.stored ?? { footerCountEnabled: true, machineIc…
+ ❯ src/SettingsPage.test.tsx:145:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/12]⎯
+
+ FAIL  |bb-plugin-wizbar| src/SettingsPage.test.tsx > N1: settings through the registered app > honors persisted values and fails closed on wrong types: {"footerCountEnabled":false,"machineIconsEnabled":true,"footer":false,"icons":true}
+ FAIL  |bb-plugin-wizbar| src/SettingsPage.test.tsx > N1: settings through the registered app > honors persisted values and fails closed on wrong types: {"footerCountEnabled":true,"machineIconsEnabled":false,"footer":true,"icons":false}
+ FAIL  |bb-plugin-wizbar| src/SettingsPage.test.tsx > N1: settings through the registered app > honors persisted values and fails closed on wrong types: {"footerCountEnabled":"true","machineIconsEnabled":1,"footer":false,"icons":false}
+AssertionError: N1: the plugin must register its settings section: expected undefined to be defined
+ ❯ mount src/SettingsPage.test.tsx:22:72
+     20| } = {}) {
+     21|   const section = app.settingsSections.find(({ id }) => id === "wizbar…
+     22|   expect(section, "N1: the plugin must register its settings section")…
+       |                                                                        ^
+     23|   const Page = section!.component;
+     24|   let stored = options.stored ?? { footerCountEnabled: true, machineIc…
+ ❯ src/SettingsPage.test.tsx:166:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/12]⎯
+
+ FAIL  |bb-plugin-wizbar| src/settings.test.ts > N1: actual WizBar settings declarations and persistent reload > declares exactly two named boolean switches with defaults
+AssertionError: expected [] to deeply equal [ 'footerCountEnabled', …(1) ]
+
+- Expected
++ Received
+
+- [
+-   "footerCountEnabled",
+-   "machineIconsEnabled",
+- ]
++ []
+
+ ❯ src/settings.test.ts:30:45
+     28|     const { host } = setup();
+     29|     const descriptors = host.harness.inspection.registrations.settings…
+     30|     expect(Object.keys(descriptors).sort()).toEqual(["footerCountEnabl…
+       |                                             ^
+     31|     expect(descriptors.footerCountEnabled).toMatchObject({ type: "bool…
+     32|     expect(descriptors.machineIconsEnabled).toMatchObject({ type: "boo…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/12]⎯
+
+ FAIL  |bb-plugin-wizbar| src/settings.test.ts > N1: actual WizBar settings declarations and persistent reload > keeps both values across actual server reload and independent partial writes
+Error: unknown setting "footerCountEnabled"
+ ❯ setSettingsValues node_modules/@get-bb/plugin-sdk/dist/testing/index.js:3022:13
+ ❯ Object.setSettings node_modules/@get-bb/plugin-sdk/dist/testing/index.js:3878:13
+ ❯ src/settings.test.ts:38:33
+     36|     const fixture = setup();
+     37|     let host = fixture.host;
+     38|     await host.harness.behavior.setSettings({ footerCountEnabled: fals…
+       |                                 ^
+     39|     await host.harness.behavior.setSettings({ machineIconsEnabled: fal…
+     40|     host = await host.harness.lifecycle.reload(fixture.factory);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/12]⎯
+
+ FAIL  |bb-plugin-wizbar| src/settings.test.ts > N1: actual WizBar settings declarations and persistent reload > rejects wrong types and unknown keys without changing saved settings
+Error: unknown setting "footerCountEnabled"
+ ❯ setSettingsValues node_modules/@get-bb/plugin-sdk/dist/testing/index.js:3022:13
+ ❯ Object.setSettings node_modules/@get-bb/plugin-sdk/dist/testing/index.js:3878:13
+ ❯ src/settings.test.ts:50:33
+     48|     const fixture = setup();
+     49|     const host = fixture.host;
+     50|     await host.harness.behavior.setSettings({ footerCountEnabled: fals…
+       |                                 ^
+     51|     await expect(host.harness.behavior.setSettings({ footerCountEnable…
+     52|     await expect(host.harness.behavior.setSettings({ machineIconsEnabl…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/12]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  12 failed | 5 passed (17)
+   Start at  00:15:22
+   Duration  969ms (transform 135ms, setup 0ms, import 496ms, tests 80ms, environment 481ms)
+

@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { loadPluginApp, renderSlot } from "@get-bb/plugin-sdk/testing/app";
 import manifest from "../package.json";
+import { reportFeatureSourceStatus } from "./settings";
 import { FooterCounterArtwork } from "./FooterCounter";
 import { MachineIcon } from "./MachineIcon";
 import { positiveSource } from "../../docs/evidence/wz5/fixtures";
@@ -70,9 +71,9 @@ describe("N1: settings through the registered app", () => {
     expect(screen.getByRole("heading", { name: "WizBar" })).toBeDefined();
     expect(screen.getByText(`Version ${manifest.version}`)).toBeDefined();
     expect(screen.getAllByRole("switch")).toHaveLength(2);
-    expect(screen.getByText("Footer: Enabled · Unavailable")).toBeDefined();
-    expect(screen.getByText("Icons: Enabled · Unverified")).toBeDefined();
-    expect(screen.queryByText(/Live data/)).toBeNull();
+    expect(screen.getByText("Footer: Enabled · Not connected yet")).toBeDefined();
+    expect(screen.getByText("Icons: Enabled · Not connected yet")).toBeDefined();
+    expect(screen.queryByText(/· Live/)).toBeNull();
     expectFeatures(true, true);
   });
 
@@ -82,7 +83,7 @@ describe("N1: settings through the registered app", () => {
     } });
     toggle("Footer count");
     await waitFor(() => expectFeatures(false, true));
-    expect(screen.getByText("Footer: Disabled · Unavailable")).toBeDefined();
+    expect(screen.getByText("Footer: Disabled · Not connected yet")).toBeDefined();
     toggle("Cloud/Local row icons");
     await waitFor(() => expectFeatures(false, false));
     expect(first.getStored()).toEqual({
@@ -99,7 +100,7 @@ describe("N1: settings through the registered app", () => {
     await waitFor(() => expectFeatures(false, true));
     toggle("Footer count");
     await waitFor(() => expectFeatures(true, true));
-    expect(screen.queryByText(/Live data/)).toBeNull();
+    expect(screen.queryByText(/· Live/)).toBeNull();
   });
 
   it("does not apply an in-flight write and retains focus until a confirmed save", async () => {
@@ -127,7 +128,7 @@ describe("N1: settings through the registered app", () => {
     expectFeatures(true, true);
     expect(first.getStored()).toEqual({ footerCountEnabled: true, machineIconsEnabled: true });
     expect((screen.getByRole("switch", { name: "Cloud/Local row icons" }) as HTMLInputElement).disabled).toBe(false);
-    expect(screen.queryByText(/Live data/)).toBeNull();
+    expect(screen.queryByText(/· Live/)).toBeNull();
   });
 
   it("disables writes when host settings are unavailable", () => {
@@ -135,7 +136,26 @@ describe("N1: settings through the registered app", () => {
     expect(screen.getAllByRole("switch").every((node) => (node as HTMLInputElement).disabled)).toBe(true);
     expect(screen.getByText("Settings are unavailable. Changes cannot be saved.")).toBeDefined();
     expect(rendered.updateSettings).not.toHaveBeenCalled();
-    expect(screen.queryByText(/Live data/)).toBeNull();
+    expect(screen.queryByText(/· Live/)).toBeNull();
+  });
+
+  // N1: a stale report could leave a false Live claim after failure/unmount.
+  // Existing toggle tests have no source adapter and cannot catch that bug.
+  it("tracks source reports independently of visibility and clears stale live status", async () => {
+    const rendered = mount();
+    let remove!: () => void;
+    act(() => { remove = reportFeatureSourceStatus(rendered.pluginId, "footer", "live"); });
+    expect(screen.getByText("Footer: Enabled · Live")).toBeDefined();
+    toggle("Footer count");
+    await waitFor(() => expectFeatures(false, true));
+    expect(screen.getByText("Footer: Disabled · Live")).toBeDefined();
+    let failed!: () => void;
+    act(() => { failed = reportFeatureSourceStatus(rendered.pluginId, "footer", "unavailable"); });
+    expect(screen.getByText("Footer: Disabled · Not connected yet")).toBeDefined();
+    act(() => { failed(); remove(); });
+    expect(screen.queryByText(/· Live/)).toBeNull();
+    expect(screen.getByText("Icons: Enabled · Not connected yet")).toBeDefined();
+    expect(screen.queryByText(/PC persistence|Unavailable|Unverified/)).toBeNull();
   });
 
   it.each([
