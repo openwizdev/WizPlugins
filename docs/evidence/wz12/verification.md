@@ -1,10 +1,11 @@
-# WZ12 verification — in progress, not a hand-back
+# WZ12 verification
 
-Branch: `wz12-observable-running-footer`, fresh public main at
-`8e878b346916311fec6d2ac11c5450b275d16410`. Production source/counter tested at
-`1f9ea5b` plus the later owned mute-visibility fixture adjustment. The final
-progress comment records the pushed head and tree. No ready PR or CI receipt
-exists yet: WZ12-F2 remains open. Do not treat this evidence commit as green.
+Branch: `wz12-observable-running-footer`, continued from `7d045f0`.
+The inherited red-first history is retained. WZ12-F2 is resolved by the
+[orchestrator ruling](https://github.com/openwizdev/wizplugins/issues/28#issuecomment-6787335036).
+Production code through `e893665ce8055e2b0286d85ccf0b9f498b465070` passes typecheck
+and tests; the final evidence-only hand-back commit is named in the PR.
+CI and independent review are separate gates. No live acceptance is claimed.
 
 ## Proof chronology
 
@@ -12,7 +13,7 @@ exists yet: WZ12-F2 remains open. Do not treat this evidence commit as green.
 | --- | --- | --- |
 | `npm test -- src/running-count.test.ts --maxWorkers=2` | 2 failures: thread-only positive/empty input returned null; `count-red.log`, committed `9adaf04` | 20 pass, `count-green.log` |
 | `npm test -- src/running-source.test.ts --maxWorkers=2` | 27 failures/1 pass against unavailable stub; `source-red.log`, committed `a7dd05b` | 28 pass, `source-green.log` |
-| `npm test -- src/FooterCounter.test.tsx --maxWorkers=2` | 4 failures/6 pass: unwired source, absent registration, wrong hover/status; `footer-red.log`, committed `17194a8` | intermediate 10 pass/1 registration failure in affected run; registration waits for WZ12-F2 |
+| `npm test -- src/FooterCounter.test.tsx --maxWorkers=2` | 4 failures/6 pass: unwired source, absent registration, wrong hover/status; `footer-red.log`, committed `17194a8` | intermediate 10 pass/1 registration failure in affected run; historical intermediate state, resolved below |
 | `npm test -- src/FooterCounter.test.tsx --maxWorkers=2 -t 'stale reuse'` | initial ESM-spy failure is not behavioral red; corrected run fails because reconnect restores retained count; committed `829669e` | 1 pass/10 unselected, `reconnect-green.log` |
 | `npm test -- src/FooterCounter.test.tsx --maxWorkers=2 -t 'does not narrow'` | Original source connection was red above | 1 pass/10 unselected after adding real Muted shelf input; `muted-visibility.log` |
 | `npm test -- src/running-count.test.ts src/running-source.test.ts src/FooterCounter.test.tsx src/SettingsPage.test.tsx identity.test.ts --maxWorkers=2` | scoped integration | 73 pass, 1 expected absent-registration failure; `affected-intermediate.log` |
@@ -21,9 +22,21 @@ exists yet: WZ12-F2 remains open. Do not treat this evidence commit as green.
 The ESM fixture error was corrected before treating the reconnect run as red.
 The first hover capture also failed fixture readiness and is not passed evidence.
 See `capture-notes.md`. Every intended behavioral red is committed before its fix.
-No workspace-wide suite, browser suite, Rust check, plugin build/install or live
-host/PC/Mac command was run. CI will run the full required plugin suite once the
-ready PR can be opened. No CI rerun, merge, publication or release is requested.
+The inherited runs above preceded continuation. Continuation verification:
+
+| Command (from wizbar) | Result |
+| --- | --- |
+| `npm ci` | pass, 474 locked packages; existing audit reports 15 vulnerabilities, no dependency edits |
+| `npm test -- src/FooterCounter.test.tsx --maxWorkers=2 -t 'registers numeric artwork'` before registration | 1 intended failure: zero registered footer items, expected one; `registration-red.log`, committed `3a90a6d` before fix |
+| `npm test -- src/running-count.test.ts src/running-source.test.ts src/FooterCounter.test.tsx src/SettingsPage.test.tsx identity.test.ts --maxWorkers=2` | 74 pass; `affected-green.log` |
+| `npm run typecheck` | pass; `typecheck-final.log` |
+| `npm test -- --maxWorkers=2` | 363 pass across 14 files; `full-suite.log` |
+| `git diff --check` | pass |
+
+The tested production tree is the code committed at `e893665`; later hand-back
+changes contain evidence only. CI independently runs the full required suite.
+No plugin build/install, live host/PC/Mac command, CI rerun, merge, publication or
+release was performed. The source status remains unverified/unavailable.
 
 ## Claims and limits
 
@@ -67,10 +80,21 @@ changelog are touched. `server.ts`, WZ10 observation contract, WZ11 settings API
 WZ14 lifecycle/mute implementation and WZ13 machine sections remain intact.
 No dependencies or declarations changed; see `dependencies.md`.
 
-Helpers: none; no helper windows or no-push checks needed. Independent review:
-not started; no finding IDs, correction counters or reviewer lineage exists to
-reset. Existing claim remains the sole owner. WZ12-F1 is resolved, WZ12-F2 asks
-about static host label and possible empty action wrapper. No interface is
-invented and no approval is inferred from elapsed time. The first-push receipt
-is retained privately for posting once the ready PR exists. Private inherited
-checkout remains clean. No unrelated owner or board stop is modified.
+Helpers: none, as the F2 ruling requires. Independent review has not started;
+no finding IDs, correction counters or reviewer lineage is reset. F1 and F2 are
+resolved; the fixed honest host label and no-op action follow those rulings.
+Original first-push timing receipt is unavailable to this continuation. It stays
+unknown rather than being reconstructed from commit or PR dates.
+
+## Continuation screenshot check
+
+The image skill's screenshot runner captured `registration-hover/` at 390×844
+and 1440×900 after registration, from the unchanged React fixture harness.
+Both PNGs were inspected: count and wrapped coverage text fit with no clipping
+or horizontal overflow; the completed capture manifest records both widths.
+The compact typography and shorter tooltip match the approved F1 revision of
+the generated target. Font rasterisation differs from inherited captures; no
+artwork styling changed during continuation. These are synthetic page captures,
+not a host action-wrapper model. Real wrapper hiding, sizing, clipping, tooltip
+arbitration, placement and updates remain keeper #9 acceptance requirements.
+The fixture server and capture tabs were closed after verification.
