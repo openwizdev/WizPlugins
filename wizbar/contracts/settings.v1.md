@@ -32,6 +32,9 @@ WizBar consumers sharing the current host snapshot; a newer host snapshot wins.
 This in-memory acknowledgement bridges host-hook refresh and is not persistence.
 Reopening reads host values again. Rejected writes keep prior visibility and show
 an inline error. Controls stay mounted, disabled during a save, and keep focus.
+Closing the last consumer retains a pending save's lock until settlement. A
+reopened section stays disabled during that request. Settlement publishes to
+current consumers, or clears the acknowledgement when no consumers remain.
 Unavailable/loading settings disable writes; no save success is invented.
 
 ## Visibility consumer interface

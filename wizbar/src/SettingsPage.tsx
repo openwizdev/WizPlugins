@@ -32,7 +32,9 @@ function settingsStore(pluginId: string): SettingsStore {
 }
 
 function publishSettings(store: SettingsStore, snapshot: SettingsAcknowledgement) {
-  store.snapshot = snapshot;
+  store.snapshot = store.consumers === 0 && !snapshot.saving
+    ? { baseline: undefined, values: undefined, saving: false }
+    : snapshot;
   for (const listener of store.listeners) listener();
 }
 
@@ -48,7 +50,7 @@ function useSettingsSnapshot() {
   useEffect(() => {
     store.consumers++;
     return () => {
-      if (--store.consumers === 0) {
+      if (--store.consumers === 0 && !store.snapshot.saving) {
         store.snapshot = { baseline: undefined, values: undefined, saving: false };
       }
     };
