@@ -1,0 +1,1261 @@
+
+> bb-plugin-wizbar@0.1.0 test
+> vitest run --config vitest.config.ts --maxWorkers=2 src/ThreadCard.test.tsx
+
+
+ RUN  v4.1.10 <checkout>/wizbar
+
+ ❯ |bb-plugin-wizbar| src/ThreadCard.test.tsx (90 tests | 35 failed) 12728ms
+     × 'observed idle Cloud' 161ms
+     × 'recognised active Cloud' 31ms
+     × 'recognised pending Cloud' 32ms
+     × 'recognised error Cloud' 28ms
+     × 'recognised stopping Cloud' 27ms
+     × 'environment object with null provider' 28ms
+     × 'environment object with  provider' 29ms
+     × 'observed idle Cloud' 44ms
+     × 'recognised active Cloud' 29ms
+     × 'recognised pending Cloud' 24ms
+     × 'recognised error Cloud' 24ms
+     × 'recognised stopping Cloud' 25ms
+     × 'environment object with null provider' 26ms
+     × 'environment object with  provider' 26ms
+     × 'Local startup waiting-for-host stays …' 1014ms
+     × 'unknown runtime' 1013ms
+     × 'missing runtime' 1014ms
+     × 'null runtime' 1014ms
+     × 'empty runtime' 1014ms
+     × 'observed idle Cloud' 28ms
+     × 'recognised active Cloud' 24ms
+     × 'recognised pending Cloud' 21ms
+     × 'recognised error Cloud' 21ms
+     × 'recognised stopping Cloud' 20ms
+     × 'environment object with null provider' 20ms
+     × 'environment object with  provider' 24ms
+     × 'Local startup waiting-for-host stays …' 1009ms
+     × 'unknown runtime' 1013ms
+     × 'missing runtime' 1013ms
+     × 'null runtime' 1013ms
+     × 'empty runtime' 1014ms
+     × retains card navigation and shortcuts with modifier false 34ms
+     × retains card navigation and shortcuts with modifier true 30ms
+     × retains Snoozed wake/status, navigation and restore controls 35ms
+     × retains Settled wake/status, navigation and restore controls 35ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 35 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Inbox machine markers at the registered app boundary > 'observed idle Cloud'
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Inbox machine markers at the registered app boundary > 'recognised active Cloud'
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Inbox machine markers at the registered app boundary > 'recognised pending Cloud'
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Inbox machine markers at the registered app boundary > 'recognised error Cloud'
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Inbox machine markers at the registered app boundary > 'recognised stopping Cloud'
+AssertionError: expected [] to deeply equal [ 'Cloud' ]
+
+- Expected
++ Received
+
+- [
+-   "Cloud",
+- ]
++ []
+
+ ❯ src/ThreadCard.test.tsx:146:70
+    144|       const row = screen.getByRole("listitem");
+    145|       const markers = within(row).queryAllByRole("img", { name: /^(Clo…
+    146|       expect(markers.map((icon) => icon.getAttribute("aria-label"))).t…
+       |                                                                      ^
+    147|       if (shelf !== "Inbox") {
+    148|         const region = screen.getByRole("region", { name: shelf });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/35]⎯
+
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Inbox machine markers at the registered app boundary > 'environment object with null provider'
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Inbox machine markers at the registered app boundary > 'environment object with  provider'
+AssertionError: expected [ 'Cloud' ] to deeply equal [ 'Local' ]
+
+- Expected
++ Received
+
+  [
+-   "Local",
++   "Cloud",
+  ]
+
+ ❯ src/ThreadCard.test.tsx:146:70
+    144|       const row = screen.getByRole("listitem");
+    145|       const markers = within(row).queryAllByRole("img", { name: /^(Clo…
+    146|       expect(markers.map((icon) => icon.getAttribute("aria-label"))).t…
+       |                                                                      ^
+    147|       if (shelf !== "Inbox") {
+    148|         const region = screen.getByRole("region", { name: shelf });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/35]⎯
+
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Snoozed machine markers at the registered app boundary > 'observed idle Cloud'
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Snoozed machine markers at the registered app boundary > 'recognised active Cloud'
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Snoozed machine markers at the registered app boundary > 'recognised pending Cloud'
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Snoozed machine markers at the registered app boundary > 'recognised error Cloud'
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Snoozed machine markers at the registered app boundary > 'recognised stopping Cloud'
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Settled machine markers at the registered app boundary > 'observed idle Cloud'
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Settled machine markers at the registered app boundary > 'recognised active Cloud'
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Settled machine markers at the registered app boundary > 'recognised pending Cloud'
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Settled machine markers at the registered app boundary > 'recognised error Cloud'
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Settled machine markers at the registered app boundary > 'recognised stopping Cloud'
+AssertionError: expected [] to deeply equal [ 'Cloud' ]
+
+- Expected
++ Received
+
+- [
+-   "Cloud",
+- ]
++ []
+
+ ❯ src/ThreadCard.test.tsx:146:70
+    144|       const row = screen.getByRole("listitem");
+    145|       const markers = within(row).queryAllByRole("img", { name: /^(Clo…
+    146|       expect(markers.map((icon) => icon.getAttribute("aria-label"))).t…
+       |                                                                      ^
+    147|       if (shelf !== "Inbox") {
+    148|         const region = screen.getByRole("region", { name: shelf });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/35]⎯
+
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Snoozed machine markers at the registered app boundary > 'environment object with null provider'
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Snoozed machine markers at the registered app boundary > 'environment object with  provider'
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Settled machine markers at the registered app boundary > 'environment object with null provider'
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Settled machine markers at the registered app boundary > 'environment object with  provider'
+AssertionError: expected [ 'Cloud' ] to deeply equal [ 'Local' ]
+
+- Expected
++ Received
+
+  [
+-   "Local",
++   "Cloud",
+  ]
+
+ ❯ src/ThreadCard.test.tsx:146:70
+    144|       const row = screen.getByRole("listitem");
+    145|       const markers = within(row).queryAllByRole("img", { name: /^(Clo…
+    146|       expect(markers.map((icon) => icon.getAttribute("aria-label"))).t…
+       |                                                                      ^
+    147|       if (shelf !== "Inbox") {
+    148|         const region = screen.getByRole("region", { name: shelf });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/35]⎯
+
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Snoozed machine markers at the registered app boundary > 'Local startup waiting-for-host stays …'
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Snoozed machine markers at the registered app boundary > 'unknown runtime'
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Snoozed machine markers at the registered app boundary > 'missing runtime'
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Snoozed machine markers at the registered app boundary > 'null runtime'
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Snoozed machine markers at the registered app boundary > 'empty runtime'
+TestingLibraryElementError: Unable to find role="region" and name "Snoozed"
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"flex min-h-0 flex-1 flex-col"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex shrink-0 items-center gap-1 px-2 pb-1"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-autocomplete[39m=[32m"none"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"Project scope: All projects"[39m
+          [33mclass[39m=[32m"flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"[39m
+          [33mdata-state[39m=[32m"closed"[39m
+          [33mdir[39m=[32m"ltr"[39m
+          [33mrole[39m=[32m"combobox"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33mstyle[39m=[32m"pointer-events: none;"[39m
+          [36m>[39m
+            [0mAll projects[0m
+          [36m</span>[39m
+          [36m<svg[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"size-4 opacity-50"[39m
+            [33mcolor[39m=[32m"currentColor"[39m
+            [33mdata-icon[39m=[32m"ChevronDown"[39m
+            [33mfill[39m=[32m"none"[39m
+            [33mheight[39m=[32m"24"[39m
+            [33mviewBox[39m=[32m"0 0 24 24"[39m
+            [33mwidth[39m=[32m"24"[39m
+            [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+          [36m>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"[39m
+              [33mstroke[39m=[32m"currentColor"[39m
+              [33mstroke-linecap[39m=[32m"round"[39m
+              [33mstroke-linejoin[39m=[32m"round"[39m
+              [33mstroke-width[39m=[32m"1.5"[39m
+            [36m/>[39m
+          [36m</svg>[39m
+        [36m</button>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"min-h-0 flex-1 overflow-y-auto px-1.5 pb-2"[39m
+      [36m>[39m
+        [36m<section>[39m
+          [36m<ul[39m
+            [33mclass[39m=[32m"flex flex-col gap-px"[39m
+          [36m>[39m
+            [36m<li[39m
+              [33mclass[39m=[32m"list-none"[39m
+              [33mdata-state[39m=[32m"closed"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"[39m
+              [36m>[39m
+                [36m<a[39m
+                  [33maria-label[39m=[32m"Review parser"[39m
+                  [33mclass[39m=[32m"absolute inset-0 cursor-pointer rounded-md"[39m
+                  [33mdata-sidebar-thread-id[39m=[32m"thr_synsample"[39m
+                  [33mdata-sidebar-thread-shortcut-target[39m=[32m""[39m
+                  [33mhref[39m=[32m"#"[39m
+                [36m/>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"pointer-events-none relative flex h-5 items-center gap-1.5"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"[39m
+                  [36m>[39m
+                    [0mOrchard[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"flex w-7 shrink-0 items-center justify-end"[39m
+                  [36m>[39m
+                    [36m<span[39m
+                      [33mclass[39m=[32m"tabular-nums text-2xs text-muted-foreground"[39m
+                    [36m>[39m
+                      [0m7m[0m
+                    [36m</span>[39m
+                  [36m</span>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"pointer-events-none relative mt-0.5 truncate text-sm text-foreground"[39m
+                [36m>[39m
+                  [0mReview parser[0m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"pointer-events-none relative mt-0.5 flex h-4 items-center gap-1.5 text-2xs text-muted-foreground"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"flex-1"[39m
+                  [36m/>[39m
+                  [36m<span[39m
+                    [33maria-label[39m=[32m"synthetic-agent"[39m
+                    [33mclass[39m=[32m"flex size-3.5 shrink-0 items-center justify-center"[39m
+                    [33mrole[39m=[32m"img"[39m
+                  [36m>[39m
+                    [36m<span[39m
+                      [33mclass[39m=[32m"size-2 rounded-full bg-muted-foreground/50"[39m
+                    [36m/>[39m
+                  [36m</span>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+            [36m</li>[39m
+          [36m</ul>[39m
+        [36m</section>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"flex min-h-0 flex-1 flex-col"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex shrink-0 items-center gap-1 px-2 pb-1"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-autocomplete[39m=[32m"none"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"Project scope: All projects"[39m
+          [33mclass[39m=[32m"flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"[39m
+          [33mdata-state[39m=[32m"closed"[39m
+          [33mdir[39m=[32m"ltr"[39m
+          [33mrole[39m=[32m"combobox"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33mstyle[39m=[32m"pointer-events: none;"[39m
+          [36m>[39m
+            [0mAll projects[0m
+          [36m</span>[39m
+          [36m<svg[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"size-4 opacity-50"[39m
+            [33mcolor[39m=[32m"currentColor"[39m
+            [33mdata-icon[39m=[32m"ChevronDown"[39m
+            [33mfill[39m=[32m"none"[39m
+            [33mheight[39m=[32m"24"[39m
+            [33mviewBox[39m=[32m"0 0 24 24"[39m
+            [33mwidth[39m=[32m"24"[39m
+            [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+          [36m>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"[39m
+              [33mstroke[39m=[32m"currentColor"[39m
+              [33mstroke-linecap[39m=[32m"round"[39m
+              [33mstroke-linejoin[39m=[32m"round"[39m
+              [33mstroke-width[39m=[32m"1.5"[39m
+            [36m/>[39m
+          [36m</svg>[39m
+        [36m</button>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"min-h-0 flex-1 overflow-y-auto px-1.5 pb-2"[39m
+      [36m>[39m
+        [36m<section>[39m
+          [36m<ul[39m
+            [33mclass[39m=[32m"flex flex-col gap-px"[39m
+          [36m>[39m
+            [36m<li[39m
+              [33mclass[39m=[32m"list-none"[39m
+              [33mdata-state[39m=[32m"closed"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"[39m
+              [36m>[39m
+                [36m<a[39m
+                  [33maria-label[39m=[32m"Review parser"[39m
+                  [33mclass[39m=[32m"absolute inset-0 cursor-pointer rounded-md"[39m
+                  [33mdata-sidebar-thread-id[39m=[32m"thr_synsample"[39m
+                  [33mdata-sidebar-thread-shortcut-target[39m=[32m""[39m
+                  [33mhref[39m=[32m"#"[39m
+                [36m/>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"pointer-events-none relative flex h-5 items-center gap-1.5"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"[39m
+                  [36m>[39m
+                    [0mOrchard[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"flex w-7 shrink-0 items-center justify-end"[39m
+                  [36m>[39m
+                    [36m<span[39m
+                      [33mclass[39m=[32m"tabular-nums text-2xs text-muted-foreground"[39m
+                    [36m>[39m
+                      [0m7m[0m
+                    [36m</span>[39m
+                  [36m</span>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"pointer-events-none relative mt-0.5 truncate text-sm text-foreground"[39m
+                [36m>[39m
+                  [0mReview parser[0m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"pointer-events-none relative mt-0.5 flex h-4 items-center gap-1.5 text-2xs text-muted-foreground"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"flex-1"[39m
+                  [36m/>[39m
+                  [36m<span[39m
+                    [33maria-label[39m=[32m"synthetic-agent"[39m
+                    [33mclass[39m=[32m"flex size-3.5 shrink-0 items-center justify-center"[39m
+                    [33mrole[39m=[32m"img"[39m
+                  [36m>[39m
+                    [36m<span[39m
+                      [33mclass[39m=[32m"size-2 rounded-full bg-muted-foreground/50"[39m
+                    [36m/>[39m
+                  [36m</span>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+            [36m</li>[39m
+          [36m</ul>[39m
+        [36m</section>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/ThreadCard.test.tsx:140:37
+    138|       render([sample], shelf === "Inbox" ? [] : [parkedRow(sample.id, …
+    139|       if (shelf !== "Inbox") {
+    140|         const region = await screen.findByRole("region", { name: shelf…
+       |                                     ^
+    141|         expect(within(region).queryByRole("listitem")).toBeNull();
+    142|         fireEvent.click(within(region).getByRole("button"));
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/35]⎯
+
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Settled machine markers at the registered app boundary > 'Local startup waiting-for-host stays …'
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Settled machine markers at the registered app boundary > 'unknown runtime'
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Settled machine markers at the registered app boundary > 'missing runtime'
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Settled machine markers at the registered app boundary > 'null runtime'
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Settled machine markers at the registered app boundary > 'empty runtime'
+TestingLibraryElementError: Unable to find role="region" and name "Settled"
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"flex min-h-0 flex-1 flex-col"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex shrink-0 items-center gap-1 px-2 pb-1"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-autocomplete[39m=[32m"none"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"Project scope: All projects"[39m
+          [33mclass[39m=[32m"flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"[39m
+          [33mdata-state[39m=[32m"closed"[39m
+          [33mdir[39m=[32m"ltr"[39m
+          [33mrole[39m=[32m"combobox"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33mstyle[39m=[32m"pointer-events: none;"[39m
+          [36m>[39m
+            [0mAll projects[0m
+          [36m</span>[39m
+          [36m<svg[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"size-4 opacity-50"[39m
+            [33mcolor[39m=[32m"currentColor"[39m
+            [33mdata-icon[39m=[32m"ChevronDown"[39m
+            [33mfill[39m=[32m"none"[39m
+            [33mheight[39m=[32m"24"[39m
+            [33mviewBox[39m=[32m"0 0 24 24"[39m
+            [33mwidth[39m=[32m"24"[39m
+            [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+          [36m>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"[39m
+              [33mstroke[39m=[32m"currentColor"[39m
+              [33mstroke-linecap[39m=[32m"round"[39m
+              [33mstroke-linejoin[39m=[32m"round"[39m
+              [33mstroke-width[39m=[32m"1.5"[39m
+            [36m/>[39m
+          [36m</svg>[39m
+        [36m</button>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"min-h-0 flex-1 overflow-y-auto px-1.5 pb-2"[39m
+      [36m>[39m
+        [36m<section>[39m
+          [36m<ul[39m
+            [33mclass[39m=[32m"flex flex-col gap-px"[39m
+          [36m>[39m
+            [36m<li[39m
+              [33mclass[39m=[32m"list-none"[39m
+              [33mdata-state[39m=[32m"closed"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"[39m
+              [36m>[39m
+                [36m<a[39m
+                  [33maria-label[39m=[32m"Review parser"[39m
+                  [33mclass[39m=[32m"absolute inset-0 cursor-pointer rounded-md"[39m
+                  [33mdata-sidebar-thread-id[39m=[32m"thr_synsample"[39m
+                  [33mdata-sidebar-thread-shortcut-target[39m=[32m""[39m
+                  [33mhref[39m=[32m"#"[39m
+                [36m/>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"pointer-events-none relative flex h-5 items-center gap-1.5"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"[39m
+                  [36m>[39m
+                    [0mOrchard[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"flex w-7 shrink-0 items-center justify-end"[39m
+                  [36m>[39m
+                    [36m<span[39m
+                      [33mclass[39m=[32m"tabular-nums text-2xs text-muted-foreground"[39m
+                    [36m>[39m
+                      [0m7m[0m
+                    [36m</span>[39m
+                  [36m</span>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"pointer-events-none relative mt-0.5 truncate text-sm text-foreground"[39m
+                [36m>[39m
+                  [0mReview parser[0m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"pointer-events-none relative mt-0.5 flex h-4 items-center gap-1.5 text-2xs text-muted-foreground"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"flex-1"[39m
+                  [36m/>[39m
+                  [36m<span[39m
+                    [33maria-label[39m=[32m"synthetic-agent"[39m
+                    [33mclass[39m=[32m"flex size-3.5 shrink-0 items-center justify-center"[39m
+                    [33mrole[39m=[32m"img"[39m
+                  [36m>[39m
+                    [36m<span[39m
+                      [33mclass[39m=[32m"size-2 rounded-full bg-muted-foreground/50"[39m
+                    [36m/>[39m
+                  [36m</span>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+            [36m</li>[39m
+          [36m</ul>[39m
+        [36m</section>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"flex min-h-0 flex-1 flex-col"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex shrink-0 items-center gap-1 px-2 pb-1"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-autocomplete[39m=[32m"none"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"Project scope: All projects"[39m
+          [33mclass[39m=[32m"flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"[39m
+          [33mdata-state[39m=[32m"closed"[39m
+          [33mdir[39m=[32m"ltr"[39m
+          [33mrole[39m=[32m"combobox"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33mstyle[39m=[32m"pointer-events: none;"[39m
+          [36m>[39m
+            [0mAll projects[0m
+          [36m</span>[39m
+          [36m<svg[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"size-4 opacity-50"[39m
+            [33mcolor[39m=[32m"currentColor"[39m
+            [33mdata-icon[39m=[32m"ChevronDown"[39m
+            [33mfill[39m=[32m"none"[39m
+            [33mheight[39m=[32m"24"[39m
+            [33mviewBox[39m=[32m"0 0 24 24"[39m
+            [33mwidth[39m=[32m"24"[39m
+            [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+          [36m>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"[39m
+              [33mstroke[39m=[32m"currentColor"[39m
+              [33mstroke-linecap[39m=[32m"round"[39m
+              [33mstroke-linejoin[39m=[32m"round"[39m
+              [33mstroke-width[39m=[32m"1.5"[39m
+            [36m/>[39m
+          [36m</svg>[39m
+        [36m</button>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"min-h-0 flex-1 overflow-y-auto px-1.5 pb-2"[39m
+      [36m>[39m
+        [36m<section>[39m
+          [36m<ul[39m
+            [33mclass[39m=[32m"flex flex-col gap-px"[39m
+          [36m>[39m
+            [36m<li[39m
+              [33mclass[39m=[32m"list-none"[39m
+              [33mdata-state[39m=[32m"closed"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"[39m
+              [36m>[39m
+                [36m<a[39m
+                  [33maria-label[39m=[32m"Review parser"[39m
+                  [33mclass[39m=[32m"absolute inset-0 cursor-pointer rounded-md"[39m
+                  [33mdata-sidebar-thread-id[39m=[32m"thr_synsample"[39m
+                  [33mdata-sidebar-thread-shortcut-target[39m=[32m""[39m
+                  [33mhref[39m=[32m"#"[39m
+                [36m/>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"pointer-events-none relative flex h-5 items-center gap-1.5"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"[39m
+                  [36m>[39m
+                    [0mOrchard[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"flex w-7 shrink-0 items-center justify-end"[39m
+                  [36m>[39m
+                    [36m<span[39m
+                      [33mclass[39m=[32m"tabular-nums text-2xs text-muted-foreground"[39m
+                    [36m>[39m
+                      [0m7m[0m
+                    [36m</span>[39m
+                  [36m</span>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"pointer-events-none relative mt-0.5 truncate text-sm text-foreground"[39m
+                [36m>[39m
+                  [0mReview parser[0m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"pointer-events-none relative mt-0.5 flex h-4 items-center gap-1.5 text-2xs text-muted-foreground"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"flex-1"[39m
+                  [36m/>[39m
+                  [36m<span[39m
+                    [33maria-label[39m=[32m"synthetic-agent"[39m
+                    [33mclass[39m=[32m"flex size-3.5 shrink-0 items-center justify-center"[39m
+                    [33mrole[39m=[32m"img"[39m
+                  [36m>[39m
+                    [36m<span[39m
+                      [33mclass[39m=[32m"size-2 rounded-full bg-muted-foreground/50"[39m
+                    [36m/>[39m
+                  [36m</span>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+            [36m</li>[39m
+          [36m</ul>[39m
+        [36m</section>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/ThreadCard.test.tsx:140:37
+    138|       render([sample], shelf === "Inbox" ? [] : [parkedRow(sample.id, …
+    139|       if (shelf !== "Inbox") {
+    140|         const region = await screen.findByRole("region", { name: shelf…
+       |                                     ^
+    141|         expect(within(region).queryByRole("listitem")).toBeNull();
+    142|         fireEvent.click(within(region).getByRole("button"));
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/35]⎯
+
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > machine row regressions > retains card navigation and shortcuts with modifier false
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > machine row regressions > retains card navigation and shortcuts with modifier true
+TestingLibraryElementError: Unable to find an accessible element with the role "img" and name "Cloud"
+
+Here are the accessible roles:
+
+  combobox:
+
+  Name "Project scope: All projects":
+  [36m<button[39m
+    [33maria-autocomplete[39m=[32m"none"[39m
+    [33maria-expanded[39m=[32m"false"[39m
+    [33maria-label[39m=[32m"Project scope: All projects"[39m
+    [33mclass[39m=[32m"flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"[39m
+    [33mdata-state[39m=[32m"closed"[39m
+    [33mdir[39m=[32m"ltr"[39m
+    [33mrole[39m=[32m"combobox"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  list:
+
+  Name "":
+  [36m<ul[39m
+    [33mclass[39m=[32m"flex flex-col gap-px"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  listitem:
+
+  Name "":
+  [36m<li[39m
+    [33mclass[39m=[32m"list-none"[39m
+    [33mdata-state[39m=[32m"closed"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  link:
+
+  Name "Review parser":
+  [36m<a[39m
+    [33maria-label[39m=[32m"Review parser"[39m
+    [33mclass[39m=[32m"absolute inset-0 cursor-pointer rounded-md"[39m
+    [33mdata-sidebar-thread-id[39m=[32m"thr_synsample"[39m
+    [33mdata-sidebar-thread-shortcut-target[39m=[32m""[39m
+    [33mhref[39m=[32m"#"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  button:
+
+  Name "Snooze until tomorrow":
+  [36m<button[39m
+    [33maria-label[39m=[32m"Snooze until tomorrow"[39m
+    [33mclass[39m=[32m"rounded p-0.5 text-muted-foreground hover:text-foreground"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "Settle thread":
+  [36m<button[39m
+    [33maria-label[39m=[32m"Settle thread"[39m
+    [33mclass[39m=[32m"rounded p-0.5 text-muted-foreground hover:text-foreground"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  img:
+
+  Name "synthetic-agent":
+  [36m<span[39m
+    [33maria-label[39m=[32m"synthetic-agent"[39m
+    [33mclass[39m=[32m"flex size-3.5 shrink-0 items-center justify-center"[39m
+    [33mrole[39m=[32m"img"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<body[39m
+  [33mstyle[39m=[32m""[39m
+[36m>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"flex min-h-0 flex-1 flex-col"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex shrink-0 items-center gap-1 px-2 pb-1"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-autocomplete[39m=[32m"none"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"Project scope: All projects"[39m
+          [33mclass[39m=[32m"flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"[39m
+          [33mdata-state[39m=[32m"closed"[39m
+          [33mdir[39m=[32m"ltr"[39m
+          [33mrole[39m=[32m"combobox"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33mstyle[39m=[32m"pointer-events: none;"[39m
+          [36m>[39m
+            [0mAll projects[0m
+          [36m</span>[39m
+          [36m<svg[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"size-4 opacity-50"[39m
+            [33mcolor[39m=[32m"currentColor"[39m
+            [33mdata-icon[39m=[32m"ChevronDown"[39m
+            [33mfill[39m=[32m"none"[39m
+            [33mheight[39m=[32m"24"[39m
+            [33mviewBox[39m=[32m"0 0 24 24"[39m
+            [33mwidth[39m=[32m"24"[39m
+            [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+          [36m>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"[39m
+              [33mstroke[39m=[32m"currentColor"[39m
+              [33mstroke-linecap[39m=[32m"round"[39m
+              [33mstroke-linejoin[39m=[32m"round"[39m
+              [33mstroke-width[39m=[32m"1.5"[39m
+            [36m/>[39m
+          [36m</svg>[39m
+        [36m</button>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"min-h-0 flex-1 overflow-y-auto px-1.5 pb-2"[39m
+      [36m>[39m
+        [36m<section>[39m
+          [36m<ul[39m
+            [33mclass[39m=[32m"flex flex-col gap-px"[39m
+          [36m>[39m
+            [36m<li[39m
+              [33mclass[39m=[32m"list-none"[39m
+              [33mdata-state[39m=[32m"closed"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"[39m
+              [36m>[39m
+                [36m<a[39m
+                  [33maria-label[39m=[32m"Review parser"[39m
+                  [33mclass[39m=[32m"absolute inset-0 cursor-pointer rounded-md"[39m
+                  [33mdata-sidebar-thread-id[39m=[32m"thr_synsample"[39m
+                  [33mdata-sidebar-thread-shortcut-target[39m=[32m""[39m
+                  [33mhref[39m=[32m"#"[39m
+                [36m/>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"pointer-events-none relative flex h-5 items-center gap-1.5"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"[39m
+                  [36m>[39m
+                    [0mOrchard[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"pointer-events-auto hidden items-center gap-0.5 group-hover/card:flex"[39m
+                  [36m>[39m
+                    [36m<button[39m
+                      [33maria-label[39m=[32m"Snooze until tomorrow"[39m
+                      [33mclass[39m=[32m"rounded p-0.5 text-muted-foreground hover:text-foreground"[39m
+                      [33mtype[39m=[32m"button"[39m
+                    [36m>[39m
+                      [36m<svg[39m
+                        [33mclass[39m=[32m"size-3.5"[39m
+                        [33mcolor[39m=[32m"currentColor"[39m
+                        [33mdata-icon[39m=[32m"Clock"[39m
+                        [33mfill[39m=[32m"none"[39m
+                        [33mheight[39m=[32m"24"[39m
+                        [33mviewBox[39m=[32m"0 0 24 24"[39m
+                        [33mwidth[39m=[32m"24"[39m
+                        [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                      [36m>[39m
+                        [36m<circle[39m
+                          [33mcx[39m=[32m"12"[39m
+                          [33mcy[39m=[32m"12"[39m
+                          [33mr[39m=[32m"10"[39m
+                          [33mstroke[39m=[32m"currentColor"[39m
+                          [33mstroke-width[39m=[32m"1.5"[39m
+                        [36m/>[39m
+                        [36m<path[39m
+                          [33md[39m=[32m"M12 8V12L14 14"[39m
+                          [33mstroke[39m=[32m"currentColor"[39m
+                          [33mstroke-linecap[39m=[32m"round"[39m
+                          [33mstroke-linejoin[39m=[32m"round"[39m
+                          [33mstroke-width[39m=[32m"1.5"[39m
+                        [36m/>[39m
+                      [36m</svg>[39m
+                    [36m</button>[39m
+                    [36m<button[39m
+                      [33maria-label[39m=[32m"Settle thread"[39m
+                      [33mclass[39m=[32m"rounded p-0.5 text-muted-foreground hover:text-foreground"[39m
+                      [33mtype[39m=[32m"button"[39m
+                    [36m>[39m
+                      [36m<svg[39m
+                        [33mclass[39m=[32m"size-3.5"[39m
+                        [33mcolor[39m=[32m"currentColor"[39m
+                        [33mdata-icon[39m=[32m"Check"[39m
+                        [33mfill[39m=[32m"none"[39m
+                        [33mheight[39m=[32m"24"[39m
+                        [33mviewBox[39m=[32m"0 0 24 24"[39m
+                        [33mwidth[39m=[32m"24"[39m
+                        [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                      [36m>[39m
+                        [36m<path[39m
+                          [33md[39m=[32m"M5 14L8.5 17.5L19 6.5"[39m
+                          [33mstroke[39m=[32m"currentColor"[39m
+                          [33mstroke-linecap[39m=[32m"round"[39m
+                          [33mstroke-linejoin[39m=[32m"round"[39m
+                          [33mstroke-width[39m=[32m"1.5"[39m
+                        [36m/>[39m
+                      [36m</svg>[39m
+                    [36m</button>[39m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"flex w-7 shrink-0 items-center justify-end group-hover/card:hidden"[39m
+                  [36m>[39m
+                    [36m<span[39m
+                      [33mclass[39m=[32m"tabular-nums text-2xs text-muted-foreground"[39m
+                    [36m>[39m
+                      [0m7m[0m
+                    [36m</span>[39m
+                  [36m</span>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"pointer-events-none relative mt-0.5 truncate text-sm text-foreground"[39m
+                [36m>[39m
+                  [0mReview parser[0m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"pointer-events-none relative mt-0.5 flex h-4 items-center gap-1.5 text-2xs text-muted-foreground"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"flex-1"[39m
+                  [36m/>[39m
+                  [36m<span[39m
+                    [33maria-label[39m=[32m"synthetic-agent"[39m
+                    [33mclass[39m=[32m"flex size-3.5 shrink-0 items-center justify-center"[39m
+                    [33mrole[39m=[32m"img"[39m
+                  [36m>[39m
+                    [36m<span[39m
+                      [33mclass[39m=[32m"size-2 rounded-full bg-muted-foreground/50"[39m
+                    [36m/>[39m
+                  [36m</span>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+            [36m</li>[39m
+          [36m</ul>[39m
+        [36m</section>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/ThreadCard.test.tsx:178:19
+    176|     expect(link.hasAttribute("data-sidebar-thread-shortcut-target")).t…
+    177|     expect(screen.getByText("7m")).toBeDefined();
+    178|     expect(screen.getByRole("img", { name: "Cloud" })).toBeDefined();
+       |                   ^
+    179|     fireEvent.click(link, { metaKey: modifier });
+    180|     expect(rendered.sidebarActionCalls).toEqual([{ method: "open", thr…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/35]⎯
+
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > machine row regressions > retains Snoozed wake/status, navigation and restore controls
+TestingLibraryElementError: Unable to find an accessible element with the role "img" and name "Cloud"
+
+Here are the accessible roles:
+
+  button:
+
+  Name "Snoozed":
+  [36m<button[39m
+    [33maria-expanded[39m=[32m"true"[39m
+    [33mclass[39m=[32m"mt-3 flex w-full items-center gap-2 px-2.5 pb-1 text-left"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  --------------------------------------------------list:
+
+  Name "":
+  [36m<ul[39m
+    [33mclass[39m=[32m"flex flex-col gap-px"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  listitem:
+
+  Name "":
+  [36m<li[39m
+    [33mclass[39m=[32m"list-none"[39m
+    [33mdata-state[39m=[32m"closed"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  link:
+
+  Name "Review parser":
+  [36m<a[39m
+    [33maria-label[39m=[32m"Review parser"[39m
+    [33mclass[39m=[32m"absolute inset-0 cursor-pointer rounded-md"[39m
+    [33mdata-sidebar-thread-id[39m=[32m"thr_synsample"[39m
+    [33mdata-sidebar-thread-shortcut-target[39m=[32m""[39m
+    [33mhref[39m=[32m"#"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  button:
+
+  Name "Wake thread now":
+  [36m<button[39m
+    [33maria-label[39m=[32m"Wake thread now"[39m
+    [33mclass[39m=[32m"pointer-events-auto absolute -right-0.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground opacity-0 hover:text-foreground focus-visible:opacity-100 group-hover/slim:opacity-100"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<section[39m
+  [33maria-label[39m=[32m"Snoozed"[39m
+[36m>[39m
+  [36m<button[39m
+    [33maria-expanded[39m=[32m"true"[39m
+    [33mclass[39m=[32m"mt-3 flex w-full items-center gap-2 px-2.5 pb-1 text-left"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m>[39m
+    [36m<span[39m
+      [33mclass[39m=[32m"text-2xs font-medium text-muted-foreground/70"[39m
+    [36m>[39m
+      [0mSnoozed[0m
+    [36m</span>[39m
+    [36m<span[39m
+      [33mclass[39m=[32m"h-px flex-1 bg-sidebar-border"[39m
+    [36m/>[39m
+    [36m<span[39m
+      [33mclass[39m=[32m"flex size-3.5 shrink-0 items-center justify-center"[39m
+    [36m>[39m
+      [36m<svg[39m
+        [33mclass[39m=[32m"size-3 text-muted-foreground/70 transition-transform rotate-180"[39m
+        [33mcolor[39m=[32m"currentColor"[39m
+        [33mdata-icon[39m=[32m"ChevronDown"[39m
+        [33mfill[39m=[32m"none"[39m
+        [33mheight[39m=[32m"24"[39m
+        [33mviewBox[39m=[32m"0 0 24 24"[39m
+        [33mwidth[39m=[32m"24"[39m
+        [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+      [36m>[39m
+        [36m<path[39m
+          [33md[39m=[32m"M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"[39m
+          [33mstroke[39m=[32m"currentColor"[39m
+          [33mstroke-linecap[39m=[32m"round"[39m
+          [33mstroke-linejoin[39m=[32m"round"[39m
+          [33mstroke-width[39m=[32m"1.5"[39m
+        [36m/>[39m
+      [36m</svg>[39m
+    [36m</span>[39m
+  [36m</button>[39m
+  [36m<ul[39m
+    [33mclass[39m=[32m"flex flex-col gap-px"[39m
+  [36m>[39m
+    [36m<li[39m
+      [33mclass[39m=[32m"list-none"[39m
+      [33mdata-state[39m=[32m"closed"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"group/slim relative flex h-8 items-center gap-2 rounded-md px-2.5 text-xs hover:bg-sidebar-accent/60"[39m
+      [36m>[39m
+        [36m<a[39m
+          [33maria-label[39m=[32m"Review parser"[39m
+          [33mclass[39m=[32m"absolute inset-0 cursor-pointer rounded-md"[39m
+          [33mdata-sidebar-thread-id[39m=[32m"thr_synsample"[39m
+          [33mdata-sidebar-thread-shortcut-target[39m=[32m""[39m
+          [33mhref[39m=[32m"#"[39m
+        [36m/>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"pointer-events-none relative min-w-0 flex-1 truncate text-muted-foreground/70 group-hover/slim:text-foreground"[39m
+        [36m>[39m
+          [0mReview parser[0m
+        [36m</span>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"flex w-7 shrink-0 items-center justify-end pointer-events-none relative tabular-nums text-2xs text-muted-foreground/60"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"flex items-center group-hover/slim:opacity-0"[39m
+          [36m>[39m
+            [0m1d[0m
+          [36m</span>[39m
+          [36m<button[39m
+            [33maria-label[39m=[32m"Wake thread now"[39m
+            [33mclass[39m=[32m"pointer-events-auto absolute -right-0.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground opacity-0 hover:text-foreground focus-visible:opacity-100 group-hover/slim:opacity-100"[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [36m<svg[39m
+              [33mclass[39m=[32m"size-3.5"[39m
+              [33mcolor[39m=[32m"currentColor"[39m
+              [33mdata-icon[39m=[32m"Clock"[39m
+              [33mfill[39m=[32m"none"[39m
+              [33mheight[39m=[32m"24"[39m
+              [33mviewBox[39m=[32m"0 0 24 24"[39m
+              [33mwidth[39m=[32m"24"[39m
+              [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+            [36m>[39m
+              [36m<circle[39m
+                [33mcx[39m=[32m"12"[39m
+                [33mcy[39m=[32m"12"[39m
+                [33mr[39m=[32m"10"[39m
+                [33mstroke[39m=[32m"currentColor"[39m
+                [33mstroke-width[39m=[32m"1.5"[39m
+              [36m/>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M12 8V12L14 14"[39m
+                [33mstroke[39m=[32m"currentColor"[39m
+                [33mstroke-linecap[39m=[32m"round"[39m
+                [33mstroke-linejoin[39m=[32m"round"[39m
+                [33mstroke-width[39m=[32m"1.5"[39m
+              [36m/>[39m
+            [36m</svg>[39m
+          [36m</button>[39m
+        [36m</span>[39m
+      [36m</div>[39m
+    [36m</li>[39m
+  [36m</ul>[39m
+[36m</section>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:109:15
+ ❯ src/ThreadCard.test.tsx:208:27
+    206|     await waitFor(() => expect(shelf === "Snoozed" ? rendered.unsnooze…
+    207|     expect(rendered.onNavigate).toHaveBeenCalledTimes(1);
+    208|     expect(within(region).getAllByRole("img", { name: "Cloud" })).toHa…
+       |                           ^
+    209|   });
+    210| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/35]⎯
+
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > machine row regressions > retains Settled wake/status, navigation and restore controls
+TestingLibraryElementError: Unable to find an accessible element with the role "img" and name "Cloud"
+
+Here are the accessible roles:
+
+  button:
+
+  Name "Settled":
+  [36m<button[39m
+    [33maria-expanded[39m=[32m"true"[39m
+    [33mclass[39m=[32m"mt-3 flex w-full items-center gap-2 px-2.5 pb-1 text-left"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  --------------------------------------------------list:
+
+  Name "":
+  [36m<ul[39m
+    [33mclass[39m=[32m"flex flex-col gap-px"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  listitem:
+
+  Name "":
+  [36m<li[39m
+    [33mclass[39m=[32m"list-none"[39m
+    [33mdata-state[39m=[32m"closed"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  link:
+
+  Name "Review parser":
+  [36m<a[39m
+    [33maria-label[39m=[32m"Review parser"[39m
+    [33mclass[39m=[32m"absolute inset-0 cursor-pointer rounded-md"[39m
+    [33mdata-sidebar-thread-id[39m=[32m"thr_synsample"[39m
+    [33mdata-sidebar-thread-shortcut-target[39m=[32m""[39m
+    [33mhref[39m=[32m"#"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  button:
+
+  Name "Un-settle thread":
+  [36m<button[39m
+    [33maria-label[39m=[32m"Un-settle thread"[39m
+    [33mclass[39m=[32m"pointer-events-auto absolute -right-0.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground opacity-0 hover:text-foreground focus-visible:opacity-100 group-hover/slim:opacity-100"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<section[39m
+  [33maria-label[39m=[32m"Settled"[39m
+[36m>[39m
+  [36m<button[39m
+    [33maria-expanded[39m=[32m"true"[39m
+    [33mclass[39m=[32m"mt-3 flex w-full items-center gap-2 px-2.5 pb-1 text-left"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m>[39m
+    [36m<span[39m
+      [33mclass[39m=[32m"text-2xs font-medium text-muted-foreground/70"[39m
+    [36m>[39m
+      [0mSettled[0m
+    [36m</span>[39m
+    [36m<span[39m
+      [33mclass[39m=[32m"h-px flex-1 bg-sidebar-border"[39m
+    [36m/>[39m
+    [36m<span[39m
+      [33mclass[39m=[32m"flex size-3.5 shrink-0 items-center justify-center"[39m
+    [36m>[39m
+      [36m<svg[39m
+        [33mclass[39m=[32m"size-3 text-muted-foreground/70 transition-transform rotate-180"[39m
+        [33mcolor[39m=[32m"currentColor"[39m
+        [33mdata-icon[39m=[32m"ChevronDown"[39m
+        [33mfill[39m=[32m"none"[39m
+        [33mheight[39m=[32m"24"[39m
+        [33mviewBox[39m=[32m"0 0 24 24"[39m
+        [33mwidth[39m=[32m"24"[39m
+        [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+      [36m>[39m
+        [36m<path[39m
+          [33md[39m=[32m"M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"[39m
+          [33mstroke[39m=[32m"currentColor"[39m
+          [33mstroke-linecap[39m=[32m"round"[39m
+          [33mstroke-linejoin[39m=[32m"round"[39m
+          [33mstroke-width[39m=[32m"1.5"[39m
+        [36m/>[39m
+      [36m</svg>[39m
+    [36m</span>[39m
+  [36m</button>[39m
+  [36m<ul[39m
+    [33mclass[39m=[32m"flex flex-col gap-px"[39m
+  [36m>[39m
+    [36m<li[39m
+      [33mclass[39m=[32m"list-none"[39m
+      [33mdata-state[39m=[32m"closed"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"group/slim relative flex h-8 items-center gap-2 rounded-md px-2.5 text-xs hover:bg-sidebar-accent/60"[39m
+      [36m>[39m
+        [36m<a[39m
+          [33maria-label[39m=[32m"Review parser"[39m
+          [33mclass[39m=[32m"absolute inset-0 cursor-pointer rounded-md"[39m
+          [33mdata-sidebar-thread-id[39m=[32m"thr_synsample"[39m
+          [33mdata-sidebar-thread-shortcut-target[39m=[32m""[39m
+          [33mhref[39m=[32m"#"[39m
+        [36m/>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"pointer-events-none relative min-w-0 flex-1 truncate text-muted-foreground/70 group-hover/slim:text-foreground"[39m
+        [36m>[39m
+          [0mReview parser[0m
+        [36m</span>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"flex w-7 shrink-0 items-center justify-end pointer-events-none relative tabular-nums text-2xs text-muted-foreground/60"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"flex items-center group-hover/slim:opacity-0"[39m
+          [36m>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"tabular-nums text-2xs text-muted-foreground"[39m
+            [36m>[39m
+              [0m7m[0m
+            [36m</span>[39m
+          [36m</span>[39m
+          [36m<button[39m
+            [33maria-label[39m=[32m"Un-settle thread"[39m
+            [33mclass[39m=[32m"pointer-events-auto absolute -right-0.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground opacity-0 hover:text-foreground focus-visible:opacity-100 group-hover/slim:opacity-100"[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [36m<svg[39m
+              [33mclass[39m=[32m"size-3.5"[39m
+              [33mcolor[39m=[32m"currentColor"[39m
+              [33mdata-icon[39m=[32m"ArrowTurnBackward"[39m
+              [33mfill[39m=[32m"none"[39m
+              [33mheight[39m=[32m"24"[39m
+              [33mviewBox[39m=[32m"0 0 24 24"[39m
+              [33mwidth[39m=[32m"24"[39m
+              [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+            [36m>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M11 6H15.5C17.9853 6 20 8.01472 20 10.5C20 12.9853 17.9853 15 15.5 15H4"[39m
+                [33mstroke[39m=[32m"currentColor"[39m
+                [33mstroke-linecap[39m=[32m"round"[39m
+                [33mstroke-linejoin[39m=[32m"round"[39m
+                [33mstroke-width[39m=[32m"1.5"[39m
+              [36m/>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M6.99998 12C6.99998 12 4.00001 14.2095 4 15C3.99999 15.7906 7 18 7 18"[39m
+                [33mstroke[39m=[32m"currentColor"[39m
+                [33mstroke-linecap[39m=[32m"round"[39m
+                [33mstroke-linejoin[39m=[32m"round"[39m
+                [33mstroke-width[39m=[32m"1.5"[39m
+              [36m/>[39m
+            [36m</svg>[39m
+          [36m</button>[39m
+        [36m</span>[39m
+      [36m</div>[39m
+    [36m</li>[39m
+  [36m</ul>[39m
+[36m</section>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:109:15
+ ❯ src/ThreadCard.test.tsx:208:27
+    206|     await waitFor(() => expect(shelf === "Snoozed" ? rendered.unsnooze…
+    207|     expect(rendered.onNavigate).toHaveBeenCalledTimes(1);
+    208|     expect(within(region).getAllByRole("img", { name: "Cloud" })).toHa…
+       |                           ^
+    209|   });
+    210| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/35]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  35 failed | 55 passed (90)
+   Start at  05:46:02
+   Duration  13.97s (transform 133ms, setup 0ms, import 453ms, tests 12.73s, environment 672ms)
+

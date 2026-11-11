@@ -105,25 +105,36 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.useRealTimers(); });
 
+// N5: projection shapes from the keeper record and the scoped source ruling.
+// Null/empty providers on an environment object are Local, never Cloud.
 const cases = [
-  { name: "null provider", environment: environment(null), marker: "Cloud" },
-  { name: "empty provider with branch", environment: environment("", "feature/parser"), marker: "Cloud" },
-  { name: "project checkout with branch", environment: environment("project-checkout", "feature/parser"), marker: "Local" },
-  { name: "personal workspace without branch", environment: environment("personal-workspace"), marker: "Local" },
-  { name: "other set provider", environment: environment("synthetic-provider"), marker: "Local" },
-  { name: "null environment", environment: null, marker: null },
-  { name: "missing environment", environment: undefined, marker: null },
-  // Malformed runtime payloads, not extra SDK fields or a proposed schema.
-  { name: "missing provider", environment: JSON.parse('{"branchName":"feature/parser"}'), marker: null },
-  { name: "numeric provider", environment: JSON.parse('{"providerId":0}'), marker: null },
-  { name: "boolean provider", environment: JSON.parse('{"providerId":false}'), marker: null },
-  { name: "object provider", environment: JSON.parse('{"providerId":{}}'), marker: null },
+  { name: "observed idle Cloud", input: { environment: null, host: null }, marker: "Cloud" },
+  ...(["active", "pending", "error", "stopping"] as const).map((runtimeStatus) => ({
+    name: `recognised ${runtimeStatus} Cloud`, input: { environment: null, host: null, runtimeStatus }, marker: "Cloud",
+  })),
+  ...[null, "", "project-checkout", "git-worktree", "personal-workspace", "synthetic-provider"].map((provider) => ({
+    name: `environment object with ${String(provider)} provider`,
+    input: { environment: environment(provider, "feature/parser") }, marker: "Local",
+  })),
+  ...(["starting", "provisioning", "waiting-for-host"] as const).map((runtimeStatus) => ({
+    name: `Local startup ${runtimeStatus} stays unmarked`, input: { environment: null, host: null, runtimeStatus }, marker: null,
+  })),
+  { name: "unknown runtime", input: JSON.parse('{"environment":null,"host":null,"runtimeStatus":"future-state"}'), marker: null },
+  { name: "missing runtime", input: { environment: null, host: null, runtimeStatus: undefined }, marker: null },
+  { name: "null runtime", input: JSON.parse('{"environment":null,"host":null,"runtimeStatus":null}'), marker: null },
+  { name: "empty runtime", input: JSON.parse('{"environment":null,"host":null,"runtimeStatus":""}'), marker: null },
+  { name: "host without environment", input: { environment: null }, marker: null },
+  { name: "missing host", input: { environment: null, host: undefined }, marker: null },
+  { name: "missing environment", input: { environment: undefined, host: null }, marker: null },
+  ...['[]', '""', 'false', '{"branchName":"feature/parser"}', '{"providerId":0}', '{"providerId":false}', '{"providerId":{}}'].map((value) => ({
+    name: `malformed environment ${value}`, input: { environment: JSON.parse(value), host: null }, marker: null,
+  })),
 ];
 
 for (const shelf of ["Inbox", "Snoozed", "Settled"] as const) {
   describe(`${shelf} machine markers at the registered app boundary`, () => {
-    it.each(cases)("$name", async ({ environment, marker }) => {
-      const sample = thread({ environment });
+    it.each(cases)("$name", async ({ input, marker }) => {
+      const sample = thread(input);
       render([sample], shelf === "Inbox" ? [] : [parkedRow(sample.id, shelf)]);
       if (shelf !== "Inbox") {
         const region = await screen.findByRole("region", { name: shelf });
@@ -147,7 +158,7 @@ for (const shelf of ["Inbox", "Snoozed", "Settled"] as const) {
 describe("machine row regressions", () => {
   it("keeps the correct marker after search and project filtering", () => {
     render([
-      thread({ environment: environment(null) }),
+      thread({ environment: null, host: null }),
       thread({ id: "thr_synguide", projectId: projects[1]!.id, title: "Write guide", environment: environment("personal-workspace") }),
     ], [], "guide");
     fireEvent.keyDown(screen.getByLabelText(/Project scope/), { key: "Enter" });
@@ -159,7 +170,7 @@ describe("machine row regressions", () => {
   });
 
   it.each([false, true])("retains card navigation and shortcuts with modifier %s", (modifier) => {
-    const rendered = render([thread({ environment: environment(null) })]);
+    const rendered = render([thread({ environment: null, host: null })]);
     const link = screen.getByRole("link", { name: "Review parser" });
     expect(link.getAttribute("data-sidebar-thread-id")).toBe("thr_synsample");
     expect(link.hasAttribute("data-sidebar-thread-shortcut-target")).toBe(true);
@@ -181,7 +192,7 @@ describe("machine row regressions", () => {
   });
 
   it.each(["Snoozed", "Settled"] as const)("retains %s wake/status, navigation and restore controls", async (shelf) => {
-    const sample = thread({ environment: environment(null) });
+    const sample = thread({ environment: null, host: null });
     const rendered = render([sample], [parkedRow(sample.id, shelf)]);
     const region = await screen.findByRole("region", { name: shelf });
     fireEvent.click(within(region).getByRole("button"));
