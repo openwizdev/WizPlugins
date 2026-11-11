@@ -2,7 +2,7 @@ import type { PluginCliRegistration, PluginCliResult } from "@get-bb/plugin-sdk"
 import { z } from "zod";
 import { resolveSnoozePresets, type ThreadShelf } from "./lifecycle";
 
-export type LifecycleOperation = "settle" | "unsettle" | "snooze" | "unsnooze" | "list";
+export type LifecycleOperation = "settle" | "unsettle" | "snooze" | "unsnooze" | "mute" | "unmute" | "list";
 export interface LifecycleSuccess {
   threadId: string;
   ok: true;
@@ -19,8 +19,8 @@ export class LifecycleError extends Error {
 }
 
 type Execute = (operation: LifecycleOperation, threadId: string, until?: number, signal?: AbortSignal) => Promise<LifecycleSuccess>;
-const operations = ["settle", "unsettle", "snooze", "unsnooze", "list"] as const;
-const usage = "wizbar <settle|unsettle|snooze|unsnooze|list> <id>... [--until <absolute-time|hour|evening|tomorrow|next-week>] [--json]";
+const operations = ["settle", "unsettle", "snooze", "unsnooze", "mute", "unmute", "list"] as const;
+const usage = "wizbar <settle|unsettle|snooze|unsnooze|mute|unmute|list> <id>... [--until <absolute-time|hour|evening|tomorrow|next-week>] [--json]";
 
 function wakeTime(value: string, now: number): number {
   const preset = resolveSnoozePresets(new Date(now)).find((p) => p.id === value);

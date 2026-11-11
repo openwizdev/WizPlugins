@@ -1,0 +1,538 @@
+
+> bb-plugin-wizbar@0.1.0 test
+> vitest run --config vitest.config.ts --maxWorkers=2 src/ThreadInbox.test.tsx
+
+
+ RUN  v4.1.10 <checkout>/wizbar
+
+ ❯ |bb-plugin-wizbar| src/ThreadInbox.test.tsx (46 tests | 2 failed) 2986ms
+     × preserves the ordinary settled shelf 1010ms
+     × preserves the ordinary snoozed shelf 1011ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/ThreadInbox.test.tsx > mute compatibility with ordinary pending runtime > preserves the ordinary settled shelf
+TestingLibraryElementError: Unable to find role="region" and name "Settled"
+
+Ignored nodes: comments, script, style
+<body
+  style=""
+>
+  <div>
+    <div
+      class="flex min-h-0 flex-1 flex-col"
+    >
+      <div
+        class="flex shrink-0 items-center gap-1 px-2 pb-1"
+      >
+        <button
+          aria-autocomplete="none"
+          aria-expanded="false"
+          aria-label="Project scope: All projects"
+          class="flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"
+          data-state="closed"
+          dir="ltr"
+          role="combobox"
+          type="button"
+        >
+          <span
+            style="pointer-events: none;"
+          >
+            All projects
+          </span>
+          <svg
+            aria-hidden="true"
+            class="size-4 opacity-50"
+            color="currentColor"
+            data-icon="ChevronDown"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+      </div>
+      <div
+        class="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2"
+      >
+        <section>
+          <ul
+            class="flex flex-col gap-px"
+          >
+            <li
+              class="list-none"
+              data-state="closed"
+            >
+              <div
+                class="group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"
+              >
+                <a
+                  aria-label="Pending setup"
+                  class="absolute inset-0 cursor-pointer rounded-md"
+                  data-sidebar-thread-id="sample-pending"
+                  data-sidebar-thread-shortcut-target=""
+                  href="#"
+                />
+                <div
+                  class="pointer-events-none relative flex h-5 items-center gap-1.5"
+                >
+                  <span
+                    class="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"
+                  >
+
+                  </span>
+                  <span
+                    class="flex w-7 shrink-0 items-center justify-end"
+                  >
+                    <span
+                      class="tabular-nums text-2xs text-muted-foreground"
+                    >
+                      2966w
+                    </span>
+                  </span>
+                </div>
+                <div
+                  class="pointer-events-none relative mt-0.5 truncate text-sm text-foreground"
+                >
+                  Pending setup
+                </div>
+                <div
+                  class="pointer-events-none relative mt-0.5 flex h-4 items-center gap-1.5 text-2xs text-muted-foreground"
+                >
+                  <span
+                    class="flex-1"
+                  />
+                  <span
+                    class="flex size-3.5 shrink-0 items-center justify-center"
+                  >
+                    <svg
+                      aria-label="Codex"
+                      class="size-3 text-muted-foreground/70"
+                      fill="currentColor"
+                      fill-rule="evenodd"
+                      role="img"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        d="M22.28 9.82a5.98 5.98 0 0 0-.51-4.91 6.05 6.05 0 0 0-6.51-2.9A6.07 6.07 0 0 0 4.98 4.18a5.98 5.98 0 0 0-4 2.9 6.05 6.05 0 0 0 .74 7.1 5.98 5.98 0 0 0 .51 4.91 6.05 6.05 0 0 0 6.52 2.9A5.98 5.98 0 0 0 13.26 24a6.06 6.06 0 0 0 5.77-4.21 5.99 5.99 0 0 0 4-2.9 6.06 6.06 0 0 0-.75-7.07zm-9.02 12.6a4.48 4.48 0 0 1-2.88-1.03l.14-.08 4.78-2.76a.79.79 0 0 0 .4-.68v-6.74l2.02 1.17a.07.07 0 0 1 .03.05v5.58a4.5 4.5 0 0 1-4.49 4.5zM3.6 18.3a4.47 4.47 0 0 1-.54-3.02l.15.09 4.78 2.76a.77.77 0 0 0 .78 0l5.84-3.37v2.33a.08.08 0 0 1-.03.06L9.74 19.95a4.5 4.5 0 0 1-6.14-1.65zM2.34 7.9a4.49 4.49 0 0 1 2.37-1.98v5.68a.77.77 0 0 0 .39.68l5.81 3.35-2.02 1.17a.08.08 0 0 1-.07 0l-4.83-2.79A4.5 4.5 0 0 1 2.34 7.9zm16.6 3.86L13.1 8.36l2.02-1.16a.08.08 0 0 1 .07 0l4.83 2.79a4.49 4.49 0 0 1-.68 8.1v-5.67a.79.79 0 0 0-.4-.67zm2.01-3.03l-.14-.08-4.77-2.78a.78.78 0 0 0-.79 0L9.41 9.23V6.9a.07.07 0 0 1 .03-.06l4.83-2.79a4.5 4.5 0 0 1 6.68 4.66zM8.31 12.86l-2.02-1.16a.08.08 0 0 1-.04-.06V6.07a4.5 4.5 0 0 1 7.38-3.45l-.14.08L8.7 5.46a.79.79 0 0 0-.4.68zm1.1-2.36l2.6-1.5 2.6 1.5v3l-2.6 1.5-2.6-1.5z"
+                      />
+                    </svg>
+                  </span>
+                </div>
+              </div>
+            </li>
+          </ul>
+        </section>
+      </div>
+    </div>
+  </div>
+</body>
+
+Ignored nodes: comments, script, style
+<body
+  style=""
+>
+  <div>
+    <div
+      class="flex min-h-0 flex-1 flex-col"
+    >
+      <div
+        class="flex shrink-0 items-center gap-1 px-2 pb-1"
+      >
+        <button
+          aria-autocomplete="none"
+          aria-expanded="false"
+          aria-label="Project scope: All projects"
+          class="flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"
+          data-state="closed"
+          dir="ltr"
+          role="combobox"
+          type="button"
+        >
+          <span
+            style="pointer-events: none;"
+          >
+            All projects
+          </span>
+          <svg
+            aria-hidden="true"
+            class="size-4 opacity-50"
+            color="currentColor"
+            data-icon="ChevronDown"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+      </div>
+      <div
+        class="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2"
+      >
+        <section>
+          <ul
+            class="flex flex-col gap-px"
+          >
+            <li
+              class="list-none"
+              data-state="closed"
+            >
+              <div
+                class="group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"
+              >
+                <a
+                  aria-label="Pending setup"
+                  class="absolute inset-0 cursor-pointer rounded-md"
+                  data-sidebar-thread-id="sample-pending"
+                  data-sidebar-thread-shortcut-target=""
+                  href="#"
+                />
+                <div
+                  class="pointer-events-none relative flex h-5 items-center gap-1.5"
+                >
+                  <span
+                    class="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"
+                  >
+
+                  </span>
+                  <span
+                    class="flex w-7 shrink-0 items-center justify-end"
+                  >
+                    <span
+                      class="tabular-nums text-2xs text-muted-foreground"
+                    >
+                      2966w
+                    </span>
+                  </span>
+                </div>
+                <div
+                  class="pointer-events-none relative mt-0.5 truncate text-sm text-foreground"
+                >
+                  Pending setup
+                </div>
+                <div
+                  class="pointer-events-none relative mt-0.5 flex h-4 items-center gap-1.5 text-2xs text-muted-foreground"
+                >
+                  <span
+                    class="flex-1"
+                  />
+                  <span
+                    class="flex size-3.5 shrink-0 items-center justify-center"
+                  >
+                    <svg
+                      aria-label="Codex"
+                      class="size-3 text-muted-foreground/70"
+                      fill="currentColor"
+                      fill-rule="evenodd"
+                      role="img"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        d="M22.28 9.82a5.98 5.98 0 0 0-.51-4.91 6.05 6.05 0 0 0-6.51-2.9A6.07 6.07 0 0 0 4.98 4.18a5.98 5.98 0 0 0-4 2.9 6.05 6.05 0 0 0 .74 7.1 5.98 5.98 0 0 0 .51 4.91 6.05 6.05 0 0 0 6.52 2.9A5.98 5.98 0 0 0 13.26 24a6.06 6.06 0 0 0 5.77-4.21 5.99 5.99 0 0 0 4-2.9 6.06 6.06 0 0 0-.75-7.07zm-9.02 12.6a4.48 4.48 0 0 1-2.88-1.03l.14-.08 4.78-2.76a.79.79 0 0 0 .4-.68v-6.74l2.02 1.17a.07.07 0 0 1 .03.05v5.58a4.5 4.5 0 0 1-4.49 4.5zM3.6 18.3a4.47 4.47 0 0 1-.54-3.02l.15.09 4.78 2.76a.77.77 0 0 0 .78 0l5.84-3.37v2.33a.08.08 0 0 1-.03.06L9.74 19.95a4.5 4.5 0 0 1-6.14-1.65zM2.34 7.9a4.49 4.49 0 0 1 2.37-1.98v5.68a.77.77 0 0 0 .39.68l5.81 3.35-2.02 1.17a.08.08 0 0 1-.07 0l-4.83-2.79A4.5 4.5 0 0 1 2.34 7.9zm16.6 3.86L13.1 8.36l2.02-1.16a.08.08 0 0 1 .07 0l4.83 2.79a4.49 4.49 0 0 1-.68 8.1v-5.67a.79.79 0 0 0-.4-.67zm2.01-3.03l-.14-.08-4.77-2.78a.78.78 0 0 0-.79 0L9.41 9.23V6.9a.07.07 0 0 1 .03-.06l4.83-2.79a4.5 4.5 0 0 1 6.68 4.66zM8.31 12.86l-2.02-1.16a.08.08 0 0 1-.04-.06V6.07a4.5 4.5 0 0 1 7.38-3.45l-.14.08L8.7 5.46a.79.79 0 0 0-.4.68zm1.1-2.36l2.6-1.5 2.6 1.5v3l-2.6 1.5-2.6-1.5z"
+                      />
+                    </svg>
+                  </span>
+                </div>
+              </div>
+            </li>
+          </ul>
+        </section>
+      </div>
+    </div>
+  </div>
+</body>
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/ThreadInbox.test.tsx:636:18
+    634|       rpc: { listLifecycle: () => ({ rows: [row] }) },
+    635|     });
+    636|     await screen.findByRole("region", { name: shelf === "settled" ? "S…
+       |                  ^
+    637|     expect(screen.queryByText("Pending setup")).toBeNull();
+    638|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  |bb-plugin-wizbar| src/ThreadInbox.test.tsx > mute compatibility with ordinary pending runtime > preserves the ordinary snoozed shelf
+TestingLibraryElementError: Unable to find role="region" and name "Snoozed"
+
+Ignored nodes: comments, script, style
+<body
+  style=""
+>
+  <div>
+    <div
+      class="flex min-h-0 flex-1 flex-col"
+    >
+      <div
+        class="flex shrink-0 items-center gap-1 px-2 pb-1"
+      >
+        <button
+          aria-autocomplete="none"
+          aria-expanded="false"
+          aria-label="Project scope: All projects"
+          class="flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"
+          data-state="closed"
+          dir="ltr"
+          role="combobox"
+          type="button"
+        >
+          <span
+            style="pointer-events: none;"
+          >
+            All projects
+          </span>
+          <svg
+            aria-hidden="true"
+            class="size-4 opacity-50"
+            color="currentColor"
+            data-icon="ChevronDown"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+      </div>
+      <div
+        class="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2"
+      >
+        <section>
+          <ul
+            class="flex flex-col gap-px"
+          >
+            <li
+              class="list-none"
+              data-state="closed"
+            >
+              <div
+                class="group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"
+              >
+                <a
+                  aria-label="Pending setup"
+                  class="absolute inset-0 cursor-pointer rounded-md"
+                  data-sidebar-thread-id="sample-pending"
+                  data-sidebar-thread-shortcut-target=""
+                  href="#"
+                />
+                <div
+                  class="pointer-events-none relative flex h-5 items-center gap-1.5"
+                >
+                  <span
+                    class="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"
+                  >
+
+                  </span>
+                  <span
+                    class="flex w-7 shrink-0 items-center justify-end"
+                  >
+                    <span
+                      class="tabular-nums text-2xs text-muted-foreground"
+                    >
+                      2966w
+                    </span>
+                  </span>
+                </div>
+                <div
+                  class="pointer-events-none relative mt-0.5 truncate text-sm text-foreground"
+                >
+                  Pending setup
+                </div>
+                <div
+                  class="pointer-events-none relative mt-0.5 flex h-4 items-center gap-1.5 text-2xs text-muted-foreground"
+                >
+                  <span
+                    class="flex-1"
+                  />
+                  <span
+                    class="flex size-3.5 shrink-0 items-center justify-center"
+                  >
+                    <svg
+                      aria-label="Codex"
+                      class="size-3 text-muted-foreground/70"
+                      fill="currentColor"
+                      fill-rule="evenodd"
+                      role="img"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        d="M22.28 9.82a5.98 5.98 0 0 0-.51-4.91 6.05 6.05 0 0 0-6.51-2.9A6.07 6.07 0 0 0 4.98 4.18a5.98 5.98 0 0 0-4 2.9 6.05 6.05 0 0 0 .74 7.1 5.98 5.98 0 0 0 .51 4.91 6.05 6.05 0 0 0 6.52 2.9A5.98 5.98 0 0 0 13.26 24a6.06 6.06 0 0 0 5.77-4.21 5.99 5.99 0 0 0 4-2.9 6.06 6.06 0 0 0-.75-7.07zm-9.02 12.6a4.48 4.48 0 0 1-2.88-1.03l.14-.08 4.78-2.76a.79.79 0 0 0 .4-.68v-6.74l2.02 1.17a.07.07 0 0 1 .03.05v5.58a4.5 4.5 0 0 1-4.49 4.5zM3.6 18.3a4.47 4.47 0 0 1-.54-3.02l.15.09 4.78 2.76a.77.77 0 0 0 .78 0l5.84-3.37v2.33a.08.08 0 0 1-.03.06L9.74 19.95a4.5 4.5 0 0 1-6.14-1.65zM2.34 7.9a4.49 4.49 0 0 1 2.37-1.98v5.68a.77.77 0 0 0 .39.68l5.81 3.35-2.02 1.17a.08.08 0 0 1-.07 0l-4.83-2.79A4.5 4.5 0 0 1 2.34 7.9zm16.6 3.86L13.1 8.36l2.02-1.16a.08.08 0 0 1 .07 0l4.83 2.79a4.49 4.49 0 0 1-.68 8.1v-5.67a.79.79 0 0 0-.4-.67zm2.01-3.03l-.14-.08-4.77-2.78a.78.78 0 0 0-.79 0L9.41 9.23V6.9a.07.07 0 0 1 .03-.06l4.83-2.79a4.5 4.5 0 0 1 6.68 4.66zM8.31 12.86l-2.02-1.16a.08.08 0 0 1-.04-.06V6.07a4.5 4.5 0 0 1 7.38-3.45l-.14.08L8.7 5.46a.79.79 0 0 0-.4.68zm1.1-2.36l2.6-1.5 2.6 1.5v3l-2.6 1.5-2.6-1.5z"
+                      />
+                    </svg>
+                  </span>
+                </div>
+              </div>
+            </li>
+          </ul>
+        </section>
+      </div>
+    </div>
+  </div>
+</body>
+
+Ignored nodes: comments, script, style
+<body
+  style=""
+>
+  <div>
+    <div
+      class="flex min-h-0 flex-1 flex-col"
+    >
+      <div
+        class="flex shrink-0 items-center gap-1 px-2 pb-1"
+      >
+        <button
+          aria-autocomplete="none"
+          aria-expanded="false"
+          aria-label="Project scope: All projects"
+          class="flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"
+          data-state="closed"
+          dir="ltr"
+          role="combobox"
+          type="button"
+        >
+          <span
+            style="pointer-events: none;"
+          >
+            All projects
+          </span>
+          <svg
+            aria-hidden="true"
+            class="size-4 opacity-50"
+            color="currentColor"
+            data-icon="ChevronDown"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+      </div>
+      <div
+        class="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2"
+      >
+        <section>
+          <ul
+            class="flex flex-col gap-px"
+          >
+            <li
+              class="list-none"
+              data-state="closed"
+            >
+              <div
+                class="group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"
+              >
+                <a
+                  aria-label="Pending setup"
+                  class="absolute inset-0 cursor-pointer rounded-md"
+                  data-sidebar-thread-id="sample-pending"
+                  data-sidebar-thread-shortcut-target=""
+                  href="#"
+                />
+                <div
+                  class="pointer-events-none relative flex h-5 items-center gap-1.5"
+                >
+                  <span
+                    class="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"
+                  >
+
+                  </span>
+                  <span
+                    class="flex w-7 shrink-0 items-center justify-end"
+                  >
+                    <span
+                      class="tabular-nums text-2xs text-muted-foreground"
+                    >
+                      2966w
+                    </span>
+                  </span>
+                </div>
+                <div
+                  class="pointer-events-none relative mt-0.5 truncate text-sm text-foreground"
+                >
+                  Pending setup
+                </div>
+                <div
+                  class="pointer-events-none relative mt-0.5 flex h-4 items-center gap-1.5 text-2xs text-muted-foreground"
+                >
+                  <span
+                    class="flex-1"
+                  />
+                  <span
+                    class="flex size-3.5 shrink-0 items-center justify-center"
+                  >
+                    <svg
+                      aria-label="Codex"
+                      class="size-3 text-muted-foreground/70"
+                      fill="currentColor"
+                      fill-rule="evenodd"
+                      role="img"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        d="M22.28 9.82a5.98 5.98 0 0 0-.51-4.91 6.05 6.05 0 0 0-6.51-2.9A6.07 6.07 0 0 0 4.98 4.18a5.98 5.98 0 0 0-4 2.9 6.05 6.05 0 0 0 .74 7.1 5.98 5.98 0 0 0 .51 4.91 6.05 6.05 0 0 0 6.52 2.9A5.98 5.98 0 0 0 13.26 24a6.06 6.06 0 0 0 5.77-4.21 5.99 5.99 0 0 0 4-2.9 6.06 6.06 0 0 0-.75-7.07zm-9.02 12.6a4.48 4.48 0 0 1-2.88-1.03l.14-.08 4.78-2.76a.79.79 0 0 0 .4-.68v-6.74l2.02 1.17a.07.07 0 0 1 .03.05v5.58a4.5 4.5 0 0 1-4.49 4.5zM3.6 18.3a4.47 4.47 0 0 1-.54-3.02l.15.09 4.78 2.76a.77.77 0 0 0 .78 0l5.84-3.37v2.33a.08.08 0 0 1-.03.06L9.74 19.95a4.5 4.5 0 0 1-6.14-1.65zM2.34 7.9a4.49 4.49 0 0 1 2.37-1.98v5.68a.77.77 0 0 0 .39.68l5.81 3.35-2.02 1.17a.08.08 0 0 1-.07 0l-4.83-2.79A4.5 4.5 0 0 1 2.34 7.9zm16.6 3.86L13.1 8.36l2.02-1.16a.08.08 0 0 1 .07 0l4.83 2.79a4.49 4.49 0 0 1-.68 8.1v-5.67a.79.79 0 0 0-.4-.67zm2.01-3.03l-.14-.08-4.77-2.78a.78.78 0 0 0-.79 0L9.41 9.23V6.9a.07.07 0 0 1 .03-.06l4.83-2.79a4.5 4.5 0 0 1 6.68 4.66zM8.31 12.86l-2.02-1.16a.08.08 0 0 1-.04-.06V6.07a4.5 4.5 0 0 1 7.38-3.45l-.14.08L8.7 5.46a.79.79 0 0 0-.4.68zm1.1-2.36l2.6-1.5 2.6 1.5v3l-2.6 1.5-2.6-1.5z"
+                      />
+                    </svg>
+                  </span>
+                </div>
+              </div>
+            </li>
+          </ul>
+        </section>
+      </div>
+    </div>
+  </div>
+</body>
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/ThreadInbox.test.tsx:636:18
+    634|       rpc: { listLifecycle: () => ({ rows: [row] }) },
+    635|     });
+    636|     await screen.findByRole("region", { name: shelf === "settled" ? "S…
+       |                  ^
+    637|     expect(screen.queryByText("Pending setup")).toBeNull();
+    638|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 44 passed (46)
+   Start at  23:46:35
+   Duration  3.98s (transform 106ms, setup 0ms, import 376ms, tests 2.99s, environment 514ms)
