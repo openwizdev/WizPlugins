@@ -2,6 +2,8 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, screen, within } from "@testing-library/react";
 import { loadPluginApp, renderSlot } from "@get-bb/plugin-sdk/testing/app";
+import { experimental_useSidebarThreads as useSidebarThreads } from "@get-bb/plugin-sdk/app";
+import { syntheticThread } from "../../docs/evidence/wz5/fixtures";
 import { MachineIcon } from "./MachineIcon";
 import { getSourceStatuses } from "./settings";
 
@@ -38,23 +40,52 @@ describe("N5 source availability and visibility at the rendered boundary", () =>
     expect(getSourceStatuses(pluginId).icons).toBe("unverified");
   });
 
-  it.each(["loading", "error"] as const)("%s suppresses a stale Local row and reports unavailable while hidden too", (status) => {
-    for (const enabled of [true, false]) {
+  for (const enabled of [true, false]) {
+    it.each(["loading", "error"] as const)(`R2 %s and recovery with icons enabled ${enabled}`, (status) => {
       const pluginId = `synthetic-machine-${++sequence}`;
-      const rendered = renderSlot({ component: () => <>
-        <Page />
-        <MachineIcon environment={{ id: "synthetic-environment", name: null,
-          branchName: null, path: null, isWorktree: false,
-          providerId: "project-checkout", workspaceDisplayKind: "other" }} />
-      </> }, {}, {
+      const Inbox = app.threadLists[0]!.component;
+      let source!: ReturnType<typeof useSidebarThreads>;
+      function Fixture({ showInbox = true }: { showInbox?: boolean }) {
+        // SDK 0.6.33 has no sidebar-state driver. Capture its synthetic snapshot
+        // to change status on the same mounted source, without mocking the hook.
+        source = useSidebarThreads();
+        return <>
+          <Page />
+          {showInbox && <Inbox activeThreadId={null} activeProjectId={null}
+            isCompactViewport={false} onNavigate={() => {}} searchQuery="" />}
+        </>;
+      }
+      const rendered = renderSlot({ component: Fixture }, {}, {
         pluginId, settings: { machineIconsEnabled: enabled },
-        sidebarThreads: { status },
+        sidebarThreads: { status: "ready", threads: [syntheticThread()] },
+        rpc: { listLifecycle: () => ({ rows: [] }) },
       });
+      const expectReady = () => {
+        expect(getSourceStatuses(pluginId).icons).toBe("unverified");
+        expect(screen.getByText("The Cloud/Local source is still being checked.")).toBeDefined();
+        expect(screen.queryAllByRole("img", { name: "Cloud" })).toHaveLength(enabled ? 1 : 0);
+      };
+      expectReady();
+      Object.assign(source, { status });
+      rendered.rerender(<Fixture />);
       expect(screen.queryAllByRole("img", { name: /^(Cloud|Local)$/ })).toHaveLength(0);
+      expect(screen.queryByRole("link", { name: "Sample work" })).toBeNull();
+      if (status === "error") expect(screen.getByText("Could not load threads.")).toBeDefined();
       expect(getSourceStatuses(pluginId).icons).toBe("unavailable");
       expect(screen.getByText("The Cloud/Local source is not connected.")).toBeDefined();
+      expect(screen.getByText(`Icons: ${enabled ? "Enabled" : "Disabled"} · Not connected yet`)).toBeDefined();
+      Object.assign(source, { status: "ready" });
+      rendered.rerender(<Fixture />);
+      expectReady();
+      // Empty/filtered/closed shelves cannot remove the mounted source report.
+      Object.assign(source, { status, threads: [] });
+      rendered.rerender(<Fixture />);
+      expect(getSourceStatuses(pluginId).icons).toBe("unavailable");
+      rendered.rerender(<Fixture showInbox={false} />);
+      expect(getSourceStatuses(pluginId).icons).toBe("unverified");
+      expect(screen.getByText("The Cloud/Local source is still being checked.")).toBeDefined();
       rendered.unmount();
       expect(getSourceStatuses(pluginId).icons).toBe("unverified");
-    }
-  });
+    });
+  }
 });

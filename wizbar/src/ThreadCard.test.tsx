@@ -210,3 +210,42 @@ describe("machine row regressions", () => {
     expect(within(region).getAllByRole("img", { name: "Cloud" })).toHaveLength(1);
   });
 });
+
+// PR #35 R1: the muted row has separate prop plumbing from the other shelves.
+describe("Muted machine markers at the registered app boundary", () => {
+  for (const enabled of [true, false]) {
+    it.each([
+      { name: "Cloud", input: { environment: null, host: null }, marker: "Cloud" },
+      { name: "Local", input: { environment: environment("project-checkout") }, marker: "Local" },
+      { name: "unknown startup", input: { environment: null, host: null, runtimeStatus: "starting" as const }, marker: null },
+    ])(`R1 $name with icons enabled ${enabled}`, async ({ input, marker }) => {
+      const sample = thread({ status: "active", runtimeStatus: "active", indicator: "runtime", ...input });
+      const unmute = vi.fn(() => ({ ok: true }));
+      const onNavigate = vi.fn();
+      const rendered = renderSlot(inbox, {
+        activeThreadId: null, activeProjectId: null, isCompactViewport: false,
+        onNavigate, searchQuery: "",
+      }, {
+        settings: { machineIconsEnabled: enabled },
+        sidebarThreads: { status: "ready", threads: [sample], projects },
+        rpc: { listLifecycle: () => ({ rows: [{
+          threadId: sample.id, settledAt: null, snoozedAt: null, snoozedUntil: null,
+          mutedAt: NOW, muteAttentionAt: sample.latestAttentionAt,
+        }] }), unmute },
+      });
+      const shelf = await screen.findByRole("region", { name: "Muted" });
+      expect(within(shelf).queryByRole("listitem")).toBeNull();
+      fireEvent.click(within(shelf).getByRole("button"));
+      const link = within(shelf).getByRole("link", { name: "Review parser" });
+      expect(link.getAttribute("data-sidebar-thread-id")).toBe(sample.id);
+      expect(link.hasAttribute("data-sidebar-thread-shortcut-target")).toBe(true);
+      fireEvent.click(link, { ctrlKey: true });
+      expect(rendered.sidebarActionCalls).toEqual([{ method: "open", threadId: sample.id, options: { split: true } }]);
+      expect(onNavigate).toHaveBeenCalledTimes(1);
+      fireEvent.click(within(shelf).getByRole("button", { name: "Unmute thread" }));
+      await waitFor(() => expect(unmute).toHaveBeenCalledWith({ threadId: sample.id }));
+      expect(within(shelf).queryAllByRole("img", { name: /^(Cloud|Local)$/ })
+        .map((icon) => icon.getAttribute("aria-label"))).toEqual(enabled && marker ? [marker] : []);
+    });
+  }
+});
