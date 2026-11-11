@@ -1,6 +1,6 @@
 # WizBar v1 preparation contract
 
-Status: baseline contract and future feature requirements, not a claim of live acceptance. Source: the copied T3 Sidebar files and published `@get-bb/plugin-sdk` declarations. The historical WZ2 sections below describe SDK **0.4.4**; #13 established the **0.6.33** baseline. The requested **0.6.49** pin in this WZ15 candidate fails source typecheck; see [WZ15 evidence](../../docs/evidence/wz15/verification.md). Current SDK/build statements below follow #13, #27 and the build ruling on #7; historical feature requirements remain subject to approved plan #1.
+Status: baseline contract and future feature requirements, not a claim of live acceptance. Source: the copied T3 Sidebar files, published `@get-bb/plugin-sdk` **0.4.4** declarations, and the scope recorded in issues #1 and #3–#9. The SDK/build and ownership rulings on #3 take precedence over earlier migration proposals.
 
 ## Source, identity and toolchain
 
@@ -10,9 +10,9 @@ Status: baseline contract and future feature requirements, not a claim of live a
 - Intended plugin ID and future command namespace: `wizbar`, following the copied `bb-plugin-` package naming convention. App contribution IDs remain `inbox`, `parent` and `children`; those are local registration IDs, not the plugin ID.
 - Entrypoints remain `app.tsx` and `src/server.ts`. There is one plugin folder, `wizbar/`; no unrelated upstream plugin is imported.
 - Both original MIT notices are retained intact, including their different copyright holders. The root licence adds a separate notice for WizBar changes. Existing attribution remains in both READMEs.
-- SDK **0.6.49** is exactly pinned in this #27 candidate, following #13's 0.6.33 baseline, but its published declarations omit API members used by existing source and tests. Typecheck fails despite 253 passing fixture tests; this candidate is blocked, not compatible or ready for merge. No SDK declarations are vendored; unrelated dependency versions, plugin release version and copied engine ranges remain unchanged. No live-host compatibility is established.
-- Local verification: `npm ci`, `npm run typecheck`, `npm test -- --maxWorkers=2` from `wizbar/`. Recorded environment: Node 24.22.1, npm 11.19.1. WZ2's upstream behavior baseline was 80 tests in five files, with an additional identity proof; WZ15 runs the existing full plugin suite without changing test meanings.
-- **Build execution: Unverified.** The current `build` script is `room-cli plugin build .`, identified from desktop help by the [#7 ruling](https://github.com/openwizdev/wizplugins/issues/7#issuecomment-6762540703). The available non-desktop CLI does not expose `plugin`; published SDK metadata is not build proof. Desktop build, installation and activation remain for #9. No alternate executable or toolchain is introduced by #27.
+- SDK **0.4.4** stays exactly pinned in package and lockfile, as ruled on #3. No SDK declarations are vendored and no dependency version is changed by WZ2. The copied engine ranges remain unchanged; this does not establish compatibility with a live host.
+- Local verification: `npm ci`, `npm run typecheck`, `npm test` from `wizbar/`. Recorded environment: Node 24.22.1, npm 11.19.1. Upstream behavior baseline: 80 tests in five files, with an additional identity proof.
+- **Build boundary: Unverified.** SDK 0.4.4's README documents only the legacy executable. The inherited `build` script remains historical metadata and must not be run under this ticket's ruling. No supported replacement command, build output or installability is claimed. #7 must preserve this gap until a supported boundary is established; typecheck and tests are the WZ2 executable proof.
 
 Identity metadata and registration tests prepare W10. Installation beside T3 Sidebar, runtime ID derivation, database separation and activation remain **Unverified** until the separately approved live acceptance in #9. WZ2 installs, runs and publishes no plugin.
 

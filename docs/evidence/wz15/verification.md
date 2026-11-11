@@ -1,78 +1,61 @@
-# WZ15 — blocked SDK candidate; README prepared
+# WZ15 README verification
 
-Ticket: [#27](https://github.com/openwizdev/wizplugins/issues/27).
-Builder question: [published-declaration incompatibility](https://github.com/openwizdev/wizplugins/issues/27#issuecomment-6780348031).
+## Approved scope
 
-## Results
+The orchestrator approved the README-only split on 2026-11-11. The SDK remains
+exactly 0.6.33. The 0.6.49 upgrade is deferred to a polish follow-up until its
+published declarations restore the existing hook and test call-log members.
+The ruling directs this ticket to proceed with its README PR.
+[Scope ruling](https://github.com/openwizdev/wizplugins/issues/27#issuecomment-6782951013).
 
-| Check | Result |
-| --- | --- |
-| Failing-first distribution proof | Five expected failures on SDK 0.6.33; [red log](pin-red.txt), committed at `d5e28f8` before pin edits |
-| Exact 0.6.49 candidate pin | Five checks pass; [pin log](pin-green.txt) proves version, tarball and integrity only |
-| Lockfile installation | `npm ci --no-audit --no-fund` passes; [install log](install.txt) |
-| Source compatibility | `npm run typecheck` exits 2 with 14 errors; [typecheck log](typecheck.txt) |
-| Existing fixture suite | `npm test -- --maxWorkers=2` passes 253 tests in 10 files; [test log](tests.txt) |
-| Product build/installation | Not run; desktop execution remains for #9 |
+The saved branch was resumed and main merged. Manifest, lockfile and shared
+contract were restored to main before current verification. The resulting
+product diff contains only `wizbar/README.md`.
 
-Node 24.22.1, npm 11.19.1. The installed SDK package reports 0.6.49.
-No source, test, Vitest configuration, TypeScript configuration, declaration shim
-or toolchain file was changed. Passing runtime fixtures do not erase a failed
-source typecheck. No ready PR or completion claim is warranted.
+## Proof and results
 
-## Actual published package inspection
+The documentation baseline review failed before README edits and was committed
+at `d5e28f8`. It identifies the copied T3 title, upstream installation guidance,
+missing WizBar commands, provenance and live-evidence disclosures.
+[Failing-first documentation review](readme-red.md).
 
-Inspected the package selected by its published registry metadata:
-[0.6.49 metadata](https://registry.npmjs.org/@get-bb%2fplugin-sdk/0.6.49),
-[archive](https://registry.npmjs.org/@get-bb/plugin-sdk/-/plugin-sdk-0.6.49.tgz).
-The integrity is checked in `check-pin.mjs` against the registry value.
-The following are paths inside that published package, not vendored declarations:
+The updated README was compared with the root README, `src/command.ts`,
+`src/lifecycle.ts`, both licence files and the prepared WZ8 installation kit.
 
-| Surface | Inspection |
-| --- | --- |
-| App entrypoint | `package.json` maps `./app` types to `bundled-types/bb-plugin-sdk-app.d.ts`. That file has zero occurrences of `experimental_useSidebarThreadActions`; its export list at line 21978 omits it. Six existing components import it. |
-| App test harness | `./testing/app` maps types to `bundled-types/bb-plugin-sdk-testing-app.d.ts`. That file has zero occurrences of `sidebarActionCalls`; eight existing assertions use it. |
-| Runtime versus declarations | `dist/app.js` still defines/exports `experimental_useSidebarThreadActions` (lines 110–111, 197). `dist/testing/app.js` still implements it (2524–2525) and returns `sidebarActionCalls` (3347). This explains why the runtime suite passes while typecheck fails; it is a published declaration/runtime mismatch, not proof that the runtime hook disappeared. |
-| Existing app registrations | App declarations retain `experimental_threadList` (20411), `experimental_threadHeaderAction` (20417) and `experimental_icons` (20590). No registration rewrite is needed for these uses. |
-| Thread data | App `PluginSidebarThreadActivity` (19192) retains workflows, backgroundAgents, backgroundCommands, planMode and goals; `PluginSidebarThread` begins at 19206. These types do not establish live completeness or execution classification. |
-| Server | Root declarations retain `defineRpcContract`, `BbPluginApi`, storage database/migrate (22536/22543), realtime publish (23184), CLI result/registration (23268/23293) and CLI register (23319). The compiler reports no errors on existing server API uses. |
-| Backend harness | `bundled-types/bb-plugin-sdk-testing.d.ts` exports `createFakePluginHost` and `makeThreadResponse` (1523); existing server-boundary fixtures pass. |
+- It names WizBar and openwizdev/wizplugins, with the existing synthetic UI image.
+- It gives the prepared desktop build/install/list commands and sidebar
+  activation setting, with desktop execution and acceptance explicitly unverified.
+- It lists the five registered operations, per-ID results, JSON and failure exit
+  status, future timezone-bearing ISO time and the four available presets.
+- It discloses the blank production footer, incomplete live Cloud classification
+  and pending settings, mute and count work through the relevant tickets.
+- It credits Sawyer Hood's T3 Sidebar, the copied source path and snapshot,
+  the distinct version tag, and both original MIT notices. Both licence files
+  retain their existing bytes.
 
-No compatibility rewrite, alternate pin or local declaration patch was attempted.
-The ticket explicitly requires a genuine blocker to be recorded rather than a
-different SDK or wider edits. The issue retains `ready-for-agent` and adds
-`needs-info` for the required plan/scope decision.
+This is the builder's documentation comparison. Independent exact-head README
+and attribution review remains required.
 
-## README review
+Current lockfile installation, typecheck and bounded full-suite results are
+recorded in `readme-checks.txt`. Source files and test meanings match main.
+No repository hook or AGENTS.md/CLAUDE.md is present in the checked-out tree.
+The checklist was reviewed for scope, evidence accuracy, attribution and privacy.
 
-Compared with the [failing baseline review](readme-red.md), the prepared README:
+## Historical SDK evidence
 
-- Names WizBar and the correct public repository, uses the existing synthetic
-  image with an explicit fixture label, and describes the existing shelves.
-- Carries the root README/#9 kit's prepared desktop build/install/list and
-  activation guidance, with build, install, separate runtime IDs/data and live
-  command execution explicitly unverified.
-- Lists exactly the five operations registered by `src/command.ts`, including
-  per-ID results, JSON, nonzero failure status, future timezone-bearing ISO time
-  and the four existing presets.
-- States that the production footer is blank and links pending settings, mute,
-  running-thread footer and corrected Cloud classification work without claiming
-  it has shipped.
-- Credits Sawyer Hood's T3 Sidebar, the copied source path/commit and distinct
-  tag; links both original MIT notices. Neither licence file is edited.
+The original 0.6.49 pin proof, installation, failed typecheck and 253 passing
+fixture tests remain available in the historical investigation and linked logs.
+`check-pin.mjs` asserts the deferred 0.6.49 distribution and is retained solely
+as that investigation's proof. It is outside the current README validation.
+[Historical investigation](sdk-0649-investigation.md).
 
-This is the builder's source/documentation comparison. Independent README and
-attribution review on the final green head remains required and has not occurred.
-No helpers were used. No product changelog claim is made for a blocked SDK bump.
+## Limits and downstream work
 
-## Scope and downstream impact
+#9 retains desktop build, installation, activation and live acceptance.
+#28 and #29 must account for the deferred SDK upgrade under the scope ruling.
+WZ15 adds no code seam. The existing image proves fixture presentation.
+Independent review and required CI must pass at the exact PR head.
 
-Manifest changes only the exact SDK pin. The lockfile changes only its root SDK
-pin and the SDK package's version, tarball and integrity. All unrelated locked
-packages and the plugin release version remain unchanged. Shared contract edits
-are confined to source/version/toolchain statements; no feature sections change.
-README links resolve to existing repository files. No new dependency is added.
-
-#28 and #29 still need a compatible 0.6.49 foundation; #9 still owns desktop
-build and live acceptance. No new code seam is added. The public branch preserves
-this blocked candidate for inspection, not for merge. A ready PR and its requested
-five-minute review/CI loop wait on a scope decision and passing typecheck.
+No helpers were used. This is documentation-only work and needs no product
+changelog line. The earlier branch's first-successful-push receipt was unavailable
+on resumption, so its original timestamp remains unknown.
