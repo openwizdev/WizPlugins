@@ -109,3 +109,13 @@ The pinned sidebar type exposes `host: { id, name } | null` and optional environ
 - #7: actual `wizbar/package.json` scripts and lockfile, with build explicitly Unverified.
 - #8: pinned provenance, existing credits, intact MIT notices and WZ2 evidence.
 - #9: installation, activation, identity/storage separation and live behavior require separate owner approvals. Nothing in fixture tests, metadata, this contract or a PR authorizes those actions.
+
+## Settings
+
+WZ11 defines two plugin-wide persistent boolean preferences, `footerCountEnabled`
+and `machineIconsEnabled`, both defaulting to true. The settings section reads
+the actual manifest version and shows visibility independently of source status.
+The exact persistence boundary and #28/#29 consumer APIs are in
+[settings.v1.md](settings.v1.md). Turning either switch on supplies no data and
+creates no live claim. PC-host persistence and presentation remain Unverified
+until #9.

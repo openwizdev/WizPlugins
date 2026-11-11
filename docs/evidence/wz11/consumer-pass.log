@@ -1,0 +1,12 @@
+
+> bb-plugin-wizbar@0.1.0 test
+> vitest run --config vitest.config.ts src/settings.test.ts -t boolean settings and source status boundary --maxWorkers=2
+
+
+ RUN  v4.1.10 <repository>/wizbar
+
+
+ Test Files  1 passed (1)
+      Tests  5 passed | 3 skipped (8)
+   Start at  22:03:19
+   Duration  245ms (transform 44ms, setup 0ms, import 138ms, tests 8ms, environment 0ms)

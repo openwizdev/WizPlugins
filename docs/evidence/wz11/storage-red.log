@@ -1,0 +1,69 @@
+
+> bb-plugin-wizbar@0.1.0 test
+> vitest run --config vitest.config.ts src/settings.test.ts -t actual WizBar settings declarations and persistent reload --maxWorkers=2
+
+
+ RUN  v4.1.10 <repository>/wizbar
+
+ ❯ |bb-plugin-wizbar| src/settings.test.ts (8 tests | 3 failed | 5 skipped) 101ms
+     × declares exactly two named boolean switches with defaults 48ms
+     × keeps both values across actual server reload and independent partial writes 25ms
+     × rejects wrong types and unknown keys without changing saved settings 26ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/settings.test.ts > N1: actual WizBar settings declarations and persistent reload > declares exactly two named boolean switches with defaults
+AssertionError: expected [] to deeply equal [ 'footerCountEnabled', …(1) ]
+
+- Expected
++ Received
+
+- [
+-   "footerCountEnabled",
+-   "machineIconsEnabled",
+- ]
++ []
+
+ ❯ src/settings.test.ts:30:45
+     28|     const { host } = setup();
+     29|     const descriptors = host.harness.inspection.registrations.settings…
+     30|     expect(Object.keys(descriptors).sort()).toEqual(["footerCountEnabl…
+       |                                             ^
+     31|     expect(descriptors.footerCountEnabled).toMatchObject({ type: "bool…
+     32|     expect(descriptors.machineIconsEnabled).toMatchObject({ type: "boo…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  |bb-plugin-wizbar| src/settings.test.ts > N1: actual WizBar settings declarations and persistent reload > keeps both values across actual server reload and independent partial writes
+Error: unknown setting "footerCountEnabled"
+ ❯ setSettingsValues node_modules/@get-bb/plugin-sdk/dist/testing/index.js:3022:13
+ ❯ Object.setSettings node_modules/@get-bb/plugin-sdk/dist/testing/index.js:3878:13
+ ❯ src/settings.test.ts:38:33
+     36|     const fixture = setup();
+     37|     let host = fixture.host;
+     38|     await host.harness.behavior.setSettings({ footerCountEnabled: fals…
+       |                                 ^
+     39|     await host.harness.behavior.setSettings({ machineIconsEnabled: fal…
+     40|     host = await host.harness.lifecycle.reload(fixture.factory);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  |bb-plugin-wizbar| src/settings.test.ts > N1: actual WizBar settings declarations and persistent reload > rejects wrong types and unknown keys without changing saved settings
+Error: unknown setting "footerCountEnabled"
+ ❯ setSettingsValues node_modules/@get-bb/plugin-sdk/dist/testing/index.js:3022:13
+ ❯ Object.setSettings node_modules/@get-bb/plugin-sdk/dist/testing/index.js:3878:13
+ ❯ src/settings.test.ts:50:33
+     48|     const fixture = setup();
+     49|     const host = fixture.host;
+     50|     await host.harness.behavior.setSettings({ footerCountEnabled: fals…
+       |                                 ^
+     51|     await expect(host.harness.behavior.setSettings({ footerCountEnable…
+     52|     await expect(host.harness.behavior.setSettings({ machineIconsEnabl…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 5 skipped (8)
+   Start at  22:03:20
+   Duration  357ms (transform 48ms, setup 0ms, import 143ms, tests 101ms, environment 0ms)

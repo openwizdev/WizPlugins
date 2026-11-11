@@ -6,6 +6,7 @@
 // understands. Here, uninstalling the plugin removes its state with it.
 import { defineRpcContract, type BbPluginApi } from "@get-bb/plugin-sdk";
 import { z } from "zod";
+import { wizbarSettingDescriptors } from "./settings";
 import { canMute, canPark, hasRuntimeWork, resolveShelf, type ThreadActivitySignals } from "./lifecycle";
 import { createLifecycleCommand, LifecycleError, type LifecycleOperation, type LifecycleSuccess } from "./command";
 
@@ -166,6 +167,7 @@ async function readSignals(bb: BbPluginApi, threadId: string, signal?: AbortSign
 }
 
 export default function plugin(bb: BbPluginApi) {
+  bb.settings.define(wizbarSettingDescriptors);
   const db = bb.storage.database();
   bb.storage.migrate(db, migrations);
 

@@ -1,0 +1,104 @@
+
+> bb-plugin-wizbar@0.1.0 test
+> vitest run --config vitest.config.ts src/SettingsPage.test.tsx --maxWorkers=2
+
+
+ RUN  v4.1.10 <repository>/wizbar
+
+ ❯ |bb-plugin-wizbar| src/SettingsPage.test.tsx (8 tests | 8 failed) 11ms
+     × registers one section, actual version and honest independent source status 4ms
+     × persists each switch independently, updates both consumers, and survives reopening 1ms
+     × does not apply an in-flight write and retains focus until a confirmed save 3ms
+     × retains prior values after a rejected write and announces the error 1ms
+     × disables writes when host settings are unavailable 0ms
+     × honors persisted values and fails closed on wrong types: {"footerCountEnabled":false,"machineIconsEnabled":true,"footer":false,"icons":true} 0ms
+     × honors persisted values and fails closed on wrong types: {"footerCountEnabled":true,"machineIconsEnabled":false,"footer":true,"icons":false} 0ms
+     × honors persisted values and fails closed on wrong types: {"footerCountEnabled":"true","machineIconsEnabled":1,"footer":false,"icons":false} 0ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 8 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/SettingsPage.test.tsx > N1: settings through the registered app > registers one section, actual version and honest independent source status
+AssertionError: N1: the plugin must register its settings section: expected undefined to be defined
+ ❯ mount src/SettingsPage.test.tsx:21:72
+     19| } = {}) {
+     20|   const section = app.settingsSections.find(({ id }) => id === "wizbar…
+     21|   expect(section, "N1: the plugin must register its settings section")…
+       |                                                                        ^
+     22|   const Page = section!.component;
+     23|   let stored = options.stored ?? { footerCountEnabled: true, machineIc…
+ ❯ src/SettingsPage.test.tsx:68:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/8]⎯
+
+ FAIL  |bb-plugin-wizbar| src/SettingsPage.test.tsx > N1: settings through the registered app > persists each switch independently, updates both consumers, and survives reopening
+AssertionError: N1: the plugin must register its settings section: expected undefined to be defined
+ ❯ mount src/SettingsPage.test.tsx:21:72
+     19| } = {}) {
+     20|   const section = app.settingsSections.find(({ id }) => id === "wizbar…
+     21|   expect(section, "N1: the plugin must register its settings section")…
+       |                                                                        ^
+     22|   const Page = section!.component;
+     23|   let stored = options.stored ?? { footerCountEnabled: true, machineIc…
+ ❯ src/SettingsPage.test.tsx:80:19
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/8]⎯
+
+ FAIL  |bb-plugin-wizbar| src/SettingsPage.test.tsx > N1: settings through the registered app > does not apply an in-flight write and retains focus until a confirmed save
+AssertionError: N1: the plugin must register its settings section: expected undefined to be defined
+ ❯ mount src/SettingsPage.test.tsx:21:72
+     19| } = {}) {
+     20|   const section = app.settingsSections.find(({ id }) => id === "wizbar…
+     21|   expect(section, "N1: the plugin must register its settings section")…
+       |                                                                        ^
+     22|   const Page = section!.component;
+     23|   let stored = options.stored ?? { footerCountEnabled: true, machineIc…
+ ❯ src/SettingsPage.test.tsx:107:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/8]⎯
+
+ FAIL  |bb-plugin-wizbar| src/SettingsPage.test.tsx > N1: settings through the registered app > retains prior values after a rejected write and announces the error
+AssertionError: N1: the plugin must register its settings section: expected undefined to be defined
+ ❯ mount src/SettingsPage.test.tsx:21:72
+     19| } = {}) {
+     20|   const section = app.settingsSections.find(({ id }) => id === "wizbar…
+     21|   expect(section, "N1: the plugin must register its settings section")…
+       |                                                                        ^
+     22|   const Page = section!.component;
+     23|   let stored = options.stored ?? { footerCountEnabled: true, machineIc…
+ ❯ src/SettingsPage.test.tsx:123:19
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/8]⎯
+
+ FAIL  |bb-plugin-wizbar| src/SettingsPage.test.tsx > N1: settings through the registered app > disables writes when host settings are unavailable
+AssertionError: N1: the plugin must register its settings section: expected undefined to be defined
+ ❯ mount src/SettingsPage.test.tsx:21:72
+     19| } = {}) {
+     20|   const section = app.settingsSections.find(({ id }) => id === "wizbar…
+     21|   expect(section, "N1: the plugin must register its settings section")…
+       |                                                                        ^
+     22|   const Page = section!.component;
+     23|   let stored = options.stored ?? { footerCountEnabled: true, machineIc…
+ ❯ src/SettingsPage.test.tsx:134:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/8]⎯
+
+ FAIL  |bb-plugin-wizbar| src/SettingsPage.test.tsx > N1: settings through the registered app > honors persisted values and fails closed on wrong types: {"footerCountEnabled":false,"machineIconsEnabled":true,"footer":false,"icons":true}
+ FAIL  |bb-plugin-wizbar| src/SettingsPage.test.tsx > N1: settings through the registered app > honors persisted values and fails closed on wrong types: {"footerCountEnabled":true,"machineIconsEnabled":false,"footer":true,"icons":false}
+ FAIL  |bb-plugin-wizbar| src/SettingsPage.test.tsx > N1: settings through the registered app > honors persisted values and fails closed on wrong types: {"footerCountEnabled":"true","machineIconsEnabled":1,"footer":false,"icons":false}
+AssertionError: N1: the plugin must register its settings section: expected undefined to be defined
+ ❯ mount src/SettingsPage.test.tsx:21:72
+     19| } = {}) {
+     20|   const section = app.settingsSections.find(({ id }) => id === "wizbar…
+     21|   expect(section, "N1: the plugin must register its settings section")…
+       |                                                                        ^
+     22|   const Page = section!.component;
+     23|   let stored = options.stored ?? { footerCountEnabled: true, machineIc…
+ ❯ src/SettingsPage.test.tsx:146:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/8]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  8 failed (8)
+   Start at  21:59:56
+   Duration  2.08s (transform 140ms, setup 0ms, import 699ms, tests 11ms, environment 1.22s)

@@ -9,8 +9,10 @@ import { ThreadInbox } from "./src/ThreadInbox";
 import { ParentChip } from "./src/ParentChip";
 import { SubagentsChip } from "./src/SubagentsChip";
 import { FooterCounter } from "./src/FooterCounter";
+import { SettingsPage } from "./src/SettingsPage";
 
 export default definePluginApp((app) => {
+  app.slots.settingsSection({ id: "wizbar-settings", component: SettingsPage });
   // WF1 candidate artwork only. Complete global inputs and the in-thread agent
   // mapping are unverified. Do not register a footer action/disclosure: even an
   // empty host button would substitute chrome for the required live counter.

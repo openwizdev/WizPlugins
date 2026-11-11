@@ -1,0 +1,13 @@
+
+> bb-plugin-wizbar@0.1.0 test
+> vitest run --config vitest.config.ts --maxWorkers=2
+
+
+ RUN  v4.1.10 <plugin>
+
+
+ Test Files  13 passed (13)
+      Tests  326 passed (326)
+   Start at  00:31:28
+   Duration  9.99s (transform 2.05s, setup 0ms, import 4.15s, tests 10.68s, environment 3.01s)
+
