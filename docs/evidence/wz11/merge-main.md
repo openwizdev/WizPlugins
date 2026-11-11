@@ -7,6 +7,6 @@ server.ts has exactly those two added settings lines. The shared contract includ
 the separate Settings and Explicit mute sections.
 
 Typecheck passes. The settings, backend and mute scoped run passes all 50 tests
-in three files. The complete plugin suite passes all 323 tests in 13 files,
+in three files. The complete plugin suite passes all 326 tests in 13 files,
 recorded in merge-main-suite.log. This merge uses the existing lockfile and
 installed dependencies. The original failing-first receipts remain in history.
