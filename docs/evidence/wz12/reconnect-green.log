@@ -1,0 +1,13 @@
+
+> bb-plugin-wizbar@0.1.0 test
+> vitest run --config vitest.config.ts src/FooterCounter.test.tsx --maxWorkers=2 -t stale reuse
+
+
+ RUN  v4.1.10 <public-checkout>/wizbar
+
+
+ Test Files  1 passed (1)
+      Tests  1 passed | 10 skipped (11)
+   Start at  04:16:08
+   Duration  2.31s (transform 312ms, setup 0ms, import 861ms, tests 263ms, environment 953ms)
+

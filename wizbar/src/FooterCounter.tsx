@@ -1,4 +1,5 @@
 import { useEffect, useId, useState } from "react";
+import type { PluginSidebarThread } from "@get-bb/plugin-sdk";
 import { countRunning, type RunningCountSource } from "./running-count";
 import { experimental_useSidebarThreads, useRealtimeConnectionState } from "@get-bb/plugin-sdk/app";
 import { useFeatureSourceStatus, useWizBarSettings } from "./SettingsPage";
@@ -6,7 +7,17 @@ import { readRunningSource } from "./running-source";
 
 /** Observable host cache only; neither coverage nor freshness is claimed live. */
 export function FooterCounter({ className }: { className?: string }) {
-  const source = readRunningSource(experimental_useSidebarThreads(), useRealtimeConnectionState());
+  const state = experimental_useSidebarThreads();
+  const connection = useRealtimeConnectionState();
+  const input = readRunningSource(state, connection);
+  const [invalidatedSnapshot, setInvalidatedSnapshot] = useState<readonly PluginSidebarThread[] | null>(null);
+  // The hook owns cache/realtime ordering. After an observable gap, a transport
+  // reconnect alone cannot certify the same retained snapshot. No age is guessed.
+  useEffect(() => {
+    if (input.status !== "ready") setInvalidatedSnapshot(state.threads);
+  }, [input.status, state.threads]);
+  const source = input.status === "ready" && invalidatedSnapshot === state.threads
+    ? { ...input, status: "stale" as const, threads: null } : input;
   useFeatureSourceStatus("footer", source.status === "ready" ? "unverified" : "unavailable");
   return <FooterCounterArtwork className={className} source={source} />;
 }
