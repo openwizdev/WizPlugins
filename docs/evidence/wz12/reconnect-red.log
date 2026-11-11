@@ -30,4 +30,3 @@ Caused by: TypeError: Cannot redefine property: experimental_useSidebarThreads
       Tests  1 failed | 10 skipped (11)
    Start at  04:15:00
    Duration  1.97s (transform 292ms, setup 0ms, import 804ms, tests 11ms, environment 947ms)
-
