@@ -14,6 +14,9 @@ export interface ThreadLifecycleRow {
   snoozedUntil: number | null;
   /** When the snooze was set — used to detect activity since. */
   snoozedAt: number | null;
+  /** Explicit mute baseline; absent on ordinary parking rows. */
+  mutedAt?: number;
+  muteAttentionAt?: number;
 }
 
 /** The activity signals that outrank a user's parking decision. */
@@ -24,12 +27,15 @@ export interface ThreadActivitySignals {
   isUnread: boolean;
   /** Newest attention timestamp bb reports for the thread. */
   latestAttentionAt: number;
+  /** Undefined means mute authority is unavailable: keep the row visible. */
+  isPinned?: boolean;
+  hasFailed?: boolean;
 }
 
-export type ThreadShelf = "active" | "snoozed" | "settled";
+export type ThreadShelf = "active" | "snoozed" | "settled" | "muted";
 
 /**
- * Whether a thread may be parked at all.
+ * Whether a thread may be settled or snoozed (explicit mute is separate).
  *
  * bb has more kinds of live work than a single session status — workflows,
  * background agents, background commands, plan mode, goals — and every one of
@@ -40,11 +46,24 @@ export function canPark(signals: ThreadActivitySignals): boolean {
   return !signals.hasPendingInteraction && !signals.isWorking;
 }
 
+/** Raw runtime/counter work, independent of attention-priority indicators.
+ * Callers validate the runtime and counters before using this for mute.
+ */
+export function hasRuntimeWork(runtimeStatus: string, counts: readonly number[]): boolean {
+  return runtimeStatus !== "idle" && runtimeStatus !== "error" || counts.some((count) => count > 0);
+}
+
+/** Explicit selection is the only exception to the working parking guard. */
+export function canMute(signals: ThreadActivitySignals): boolean {
+  return signals.isWorking && !signals.hasPendingInteraction &&
+    signals.isPinned === false && signals.hasFailed === false;
+}
+
 /**
  * Which shelf a thread belongs on right now.
  *
- * Order matters. Live work and a raised hand always win, so a parked thread
- * that starts working or asks a question comes straight back. Then snooze,
+ * Explicit mute keeps ordinary running updates hidden, but attention wins.
+ * For ordinary parking, live work and a raised hand always win. Then snooze,
  * because a wake time is a stronger statement than a settle. Then settled.
  */
 export function resolveShelf(
@@ -53,6 +72,13 @@ export function resolveShelf(
   now: number,
 ): ThreadShelf {
   if (row === undefined) return "active";
+  if (row.mutedAt !== undefined) {
+    if (signals.hasPendingInteraction || signals.isPinned !== false ||
+        signals.hasFailed !== false || row.muteAttentionAt === undefined) return "active";
+    const finishedAttention = !signals.isWorking && signals.isUnread &&
+      signals.latestAttentionAt > row.muteAttentionAt;
+    return finishedAttention ? "active" : "muted";
+  }
   if (!canPark(signals)) return "active";
 
   if (row.snoozedUntil !== null) {

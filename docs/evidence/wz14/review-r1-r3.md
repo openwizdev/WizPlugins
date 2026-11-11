@@ -1,0 +1,21 @@
+# Review corrections R1–R3, round 1
+
+Review: [CHANGES at 0e09c16](https://github.com/openwizdev/wizplugins/pull/31#issuecomment-6781642579). All three findings were accepted and reproduced at that production head. No independent review is claimed for the fixes.
+
+Source checked: `ca68c5a6b08c598047a82131f7159ff756bcac1b`, tree `a2006cfb3fee2a1ca45520290c212279787b3011`. The final handoff adds these receipts and screenshots only.
+
+| Finding | Before | Fix and observable proof |
+| --- | --- | --- |
+| R1: background-only completion during mute validation | A held old working snapshot could write mute after an activity event with no existing mute row | Every activity observation synchronously invalidates pending validations before looking for stored mute. The held snapshot is refused with `stale_operation` and no row/publication; ordinary running events preserve an existing selection |
+| R2: attention indicator hides continuing runtime work | An active-runtime row with `unread-success` appeared in Inbox | Shared `hasRuntimeWork` uses validated raw runtime/counters for mute classification on both server and sidebar. The rendered regression retains the collapsed Muted shelf; existing idle completion still breaks through. Exported `isWorking` and ordinary parking continue to use the established predicate |
+| R3: missed breakthrough after reload or authoritative CLI observation | Stored mute returned after read-attention updates | Finite startup reconciliation and authoritative CLI observation retire only the captured selection, with a shared revision and conditional-delete guard. Reopen and three CLI breakthrough cases remain visible after later read/work changes. Unavailable authority retains the row without publication. Held CLI/event observations cannot clear an identical undo/re-mute selection |
+
+`review-r1-r3-red.txt`: seven failed, three passed, 66 filtered cases; committed in `69758ee` before fixes. The passing controls specifically protected ordinary running events, unavailable reload state and the existing event-revision barrier. `review-startup-cli-red.txt`: the first CLI request could initially race startup retirement and return stale; committed in `8b5a717` before the list startup barrier. Both initial sidebar and CLI reads now await startup reconciliation. Startup is abortable and drained through the plugin's disposal hook; it adds no timer, watcher, schedule or new dependency.
+
+Commands from `wizbar/`: affected `npm test -- --maxWorkers=2 src/mute.test.ts src/server.test.ts src/lifecycle.test.ts src/ThreadInbox.test.tsx` passes 214 tests; final `npm run typecheck` passes; final `npm test -- --maxWorkers=2` passes 306 tests in eleven files. Full suite ran once after final source changes. See `review-affected.txt`, `review-typecheck.txt` and `review-tests.txt`. Installation uses the prior successful `npm ci` and unchanged lockfile.
+
+R2 screenshots: `screenshots/review-r2/` renders the registered app from this source at 390 × 844 and 1440 × 900, with `?running-attention` selecting active raw runtime plus the attention-priority success indicator. Both images were opened and inspected. The row stays on the expanded Muted shelf and Unmute remains visible; content width equals viewport width. Appearance matches the original target intent and prior fixture captures; no style or layout changes were needed. These are synthetic Chromium captures, with the existing fixture stylesheet, not installed-plugin evidence. Prior interaction/focus receipts remain applicable; this correction changes classification only.
+
+Only ticket-owned paths changed, including lifecycle/store sections of shared files. The exported `isWorking` function remains byte-identical to the reviewed head; footer/count sources, app registrations, both licence notices, package and lockfile are untouched. Privacy-pattern, PNG text/EXIF metadata, outgoing noreply-identity and diff-whitespace checks pass. No helpers were used.
+
+The host-mapping question on #26 is still unanswered with `needs-info`; no real host observation was added or claimed. Existing #9 live/build/install/publication limits remain. Independent re-review and required CI must bind to the new handoff head before merge; the builder never reviews or merges this PR.

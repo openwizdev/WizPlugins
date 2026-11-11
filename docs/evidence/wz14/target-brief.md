@@ -1,0 +1,15 @@
+# WZ14 target brief
+
+Surface: existing WizBar sidebar, baseline main at `0e1cecc81e9e3e9f739d99c6a970e39fcd668290`. Rubric: WZ14-1. This is a narrow extension of the existing collapsed Snoozed/Settled pattern, not a new screen. Approved scope: [plan revision 8](https://github.com/openwizdev/wizplugins/issues/1#issuecomment-6780025774).
+
+Person/task: a fleet maintainer finds questions in Inbox and can undo an explicit running-thread mute. Preserve existing scope picker, ordering, cards, headers, footer and machine markers. No automatic selection policy.
+
+Observed design: dark neutral sidebar; system sans; 12px body and compact shelf labels; 4/8/12px spacing; 6px corners; subdued grey labels and separators; existing focus treatment. No new colour or font system. Add one Muted shelf matching existing shelf headers, collapsed by default. Expanded rows have a title, existing machine marker and an explicit Unmute button. Keep navigation and undo as separate sibling controls. At 390 x 844, sidebar fills the available width; at 1440 x 900 it remains about 320px beside a quiet fixture canvas. This keeps the existing hierarchy and density.
+
+Synthetic packet: Orchard project, question row “Review parser” in Inbox; running “Write guide” in Muted; quiet “Guide notes” in Settled. One Muted row; expanded target shows its Unmute action. Counts are shelf counts, not a live footer claim. Edge variants: empty has no shelf; zero muted hides its header; long title “Write guide compatibility and documentation across workspaces” truncates without hiding undo; sparse one-row state; unavailable state leaves a thread visible. Target and fixture share this packet.
+
+Built-in image generation prompt: create a UI mockup with two labelled viewport studies, 390 CSS px and 1440 CSS px. Preserve the existing compact dark WizBar sidebar pattern, system sans, neutral grey text, fine separators, no decorative art. Show “WizBar”, “All projects”, Inbox row “Review parser” with a question indicator, expanded shelf “Muted” with row “Write guide”, a small machine marker and distinct “Unmute” control, and collapsed “Settled (1)”. Desktop sidebar is 320px, adjacent quiet canvas reads “Synthetic mute preview”. Phone shows the same sidebar full width. No invented metrics, personal information or host data. This is a design target, not a screenshot.
+
+Critique before generation: adding one low-priority shelf preserves Inbox as the attention surface. The visible undo text is clearer than reusing Settle's restore label. Matching existing shelf spacing avoids a new control system. Target fidelity is illustrative; measured screenshots and interaction tests judge the implementation.
+
+Target inspection: both viewport concepts contain the packet and the explicit Unmute control without clipping. Generated borders, picker fill and blue action text are illustrative drift from the existing neutral/ghost design; implementation keeps existing host tokens and uses neutral action text. No new branding is adopted. Route: built-in image tool; no API-key runner.
