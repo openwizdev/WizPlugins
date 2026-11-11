@@ -64,6 +64,39 @@ function expectFeatures(footer: boolean, icons: boolean) {
   expect(screen.queryByRole("img", { name: "Cloud" })).toBeNull();
 }
 
+// R1: closing the final consumer must retain an outstanding host-write lock.
+// The preview fixture keeps additional consumers mounted and misses this path.
+function deferredPage() {
+  const section = app.settingsSections.find(({ id }) => id === "wizbar-settings")!;
+  const pluginId = `synthetic-deferred-settings-${++fixtureNumber}`;
+  const hostValues = { footerCountEnabled: true, machineIconsEnabled: true };
+  let stored = { ...hostValues };
+  let resolve!: () => void;
+  let reject!: (error: Error) => void;
+  const pending = new Promise<void>((done, fail) => { resolve = done; reject = fail; });
+  const write = ({ values }: { values: Record<string, unknown> }) => {
+    stored = { ...stored, ...values } as typeof stored;
+    return { ok: true as const, schema: {}, values: { ...stored } };
+  };
+  const updateSettings = vi.fn(async (args: { values: Record<string, unknown> }) => write(args));
+  updateSettings.mockImplementationOnce(async (args) => {
+    await pending;
+    return write(args);
+  });
+  return {
+    open: () => renderSlot(section, {}, {
+      pluginId, settings: hostValues, sdk: { plugins: { updateSettings } },
+    }),
+    updateSettings,
+    settle: async (succeeds: boolean) => {
+      await act(async () => {
+        if (succeeds) resolve();
+        else reject(new Error("Synthetic deferred save rejection"));
+      });
+    },
+  };
+}
+
 describe("N1: settings through the registered app", () => {
   it("registers one section, actual version and honest independent source status", () => {
     mount();
@@ -118,6 +151,45 @@ describe("N1: settings through the registered app", () => {
     expect(screen.getByRole("switch", { name: "Footer count" })).toBe(control);
     expect(document.activeElement).toBe(control);
     expect(screen.getByRole("status", { name: "Settings save" }).textContent).toContain("Saved");
+  });
+
+  it.each([
+    { succeeds: true, footerEnabled: false },
+    { succeeds: false, footerEnabled: true },
+  ])("R1 keeps the save lock across closing and reopening until settlement: %j", async ({ succeeds, footerEnabled }) => {
+    const fixture = deferredPage();
+    const first = fixture.open();
+    toggle("Footer count");
+    expect(fixture.updateSettings).toHaveBeenCalledTimes(1);
+    first.unmount();
+    fixture.open();
+    const footer = screen.getByRole("switch", { name: "Footer count" }) as HTMLInputElement;
+    const icons = screen.getByRole("switch", { name: "Cloud/Local row icons" }) as HTMLInputElement;
+    expect(footer.disabled).toBe(true);
+    expect(icons.disabled).toBe(true);
+    toggle("Cloud/Local row icons");
+    expect(fixture.updateSettings).toHaveBeenCalledTimes(1);
+    await fixture.settle(succeeds);
+    await waitFor(() => expect(footer.disabled).toBe(false));
+    expect(footer.checked).toBe(footerEnabled);
+    expect(icons.checked).toBe(true);
+    toggle("Cloud/Local row icons");
+    await waitFor(() => expect(icons.checked).toBe(false));
+    expect(fixture.updateSettings).toHaveBeenCalledTimes(2);
+    expect(footer.checked).toBe(footerEnabled);
+  });
+
+  it.each([true, false])("R1 clears settled acknowledgements with no mounted consumers, success=%s", async (succeeds) => {
+    const fixture = deferredPage();
+    const first = fixture.open();
+    toggle("Footer count");
+    first.unmount();
+    await fixture.settle(succeeds);
+    fixture.open();
+    const footer = screen.getByRole("switch", { name: "Footer count" }) as HTMLInputElement;
+    expect(footer.disabled).toBe(false);
+    expect(footer.checked).toBe(true);
+    expect(fixture.updateSettings).toHaveBeenCalledTimes(1);
   });
 
   it("retains prior values after a rejected write and announces the error", async () => {

@@ -1,0 +1,59 @@
+
+> bb-plugin-wizbar@0.1.0 test
+> vitest run --config vitest.config.ts src/SettingsPage.test.tsx --maxWorkers=2
+
+
+ RUN  v4.1.10 <plugin>
+
+ ❯ |bb-plugin-wizbar| src/SettingsPage.test.tsx (13 tests | 3 failed) 450ms
+     × R1 keeps the save lock across closing and reopening until settlement: {"succeeds":true,"footerEnabled":false} 23ms
+     × R1 keeps the save lock across closing and reopening until settlement: {"succeeds":false,"footerEnabled":true} 19ms
+     × R1 clears settled acknowledgements with no mounted consumers, success=true 21ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/SettingsPage.test.tsx > N1: settings through the registered app > R1 keeps the save lock across closing and reopening until settlement: {"succeeds":true,"footerEnabled":false}
+ FAIL  |bb-plugin-wizbar| src/SettingsPage.test.tsx > N1: settings through the registered app > R1 keeps the save lock across closing and reopening until settlement: {"succeeds":false,"footerEnabled":true}
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ src/SettingsPage.test.tsx:168:29
+    166|     const footer = screen.getByRole("switch", { name: "Footer count" }…
+    167|     const icons = screen.getByRole("switch", { name: "Cloud/Local row …
+    168|     expect(footer.disabled).toBe(true);
+       |                             ^
+    169|     expect(icons.disabled).toBe(true);
+    170|     toggle("Cloud/Local row icons");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  |bb-plugin-wizbar| src/SettingsPage.test.tsx > N1: settings through the registered app > R1 clears settled acknowledgements with no mounted consumers, success=true
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ src/SettingsPage.test.tsx:191:28
+    189|     const footer = screen.getByRole("switch", { name: "Footer count" }…
+    190|     expect(footer.disabled).toBe(false);
+    191|     expect(footer.checked).toBe(true);
+       |                            ^
+    192|     expect(fixture.updateSettings).toHaveBeenCalledTimes(1);
+    193|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 10 passed (13)
+   Start at  01:32:22
+   Duration  1.94s (transform 450ms, setup 0ms, import 778ms, tests 450ms, environment 590ms)
+
