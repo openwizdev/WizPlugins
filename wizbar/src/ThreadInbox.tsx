@@ -16,6 +16,7 @@ import {
 } from "./components/Select";
 import { ThreadCard } from "./ThreadCard";
 import { MachineIcon } from "./MachineIcon";
+import { useFeatureSourceStatus } from "./SettingsPage";
 import { SlimRow } from "./SlimRow";
 import { useLifecycle } from "./useLifecycle";
 import { TRAILING_GLYPH_BOX_CLASS } from "./StatusSlot";
@@ -44,6 +45,7 @@ export function ThreadInbox({
   searchQuery,
 }: PluginThreadListProps) {
   const { status, threads, projects } = useSidebarThreads();
+  useFeatureSourceStatus("icons", status === "ready" ? "unverified" : "unavailable");
   const actions = useSidebarThreadActions();
   const lifecycle = useLifecycle(threads);
   const [scope, setScope] = useState<string>(ALL_PROJECTS);
@@ -332,7 +334,7 @@ function MutedRow({ thread, isActive, onNavigate, onUnmute }: {
             onNavigate();
           }} />
         <span className="pointer-events-none relative min-w-0 flex-1 truncate text-muted-foreground">{title}</span>
-        <MachineIcon environment={thread.environment} />
+        <MachineIcon environment={thread.environment} host={thread.host} runtimeStatus={thread.runtimeStatus} />
         <button type="button" aria-label="Unmute thread" disabled={pending}
           className="relative shrink-0 rounded px-1 py-1 text-muted-foreground hover:text-foreground focus-visible:ring-1 disabled:opacity-50"
           onClick={async () => {

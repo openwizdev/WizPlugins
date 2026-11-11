@@ -51,13 +51,15 @@ ThreadCard/SlimRow prop plumbing, icon tests and the machine evidence contract
 section. Lifecycle, server/CLI, settings wrapper, ordering and both header chips
 are untouched. No new backend seam is required.
 
-**Pending:** `MutedRow` in `ThreadInbox.tsx` was introduced by the merged mute
-feature but its icon-plumbing line is outside #29's owned paths. The
-[Builder question](https://github.com/openwizdev/wizplugins/issues/29#issuecomment-6788144886)
-requests that exact line. Until granted and changed, Cloud muted rows remain
-unmarked; environment-object Local markers still work. Do not treat all-row
-acceptance as complete or merge this PR while that remains open. Continue with
-a failing-first muted-row case once authority is recorded.
+**PR #35 findings fixed:** the [additional ownership ruling](https://github.com/openwizdev/wizplugins/issues/29#issuecomment-6789521751)
+grants exactly the MutedRow icon prop line and source-status import/hook call in
+`ThreadInbox.tsx`. R1 now passes host/runtime to the muted marker; R2 publishes
+status once from the mounted sidebar consumer and removes row-level reports.
+Registered-app regressions cover Cloud/Local/unknown muted input, both visibility
+values, navigation, Unmute, loading/error, recovery and source unmount. R3 now
+qualifies startup as ambiguous. See `findings-red.md` and `findings-green.md` for
+the red-first correction and passing checks. Existing target/captures above
+remain the visual reference; these corrections add no layout or glyph changes.
 
 The source status intentionally stays unverified for ready projection input,
 and unavailable during loading/error. This observed rule lacks an explicit
