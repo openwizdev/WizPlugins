@@ -1,0 +1,36 @@
+
+> bb-plugin-wizbar@0.1.0 test
+> vitest run --config vitest.config.ts --maxWorkers=2 src/mute.test.ts -t R3 reconciles finished
+
+
+ RUN  v4.1.10 <checkout>/wizbar
+
+ ❯ |bb-plugin-wizbar| src/mute.test.ts (33 tests | 1 failed | 32 skipped) 101ms
+     × R3 reconciles finished attention after reopening the database before serving sidebar rows 99ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/mute.test.ts > review regressions R1/R3 > R3 reconciles finished attention after reopening the database before serving sidebar rows
+AssertionError: expected undefined to be 'active' // Object.is equality
+
+- Expected:
+"active"
+
++ Received:
+undefined
+
+ ❯ src/mute.test.ts:248:75
+    246|     const loaded = setup([live], second);
+    247|     // The first CLI request may arrive before the startup task has dr…
+    248|     expect((await loaded.run(["list", live.id])).output.results[0].she…
+       |                                                                           ^
+    249|     expect(await loaded.rows()).toEqual([]);
+    250|     live.lastReadAt = 200;
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 32 skipped (33)
+   Start at  23:07:29
+   Duration  342ms (transform 52ms, setup 0ms, import 146ms, tests 101ms, environment 0ms)

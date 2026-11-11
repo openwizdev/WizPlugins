@@ -1,0 +1,36 @@
+
+> bb-plugin-wizbar@0.1.0 test
+> vitest run --config vitest.config.ts --maxWorkers=2 src/mute.test.ts
+
+
+ RUN  v4.1.10 <checkout>/wizbar
+
+ ❯ |bb-plugin-wizbar| src/mute.test.ts (24 tests | 1 failed) 1341ms
+     × a stale validation cannot override thread.idle 58ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/mute.test.ts > pending mute safety > a stale validation cannot override thread.idle
+AssertionError: expected +0 to be 1 // Object.is equality
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ src/mute.test.ts:181:29
+    179|     response.resolve([running()]);
+    180|     const result = await pending;
+    181|     expect(result.exitCode).toBe(1);
+       |                             ^
+    182|     expect(result.output.results[0].error.code).toBe("stale_operation"…
+    183|     expect(await host.rows()).toEqual([]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 23 passed (24)
+   Start at  22:02:35
+   Duration  1.58s (transform 48ms, setup 0ms, import 140ms, tests 1.34s, environment 0ms)

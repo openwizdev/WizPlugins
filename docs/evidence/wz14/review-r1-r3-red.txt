@@ -1,0 +1,498 @@
+
+> bb-plugin-wizbar@0.1.0 test
+> vitest run --config vitest.config.ts --maxWorkers=2 src/mute.test.ts src/ThreadInbox.test.tsx -t review regressions|R2 retains
+
+
+ RUN  v4.1.10 <checkout>/wizbar
+
+ ❯ |bb-plugin-wizbar| src/mute.test.ts (33 tests | 6 failed | 24 skipped) 646ms
+     × R1 refuses stale background completion observed before mute is stored 73ms
+     × R3 retires question found by CLI without an event 64ms
+     × R3 retires failure found by CLI without an event 57ms
+     × R3 retires finished found by CLI without an event 59ms
+     × R3 reconciles finished attention after reopening the database before serving sidebar rows 60ms
+     × R3 a stale CLI observation cannot retire an identical re-mute selection 108ms
+ ❯ |bb-plugin-wizbar| src/ThreadInbox.test.tsx (43 tests | 1 failed | 42 skipped) 1119ms
+     × R2 retains running attention on Muted using runtime authority 1118ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 7 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/ThreadInbox.test.tsx > explicit muted shelf > R2 retains running attention on Muted using runtime authority
+TestingLibraryElementError: Unable to find role="region" and name "Muted"
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"flex min-h-0 flex-1 flex-col"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex shrink-0 items-center gap-1 px-2 pb-1"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-autocomplete[39m=[32m"none"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"Project scope: All projects"[39m
+          [33mclass[39m=[32m"flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"[39m
+          [33mdata-state[39m=[32m"closed"[39m
+          [33mdir[39m=[32m"ltr"[39m
+          [33mrole[39m=[32m"combobox"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33mstyle[39m=[32m"pointer-events: none;"[39m
+          [36m>[39m
+            [0mAll projects[0m
+          [36m</span>[39m
+          [36m<svg[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"size-4 opacity-50"[39m
+            [33mcolor[39m=[32m"currentColor"[39m
+            [33mdata-icon[39m=[32m"ChevronDown"[39m
+            [33mfill[39m=[32m"none"[39m
+            [33mheight[39m=[32m"24"[39m
+            [33mviewBox[39m=[32m"0 0 24 24"[39m
+            [33mwidth[39m=[32m"24"[39m
+            [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+          [36m>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"[39m
+              [33mstroke[39m=[32m"currentColor"[39m
+              [33mstroke-linecap[39m=[32m"round"[39m
+              [33mstroke-linejoin[39m=[32m"round"[39m
+              [33mstroke-width[39m=[32m"1.5"[39m
+            [36m/>[39m
+          [36m</svg>[39m
+        [36m</button>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"min-h-0 flex-1 overflow-y-auto px-1.5 pb-2"[39m
+      [36m>[39m
+        [36m<section>[39m
+          [36m<ul[39m
+            [33mclass[39m=[32m"flex flex-col gap-px"[39m
+          [36m>[39m
+            [36m<li[39m
+              [33mclass[39m=[32m"list-none"[39m
+              [33mdata-state[39m=[32m"closed"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"[39m
+              [36m>[39m
+                [36m<a[39m
+                  [33maria-label[39m=[32m"Write guide"[39m
+                  [33mclass[39m=[32m"absolute inset-0 cursor-pointer rounded-md"[39m
+                  [33mdata-sidebar-thread-id[39m=[32m"sample-mute"[39m
+                  [33mdata-sidebar-thread-shortcut-target[39m=[32m""[39m
+                  [33mhref[39m=[32m"#"[39m
+                [36m/>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"pointer-events-none relative flex h-5 items-center gap-1.5"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"[39m
+                  [36m>[39m
+                    [0m [0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"pointer-events-auto hidden items-center gap-0.5 group-hover/card:flex"[39m
+                  [36m>[39m
+                    [36m<button[39m
+                      [33maria-label[39m=[32m"Snooze until tomorrow"[39m
+                      [33mclass[39m=[32m"rounded p-0.5 text-muted-foreground hover:text-foreground"[39m
+                      [33mtype[39m=[32m"button"[39m
+                    [36m>[39m
+                      [36m<svg[39m
+                        [33mclass[39m=[32m"size-3.5"[39m
+                        [33mcolor[39m=[32m"currentColor"[39m
+                        [33mdata-icon[39m=[32m"Clock"[39m
+                        [33mfill[39m=[32m"none"[39m
+                        [33mheight[39m=[32m"24"[39m
+                        [33mviewBox[39m=[32m"0 0 24 24"[39m
+                        [33mwidth[39m=[32m"24"[39m
+                        [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                      [36m>[39m
+                        [36m<circle[39m
+                          [33mcx[39m=[32m"12"[39m
+                          [33mcy[39m=[32m"12"[39m
+                          [33mr[39m=[32m"10"[39m
+                          [33mstroke[39m=[32m"currentColor"[39m
+                          [33mstroke-width[39m=[32m"1.5"[39m
+                        [36m/>[39m
+                        [36m<path[39m
+                          [33md[39m=[32m"M12 8V12L14 14"[39m
+                          [33mstroke[39m=[32m"currentColor"[39m
+                          [33mstroke-linecap[39m=[32m"round"[39m
+                          [33mstroke-linejoin[39m=[32m"round"[39m
+                          [33mstroke-width[39m=[32m"1.5"[39m
+                        [36m/>[39m
+                      [36m</svg>[39m
+                    [36m</button>[39m
+                    [36m<button[39m
+                      [33maria-label[39m=[32m"Settle thread"[39m
+                      [33mclass[39m=[32m"rounded p-0.5 text-muted-foreground hover:text-foreground"[39m
+                      [33mtype[39m=[32m"button"[39m
+                    [36m>[39m
+                      [36m<svg[39m
+                        [33mclass[39m=[32m"size-3.5"[39m
+                        [33mcolor[39m=[32m"currentColor"[39m
+                        [33mdata-icon[39m=[32m"Check"[39m
+                        [33mfill[39m=[32m"none"[39m
+                        [33mheight[39m=[32m"24"[39m
+                        [33mviewBox[39m=[32m"0 0 24 24"[39m
+                        [33mwidth[39m=[32m"24"[39m
+                        [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                      [36m>[39m
+                        [36m<path[39m
+                          [33md[39m=[32m"M5 14L8.5 17.5L19 6.5"[39m
+                          [33mstroke[39m=[32m"currentColor"[39m
+                          [33mstroke-linecap[39m=[32m"round"[39m
+                          [33mstroke-linejoin[39m=[32m"round"[39m
+                          [33mstroke-width[39m=[32m"1.5"[39m
+                        [36m/>[39m
+                      [36m</svg>[39m
+                    [36m</button>[39m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"flex w-7 shrink-0 items-center justify-end group-hover/card:hidden"[39m
+                  [36m>[39m
+                    [36m<span[39m
+                      [33mclass[39m=[32m"flex items-center justify-center size-3.5 shrink-0"[39m
+                    [36m>[39m
+                      [36m<span[39m
+                        [33mclass[39m=[32m"size-[5px] rounded-full bg-timeline-accent"[39m
+                      [36m/>[39m
+                    [36m</span>[39m
+                  [36m</span>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"pointer-events-none relative mt-0.5 truncate text-sm text-foreground font-medium"[39m
+                [36m>[39m
+                  [0mWrite guide[0m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"pointer-events-none relative mt-0.5 flex h-4 items-center gap-1.5 text-2xs text-muted-foreground"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"flex-1"[39m
+                  [36m/>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"flex size-3.5 shrink-0 items-center justify-center"[39m
+                  [36m>[39m
+                    [36m<svg[39m
+                      [33maria-label[39m=[32m"Codex"[39m
+                      [33mclass[39m=[32m"size-3 text-muted-foreground/70"[39m
+                      [33mfill[39m=[32m"currentColor"[39m
+                      [33mfill-rule[39m=[32m"evenodd"[39m
+                      [33mrole[39m=[32m"img"[39m
+                      [33mviewBox[39m=[32m"0 0 24 24"[39m
+                    [36m>[39m
+                      [36m<path[39m
+                        [33md[39m=[32m"M22.28 9.82a5.98 5.98 0 0 0-.51-4.91 6.05 6.05 0 0 0-6.51-2.9A6.07 6.07 0 0 0 4.98 4.18a5.98 5.98 0 0 0-4 2.9 6.05 6.05 0 0 0 .74 7.1 5.98 5.98 0 0 0 .51 4.91 6.05 6.05 0 0 0 6.52 2.9A5.98 5.98 0 0 0 13.26 24a6.06 6.06 0 0 0 5.77-4.21 5.99 5.99 0 0 0 4-2.9 6.06 6.06 0 0 0-.75-7.07zm-9.02 12.6a4.48 4.48 0 0 1-2.88-1.03l.14-.08 4.78-2.76a.79.79 0 0 0 .4-.68v-6.74l2.02 1.17a.07.07 0 0 1 .03.05v5.58a4.5 4.5 0 0 1-4.49 4.5zM3.6 18.3a4.47 4.47 0 0 1-.54-3.02l.15.09 4.78 2.76a.77.77 0 0 0 .78 0l5.84-3.37v2.33a.08.08 0 0 1-.03.06L9.74 19.95a4.5 4.5 0 0 1-6.14-1.65zM2.34 7.9a4.49 4.49 0 0 1 2.37-1.98v5.68a.77.77 0 0 0 .39.68l5.81 3.35-2.02 1.17a.08.08 0 0 1-.07 0l-4.83-2.79A4.5 4.5 0 0 1 2.34 7.9zm16.6 3.86L13.1 8.36l2.02-1.16a.08.08 0 0 1 .07 0l4.83 2.79a4.49 4.49 0 0 1-.68 8.1v-5.67a.79.79 0 0 0-.4-.67zm2.01-3.03l-.14-.08-4.77-2.78a.78.78 0 0 0-.79 0L9.41 9.23V6.9a.07.07 0 0 1 .03-.06l4.83-2.79a4.5 4.5 0 0 1 6.68 4.66zM8.31 12.86l-2.02-1.16a.08.08 0 0 1-.04-.06V6.07a4.5 4.5 0 0 1 7.38-3.45l-.14.08L8.7 5.46a.79.79 0 0 0-.4.68zm1.1-2.36l2.6-1.5 2.6 1.5v3l-2.6 1.5-2.6-1.5z"[39m
+                      [36m/>[39m
+                    [36m</svg>[39m
+                  [36m</span>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+            [36m</li>[39m
+          [36m</ul>[39m
+        [36m</section>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"flex min-h-0 flex-1 flex-col"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex shrink-0 items-center gap-1 px-2 pb-1"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-autocomplete[39m=[32m"none"[39m
+          [33maria-expanded[39m=[32m"false"[39m
+          [33maria-label[39m=[32m"Project scope: All projects"[39m
+          [33mclass[39m=[32m"flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"[39m
+          [33mdata-state[39m=[32m"closed"[39m
+          [33mdir[39m=[32m"ltr"[39m
+          [33mrole[39m=[32m"combobox"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33mstyle[39m=[32m"pointer-events: none;"[39m
+          [36m>[39m
+            [0mAll projects[0m
+          [36m</span>[39m
+          [36m<svg[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"size-4 opacity-50"[39m
+            [33mcolor[39m=[32m"currentColor"[39m
+            [33mdata-icon[39m=[32m"ChevronDown"[39m
+            [33mfill[39m=[32m"none"[39m
+            [33mheight[39m=[32m"24"[39m
+            [33mviewBox[39m=[32m"0 0 24 24"[39m
+            [33mwidth[39m=[32m"24"[39m
+            [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+          [36m>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"[39m
+              [33mstroke[39m=[32m"currentColor"[39m
+              [33mstroke-linecap[39m=[32m"round"[39m
+              [33mstroke-linejoin[39m=[32m"round"[39m
+              [33mstroke-width[39m=[32m"1.5"[39m
+            [36m/>[39m
+          [36m</svg>[39m
+        [36m</button>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"min-h-0 flex-1 overflow-y-auto px-1.5 pb-2"[39m
+      [36m>[39m
+        [36m<section>[39m
+          [36m<ul[39m
+            [33mclass[39m=[32m"flex flex-col gap-px"[39m
+          [36m>[39m
+            [36m<li[39m
+              [33mclass[39m=[32m"list-none"[39m
+              [33mdata-state[39m=[32m"closed"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"[39m
+              [36m>[39m
+                [36m<a[39m
+                  [33maria-label[39m=[32m"Write guide"[39m
+                  [33mclass[39m=[32m"absolute inset-0 cursor-pointer rounded-md"[39m
+                  [33mdata-sidebar-thread-id[39m=[32m"sample-mute"[39m
+                  [33mdata-sidebar-thread-shortcut-target[39m=[32m""[39m
+                  [33mhref[39m=[32m"#"[39m
+                [36m/>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"pointer-events-none relative flex h-5 items-center gap-1.5"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"[39m
+                  [36m>[39m
+                    [0m [0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"pointer-events-auto hidden items-center gap-0.5 group-hover/card:flex"[39m
+                  [36m>[39m
+                    [36m<button[39m
+                      [33maria-label[39m=[32m"Snooze until tomorrow"[39m
+                      [33mclass[39m=[32m"rounded p-0.5 text-muted-foreground hover:text-foreground"[39m
+                      [33mtype[39m=[32m"button"[39m
+                    [36m>[39m
+                      [36m<svg[39m
+                        [33mclass[39m=[32m"size-3.5"[39m
+                        [33mcolor[39m=[32m"currentColor"[39m
+                        [33mdata-icon[39m=[32m"Clock"[39m
+                        [33mfill[39m=[32m"none"[39m
+                        [33mheight[39m=[32m"24"[39m
+                        [33mviewBox[39m=[32m"0 0 24 24"[39m
+                        [33mwidth[39m=[32m"24"[39m
+                        [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                      [36m>[39m
+                        [36m<circle[39m
+                          [33mcx[39m=[32m"12"[39m
+                          [33mcy[39m=[32m"12"[39m
+                          [33mr[39m=[32m"10"[39m
+                          [33mstroke[39m=[32m"currentColor"[39m
+                          [33mstroke-width[39m=[32m"1.5"[39m
+                        [36m/>[39m
+                        [36m<path[39m
+                          [33md[39m=[32m"M12 8V12L14 14"[39m
+                          [33mstroke[39m=[32m"currentColor"[39m
+                          [33mstroke-linecap[39m=[32m"round"[39m
+                          [33mstroke-linejoin[39m=[32m"round"[39m
+                          [33mstroke-width[39m=[32m"1.5"[39m
+                        [36m/>[39m
+                      [36m</svg>[39m
+                    [36m</button>[39m
+                    [36m<button[39m
+                      [33maria-label[39m=[32m"Settle thread"[39m
+                      [33mclass[39m=[32m"rounded p-0.5 text-muted-foreground hover:text-foreground"[39m
+                      [33mtype[39m=[32m"button"[39m
+                    [36m>[39m
+                      [36m<svg[39m
+                        [33mclass[39m=[32m"size-3.5"[39m
+                        [33mcolor[39m=[32m"currentColor"[39m
+                        [33mdata-icon[39m=[32m"Check"[39m
+                        [33mfill[39m=[32m"none"[39m
+                        [33mheight[39m=[32m"24"[39m
+                        [33mviewBox[39m=[32m"0 0 24 24"[39m
+                        [33mwidth[39m=[32m"24"[39m
+                        [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                      [36m>[39m
+                        [36m<path[39m
+                          [33md[39m=[32m"M5 14L8.5 17.5L19 6.5"[39m
+                          [33mstroke[39m=[32m"currentColor"[39m
+                          [33mstroke-linecap[39m=[32m"round"[39m
+                          [33mstroke-linejoin[39m=[32m"round"[39m
+                          [33mstroke-width[39m=[32m"1.5"[39m
+                        [36m/>[39m
+                      [36m</svg>[39m
+                    [36m</button>[39m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"flex w-7 shrink-0 items-center justify-end group-hover/card:hidden"[39m
+                  [36m>[39m
+                    [36m<span[39m
+                      [33mclass[39m=[32m"flex items-center justify-center size-3.5 shrink-0"[39m
+                    [36m>[39m
+                      [36m<span[39m
+                        [33mclass[39m=[32m"size-[5px] rounded-full bg-timeline-accent"[39m
+                      [36m/>[39m
+                    [36m</span>[39m
+                  [36m</span>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"pointer-events-none relative mt-0.5 truncate text-sm text-foreground font-medium"[39m
+                [36m>[39m
+                  [0mWrite guide[0m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"pointer-events-none relative mt-0.5 flex h-4 items-center gap-1.5 text-2xs text-muted-foreground"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"flex-1"[39m
+                  [36m/>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"flex size-3.5 shrink-0 items-center justify-center"[39m
+                  [36m>[39m
+                    [36m<svg[39m
+                      [33maria-label[39m=[32m"Codex"[39m
+                      [33mclass[39m=[32m"size-3 text-muted-foreground/70"[39m
+                      [33mfill[39m=[32m"currentColor"[39m
+                      [33mfill-rule[39m=[32m"evenodd"[39m
+                      [33mrole[39m=[32m"img"[39m
+                      [33mviewBox[39m=[32m"0 0 24 24"[39m
+                    [36m>[39m
+                      [36m<path[39m
+                        [33md[39m=[32m"M22.28 9.82a5.98 5.98 0 0 0-.51-4.91 6.05 6.05 0 0 0-6.51-2.9A6.07 6.07 0 0 0 4.98 4.18a5.98 5.98 0 0 0-4 2.9 6.05 6.05 0 0 0 .74 7.1 5.98 5.98 0 0 0 .51 4.91 6.05 6.05 0 0 0 6.52 2.9A5.98 5.98 0 0 0 13.26 24a6.06 6.06 0 0 0 5.77-4.21 5.99 5.99 0 0 0 4-2.9 6.06 6.06 0 0 0-.75-7.07zm-9.02 12.6a4.48 4.48 0 0 1-2.88-1.03l.14-.08 4.78-2.76a.79.79 0 0 0 .4-.68v-6.74l2.02 1.17a.07.07 0 0 1 .03.05v5.58a4.5 4.5 0 0 1-4.49 4.5zM3.6 18.3a4.47 4.47 0 0 1-.54-3.02l.15.09 4.78 2.76a.77.77 0 0 0 .78 0l5.84-3.37v2.33a.08.08 0 0 1-.03.06L9.74 19.95a4.5 4.5 0 0 1-6.14-1.65zM2.34 7.9a4.49 4.49 0 0 1 2.37-1.98v5.68a.77.77 0 0 0 .39.68l5.81 3.35-2.02 1.17a.08.08 0 0 1-.07 0l-4.83-2.79A4.5 4.5 0 0 1 2.34 7.9zm16.6 3.86L13.1 8.36l2.02-1.16a.08.08 0 0 1 .07 0l4.83 2.79a4.49 4.49 0 0 1-.68 8.1v-5.67a.79.79 0 0 0-.4-.67zm2.01-3.03l-.14-.08-4.77-2.78a.78.78 0 0 0-.79 0L9.41 9.23V6.9a.07.07 0 0 1 .03-.06l4.83-2.79a4.5 4.5 0 0 1 6.68 4.66zM8.31 12.86l-2.02-1.16a.08.08 0 0 1-.04-.06V6.07a4.5 4.5 0 0 1 7.38-3.45l-.14.08L8.7 5.46a.79.79 0 0 0-.4.68zm1.1-2.36l2.6-1.5 2.6 1.5v3l-2.6 1.5-2.6-1.5z"[39m
+                      [36m/>[39m
+                    [36m</svg>[39m
+                  [36m</span>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+            [36m</li>[39m
+          [36m</ul>[39m
+        [36m</section>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/ThreadInbox.test.tsx:654:18
+    652|       rpc: { listLifecycle: () => ({ rows: [mutedRow] }) },
+    653|     });
+    654|     await screen.findByRole("region", { name: "Muted" });
+       |                  ^
+    655|     expect(screen.queryByText("Write guide")).toBeNull();
+    656|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/7]⎯
+
+ FAIL  |bb-plugin-wizbar| src/mute.test.ts > review regressions R1/R3 > R1 refuses stale background completion observed before mute is stored
+AssertionError: expected +0 to be 1 // Object.is equality
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ src/mute.test.ts:205:29
+    203|     reply.resolve([initial]);
+    204|     const result = await pending;
+    205|     expect(result.exitCode).toBe(1);
+       |                             ^
+    206|     expect(result.output.results[0].error.code).toBe("stale_operation"…
+    207|     expect(await host.rows()).toEqual([]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/7]⎯
+
+ FAIL  |bb-plugin-wizbar| src/mute.test.ts > review regressions R1/R3 > R3 retires question found by CLI without an event
+ FAIL  |bb-plugin-wizbar| src/mute.test.ts > review regressions R1/R3 > R3 retires failure found by CLI without an event
+ FAIL  |bb-plugin-wizbar| src/mute.test.ts > review regressions R1/R3 > R3 retires finished found by CLI without an event
+AssertionError: expected [ { threadId: 'sample-a', …(5) } ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   {
++     "muteAttentionAt": 100,
++     "mutedAt": 1904292000000,
++     "settledAt": null,
++     "snoozedAt": null,
++     "snoozedUntil": null,
++     "threadId": "sample-a",
++   },
++ ]
+
+ ❯ src/mute.test.ts:228:31
+    226|     const observed = await host.run(["list", live.id]);
+    227|     expect(observed.output.results[0].shelf).toBe("active");
+    228|     expect(await host.rows()).toEqual([]);
+       |                               ^
+    229|     live.hasPendingInteraction = false; live.queuedWork = "none";
+    230|     live.lastReadAt = 200; live.status = "active"; live.runtime.displa…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/7]⎯
+
+ FAIL  |bb-plugin-wizbar| src/mute.test.ts > review regressions R1/R3 > R3 reconciles finished attention after reopening the database before serving sidebar rows
+AssertionError: expected [ { threadId: 'sample-a', …(5) } ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   {
++     "muteAttentionAt": 100,
++     "mutedAt": 1904292000000,
++     "settledAt": null,
++     "snoozedAt": null,
++     "snoozedUntil": null,
++     "threadId": "sample-a",
++   },
++ ]
+
+ ❯ src/mute.test.ts:247:33
+    245|     const second = new Database(path); databases.push(second);
+    246|     const loaded = setup([live], second);
+    247|     expect(await loaded.rows()).toEqual([]);
+       |                                 ^
+    248|     expect((await loaded.run(["list", live.id])).output.results[0].she…
+    249|     live.lastReadAt = 200;
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/7]⎯
+
+ FAIL  |bb-plugin-wizbar| src/mute.test.ts > review regressions R1/R3 > R3 a stale CLI observation cannot retire an identical re-mute selection
+AssertionError: expected +0 to be 1 // Object.is equality
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ src/mute.test.ts:281:31
+    279|     const result = await pending;
+    280|     if ("exitCode" in result) {
+    281|       expect(result.exitCode).toBe(1);
+       |                               ^
+    282|       expect(result.output.results[0].error.code).toBe("stale_operatio…
+    283|     }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/7]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  7 failed | 3 passed | 66 skipped (76)
+   Start at  23:05:31
+   Duration  2.02s (transform 132ms, setup 0ms, import 482ms, tests 1.77s, environment 459ms)

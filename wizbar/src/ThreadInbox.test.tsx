@@ -619,3 +619,84 @@ describe("pull request badge", () => {
     ).toContain("success");
   });
 });
+
+// R4: mute's stricter runtime authority must not change ordinary parking.
+// The existing shelf fixtures used idle runtime and missed the valid pending state.
+describe("mute compatibility with ordinary pending runtime", () => {
+  it.each(["settled", "snoozed"])("preserves the ordinary %s shelf", async (shelf) => {
+    const now = Date.now();
+    const row = { threadId: "sample-pending", settledAt: shelf === "settled" ? now : null,
+      snoozedUntil: shelf === "snoozed" ? now + 3_600_000 : null,
+      snoozedAt: shelf === "snoozed" ? now : null };
+    renderSlot(inbox, listProps, {
+      sidebarThreads: { status: "ready", threads: [thread({ id: "sample-pending", title: "Pending setup",
+        status: "pending", runtimeStatus: "pending", indicator: "none", isUnread: false })], projects: [] },
+      rpc: { listLifecycle: () => ({ rows: [row] }) },
+    });
+    await screen.findByRole("region", { name: shelf === "settled" ? "Settled" : "Snoozed" });
+    expect(screen.queryByText("Pending setup")).toBeNull();
+  });
+});
+
+// N2: existing shelf tests store ordinary parks, not persistent running mute.
+describe("explicit muted shelf", () => {
+  const mutedRow = { threadId: "sample-mute", settledAt: null, snoozedUntil: null,
+    snoozedAt: null, mutedAt: 1000, muteAttentionAt: 100 };
+  const busy = () => thread({ id: "sample-mute", title: "Write guide", indicator: "runtime",
+    status: "active", runtimeStatus: "active", latestAttentionAt: 200, isUnread: true });
+  it("keeps running attention muted through refresh and offers navigation and explicit undo", async () => {
+    let rows = [mutedRow];
+    const rendered = renderSlot(inbox, listProps, {
+      sidebarThreads: { status: "ready", threads: [busy()], projects: [] },
+      rpc: { listLifecycle: () => ({ rows }), unmute: () => { rows = []; return { ok: true }; } },
+    });
+    const shelf = await screen.findByRole("region", { name: "Muted" });
+    expect(screen.queryByText("Write guide")).toBeNull();
+    fireEvent.click(within(shelf).getByRole("button", { name: "Muted (1)" }));
+    await rendered.emitRealtime("lifecycle", {});
+    fireEvent.click(within(shelf).getByRole("link", { name: "Write guide" }), { metaKey: true });
+    expect(rendered.sidebarActionCalls).toContainEqual({ method: "open", threadId: "sample-mute", options: { split: true } });
+    fireEvent.click(within(shelf).getByRole("button", { name: "Unmute thread" }));
+    await waitFor(() => expect(rendered.rpcCalls.some((c) => c.method === "unmute")).toBe(true));
+    await rendered.emitRealtime("lifecycle", {});
+    await waitFor(() => expect(screen.queryByRole("region", { name: "Muted" })).toBeNull());
+    expect(screen.getByText("Write guide")).toBeDefined();
+  });
+  // R2: attention indicators outrank runtime indicators in the host projection.
+  // The earlier busy fixture always supplied a runtime indicator and missed this.
+  it("R2 retains running attention on Muted using runtime authority", async () => {
+    renderSlot(inbox, listProps, {
+      sidebarThreads: { status: "ready", threads: [{ ...busy(), indicator: "unread-success" }], projects: [] },
+      rpc: { listLifecycle: () => ({ rows: [mutedRow] }) },
+    });
+    await screen.findByRole("region", { name: "Muted" });
+    expect(screen.queryByText("Write guide")).toBeNull();
+  });
+  it.each([
+    { hasPendingInteraction: true, indicator: "waiting-for-input" },
+    { runtimeStatus: "error", status: "error", indicator: "unread-error" },
+    { indicator: "none", status: "idle", runtimeStatus: "idle", isUnread: true },
+    { isPinned: true },
+    { runtimeStatus: "waiting-for-host" },
+    { status: "pending", runtimeStatus: "pending", indicator: "none" },
+    { runtimeStatus: "future-status" as never },
+    { queuedWork: "future-status" as never },
+  ] as Partial<PluginSidebarThread>[])("keeps attention/pinned/unavailable work in Inbox: %j", async (changes) => {
+    renderSlot(inbox, listProps, {
+      sidebarThreads: { status: "ready", threads: [{ ...busy(), ...changes }], projects: [] },
+      rpc: { listLifecycle: () => ({ rows: [mutedRow] }) },
+    });
+    expect(await screen.findByText("Write guide")).toBeDefined();
+    await waitFor(() => expect(screen.queryByRole("region", { name: "Muted" })).toBeNull());
+  });
+  it("loads a stored mute on a fresh mount", async () => {
+    const options = { sidebarThreads: { status: "ready" as const, threads: [busy()], projects: [] },
+      rpc: { listLifecycle: () => ({ rows: [mutedRow] }) } };
+    const first = renderSlot(inbox, listProps, options);
+    await screen.findByRole("region", { name: "Muted" });
+    first.unmount();
+    renderSlot(inbox, listProps, options);
+    await screen.findByRole("button", { name: "Muted (1)" });
+    expect(screen.queryByText("Write guide")).toBeNull();
+  });
+});
