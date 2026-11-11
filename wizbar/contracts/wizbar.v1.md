@@ -87,13 +87,54 @@ The approved next iteration supersedes the baseline no-mute rule only for explic
 - The sidebar adds a collapsed Muted shelf with navigation and explicit Unmute. The exported `isWorking` predicate and raw host work inputs are unchanged; visibility does not affect counting. Timed snooze and completed-work settle keep their ordinary rules.
 - Keeper selection is external policy: explicit fleet mute, with no inferred owner/child rule or automatic parking. The revised keeper policy also permits settling finished threads generally; waiting, failed and pinned work remains available. Fixture semantics do not establish real keeper operation; live mapping and acceptance remain #9 and the linked question in the mute contract.
 
-## Future count inputs and footer boundary — #6
+## Observable count inputs and footer boundary — WZ12 / #28
 
-Use the existing `isWorking` predicate as the single working definition. The required total is one for every working thread, including child threads, plus one for each running in-thread subagent. It spans every project and includes working threads hidden or parked in the list. Search, project selection and shelf filters cannot narrow the input. Use one pure counting function, not duplicated calculations in UI and tests.
+[Plan revision 9](https://github.com/openwizdev/wizplugins/issues/1#issuecomment-6786317923)
+supersedes the historical complete-source/subagent prerequisite for this consumer.
+Use the current SDK0.6.33 `experimental_useSidebarThreads()` with its default
+active-lifecycle selection, before all shelf, search, project, child hiding and
+mute visibility filters. Every project/child/hidden/parked/muted working row
+**supplied by that hook** counts once by stable ID. Archived lifecycle pages are
+not requested: unseen/archived work and global completeness remain unverified.
+This is not a CLI count or a claim that the hook sees every running thread.
 
-SDK 0.4.4 declares `PluginSidebarThread.activity` counters and the sidebar thread array. Those declarations do **not** establish global completeness, deduplication, or that `backgroundAgents` exactly matches running in-thread subagents. Those mappings and a complete live input source are **Unverified**. Do not silently equate counters or treat a filtered sidebar list as globally complete.
+`readRunningSource` in `src/running-source.ts` validates the WZ10 work fields and
+calls the unchanged `isWorking`. Its version-1 normalisation retains WZ10's
+`id`, `projectId`, `parentThreadId`, `isWorking` facts and
+`subagents: { status: "unproven", count: null }`, but explicitly scopes ready
+input to `"observable-sidebar"`, as revision 9 permits. Ready describes only
+valid observable rows, never the older contract's globally complete scope.
+Incomplete IDs/membership/work fields, unknown indicators, invalid counters and
+contradictory duplicate work/membership facts invalidate the snapshot. Repeated
+identical normalised IDs count once. No visibility or lifecycle field narrows it.
 
-The footer must show a spinner and number, dim zero, and a hover split between threads and subagents, with no click action. It remains blocked on #2's positive evidence for a live number in the footer row. A merged report, a type or a fixture alone does not satisfy that prerequisite. Icon/card-only or unclear capability requires an owner decision; no substitute location or presentation is authorized. WZ2 registers no footer.
+`countRunning` is the one pure counting rule. Observable input returns
+`{ threads: N, subagents: null, total: N }`; an empty valid observable set can
+return zero. No subagent map is required. Background-agent activity makes a
+thread working but is never added as a separate subagent total. The older
+explicit-complete input/map seam remains for historical synthetic proof; production
+does not use or assert it.
+
+The production `FooterCounter` reads the host hook and realtime connection state.
+Loading, error, incomplete or disconnected input renders no number and publishes
+WZ11 `unavailable`. After an observed gap, the retained hook-array identity cannot
+restore the number; a new ready hook snapshot is required. The hook owns its
+cache/realtime updates and ordering. No age threshold, reconnect reconciliation
+or global freshness proof is invented. Valid observable input publishes
+`unverified`, independently of the visibility switch, never `live`.
+
+The presentation keeps the spinner/number, dim stopped zero, hover/focus coverage
+and no-click effect. Thread-only hover says `N running · subagents not counted yet
+· some threads may be unseen`. Reduced-motion preferences stop animation. The
+existing WZ11 visibility guard is preserved; no settings API or persistence change.
+
+[WZ12-F1](https://github.com/openwizdev/wizplugins/issues/28#issuecomment-6786760739)
+approves the numeric custom artwork as the icon of one no-op
+`experimental_sidebarFooter` action, honoring host sizing, with no disclosure,
+panel, card or alternate strip. Its static label/update and empty-wrapper limits
+are the subject of WZ12-F2 on the ticket. The real host's sizing, wrapping, tooltip
+arbitration, placement, count agreement and updates remain Unverified until keeper
+#9. Synthetic captures cannot establish those outcomes.
 
 ## Future Cloud/Local field evidence — #5
 

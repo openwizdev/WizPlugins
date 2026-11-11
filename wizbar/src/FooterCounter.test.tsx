@@ -70,23 +70,25 @@ describe("W3: synthetic footer artwork through the SDK rendering harness", () =>
     expect(screen.queryByRole("tooltip")).toBeNull();
   });
   it("does not narrow synthetic input when inbox search, project and shelves change", async () => {
+    const rawThreads = positiveThreads.map((thread) => thread.id === "sample-parent" ? { ...thread, runtimeStatus: "active" as const } : thread);
     const footer = renderSlot({ component: app.icons.find(({ name }) => name === "wizbar-running-count")!.component }, {}, {
-      sidebarThreads: { status: "ready", threads: positiveThreads },
+      sidebarThreads: { status: "ready", threads: rawThreads },
     });
     const inbox = renderSlot(app.threadLists[0]!, {
       activeThreadId: null, activeProjectId: null, isCompactViewport: false,
       searchQuery: "", onNavigate() {},
     }, {
-      sidebarThreads: { status: "ready", threads: positiveThreads, projects: [
+      sidebarThreads: { status: "ready", threads: rawThreads, projects: [
         { id: "sample-project-a", name: "Sample A", isPersonal: false, href: "/projects/sample-project-a", settingsHref: "/projects/sample-project-a/settings" },
         { id: "sample-project-b", name: "Sample B", isPersonal: false, href: "/projects/sample-project-b", settingsHref: "/projects/sample-project-b/settings" },
       ] },
       rpc: { listLifecycle: () => ({ rows: [
-        { threadId: "sample-parent", settledAt: 200, snoozedUntil: null, snoozedAt: null },
+        { threadId: "sample-parent", settledAt: null, snoozedUntil: null, snoozedAt: null, mutedAt: 200, muteAttentionAt: 100 },
         { threadId: "sample-child", settledAt: null, snoozedUntil: Date.now() + 60000, snoozedAt: 200 },
         { threadId: "sample-idle", settledAt: 200, snoozedUntil: null, snoozedAt: null },
       ] }) },
     });
+    await screen.findByRole("region", { name: "Muted" });
     const shelf = await screen.findByRole("region", { name: "Settled" });
     fireEvent.click(shelf.querySelector("button")!);
     expect(footer.container.querySelector('[role="status"]')?.textContent).toBe("2");

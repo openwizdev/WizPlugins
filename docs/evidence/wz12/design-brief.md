@@ -27,3 +27,9 @@ subject to WZ12-F1; no icon-only/card/alternate location is proposed.
 
 Critique: preserve the glanceable number while allowing coverage text to wrap.
 The longer hover deliberately replaces the old complete thread/subagent split.
+
+WZ12-F1 approved the target with shorter hover copy on 2026-11-11:
+`N running · subagents not counted yet · some threads may be unseen`.
+This deliberate copy change follows the public ruling at
+https://github.com/openwizdev/wizplugins/issues/28#issuecomment-6786760739;
+the original generated target/prompt are retained. No new layout is proposed.
