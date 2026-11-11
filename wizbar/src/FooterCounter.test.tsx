@@ -2,6 +2,8 @@
 import { createElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, screen } from "@testing-library/react";
+import * as sdkHooks from "@get-bb/plugin-sdk/app";
+import type { PluginSidebarThreadsState } from "@get-bb/plugin-sdk";
 import { loadPluginApp, renderSlot } from "@get-bb/plugin-sdk/testing/app";
 import { getSourceStatuses } from "./settings";
 import { readRunningSource } from "./running-source";
@@ -11,7 +13,7 @@ const app = await loadPluginApp(() => import("../app"));
 const { FooterCounterArtwork } = await import("./FooterCounter");
 const candidate = { component: FooterCounterArtwork };
 const empty = { complete: true, threads: [], subagentsByThread: new Map<string, number>() };
-afterEach(cleanup);
+afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 describe("W3: synthetic footer artwork through the SDK rendering harness", () => {
   it("shows a dim zero with a stopped spinner", () => {
@@ -61,7 +63,9 @@ describe("W3: synthetic footer artwork through the SDK rendering harness", () =>
     expect(screen.queryByRole("tooltip")).toBeNull();
   });
   it("does not narrow synthetic input when inbox search, project and shelves change", async () => {
-    const footer = renderSlot(candidate, { source: positiveSource });
+    const footer = renderSlot({ component: app.icons.find(({ name }) => name === "wizbar-running-count")!.component }, {}, {
+      sidebarThreads: { status: "ready", threads: positiveThreads },
+    });
     const inbox = renderSlot(app.threadLists[0]!, {
       activeThreadId: null, activeProjectId: null, isCompactViewport: false,
       searchQuery: "", onNavigate() {},
@@ -78,7 +82,7 @@ describe("W3: synthetic footer artwork through the SDK rendering harness", () =>
     });
     const shelf = await screen.findByRole("region", { name: "Settled" });
     fireEvent.click(shelf.querySelector("button")!);
-    expect(footer.container.querySelector('[role="status"]')?.textContent).toBe("5");
+    expect(footer.container.querySelector('[role="status"]')?.textContent).toBe("2");
     fireEvent.keyDown(screen.getByLabelText(/Project scope/), { key: "Enter" });
     fireEvent.click(screen.getByRole("option", { name: "Sample B" }));
     inbox.rerender(createElement(app.threadLists[0]!.component, {
@@ -86,7 +90,7 @@ describe("W3: synthetic footer artwork through the SDK rendering harness", () =>
       searchQuery: "no matching row", onNavigate() {},
     }));
     expect(inbox.container.querySelectorAll('[role="listitem"]')).toHaveLength(0);
-    expect(footer.container.querySelector('[role="status"]')?.textContent).toBe("5");
+    expect(footer.container.querySelector('[role="status"]')?.textContent).toBe("2");
   });
 });
 
@@ -144,6 +148,35 @@ describe("N4: approved observable footer route", () => {
     await rendered.setRealtimeConnectionState("reconnecting");
     expect(getSourceStatuses(pluginId).footer).toBe("unavailable");
     expect(rendered.container.innerHTML).toBe("");
+  });
+
+  it("updates from host snapshots and rejects stale reuse after reconnect/error", async () => {
+    let feed: Pick<PluginSidebarThreadsState, "status" | "threads"> = { status: "ready", threads: positiveThreads };
+    vi.spyOn(sdkHooks, "experimental_useSidebarThreads").mockImplementation(() => ({
+      ...feed, projects: [], sections: [], experimental_archived: null,
+    }));
+    const pluginId = "synthetic-updating-footer";
+    const rendered = renderSlot({ component: icon.component }, {}, { pluginId });
+    expect(screen.getByRole("status", { name: "2 running" })).toBeDefined();
+    await rendered.setRealtimeConnectionState("reconnecting");
+    expect(screen.queryByRole("status")).toBeNull();
+    await rendered.setRealtimeConnectionState("connected");
+    expect(screen.queryByRole("status"), "reconnect alone cannot certify the old cache").toBeNull();
+    expect(getSourceStatuses(pluginId).footer).toBe("unavailable");
+    feed = { status: "ready", threads: [] };
+    rendered.rerender(createElement(icon.component));
+    expect(screen.getByRole("status", { name: "0 running" })).toBeDefined();
+    expect(getSourceStatuses(pluginId).footer).toBe("unverified");
+    feed = { ...feed, status: "error" };
+    rendered.rerender(createElement(icon.component));
+    expect(screen.queryByRole("status")).toBeNull();
+    feed = { ...feed, status: "ready" };
+    rendered.rerender(createElement(icon.component));
+    expect(screen.queryByRole("status"), "error recovery needs a new host snapshot").toBeNull();
+    feed = { status: "ready", threads: [...positiveThreads] };
+    rendered.rerender(createElement(icon.component));
+    expect(screen.getByRole("status", { name: "2 running" })).toBeDefined();
+    expect(getSourceStatuses(pluginId).footer).toBe("unverified");
   });
 
   it("updates observable artwork to dim zero, clears stale hover on failure and discloses thread-only input", () => {

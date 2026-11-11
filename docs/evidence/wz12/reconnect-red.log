@@ -1,0 +1,33 @@
+
+> bb-plugin-wizbar@0.1.0 test
+> vitest run --config vitest.config.ts src/FooterCounter.test.tsx --maxWorkers=2 -t stale reuse
+
+
+ RUN  v4.1.10 <public-checkout>/wizbar
+
+ ❯ |bb-plugin-wizbar| src/FooterCounter.test.tsx (11 tests | 1 failed | 10 skipped) 11ms
+     × updates from host snapshots and rejects stale reuse after reconnect/error 9ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/FooterCounter.test.tsx > N4: approved observable footer route > updates from host snapshots and rejects stale reuse after reconnect/error
+TypeError: Cannot spy on export "experimental_useSidebarThreads". Module namespace is not configurable in ESM. See: https://vitest.dev/guide/browser/#limitations
+ ❯ src/FooterCounter.test.tsx:155:8
+    153|   it("updates from host snapshots and rejects stale reuse after reconn…
+    154|     let feed: Pick<PluginSidebarThreadsState, "status" | "threads"> = …
+    155|     vi.spyOn(sdkHooks, "experimental_useSidebarThreads").mockImplement…
+       |        ^
+    156|       ...feed, projects: [], sections: [], experimental_archived: null,
+    157|     }));
+
+Caused by: TypeError: Cannot redefine property: experimental_useSidebarThreads
+ ❯ src/FooterCounter.test.tsx:155:8
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 10 skipped (11)
+   Start at  04:15:00
+   Duration  1.97s (transform 292ms, setup 0ms, import 804ms, tests 11ms, environment 947ms)
+
