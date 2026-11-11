@@ -77,3 +77,13 @@ from the approved plan and host-observation contract. No live host action occurr
 The earlier builder's original first-successful-push receipt is unavailable in
 this continuation. Its timing remains unknown. GitHub activity and commit dates
 are used only for the requested concurrent-builder check.
+
+## Final reason regression
+
+The final checklist found that a future disconnected icon adapter could inherit
+the initial still-being-checked reason. reason-red.log records one expected
+rendered failure, committed at `8a95ecb` before the correction. Reasons now follow
+the internal source status independently of feature identity. The same 25 scoped
+settings/backend/footer tests and typecheck pass after this correction. The
+initial screenshot state is identical. The preceding full local suite is retained
+in suite-pass.log, and CI runs the complete suite for the final head.

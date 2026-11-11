@@ -102,8 +102,8 @@ export function SettingsPage() {
   }
 
   const sourceRows = [
-    { feature: "footer", label: "Footer", enabled: settings.footerCountEnabled },
-    { feature: "icons", label: "Icons", enabled: settings.machineIconsEnabled },
+    { feature: "footer", label: "Footer", source: "running-count", enabled: settings.footerCountEnabled },
+    { feature: "icons", label: "Icons", source: "Cloud/Local", enabled: settings.machineIconsEnabled },
   ] as const;
 
   return (
@@ -132,13 +132,13 @@ export function SettingsPage() {
       </div>
       <div style={{ borderTop: "1px solid var(--border)", marginTop: 20, paddingTop: 20 }}>
         <h3 style={{ fontSize: 14, fontWeight: 600, margin: "0 0 12px" }}>Data sources</h3>
-        {sourceRows.map(({ feature, label, enabled }) => (
+        {sourceRows.map(({ feature, label, source, enabled }) => (
           <div key={feature} style={{ marginTop: 12 }}>
             <strong style={{ fontWeight: 600 }}>{label}{": "}{enabled ? "Enabled" : "Disabled"} · {statuses[feature] === "live" ? "Live" : "Not connected yet"}</strong>
             <p style={{ color: "var(--muted-foreground)", margin: 0 }}>
               {statuses[feature] === "live" ? "Connected to the current verified source."
-                : feature === "footer" ? "The running-count source is not connected."
-                : "The Cloud/Local source is still being checked."}
+                : statuses[feature] === "unavailable" ? `The ${source} source is not connected.`
+                : `The ${source} source is still being checked.`}
             </p>
           </div>
         ))}
