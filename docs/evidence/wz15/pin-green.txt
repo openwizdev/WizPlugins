@@ -1,0 +1,6 @@
+PASS manifest SDK pin
+PASS lock root SDK pin
+PASS locked SDK version
+PASS locked SDK tarball
+PASS locked SDK integrity
+5 passed; 0 failed
