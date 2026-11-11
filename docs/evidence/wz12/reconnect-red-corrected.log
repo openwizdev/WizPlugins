@@ -1,0 +1,71 @@
+
+> bb-plugin-wizbar@0.1.0 test
+> vitest run --config vitest.config.ts src/FooterCounter.test.tsx --maxWorkers=2 -t stale reuse
+
+
+ RUN  v4.1.10 <public-checkout>/wizbar
+
+ ❯ |bb-plugin-wizbar| src/FooterCounter.test.tsx (11 tests | 1 failed | 10 skipped) 239ms
+     × updates from host snapshots and rejects stale reuse after reconnect/error 237ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/FooterCounter.test.tsx > N4: approved observable footer route > updates from host snapshots and rejects stale reuse after reconnect/error
+AssertionError: reconnect alone cannot certify the old cache: expected <span role="status" …(4)>…(2)</span> to be null
+
+- Expected:
+null
+
++ Received:
+<span
+  aria-label="2 running"
+  aria-live="polite"
+  role="status"
+  style="position: relative; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-variant-numeric: tabular-nums; line-height: 20px; color: var(--foreground);"
+  tabindex="0"
+>
+  <svg
+    aria-hidden="true"
+    class="wizbar-running-spinner"
+    fill="none"
+    height="14"
+    style="flex-shrink: 0; animation: wizbar-running-spin 1s linear infinite;"
+    viewBox="0 0 16 16"
+    width="14"
+  >
+    <circle
+      cx="8"
+      cy="8"
+      opacity="0.25"
+      r="6"
+      stroke="currentColor"
+      stroke-width="2"
+    />
+    <path
+      d="M8 2a6 6 0 0 1 6 6"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-width="2"
+    />
+  </svg>
+  <span>
+    2
+  </span>
+</span>
+
+ ❯ src/FooterCounter.test.tsx:168:90
+    166|     expect(screen.queryByRole("status")).toBeNull();
+    167|     await rendered.setRealtimeConnectionState("connected");
+    168|     expect(screen.queryByRole("status"), "reconnect alone cannot certi…
+       |                                                                                          ^
+    169|     expect(getSourceStatuses(pluginId).footer).toBe("unavailable");
+    170|     fixtureFeed.current = { status: "ready", threads: [] };
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 10 skipped (11)
+   Start at  04:15:38
+   Duration  2.80s (transform 374ms, setup 0ms, import 1.07s, tests 239ms, environment 1.24s)
+
