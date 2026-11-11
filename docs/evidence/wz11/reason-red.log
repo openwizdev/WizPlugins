@@ -1,0 +1,198 @@
+
+> bb-plugin-wizbar@0.1.0 test
+> vitest run --config vitest.config.ts src/SettingsPage.test.tsx --maxWorkers=2
+
+
+ RUN  v4.1.10 <plugin>
+
+ ❯ |bb-plugin-wizbar| src/SettingsPage.test.tsx (9 tests | 1 failed) 379ms
+     × tracks source reports independently of visibility and clears stale live status 32ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/SettingsPage.test.tsx > N1: settings through the registered app > tracks source reports independently of visibility and clears stale live status
+TestingLibraryElementError: Unable to find an element with the text: The Cloud/Local source is not connected.. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<section[39m
+      [33maria-label[39m=[32m"WizBar settings"[39m
+      [33mstyle[39m=[32m"max-width: 640px; padding: 24px; color: var(--foreground); font-family: system-ui, sans-serif; font-size: 14px; line-height: 20px;"[39m
+    [36m>[39m
+      [36m<h2[39m
+        [33mstyle[39m=[32m"font-size: 18px; font-weight: 600; margin: 0px 0px 4px;"[39m
+      [36m>[39m
+        [0mWizBar[0m
+      [36m</h2>[39m
+      [36m<p[39m
+        [33mstyle[39m=[32m"color: var(--muted-foreground); margin: 0px;"[39m
+      [36m>[39m
+        [0mVersion [0m
+        [0m0.1.0[0m
+      [36m</p>[39m
+      [36m<div[39m
+        [33mstyle[39m=[32m"border-top: 1px solid var(--border); margin-top: 20px; padding-top: 20px; display: grid; gap: 16px;"[39m
+      [36m>[39m
+        [36m<label[39m
+          [33mstyle[39m=[32m"display: flex; align-items: flex-start; gap: 12px; cursor: pointer;"[39m
+        [36m>[39m
+          [36m<input[39m
+            [33maria-label[39m=[32m"Footer count"[39m
+            [33mchecked[39m=[32m""[39m
+            [33mrole[39m=[32m"switch"[39m
+            [33mstyle[39m=[32m"margin: 3px 0px 0px; width: 16px; height: 16px; flex-shrink: 0;"[39m
+            [33mtype[39m=[32m"checkbox"[39m
+          [36m/>[39m
+          [36m<span>[39m
+            [36m<strong[39m
+              [33mstyle[39m=[32m"font-weight: 600;"[39m
+            [36m>[39m
+              [0mFooter count[0m
+            [36m</strong>[39m
+            [36m<span[39m
+              [33mstyle[39m=[32m"display: block; color: var(--muted-foreground);"[39m
+            [36m>[39m
+              [0mShow the running count when its source is available.[0m
+            [36m</span>[39m
+          [36m</span>[39m
+        [36m</label>[39m
+        [36m<label[39m
+          [33mstyle[39m=[32m"display: flex; align-items: flex-start; gap: 12px; cursor: pointer;"[39m
+        [36m>[39m
+          [36m<input[39m
+            [33maria-label[39m=[32m"Cloud/Local row icons"[39m
+            [33mchecked[39m=[32m""[39m
+            [33mrole[39m=[32m"switch"[39m
+            [33mstyle[39m=[32m"margin: 3px 0px 0px; width: 16px; height: 16px; flex-shrink: 0;"[39m
+            [33mtype[39m=[32m"checkbox"[39m
+          [36m/>[39m
+          [36m<span>[39m
+            [36m<strong[39m
+              [33mstyle[39m=[32m"font-weight: 600;"[39m
+            [36m>[39m
+              [0mCloud/Local row icons[0m
+            [36m</strong>[39m
+            [36m<span[39m
+              [33mstyle[39m=[32m"display: block; color: var(--muted-foreground);"[39m
+            [36m>[39m
+              [0mShow machine icons when classification is available.[0m
+            [36m</span>[39m
+          [36m</span>[39m
+        [36m</label>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mstyle[39m=[32m"border-top: 1px solid var(--border); margin-top: 20px; padding-top: 20px;"[39m
+      [36m>[39m
+        [36m<h3[39m
+          [33mstyle[39m=[32m"font-size: 14px; font-weight: 600; margin: 0px 0px 12px;"[39m
+        [36m>[39m
+          [0mData sources[0m
+        [36m</h3>[39m
+        [36m<div[39m
+          [33mstyle[39m=[32m"margin-top: 12px;"[39m
+        [36m>[39m
+          [36m<strong[39m
+            [33mstyle[39m=[32m"font-weight: 600;"[39m
+          [36m>[39m
+            [0mFooter[0m
+            [0m: [0m
+            [0mDisabled[0m
+            [0m · [0m
+            [0mNot connected yet[0m
+          [36m</strong>[39m
+          [36m<p[39m
+            [33mstyle[39m=[32m"color: var(--muted-foreground); margin: 0px;"[39m
+          [36m>[39m
+            [0mThe running-count source is not connected.[0m
+          [36m</p>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mstyle[39m=[32m"margin-top: 12px;"[39m
+        [36m>[39m
+          [36m<strong[39m
+            [33mstyle[39m=[32m"font-weight: 600;"[39m
+          [36m>[39m
+            [0mIcons[0m
+            [0m: [0m
+            [0mEnabled[0m
+            [0m · [0m
+            [0mNot connected yet[0m
+          [36m</strong>[39m
+          [36m<p[39m
+            [33mstyle[39m=[32m"color: var(--muted-foreground); margin: 0px;"[39m
+          [36m>[39m
+            [0mThe Cloud/Local source is still being checked.[0m
+          [36m</p>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33maria-label[39m=[32m"Settings save"[39m
+        [33maria-live[39m=[32m"polite"[39m
+        [33mrole[39m=[32m"status"[39m
+        [33mstyle[39m=[32m"color: var(--muted-foreground); margin-top: 16px;"[39m
+      [36m>[39m
+        [36m<span>[39m
+          [0mSaved[0m
+        [36m</span>[39m
+      [36m</div>[39m
+    [36m</section>[39m
+    [36m<div[39m
+      [33maria-label[39m=[32m"Synthetic feature previews"[39m
+    [36m>[39m
+      [36m<span[39m
+        [33maria-label[39m=[32m"Local"[39m
+        [33mclass[39m=[32m"pointer-events-none relative flex size-3.5 shrink-0 items-center justify-center text-muted-foreground"[39m
+        [33mrole[39m=[32m"img"[39m
+        [33mtitle[39m=[32m"Local"[39m
+      [36m>[39m
+        [36m<svg[39m
+          [33maria-hidden[39m=[32m"true"[39m
+          [33mclass[39m=[32m"size-3.5"[39m
+          [33mcolor[39m=[32m"currentColor"[39m
+          [33mdata-icon[39m=[32m"Laptop"[39m
+          [33mfill[39m=[32m"none"[39m
+          [33mheight[39m=[32m"24"[39m
+          [33mviewBox[39m=[32m"0 0 24 24"[39m
+          [33mwidth[39m=[32m"24"[39m
+          [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+        [36m>[39m
+          [36m<path[39m
+            [33md[39m=[32m"M20.4999 16.5V8.5C20.4999 6.14298 20.4999 4.96447 19.7676 4.23223C19.0354 3.5 17.8569 3.5 15.4999 3.5H8.49988C6.14286 3.5 4.96434 3.5 4.23211 4.23223C3.49988 4.96447 3.49988 6.14298 3.49988 8.5V16.5"[39m
+            [33mstroke[39m=[32m"currentColor"[39m
+            [33mstroke-linecap[39m=[32m"round"[39m
+            [33mstroke-linejoin[39m=[32m"round"[39m
+            [33mstroke-width[39m=[32m"1.5"[39m
+          [36m/>[39m
+          [36m<path[39m
+            [33md[39m=[32m"M21.9841 20.5H2.01567C1.63273 20.5 1.38367 20.1088 1.55493 19.7764L3.49988 16.5H20.4999L22.4448 19.7764C22.6161 20.1088 22.367 20.5 21.9841 20.5Z"[39m
+            [33mstroke[39m=[32m"currentColor"[39m
+            [33mstroke-linecap[39m=[32m"round"[39m
+            [33mstroke-linejoin[39m=[32m"round"[39m
+            [33mstroke-width[39m=[32m"1.5"[39m
+          [36m/>[39m
+        [36m</svg>[39m
+      [36m</span>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/SettingsPage.test.tsx:157:19
+    155|     let iconsFailed!: () => void;
+    156|     act(() => { iconsFailed = reportFeatureSourceStatus(rendered.plugi…
+    157|     expect(screen.getByText("The Cloud/Local source is not connected."…
+       |                   ^
+    158|     act(() => { failed(); remove(); iconsFailed(); });
+    159|     expect(screen.queryByText(/· Live/)).toBeNull();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 8 passed (9)
+   Start at  00:21:58
+   Duration  1.47s (transform 223ms, setup 0ms, import 500ms, tests 379ms, environment 486ms)
+

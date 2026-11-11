@@ -152,7 +152,10 @@ describe("N1: settings through the registered app", () => {
     let failed!: () => void;
     act(() => { failed = reportFeatureSourceStatus(rendered.pluginId, "footer", "unavailable"); });
     expect(screen.getByText("Footer: Disabled · Not connected yet")).toBeDefined();
-    act(() => { failed(); remove(); });
+    let iconsFailed!: () => void;
+    act(() => { iconsFailed = reportFeatureSourceStatus(rendered.pluginId, "icons", "unavailable"); });
+    expect(screen.getByText("The Cloud/Local source is not connected.")).toBeDefined();
+    act(() => { failed(); remove(); iconsFailed(); });
     expect(screen.queryByText(/· Live/)).toBeNull();
     expect(screen.getByText("Icons: Enabled · Not connected yet")).toBeDefined();
     expect(screen.queryByText(/PC persistence|Unavailable|Unverified/)).toBeNull();
