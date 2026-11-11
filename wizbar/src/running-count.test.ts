@@ -44,3 +44,26 @@ describe("W2: global running count on explicitly synthetic complete inputs", () 
     expect(countRunning({ complete: true, threads: [idle, syntheticThread({ indicator: "runtime" })], subagentsByThread: new Map([[idle.id, 0]]) })).toBeNull();
   });
 });
+
+// N4: legacy fixtures require a complete subagent map and miss WB3's approved
+// observable thread-only contract. A duplicate or missing map must not hide work.
+describe("N4: observable thread-only counting", () => {
+  it("counts unique observable parents/children across projects without a subagent map", () => {
+    expect(countRunning({
+      version: 1, status: "ready", scope: "observable-sidebar",
+      threads: [
+        { id: "sample-parent", projectId: "sample-project-a", parentThreadId: null, isWorking: true },
+        { id: "sample-child", projectId: "sample-project-b", parentThreadId: "sample-parent", isWorking: true },
+        { id: "sample-parent", projectId: "sample-project-a", parentThreadId: null, isWorking: true },
+        { id: "sample-idle", projectId: "sample-project-b", parentThreadId: null, isWorking: false },
+      ],
+      subagents: { status: "unproven", count: null },
+    })).toEqual({ threads: 2, subagents: null, total: 2 });
+  });
+  it("distinguishes an observable empty set from unknown input", () => {
+    expect(countRunning({
+      version: 1, status: "ready", scope: "observable-sidebar", threads: [],
+      subagents: { status: "unproven", count: null },
+    })).toEqual({ threads: 0, subagents: null, total: 0 });
+  });
+});

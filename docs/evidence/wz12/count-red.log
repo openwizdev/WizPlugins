@@ -1,0 +1,64 @@
+
+> bb-plugin-wizbar@0.1.0 test
+> vitest run --config vitest.config.ts src/running-count.test.ts --maxWorkers=2
+
+
+ RUN  v4.1.10 <public-checkout>/wizbar
+
+ ❯ |bb-plugin-wizbar| src/running-count.test.ts (20 tests | 2 failed) 23ms
+     × counts unique observable parents/children across projects without a subagent map 9ms
+     × distinguishes an observable empty set from unknown input 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/running-count.test.ts > N4: observable thread-only counting > counts unique observable parents/children across projects without a subagent map
+AssertionError: expected null to deeply equal { threads: 2, subagents: null, …(1) }
+
+- Expected:
+{
+  "subagents": null,
+  "threads": 2,
+  "total": 2,
+}
+
++ Received:
+null
+
+ ❯ src/running-count.test.ts:61:9
+     59|       ],
+     60|       subagents: { status: "unproven", count: null },
+     61|     })).toEqual({ threads: 2, subagents: null, total: 2 });
+       |         ^
+     62|   });
+     63|   it("distinguishes an observable empty set from unknown input", () =>…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  |bb-plugin-wizbar| src/running-count.test.ts > N4: observable thread-only counting > distinguishes an observable empty set from unknown input
+AssertionError: expected null to deeply equal { threads: +0, subagents: null, …(1) }
+
+- Expected:
+{
+  "subagents": null,
+  "threads": 0,
+  "total": 0,
+}
+
++ Received:
+null
+
+ ❯ src/running-count.test.ts:67:9
+     65|       version: 1, status: "ready", scope: "observable-sidebar", thread…
+     66|       subagents: { status: "unproven", count: null },
+     67|     })).toEqual({ threads: 0, subagents: null, total: 0 });
+       |         ^
+     68|   });
+     69| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 18 passed (20)
+   Start at  04:09:37
+   Duration  308ms (transform 68ms, setup 0ms, import 102ms, tests 23ms, environment 0ms)

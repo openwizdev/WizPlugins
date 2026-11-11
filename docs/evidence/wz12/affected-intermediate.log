@@ -1,0 +1,36 @@
+
+> bb-plugin-wizbar@0.1.0 test
+> vitest run --config vitest.config.ts src/running-count.test.ts src/running-source.test.ts src/FooterCounter.test.tsx src/SettingsPage.test.tsx identity.test.ts --maxWorkers=2
+
+
+ RUN  v4.1.10 <public-checkout>/wizbar
+
+ ❯ |bb-plugin-wizbar| src/FooterCounter.test.tsx (11 tests | 1 failed) 756ms
+     × registers numeric artwork in one no-op action, with no disclosure 12ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/FooterCounter.test.tsx > N4: approved observable footer route > registers numeric artwork in one no-op action, with no disclosure
+AssertionError: expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ src/FooterCounter.test.tsx:112:48
+    110|   it("registers numeric artwork in one no-op action, with no disclosur…
+    111|     expect(app.sidebarFooterActions).toEqual([]);
+    112|     expect(app.experimentalSidebarFooterItems).toHaveLength(1);
+       |                                                ^
+    113|     const action = app.experimentalSidebarFooterItems[0]!;
+    114|     expect(action.kind).toBe("action");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 4 passed (5)
+      Tests  1 failed | 73 passed (74)
+   Start at  04:19:38
+   Duration  4.65s (transform 553ms, setup 0ms, import 2.29s, tests 1.75s, environment 2.92s)

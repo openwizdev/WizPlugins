@@ -1,14 +1,25 @@
 import { useEffect, useId, useState } from "react";
+import type { PluginSidebarThread } from "@get-bb/plugin-sdk";
 import { countRunning, type RunningCountSource } from "./running-count";
-import { useWizBarSettings } from "./SettingsPage";
+import { experimental_useSidebarThreads, useRealtimeConnectionState } from "@get-bb/plugin-sdk/app";
+import { useFeatureSourceStatus, useWizBarSettings } from "./SettingsPage";
+import { readRunningSource } from "./running-source";
 
-/**
- * Candidate artwork for the pinned SDK's host-rendered footer icon surface.
- * There is no verified complete source/subagent mapping yet. Keep that unknown
- * explicit: do not read backgroundAgents as subagents or show an invented zero.
- */
+/** Observable host cache only; neither coverage nor freshness is claimed live. */
 export function FooterCounter({ className }: { className?: string }) {
-  return <FooterCounterArtwork className={className} source={null} />;
+  const state = experimental_useSidebarThreads();
+  const connection = useRealtimeConnectionState();
+  const input = readRunningSource(state, connection);
+  const [invalidatedSnapshot, setInvalidatedSnapshot] = useState<readonly PluginSidebarThread[] | null>(null);
+  // The hook owns cache/realtime ordering. After an observable gap, a transport
+  // reconnect alone cannot certify the same retained snapshot. No age is guessed.
+  useEffect(() => {
+    if (input.status !== "ready") setInvalidatedSnapshot(state.threads);
+  }, [input.status, state.threads]);
+  const source = input.status === "ready" && invalidatedSnapshot === state.threads
+    ? { ...input, status: "stale" as const, threads: null } : input;
+  useFeatureSourceStatus("footer", source.status === "ready" ? "unverified" : "unavailable");
+  return <FooterCounterArtwork className={className} source={source} />;
 }
 
 /** Presentation over explicit inputs; synthetic harness inputs are not host proof. */
@@ -32,7 +43,7 @@ export function FooterCounterArtwork({ source, className }: {
   const showSplit = hovered || focused;
   return (
     <>
-      <style>{"@keyframes wizbar-running-spin { to { transform: rotate(360deg); } }"}</style>
+      <style>{"@keyframes wizbar-running-spin { to { transform: rotate(360deg); } } @media (prefers-reduced-motion: reduce) { .wizbar-running-spinner { animation: none !important; } }"}</style>
       <span
         role="status"
         aria-label={`${count.total} running`}
@@ -51,7 +62,7 @@ export function FooterCounterArtwork({ source, className }: {
         }}
       >
         <svg
-          viewBox="0 0 16 16" width={14} height={14} fill="none" aria-hidden="true"
+          className="wizbar-running-spinner" viewBox="0 0 16 16" width={14} height={14} fill="none" aria-hidden="true"
           style={{ flexShrink: 0, animation: count.total > 0 ? "wizbar-running-spin 1s linear infinite" : undefined }}
         >
           <circle cx={8} cy={8} r={6} stroke="currentColor" strokeWidth={2} opacity={0.25} />
@@ -61,11 +72,13 @@ export function FooterCounterArtwork({ source, className }: {
         {showSplit ? (
           <span id={tooltipId} role="tooltip" style={{
             position: "absolute", bottom: "calc(100% + 6px)", left: 0,
-            whiteSpace: "nowrap", padding: "4px 8px", borderRadius: 6, zIndex: 50,
+            width: "max-content", maxWidth: "min(300px, calc(100vw - 32px))", whiteSpace: "normal", padding: "4px 8px", borderRadius: 6, zIndex: 50,
             background: "var(--popover)", color: "var(--popover-foreground)",
             border: "1px solid var(--border)", pointerEvents: "none",
           }}>
-            {count.threads} threads, {count.subagents} subagents
+            {count.subagents === null
+              ? `${count.threads} running · subagents not counted yet · some threads may be unseen`
+              : `${count.threads} threads, ${count.subagents} subagents`}
           </span>
         ) : null}
       </span>

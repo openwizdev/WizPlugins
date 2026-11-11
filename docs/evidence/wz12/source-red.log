@@ -1,0 +1,196 @@
+
+> bb-plugin-wizbar@0.1.0 test
+> vitest run --config vitest.config.ts src/running-source.test.ts --maxWorkers=2
+
+
+ RUN  v4.1.10 <public-checkout>/wizbar
+
+ ❯ |bb-plugin-wizbar| src/running-source.test.ts (28 tests | 27 failed) 45ms
+     × preserves cross-project, archived, hidden and child work, deduplicated by stable ID 14ms
+     × uses unchanged WZ10 workflows signal without equating background counts with subagents 2ms
+     × uses unchanged WZ10 background agents signal without equating background counts with subagents 1ms
+     × uses unchanged WZ10 background commands signal without equating background counts with subagents 1ms
+     × uses unchanged WZ10 plan mode signal without equating background counts with subagents 1ms
+     × uses unchanged WZ10 goals signal without equating background counts with subagents 1ms
+     × uses unchanged WZ10 runtime signal without equating background counts with subagents 1ms
+     × uses unchanged WZ10 working draft signal without equating background counts with subagents 1ms
+     × does not infer work from active status or attention alone 1ms
+     × never turns error into an empty count, even with retained rows 4ms
+     × never displays retained work while connecting 1ms
+     × never displays retained work while reconnecting 1ms
+     × rejects incomplete/unknown work facts instead of interpreting them as idle: {"id":"","projectId":"sample-project-a","title":"Sample work","titleFallback":null,"displayTitle":"Sample work","parentThreadId":null,"lifecycleOwnerThreadId":null,"sourceThreadId":null,"sectionId":null,"originKind":null,"originPluginId":null,"providerId":"codex","status":"idle","runtimeStatus":"idle","queuedWork":"none","hasPendingInteraction":false,"activity":{"workflows":0,"backgroundAgents":0,"backgroundCommands":0,"planMode":0,"goals":0},"indicator":"none","indicatorLabel":null,"isUnread":false,"isPinned":false,"pinnedAt":null,"pinSortKey":null,"isArchived":false,"archivedAt":null,"href":"/projects/sample-project-a/threads/sample-parent","isHidden":false,"environment":null,"host":null,"createdAt":100,"updatedAt":100,"lastReadAt":100,"latestAttentionAt":100} 1ms
+     × rejects incomplete/unknown work facts instead of interpreting them as idle: {"id":"sample-parent","projectId":"","title":"Sample work","titleFallback":null,"displayTitle":"Sample work","parentThreadId":null,"lifecycleOwnerThreadId":null,"sourceThreadId":null,"sectionId":null,"originKind":null,"originPluginId":null,"providerId":"codex","status":"idle","runtimeStatus":"idle","queuedWork":"none","hasPendingInteraction":false,"activity":{"workflows":0,"backgroundAgents":0,"backgroundCommands":0,"planMode":0,"goals":0},"indicator":"none","indicatorLabel":null,"isUnread":false,"isPinned":false,"pinnedAt":null,"pinSortKey":null,"isArchived":false,"archivedAt":null,"href":"/projects/sample-project-a/threads/sample-parent","isHidden":false,"environment":null,"host":null,"createdAt":100,"updatedAt":100,"lastReadAt":100,"latestAttentionAt":100} 1ms
+     × rejects incomplete/unknown work facts instead of interpreting them as idle: {"id":"sample-parent","projectId":"sample-project-a","title":"Sample work","titleFallback":null,"displayTitle":"Sample work","lifecycleOwnerThreadId":null,"sourceThreadId":null,"sectionId":null,"originKind":null,"originPluginId":null,"providerId":"codex","status":"idle","runtimeStatus":"idle","queuedWork":"none","hasPendingInteraction":false,"activity":{"workflows":0,"backgroundAgents":0,"backgroundCommands":0,"planMode":0,"goals":0},"indicator":"none","indicatorLabel":null,"isUnread":false,"isPinned":false,"pinnedAt":null,"pinSortKey":null,"isArchived":false,"archivedAt":null,"href":"/projects/sample-project-a/threads/sample-parent","isHidden":false,"environment":null,"host":null,"createdAt":100,"updatedAt":100,"lastReadAt":100,"latestAttentionAt":100} 1ms
+     × rejects incomplete/unknown work facts instead of interpreting them as idle: {"id":"sample-parent","projectId":"sample-project-a","title":"Sample work","titleFallback":null,"displayTitle":"Sample work","parentThreadId":null,"lifecycleOwnerThreadId":null,"sourceThreadId":null,"sectionId":null,"originKind":null,"originPluginId":null,"providerId":"codex","status":"idle","runtimeStatus":"idle","queuedWork":"none","hasPendingInteraction":false,"indicator":"none","indicatorLabel":null,"isUnread":false,"isPinned":false,"pinnedAt":null,"pinSortKey":null,"isArchived":false,"archivedAt":null,"href":"/projects/sample-project-a/threads/sample-parent","isHidden":false,"environment":null,"host":null,"createdAt":100,"updatedAt":100,"lastReadAt":100,"latestAttentionAt":100} 1ms
+     × rejects incomplete/unknown work facts instead of interpreting them as idle: {"id":"sample-parent","projectId":"sample-project-a","title":"Sample work","titleFallback":null,"displayTitle":"Sample work","parentThreadId":null,"lifecycleOwnerThreadId":null,"sourceThreadId":null,"sectionId":null,"originKind":null,"originPluginId":null,"providerId":"codex","status":"idle","runtimeStatus":"idle","queuedWork":"none","hasPendingInteraction":false,"activity":{"workflows":0,"backgroundAgents":0,"backgroundCommands":0,"planMode":0},"indicator":"none","indicatorLabel":null,"isUnread":false,"isPinned":false,"pinnedAt":null,"pinSortKey":null,"isArchived":false,"archivedAt":null,"href":"/projects/sample-project-a/threads/sample-parent","isHidden":false,"environment":null,"host":null,"createdAt":100,"updatedAt":100,"lastReadAt":100,"latestAttentionAt":100} 1ms
+     × rejects incomplete/unknown work facts instead of interpreting them as idle: {"id":"sample-parent","projectId":"sample-project-a","title":"Sample work","titleFallback":null,"displayTitle":"Sample work","parentThreadId":null,"lifecycleOwnerThreadId":null,"sourceThreadId":null,"sectionId":null,"originKind":null,"originPluginId":null,"providerId":"codex","status":"idle","runtimeStatus":"idle","queuedWork":"none","hasPendingInteraction":false,"activity":{"workflows":-1,"backgroundAgents":0,"backgroundCommands":0,"planMode":0,"goals":0},"indicator":"none","indicatorLabel":null,"isUnread":false,"isPinned":false,"pinnedAt":null,"pinSortKey":null,"isArchived":false,"archivedAt":null,"href":"/projects/sample-project-a/threads/sample-parent","isHidden":false,"environment":null,"host":null,"createdAt":100,"updatedAt":100,"lastReadAt":100,"latestAttentionAt":100} 1ms
+     × rejects incomplete/unknown work facts instead of interpreting them as idle: {"id":"sample-parent","projectId":"sample-project-a","title":"Sample work","titleFallback":null,"displayTitle":"Sample work","parentThreadId":null,"lifecycleOwnerThreadId":null,"sourceThreadId":null,"sectionId":null,"originKind":null,"originPluginId":null,"providerId":"codex","status":"idle","runtimeStatus":"idle","queuedWork":"none","hasPendingInteraction":false,"activity":{"workflows":0,"backgroundAgents":0,"backgroundCommands":0.5,"planMode":0,"goals":0},"indicator":"none","indicatorLabel":null,"isUnread":false,"isPinned":false,"pinnedAt":null,"pinSortKey":null,"isArchived":false,"archivedAt":null,"href":"/projects/sample-project-a/threads/sample-parent","isHidden":false,"environment":null,"host":null,"createdAt":100,"updatedAt":100,"lastReadAt":100,"latestAttentionAt":100} 1ms
+     × rejects incomplete/unknown work facts instead of interpreting them as idle: {"id":"sample-parent","projectId":"sample-project-a","title":"Sample work","titleFallback":null,"displayTitle":"Sample work","parentThreadId":null,"lifecycleOwnerThreadId":null,"sourceThreadId":null,"sectionId":null,"originKind":null,"originPluginId":null,"providerId":"codex","status":"idle","runtimeStatus":"idle","queuedWork":"none","hasPendingInteraction":false,"activity":{"workflows":0,"backgroundAgents":0,"backgroundCommands":0,"planMode":0,"goals":null},"indicator":"none","indicatorLabel":null,"isUnread":false,"isPinned":false,"pinnedAt":null,"pinSortKey":null,"isArchived":false,"archivedAt":null,"href":"/projects/sample-project-a/threads/sample-parent","isHidden":false,"environment":null,"host":null,"createdAt":100,"updatedAt":100,"lastReadAt":100,"latestAttentionAt":100} 1ms
+     × rejects incomplete/unknown work facts instead of interpreting them as idle: {"id":"sample-parent","projectId":"sample-project-a","title":"Sample work","titleFallback":null,"displayTitle":"Sample work","parentThreadId":null,"lifecycleOwnerThreadId":null,"sourceThreadId":null,"sectionId":null,"originKind":null,"originPluginId":null,"providerId":"codex","status":"idle","runtimeStatus":"idle","queuedWork":"none","hasPendingInteraction":false,"activity":{"workflows":0,"backgroundAgents":0,"backgroundCommands":0,"planMode":null,"goals":0},"indicator":"none","indicatorLabel":null,"isUnread":false,"isPinned":false,"pinnedAt":null,"pinSortKey":null,"isArchived":false,"archivedAt":null,"href":"/projects/sample-project-a/threads/sample-parent","isHidden":false,"environment":null,"host":null,"createdAt":100,"updatedAt":100,"lastReadAt":100,"latestAttentionAt":100} 1ms
+     × rejects incomplete/unknown work facts instead of interpreting them as idle: {"id":"sample-parent","projectId":"sample-project-a","title":"Sample work","titleFallback":null,"displayTitle":"Sample work","parentThreadId":null,"lifecycleOwnerThreadId":null,"sourceThreadId":null,"sectionId":null,"originKind":null,"originPluginId":null,"providerId":"codex","status":"idle","runtimeStatus":"idle","queuedWork":"none","hasPendingInteraction":false,"activity":{"workflows":0,"backgroundAgents":"1","backgroundCommands":0,"planMode":0,"goals":0},"indicator":"none","indicatorLabel":null,"isUnread":false,"isPinned":false,"pinnedAt":null,"pinSortKey":null,"isArchived":false,"archivedAt":null,"href":"/projects/sample-project-a/threads/sample-parent","isHidden":false,"environment":null,"host":null,"createdAt":100,"updatedAt":100,"lastReadAt":100,"latestAttentionAt":100} 1ms
+     × rejects incomplete/unknown work facts instead of interpreting them as idle: {"id":"sample-parent","projectId":"sample-project-a","title":"Sample work","titleFallback":null,"displayTitle":"Sample work","parentThreadId":null,"lifecycleOwnerThreadId":null,"sourceThreadId":null,"sectionId":null,"originKind":null,"originPluginId":null,"providerId":"codex","status":"idle","runtimeStatus":"idle","queuedWork":"none","hasPendingInteraction":false,"activity":{"workflows":0,"backgroundAgents":0,"backgroundCommands":0,"planMode":0,"goals":0},"indicatorLabel":null,"isUnread":false,"isPinned":false,"pinnedAt":null,"pinSortKey":null,"isArchived":false,"archivedAt":null,"href":"/projects/sample-project-a/threads/sample-parent","isHidden":false,"environment":null,"host":null,"createdAt":100,"updatedAt":100,"lastReadAt":100,"latestAttentionAt":100} 1ms
+     × rejects incomplete/unknown work facts instead of interpreting them as idle: {"id":"sample-parent","projectId":"sample-project-a","title":"Sample work","titleFallback":null,"displayTitle":"Sample work","parentThreadId":null,"lifecycleOwnerThreadId":null,"sourceThreadId":null,"sectionId":null,"originKind":null,"originPluginId":null,"providerId":"codex","status":"idle","runtimeStatus":"idle","queuedWork":"none","hasPendingInteraction":false,"activity":{"workflows":0,"backgroundAgents":0,"backgroundCommands":0,"planMode":0,"goals":0},"indicator":"future-signal","indicatorLabel":null,"isUnread":false,"isPinned":false,"pinnedAt":null,"pinSortKey":null,"isArchived":false,"archivedAt":null,"href":"/projects/sample-project-a/threads/sample-parent","isHidden":false,"environment":null,"host":null,"createdAt":100,"updatedAt":100,"lastReadAt":100,"latestAttentionAt":100} 1ms
+     × rejects contradictory duplicate work/membership facts 1ms
+     × rejects contradictory duplicate work/membership facts 1ms
+     × rejects contradictory duplicate work/membership facts 3ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 27 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/running-source.test.ts > N4: unfiltered observable sidebar source > preserves cross-project, archived, hidden and child work, deduplicated by stable ID
+AssertionError: expected null to deeply equal { threads: 2, subagents: null, …(1) }
+
+- Expected:
+{
+  "subagents": null,
+  "threads": 2,
+  "total": 2,
+}
+
++ Received:
+null
+
+ ❯ src/running-source.test.ts:18:33
+     16|     expect(countRunning(input)).toBeNull();
+     17|     const valid = readRunningSource(state([parent, child, parent]), "c…
+     18|     expect(countRunning(valid)).toEqual({ threads: 2, subagents: null,…
+       |                                 ^
+     19|     expect(valid.scope).toBe("observable-sidebar");
+     20|     expect(valid.subagents).toEqual({ status: "unproven", count: null …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/27]⎯
+
+ FAIL  |bb-plugin-wizbar| src/running-source.test.ts > N4: unfiltered observable sidebar source > uses unchanged WZ10 workflows signal without equating background counts with subagents
+ FAIL  |bb-plugin-wizbar| src/running-source.test.ts > N4: unfiltered observable sidebar source > uses unchanged WZ10 background agents signal without equating background counts with subagents
+ FAIL  |bb-plugin-wizbar| src/running-source.test.ts > N4: unfiltered observable sidebar source > uses unchanged WZ10 background commands signal without equating background counts with subagents
+ FAIL  |bb-plugin-wizbar| src/running-source.test.ts > N4: unfiltered observable sidebar source > uses unchanged WZ10 plan mode signal without equating background counts with subagents
+ FAIL  |bb-plugin-wizbar| src/running-source.test.ts > N4: unfiltered observable sidebar source > uses unchanged WZ10 goals signal without equating background counts with subagents
+ FAIL  |bb-plugin-wizbar| src/running-source.test.ts > N4: unfiltered observable sidebar source > uses unchanged WZ10 runtime signal without equating background counts with subagents
+ FAIL  |bb-plugin-wizbar| src/running-source.test.ts > N4: unfiltered observable sidebar source > uses unchanged WZ10 working draft signal without equating background counts with subagents
+AssertionError: expected null to deeply equal { threads: 1, subagents: null, …(1) }
+
+- Expected:
+{
+  "subagents": null,
+  "threads": 1,
+  "total": 1,
+}
+
++ Received:
+null
+
+ ❯ src/running-source.test.ts:33:8
+     31|   ] as const)("uses unchanged WZ10 %s signal without equating backgrou…
+     32|     expect(countRunning(readRunningSource(state([syntheticThread({ act…
+     33|       .toEqual({ threads: 1, subagents: null, total: 1 });
+       |        ^
+     34|   });
+     35|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/27]⎯
+
+ FAIL  |bb-plugin-wizbar| src/running-source.test.ts > N4: unfiltered observable sidebar source > does not infer work from active status or attention alone
+AssertionError: expected null to deeply equal { threads: +0, subagents: null, …(1) }
+
+- Expected:
+{
+  "subagents": null,
+  "threads": 0,
+  "total": 0,
+}
+
++ Received:
+null
+
+ ❯ src/running-source.test.ts:38:8
+     36|   it("does not infer work from active status or attention alone", () =…
+     37|     expect(countRunning(readRunningSource(state([syntheticThread({ sta…
+     38|       .toEqual({ threads: 0, subagents: null, total: 0 });
+       |        ^
+     39|   });
+     40|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/27]⎯
+
+ FAIL  |bb-plugin-wizbar| src/running-source.test.ts > N4: unfiltered observable sidebar source > never turns error into an empty count, even with retained rows
+AssertionError: expected 'unavailable' to be 'error' // Object.is equality
+
+Expected: "error"
+Received: "unavailable"
+
+ ❯ src/running-source.test.ts:43:26
+     41|   it.each(["loading", "error"] as const)("never turns %s into an empty…
+     42|     const input = readRunningSource({ ...state(), status }, "connected…
+     43|     expect(input.status).toBe(status === "loading" ? "unavailable" : "…
+       |                          ^
+     44|     expect(input.threads).toBeNull();
+     45|     expect(countRunning(input)).toBeNull();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/27]⎯
+
+ FAIL  |bb-plugin-wizbar| src/running-source.test.ts > N4: unfiltered observable sidebar source > never displays retained work while connecting
+ FAIL  |bb-plugin-wizbar| src/running-source.test.ts > N4: unfiltered observable sidebar source > never displays retained work while reconnecting
+AssertionError: expected 'unavailable' to be 'stale' // Object.is equality
+
+Expected: "stale"
+Received: "unavailable"
+
+ ❯ src/running-source.test.ts:49:26
+     47|   it.each(["connecting", "reconnecting"] as const)("never displays ret…
+     48|     const input = readRunningSource(state(), connection);
+     49|     expect(input.status).toBe("stale");
+       |                          ^
+     50|     expect(countRunning(input)).toBeNull();
+     51|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/27]⎯
+
+ FAIL  |bb-plugin-wizbar| src/running-source.test.ts > N4: unfiltered observable sidebar source > rejects incomplete/unknown work facts instead of interpreting them as idle: {"id":"","projectId":"sample-project-a","title":"Sample work","titleFallback":null,"displayTitle":"Sample work","parentThreadId":null,"lifecycleOwnerThreadId":null,"sourceThreadId":null,"sectionId":null,"originKind":null,"originPluginId":null,"providerId":"codex","status":"idle","runtimeStatus":"idle","queuedWork":"none","hasPendingInteraction":false,"activity":{"workflows":0,"backgroundAgents":0,"backgroundCommands":0,"planMode":0,"goals":0},"indicator":"none","indicatorLabel":null,"isUnread":false,"isPinned":false,"pinnedAt":null,"pinSortKey":null,"isArchived":false,"archivedAt":null,"href":"/projects/sample-project-a/threads/sample-parent","isHidden":false,"environment":null,"host":null,"createdAt":100,"updatedAt":100,"lastReadAt":100,"latestAttentionAt":100}
+ FAIL  |bb-plugin-wizbar| src/running-source.test.ts > N4: unfiltered observable sidebar source > rejects incomplete/unknown work facts instead of interpreting them as idle: {"id":"sample-parent","projectId":"","title":"Sample work","titleFallback":null,"displayTitle":"Sample work","parentThreadId":null,"lifecycleOwnerThreadId":null,"sourceThreadId":null,"sectionId":null,"originKind":null,"originPluginId":null,"providerId":"codex","status":"idle","runtimeStatus":"idle","queuedWork":"none","hasPendingInteraction":false,"activity":{"workflows":0,"backgroundAgents":0,"backgroundCommands":0,"planMode":0,"goals":0},"indicator":"none","indicatorLabel":null,"isUnread":false,"isPinned":false,"pinnedAt":null,"pinSortKey":null,"isArchived":false,"archivedAt":null,"href":"/projects/sample-project-a/threads/sample-parent","isHidden":false,"environment":null,"host":null,"createdAt":100,"updatedAt":100,"lastReadAt":100,"latestAttentionAt":100}
+ FAIL  |bb-plugin-wizbar| src/running-source.test.ts > N4: unfiltered observable sidebar source > rejects incomplete/unknown work facts instead of interpreting them as idle: {"id":"sample-parent","projectId":"sample-project-a","title":"Sample work","titleFallback":null,"displayTitle":"Sample work","lifecycleOwnerThreadId":null,"sourceThreadId":null,"sectionId":null,"originKind":null,"originPluginId":null,"providerId":"codex","status":"idle","runtimeStatus":"idle","queuedWork":"none","hasPendingInteraction":false,"activity":{"workflows":0,"backgroundAgents":0,"backgroundCommands":0,"planMode":0,"goals":0},"indicator":"none","indicatorLabel":null,"isUnread":false,"isPinned":false,"pinnedAt":null,"pinSortKey":null,"isArchived":false,"archivedAt":null,"href":"/projects/sample-project-a/threads/sample-parent","isHidden":false,"environment":null,"host":null,"createdAt":100,"updatedAt":100,"lastReadAt":100,"latestAttentionAt":100}
+ FAIL  |bb-plugin-wizbar| src/running-source.test.ts > N4: unfiltered observable sidebar source > rejects incomplete/unknown work facts instead of interpreting them as idle: {"id":"sample-parent","projectId":"sample-project-a","title":"Sample work","titleFallback":null,"displayTitle":"Sample work","parentThreadId":null,"lifecycleOwnerThreadId":null,"sourceThreadId":null,"sectionId":null,"originKind":null,"originPluginId":null,"providerId":"codex","status":"idle","runtimeStatus":"idle","queuedWork":"none","hasPendingInteraction":false,"indicator":"none","indicatorLabel":null,"isUnread":false,"isPinned":false,"pinnedAt":null,"pinSortKey":null,"isArchived":false,"archivedAt":null,"href":"/projects/sample-project-a/threads/sample-parent","isHidden":false,"environment":null,"host":null,"createdAt":100,"updatedAt":100,"lastReadAt":100,"latestAttentionAt":100}
+ FAIL  |bb-plugin-wizbar| src/running-source.test.ts > N4: unfiltered observable sidebar source > rejects incomplete/unknown work facts instead of interpreting them as idle: {"id":"sample-parent","projectId":"sample-project-a","title":"Sample work","titleFallback":null,"displayTitle":"Sample work","parentThreadId":null,"lifecycleOwnerThreadId":null,"sourceThreadId":null,"sectionId":null,"originKind":null,"originPluginId":null,"providerId":"codex","status":"idle","runtimeStatus":"idle","queuedWork":"none","hasPendingInteraction":false,"activity":{"workflows":0,"backgroundAgents":0,"backgroundCommands":0,"planMode":0},"indicator":"none","indicatorLabel":null,"isUnread":false,"isPinned":false,"pinnedAt":null,"pinSortKey":null,"isArchived":false,"archivedAt":null,"href":"/projects/sample-project-a/threads/sample-parent","isHidden":false,"environment":null,"host":null,"createdAt":100,"updatedAt":100,"lastReadAt":100,"latestAttentionAt":100}
+ FAIL  |bb-plugin-wizbar| src/running-source.test.ts > N4: unfiltered observable sidebar source > rejects incomplete/unknown work facts instead of interpreting them as idle: {"id":"sample-parent","projectId":"sample-project-a","title":"Sample work","titleFallback":null,"displayTitle":"Sample work","parentThreadId":null,"lifecycleOwnerThreadId":null,"sourceThreadId":null,"sectionId":null,"originKind":null,"originPluginId":null,"providerId":"codex","status":"idle","runtimeStatus":"idle","queuedWork":"none","hasPendingInteraction":false,"activity":{"workflows":-1,"backgroundAgents":0,"backgroundCommands":0,"planMode":0,"goals":0},"indicator":"none","indicatorLabel":null,"isUnread":false,"isPinned":false,"pinnedAt":null,"pinSortKey":null,"isArchived":false,"archivedAt":null,"href":"/projects/sample-project-a/threads/sample-parent","isHidden":false,"environment":null,"host":null,"createdAt":100,"updatedAt":100,"lastReadAt":100,"latestAttentionAt":100}
+ FAIL  |bb-plugin-wizbar| src/running-source.test.ts > N4: unfiltered observable sidebar source > rejects incomplete/unknown work facts instead of interpreting them as idle: {"id":"sample-parent","projectId":"sample-project-a","title":"Sample work","titleFallback":null,"displayTitle":"Sample work","parentThreadId":null,"lifecycleOwnerThreadId":null,"sourceThreadId":null,"sectionId":null,"originKind":null,"originPluginId":null,"providerId":"codex","status":"idle","runtimeStatus":"idle","queuedWork":"none","hasPendingInteraction":false,"activity":{"workflows":0,"backgroundAgents":0,"backgroundCommands":0.5,"planMode":0,"goals":0},"indicator":"none","indicatorLabel":null,"isUnread":false,"isPinned":false,"pinnedAt":null,"pinSortKey":null,"isArchived":false,"archivedAt":null,"href":"/projects/sample-project-a/threads/sample-parent","isHidden":false,"environment":null,"host":null,"createdAt":100,"updatedAt":100,"lastReadAt":100,"latestAttentionAt":100}
+ FAIL  |bb-plugin-wizbar| src/running-source.test.ts > N4: unfiltered observable sidebar source > rejects incomplete/unknown work facts instead of interpreting them as idle: {"id":"sample-parent","projectId":"sample-project-a","title":"Sample work","titleFallback":null,"displayTitle":"Sample work","parentThreadId":null,"lifecycleOwnerThreadId":null,"sourceThreadId":null,"sectionId":null,"originKind":null,"originPluginId":null,"providerId":"codex","status":"idle","runtimeStatus":"idle","queuedWork":"none","hasPendingInteraction":false,"activity":{"workflows":0,"backgroundAgents":0,"backgroundCommands":0,"planMode":0,"goals":null},"indicator":"none","indicatorLabel":null,"isUnread":false,"isPinned":false,"pinnedAt":null,"pinSortKey":null,"isArchived":false,"archivedAt":null,"href":"/projects/sample-project-a/threads/sample-parent","isHidden":false,"environment":null,"host":null,"createdAt":100,"updatedAt":100,"lastReadAt":100,"latestAttentionAt":100}
+ FAIL  |bb-plugin-wizbar| src/running-source.test.ts > N4: unfiltered observable sidebar source > rejects incomplete/unknown work facts instead of interpreting them as idle: {"id":"sample-parent","projectId":"sample-project-a","title":"Sample work","titleFallback":null,"displayTitle":"Sample work","parentThreadId":null,"lifecycleOwnerThreadId":null,"sourceThreadId":null,"sectionId":null,"originKind":null,"originPluginId":null,"providerId":"codex","status":"idle","runtimeStatus":"idle","queuedWork":"none","hasPendingInteraction":false,"activity":{"workflows":0,"backgroundAgents":0,"backgroundCommands":0,"planMode":null,"goals":0},"indicator":"none","indicatorLabel":null,"isUnread":false,"isPinned":false,"pinnedAt":null,"pinSortKey":null,"isArchived":false,"archivedAt":null,"href":"/projects/sample-project-a/threads/sample-parent","isHidden":false,"environment":null,"host":null,"createdAt":100,"updatedAt":100,"lastReadAt":100,"latestAttentionAt":100}
+ FAIL  |bb-plugin-wizbar| src/running-source.test.ts > N4: unfiltered observable sidebar source > rejects incomplete/unknown work facts instead of interpreting them as idle: {"id":"sample-parent","projectId":"sample-project-a","title":"Sample work","titleFallback":null,"displayTitle":"Sample work","parentThreadId":null,"lifecycleOwnerThreadId":null,"sourceThreadId":null,"sectionId":null,"originKind":null,"originPluginId":null,"providerId":"codex","status":"idle","runtimeStatus":"idle","queuedWork":"none","hasPendingInteraction":false,"activity":{"workflows":0,"backgroundAgents":"1","backgroundCommands":0,"planMode":0,"goals":0},"indicator":"none","indicatorLabel":null,"isUnread":false,"isPinned":false,"pinnedAt":null,"pinSortKey":null,"isArchived":false,"archivedAt":null,"href":"/projects/sample-project-a/threads/sample-parent","isHidden":false,"environment":null,"host":null,"createdAt":100,"updatedAt":100,"lastReadAt":100,"latestAttentionAt":100}
+ FAIL  |bb-plugin-wizbar| src/running-source.test.ts > N4: unfiltered observable sidebar source > rejects incomplete/unknown work facts instead of interpreting them as idle: {"id":"sample-parent","projectId":"sample-project-a","title":"Sample work","titleFallback":null,"displayTitle":"Sample work","parentThreadId":null,"lifecycleOwnerThreadId":null,"sourceThreadId":null,"sectionId":null,"originKind":null,"originPluginId":null,"providerId":"codex","status":"idle","runtimeStatus":"idle","queuedWork":"none","hasPendingInteraction":false,"activity":{"workflows":0,"backgroundAgents":0,"backgroundCommands":0,"planMode":0,"goals":0},"indicatorLabel":null,"isUnread":false,"isPinned":false,"pinnedAt":null,"pinSortKey":null,"isArchived":false,"archivedAt":null,"href":"/projects/sample-project-a/threads/sample-parent","isHidden":false,"environment":null,"host":null,"createdAt":100,"updatedAt":100,"lastReadAt":100,"latestAttentionAt":100}
+ FAIL  |bb-plugin-wizbar| src/running-source.test.ts > N4: unfiltered observable sidebar source > rejects incomplete/unknown work facts instead of interpreting them as idle: {"id":"sample-parent","projectId":"sample-project-a","title":"Sample work","titleFallback":null,"displayTitle":"Sample work","parentThreadId":null,"lifecycleOwnerThreadId":null,"sourceThreadId":null,"sectionId":null,"originKind":null,"originPluginId":null,"providerId":"codex","status":"idle","runtimeStatus":"idle","queuedWork":"none","hasPendingInteraction":false,"activity":{"workflows":0,"backgroundAgents":0,"backgroundCommands":0,"planMode":0,"goals":0},"indicator":"future-signal","indicatorLabel":null,"isUnread":false,"isPinned":false,"pinnedAt":null,"pinSortKey":null,"isArchived":false,"archivedAt":null,"href":"/projects/sample-project-a/threads/sample-parent","isHidden":false,"environment":null,"host":null,"createdAt":100,"updatedAt":100,"lastReadAt":100,"latestAttentionAt":100}
+AssertionError: expected 'unavailable' to be 'incomplete' // Object.is equality
+
+Expected: "incomplete"
+Received: "unavailable"
+
+ ❯ src/running-source.test.ts:65:26
+     63|     // Deliberate corrupt host fixture; no production declaration exte…
+     64|     const input = readRunningSource({ status: "ready", threads: [threa…
+     65|     expect(input.status).toBe("incomplete");
+       |                          ^
+     66|     expect(countRunning(input)).toBeNull();
+     67|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/27]⎯
+
+ FAIL  |bb-plugin-wizbar| src/running-source.test.ts > N4: unfiltered observable sidebar source > rejects contradictory duplicate work/membership facts
+ FAIL  |bb-plugin-wizbar| src/running-source.test.ts > N4: unfiltered observable sidebar source > rejects contradictory duplicate work/membership facts
+ FAIL  |bb-plugin-wizbar| src/running-source.test.ts > N4: unfiltered observable sidebar source > rejects contradictory duplicate work/membership facts
+AssertionError: expected 'unavailable' to be 'incomplete' // Object.is equality
+
+Expected: "incomplete"
+Received: "unavailable"
+
+ ❯ src/running-source.test.ts:75:26
+     73|   ])("rejects contradictory duplicate work/membership facts", (second)…
+     74|     const input = readRunningSource(state([idle, second]), "connected"…
+     75|     expect(input.status).toBe("incomplete");
+       |                          ^
+     76|     expect(countRunning(input)).toBeNull();
+     77|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/27]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  27 failed | 1 passed (28)
+   Start at  04:11:08
+   Duration  447ms (transform 82ms, setup 0ms, import 124ms, tests 45ms, environment 0ms)

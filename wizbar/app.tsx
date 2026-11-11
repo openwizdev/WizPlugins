@@ -13,12 +13,18 @@ import { SettingsPage } from "./src/SettingsPage";
 
 export default definePluginApp((app) => {
   app.slots.settingsSection({ id: "wizbar-settings", component: SettingsPage });
-  // WF1 candidate artwork only. Complete global inputs and the in-thread agent
-  // mapping are unverified. Do not register a footer action/disclosure: even an
-  // empty host button would substitute chrome for the required live counter.
+  // WZ12-F1/F2: the host owns sizing and its static label; the artwork owns
+  // the observable count and dynamic hover. Host presentation remains for #9.
   app.experimental_icons.register({
     name: "wizbar-running-count",
     component: FooterCounter,
+  });
+  app.experimental_sidebarFooter.register({
+    id: "running-count",
+    kind: "action",
+    label: "Running · subagents not counted yet · some threads may be unseen",
+    icon: "wizbar-running-count",
+    onActivate() {},
   });
 
   app.slots.experimental_threadList({
