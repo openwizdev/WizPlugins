@@ -2,9 +2,10 @@
 
 WizBar is a Cloudroom sidebar plugin. It keeps T3 Sidebar's Inbox, Snoozed and
 Settled shelves, manual parking and parent/child header chips, and adds batch
-lifecycle commands and Cloud/Local row markers. Working or waiting threads
-cannot currently be parked. Unreadable activity fails closed. Parked threads
-return when work or new attention requires it. The project lives in
+lifecycle commands, a persistent Muted shelf and Cloud/Local row markers.
+Ordinary settle and snooze refuse working or waiting threads. Unreadable
+activity fails closed. Ordinary parked threads return when work or new
+attention requires it. The project lives in
 [openwizdev/wizplugins](https://github.com/openwizdev/wizplugins).
 
 ![WizBar rendered with synthetic example rows](../docs/images/wizbar.png)
@@ -12,10 +13,9 @@ return when work or new attention requires it. The project lives in
 The image shows the React UI rendered with synthetic fixture data and styling.
 The production footer counter is blank. Current row markers use an observed
 `environment.providerId` mapping with unknown data left unmarked. Correct live
-Cloud classification remains pending. Settings switches,
-explicit running-fleet mute and a real running-thread footer count are planned
-in [#25](https://github.com/openwizdev/wizplugins/issues/25),
-[#26](https://github.com/openwizdev/wizplugins/issues/26),
+Cloud classification remains pending. Settings switches and a real
+running-thread footer count are planned in
+[#25](https://github.com/openwizdev/wizplugins/issues/25),
 [#28](https://github.com/openwizdev/wizplugins/issues/28) and
 [#29](https://github.com/openwizdev/wizplugins/issues/29).
 
@@ -47,21 +47,33 @@ rows. Separate runtime IDs and data still need live verification.
 ## Commands
 
 The registered namespace is `wizbar`. Each operation accepts one or many IDs.
+Use `--` to end options before literal IDs.
 
 ```text
 wizbar settle <id>... [--json]
 wizbar unsettle <id>... [--json]
 wizbar snooze <id>... --until <time> [--json]
 wizbar unsnooze <id>... [--json]
+wizbar mute <id>... [--json]
+wizbar unmute <id>... [--json]
 wizbar list <id>... [--json]
 ```
 
-`--until` takes a future ISO timestamp with a timezone, or an available sidebar
-preset from `hour`, `evening`, `tomorrow` and `next-week`. Results are per ID. Any
-failed ID produces a nonzero exit status while other IDs are still processed.
+Only `snooze` takes `--until`, which requires a future ISO timestamp with a
+timezone or an available sidebar preset from `hour`, `evening`, `tomorrow` and
+`next-week`. Results are per ID. Any failed ID produces a nonzero exit status
+while other IDs are still processed.
 `list` reports the resolved shelf and snooze wake time. Commands and sidebar
-share the plugin store and refresh channel. Live dispatch and visible refresh remain
-unverified in #9.
+share the plugin store and refresh channel. Live dispatch and visible refresh
+remain unverified in #9.
+
+Explicit `mute` is the running-thread exception for keeper-selected fleet work.
+It requires a verified running, unpinned thread without pending input or failure.
+The Muted shelf uses the plugin's persistent store and keeps the selection
+through reloads and ordinary working updates. A question, failure or stopped
+work with newer unread attention returns the thread to Inbox. `unmute` provides
+manual undo. The keeper's live breakthrough mapping and acceptance remain
+unverified. See the [mute contract](contracts/mute.v1.md).
 
 ## Credit and licence
 
