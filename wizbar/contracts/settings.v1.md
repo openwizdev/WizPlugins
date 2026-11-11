@@ -17,8 +17,8 @@ verified source. Missing keys use these defaults. Present non-boolean values
 fail closed to false; strings such as `"true"` are not booleans.
 
 `wizbarSettingDescriptors` in `src/settings.ts` is the single declaration. It is
-registered with `bb.settings.define` in the existing backend factory (pending the
-narrow path grant requested on #25). No manifest-only settings API is assumed.
+registered with `bb.settings.define` in the existing backend factory (approved by the
+2026-11-10 orchestrator ruling on #25). No manifest-only settings API is assumed.
 The host persists non-secret values in its plugin settings store, scoped to this
 plugin ID. These are plugin-wide preferences across projects, not lifecycle rows,
 localStorage, a component's lifetime or settings in another plugin.
@@ -64,7 +64,9 @@ unavailable or icons unverified. The page observes the same plugin-scoped store.
 
 Initial production status: footer unavailable (unwired), icons unverified
 (existing mapping awaits #29). The page separately renders Enabled/Disabled and
-Live data/Unavailable/Unverified, even while a feature is disabled. It reads
+Live/Not connected yet, even while a feature is disabled. Both unavailable and
+unverified use Not connected yet with a short reason. Internal status values
+retain the distinction for consumers. It reads
 `package.json`'s actual version; there is no version bump or release claim.
 
 ## SDK compatibility and limits
@@ -80,6 +82,6 @@ uses the same keys; it introduces no independent settings store.
 
 N1: rendered-app proofs cover registration, read/write acknowledgement, reopening,
 both feature guards, failures and status truthfulness. Backend settings fixture
-proof will establish declaration and durable reload behavior after the path grant.
+proof establishes declaration and durable reload behavior in the SDK fake.
 N1-live: PC persistence, host invalidation, exact placement and presentation remain
 Unverified until #9. No live application access or installation is authorized here.

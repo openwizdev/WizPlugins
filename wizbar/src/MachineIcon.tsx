@@ -1,5 +1,6 @@
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import { Icon } from "./components/Icon";
+import { useWizBarSettings } from "./SettingsPage";
 
 /** WD5's observed mapping, not a general SDK guarantee. Unknown stays unmarked. */
 export function MachineIcon({
@@ -7,6 +8,8 @@ export function MachineIcon({
 }: {
   environment: PluginSidebarThread["environment"] | undefined;
 }) {
+  const { machineIconsEnabled } = useWizBarSettings();
+  if (!machineIconsEnabled) return null;
   if (
     !environment ||
     typeof environment !== "object" ||

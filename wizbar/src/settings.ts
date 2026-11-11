@@ -12,7 +12,7 @@ export const wizbarSettingDescriptors = {
 } satisfies PluginSettingDescriptors;
 
 export type WizBarSettings = { footerCountEnabled: boolean; machineIconsEnabled: boolean };
-export type SettingValues = Record<string, string | number | boolean> | undefined;
+export type SettingValues = Record<string, unknown> | undefined;
 export type Feature = "footer" | "icons";
 export type SourceStatus = "live" | "unavailable" | "unverified";
 export type SourceStatuses = Readonly<Record<Feature, SourceStatus>>;

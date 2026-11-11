@@ -1,5 +1,6 @@
 import { useEffect, useId, useState } from "react";
 import { countRunning, type RunningCountSource } from "./running-count";
+import { useWizBarSettings } from "./SettingsPage";
 
 /**
  * Candidate artwork for the pinned SDK's host-rendered footer icon surface.
@@ -15,6 +16,7 @@ export function FooterCounterArtwork({ source, className }: {
   source: RunningCountSource | null;
   className?: string;
 }) {
+  const { footerCountEnabled } = useWizBarSettings();
   const count = countRunning(source);
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -26,7 +28,7 @@ export function FooterCounterArtwork({ source, className }: {
       setFocused(false);
     }
   }, [unavailable]);
-  if (count === null) return null;
+  if (!footerCountEnabled || count === null) return null;
   const showSplit = hovered || focused;
   return (
     <>

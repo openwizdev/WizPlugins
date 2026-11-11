@@ -1,0 +1,34 @@
+{
+  "url": "http://127.0.0.1:4173/docs/evidence/wz11/render.html",
+  "readySelector": "section[aria-label=\"WizBar settings\"]",
+  "deviceScaleFactor": 1,
+  "reducedMotion": true,
+  "captures": [
+    {
+      "name": "phone",
+      "file": "phone.png",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "page": {
+        "width": 390,
+        "height": 844,
+        "contentWidth": 390
+      }
+    },
+    {
+      "name": "desktop",
+      "file": "desktop.png",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "page": {
+        "width": 1440,
+        "height": 900,
+        "contentWidth": 1440
+      }
+    }
+  ]
+}
