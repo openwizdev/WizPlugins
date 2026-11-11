@@ -1,0 +1,1260 @@
+
+> bb-plugin-wizbar@0.1.0 test
+> vitest run --config vitest.config.ts --maxWorkers=2 src/ThreadCard.test.tsx
+
+
+ RUN  v4.1.10 <checkout>/wizbar
+
+ ❯ |bb-plugin-wizbar| src/ThreadCard.test.tsx (90 tests | 35 failed) 12728ms
+     × 'observed idle Cloud' 161ms
+     × 'recognised active Cloud' 31ms
+     × 'recognised pending Cloud' 32ms
+     × 'recognised error Cloud' 28ms
+     × 'recognised stopping Cloud' 27ms
+     × 'environment object with null provider' 28ms
+     × 'environment object with  provider' 29ms
+     × 'observed idle Cloud' 44ms
+     × 'recognised active Cloud' 29ms
+     × 'recognised pending Cloud' 24ms
+     × 'recognised error Cloud' 24ms
+     × 'recognised stopping Cloud' 25ms
+     × 'environment object with null provider' 26ms
+     × 'environment object with  provider' 26ms
+     × 'Local startup waiting-for-host stays …' 1014ms
+     × 'unknown runtime' 1013ms
+     × 'missing runtime' 1014ms
+     × 'null runtime' 1014ms
+     × 'empty runtime' 1014ms
+     × 'observed idle Cloud' 28ms
+     × 'recognised active Cloud' 24ms
+     × 'recognised pending Cloud' 21ms
+     × 'recognised error Cloud' 21ms
+     × 'recognised stopping Cloud' 20ms
+     × 'environment object with null provider' 20ms
+     × 'environment object with  provider' 24ms
+     × 'Local startup waiting-for-host stays …' 1009ms
+     × 'unknown runtime' 1013ms
+     × 'missing runtime' 1013ms
+     × 'null runtime' 1013ms
+     × 'empty runtime' 1014ms
+     × retains card navigation and shortcuts with modifier false 34ms
+     × retains card navigation and shortcuts with modifier true 30ms
+     × retains Snoozed wake/status, navigation and restore controls 35ms
+     × retains Settled wake/status, navigation and restore controls 35ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 35 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Inbox machine markers at the registered app boundary > 'observed idle Cloud'
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Inbox machine markers at the registered app boundary > 'recognised active Cloud'
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Inbox machine markers at the registered app boundary > 'recognised pending Cloud'
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Inbox machine markers at the registered app boundary > 'recognised error Cloud'
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Inbox machine markers at the registered app boundary > 'recognised stopping Cloud'
+AssertionError: expected [] to deeply equal [ 'Cloud' ]
+
+- Expected
++ Received
+
+- [
+-   "Cloud",
+- ]
++ []
+
+ ❯ src/ThreadCard.test.tsx:146:70
+    144|       const row = screen.getByRole("listitem");
+    145|       const markers = within(row).queryAllByRole("img", { name: /^(Clo…
+    146|       expect(markers.map((icon) => icon.getAttribute("aria-label"))).t…
+       |                                                                      ^
+    147|       if (shelf !== "Inbox") {
+    148|         const region = screen.getByRole("region", { name: shelf });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/35]⎯
+
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Inbox machine markers at the registered app boundary > 'environment object with null provider'
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Inbox machine markers at the registered app boundary > 'environment object with  provider'
+AssertionError: expected [ 'Cloud' ] to deeply equal [ 'Local' ]
+
+- Expected
++ Received
+
+  [
+-   "Local",
++   "Cloud",
+  ]
+
+ ❯ src/ThreadCard.test.tsx:146:70
+    144|       const row = screen.getByRole("listitem");
+    145|       const markers = within(row).queryAllByRole("img", { name: /^(Clo…
+    146|       expect(markers.map((icon) => icon.getAttribute("aria-label"))).t…
+       |                                                                      ^
+    147|       if (shelf !== "Inbox") {
+    148|         const region = screen.getByRole("region", { name: shelf });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/35]⎯
+
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Snoozed machine markers at the registered app boundary > 'observed idle Cloud'
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Snoozed machine markers at the registered app boundary > 'recognised active Cloud'
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Snoozed machine markers at the registered app boundary > 'recognised pending Cloud'
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Snoozed machine markers at the registered app boundary > 'recognised error Cloud'
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Snoozed machine markers at the registered app boundary > 'recognised stopping Cloud'
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Settled machine markers at the registered app boundary > 'observed idle Cloud'
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Settled machine markers at the registered app boundary > 'recognised active Cloud'
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Settled machine markers at the registered app boundary > 'recognised pending Cloud'
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Settled machine markers at the registered app boundary > 'recognised error Cloud'
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Settled machine markers at the registered app boundary > 'recognised stopping Cloud'
+AssertionError: expected [] to deeply equal [ 'Cloud' ]
+
+- Expected
++ Received
+
+- [
+-   "Cloud",
+- ]
++ []
+
+ ❯ src/ThreadCard.test.tsx:146:70
+    144|       const row = screen.getByRole("listitem");
+    145|       const markers = within(row).queryAllByRole("img", { name: /^(Clo…
+    146|       expect(markers.map((icon) => icon.getAttribute("aria-label"))).t…
+       |                                                                      ^
+    147|       if (shelf !== "Inbox") {
+    148|         const region = screen.getByRole("region", { name: shelf });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/35]⎯
+
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Snoozed machine markers at the registered app boundary > 'environment object with null provider'
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Snoozed machine markers at the registered app boundary > 'environment object with  provider'
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Settled machine markers at the registered app boundary > 'environment object with null provider'
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Settled machine markers at the registered app boundary > 'environment object with  provider'
+AssertionError: expected [ 'Cloud' ] to deeply equal [ 'Local' ]
+
+- Expected
++ Received
+
+  [
+-   "Local",
++   "Cloud",
+  ]
+
+ ❯ src/ThreadCard.test.tsx:146:70
+    144|       const row = screen.getByRole("listitem");
+    145|       const markers = within(row).queryAllByRole("img", { name: /^(Clo…
+    146|       expect(markers.map((icon) => icon.getAttribute("aria-label"))).t…
+       |                                                                      ^
+    147|       if (shelf !== "Inbox") {
+    148|         const region = screen.getByRole("region", { name: shelf });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/35]⎯
+
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Snoozed machine markers at the registered app boundary > 'Local startup waiting-for-host stays …'
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Snoozed machine markers at the registered app boundary > 'unknown runtime'
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Snoozed machine markers at the registered app boundary > 'missing runtime'
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Snoozed machine markers at the registered app boundary > 'null runtime'
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Snoozed machine markers at the registered app boundary > 'empty runtime'
+TestingLibraryElementError: Unable to find role="region" and name "Snoozed"
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="flex min-h-0 flex-1 flex-col"
+    >
+      <div
+        class="flex shrink-0 items-center gap-1 px-2 pb-1"
+      >
+        <button
+          aria-autocomplete="none"
+          aria-expanded="false"
+          aria-label="Project scope: All projects"
+          class="flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"
+          data-state="closed"
+          dir="ltr"
+          role="combobox"
+          type="button"
+        >
+          <span
+            style="pointer-events: none;"
+          >
+            All projects
+          </span>
+          <svg
+            aria-hidden="true"
+            class="size-4 opacity-50"
+            color="currentColor"
+            data-icon="ChevronDown"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+      </div>
+      <div
+        class="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2"
+      >
+        <section>
+          <ul
+            class="flex flex-col gap-px"
+          >
+            <li
+              class="list-none"
+              data-state="closed"
+            >
+              <div
+                class="group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"
+              >
+                <a
+                  aria-label="Review parser"
+                  class="absolute inset-0 cursor-pointer rounded-md"
+                  data-sidebar-thread-id="thr_synsample"
+                  data-sidebar-thread-shortcut-target=""
+                  href="#"
+                />
+                <div
+                  class="pointer-events-none relative flex h-5 items-center gap-1.5"
+                >
+                  <span
+                    class="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"
+                  >
+                    Orchard
+                  </span>
+                  <span
+                    class="flex w-7 shrink-0 items-center justify-end"
+                  >
+                    <span
+                      class="tabular-nums text-2xs text-muted-foreground"
+                    >
+                      7m
+                    </span>
+                  </span>
+                </div>
+                <div
+                  class="pointer-events-none relative mt-0.5 truncate text-sm text-foreground"
+                >
+                  Review parser
+                </div>
+                <div
+                  class="pointer-events-none relative mt-0.5 flex h-4 items-center gap-1.5 text-2xs text-muted-foreground"
+                >
+                  <span
+                    class="flex-1"
+                  />
+                  <span
+                    aria-label="synthetic-agent"
+                    class="flex size-3.5 shrink-0 items-center justify-center"
+                    role="img"
+                  >
+                    <span
+                      class="size-2 rounded-full bg-muted-foreground/50"
+                    />
+                  </span>
+                </div>
+              </div>
+            </li>
+          </ul>
+        </section>
+      </div>
+    </div>
+  </div>
+</body>
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="flex min-h-0 flex-1 flex-col"
+    >
+      <div
+        class="flex shrink-0 items-center gap-1 px-2 pb-1"
+      >
+        <button
+          aria-autocomplete="none"
+          aria-expanded="false"
+          aria-label="Project scope: All projects"
+          class="flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"
+          data-state="closed"
+          dir="ltr"
+          role="combobox"
+          type="button"
+        >
+          <span
+            style="pointer-events: none;"
+          >
+            All projects
+          </span>
+          <svg
+            aria-hidden="true"
+            class="size-4 opacity-50"
+            color="currentColor"
+            data-icon="ChevronDown"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+      </div>
+      <div
+        class="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2"
+      >
+        <section>
+          <ul
+            class="flex flex-col gap-px"
+          >
+            <li
+              class="list-none"
+              data-state="closed"
+            >
+              <div
+                class="group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"
+              >
+                <a
+                  aria-label="Review parser"
+                  class="absolute inset-0 cursor-pointer rounded-md"
+                  data-sidebar-thread-id="thr_synsample"
+                  data-sidebar-thread-shortcut-target=""
+                  href="#"
+                />
+                <div
+                  class="pointer-events-none relative flex h-5 items-center gap-1.5"
+                >
+                  <span
+                    class="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"
+                  >
+                    Orchard
+                  </span>
+                  <span
+                    class="flex w-7 shrink-0 items-center justify-end"
+                  >
+                    <span
+                      class="tabular-nums text-2xs text-muted-foreground"
+                    >
+                      7m
+                    </span>
+                  </span>
+                </div>
+                <div
+                  class="pointer-events-none relative mt-0.5 truncate text-sm text-foreground"
+                >
+                  Review parser
+                </div>
+                <div
+                  class="pointer-events-none relative mt-0.5 flex h-4 items-center gap-1.5 text-2xs text-muted-foreground"
+                >
+                  <span
+                    class="flex-1"
+                  />
+                  <span
+                    aria-label="synthetic-agent"
+                    class="flex size-3.5 shrink-0 items-center justify-center"
+                    role="img"
+                  >
+                    <span
+                      class="size-2 rounded-full bg-muted-foreground/50"
+                    />
+                  </span>
+                </div>
+              </div>
+            </li>
+          </ul>
+        </section>
+      </div>
+    </div>
+  </div>
+</body>
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/ThreadCard.test.tsx:140:37
+    138|       render([sample], shelf === "Inbox" ? [] : [parkedRow(sample.id, …
+    139|       if (shelf !== "Inbox") {
+    140|         const region = await screen.findByRole("region", { name: shelf…
+       |                                     ^
+    141|         expect(within(region).queryByRole("listitem")).toBeNull();
+    142|         fireEvent.click(within(region).getByRole("button"));
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/35]⎯
+
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Settled machine markers at the registered app boundary > 'Local startup waiting-for-host stays …'
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Settled machine markers at the registered app boundary > 'unknown runtime'
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Settled machine markers at the registered app boundary > 'missing runtime'
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Settled machine markers at the registered app boundary > 'null runtime'
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > Settled machine markers at the registered app boundary > 'empty runtime'
+TestingLibraryElementError: Unable to find role="region" and name "Settled"
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="flex min-h-0 flex-1 flex-col"
+    >
+      <div
+        class="flex shrink-0 items-center gap-1 px-2 pb-1"
+      >
+        <button
+          aria-autocomplete="none"
+          aria-expanded="false"
+          aria-label="Project scope: All projects"
+          class="flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"
+          data-state="closed"
+          dir="ltr"
+          role="combobox"
+          type="button"
+        >
+          <span
+            style="pointer-events: none;"
+          >
+            All projects
+          </span>
+          <svg
+            aria-hidden="true"
+            class="size-4 opacity-50"
+            color="currentColor"
+            data-icon="ChevronDown"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+      </div>
+      <div
+        class="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2"
+      >
+        <section>
+          <ul
+            class="flex flex-col gap-px"
+          >
+            <li
+              class="list-none"
+              data-state="closed"
+            >
+              <div
+                class="group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"
+              >
+                <a
+                  aria-label="Review parser"
+                  class="absolute inset-0 cursor-pointer rounded-md"
+                  data-sidebar-thread-id="thr_synsample"
+                  data-sidebar-thread-shortcut-target=""
+                  href="#"
+                />
+                <div
+                  class="pointer-events-none relative flex h-5 items-center gap-1.5"
+                >
+                  <span
+                    class="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"
+                  >
+                    Orchard
+                  </span>
+                  <span
+                    class="flex w-7 shrink-0 items-center justify-end"
+                  >
+                    <span
+                      class="tabular-nums text-2xs text-muted-foreground"
+                    >
+                      7m
+                    </span>
+                  </span>
+                </div>
+                <div
+                  class="pointer-events-none relative mt-0.5 truncate text-sm text-foreground"
+                >
+                  Review parser
+                </div>
+                <div
+                  class="pointer-events-none relative mt-0.5 flex h-4 items-center gap-1.5 text-2xs text-muted-foreground"
+                >
+                  <span
+                    class="flex-1"
+                  />
+                  <span
+                    aria-label="synthetic-agent"
+                    class="flex size-3.5 shrink-0 items-center justify-center"
+                    role="img"
+                  >
+                    <span
+                      class="size-2 rounded-full bg-muted-foreground/50"
+                    />
+                  </span>
+                </div>
+              </div>
+            </li>
+          </ul>
+        </section>
+      </div>
+    </div>
+  </div>
+</body>
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="flex min-h-0 flex-1 flex-col"
+    >
+      <div
+        class="flex shrink-0 items-center gap-1 px-2 pb-1"
+      >
+        <button
+          aria-autocomplete="none"
+          aria-expanded="false"
+          aria-label="Project scope: All projects"
+          class="flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"
+          data-state="closed"
+          dir="ltr"
+          role="combobox"
+          type="button"
+        >
+          <span
+            style="pointer-events: none;"
+          >
+            All projects
+          </span>
+          <svg
+            aria-hidden="true"
+            class="size-4 opacity-50"
+            color="currentColor"
+            data-icon="ChevronDown"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+      </div>
+      <div
+        class="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2"
+      >
+        <section>
+          <ul
+            class="flex flex-col gap-px"
+          >
+            <li
+              class="list-none"
+              data-state="closed"
+            >
+              <div
+                class="group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"
+              >
+                <a
+                  aria-label="Review parser"
+                  class="absolute inset-0 cursor-pointer rounded-md"
+                  data-sidebar-thread-id="thr_synsample"
+                  data-sidebar-thread-shortcut-target=""
+                  href="#"
+                />
+                <div
+                  class="pointer-events-none relative flex h-5 items-center gap-1.5"
+                >
+                  <span
+                    class="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"
+                  >
+                    Orchard
+                  </span>
+                  <span
+                    class="flex w-7 shrink-0 items-center justify-end"
+                  >
+                    <span
+                      class="tabular-nums text-2xs text-muted-foreground"
+                    >
+                      7m
+                    </span>
+                  </span>
+                </div>
+                <div
+                  class="pointer-events-none relative mt-0.5 truncate text-sm text-foreground"
+                >
+                  Review parser
+                </div>
+                <div
+                  class="pointer-events-none relative mt-0.5 flex h-4 items-center gap-1.5 text-2xs text-muted-foreground"
+                >
+                  <span
+                    class="flex-1"
+                  />
+                  <span
+                    aria-label="synthetic-agent"
+                    class="flex size-3.5 shrink-0 items-center justify-center"
+                    role="img"
+                  >
+                    <span
+                      class="size-2 rounded-full bg-muted-foreground/50"
+                    />
+                  </span>
+                </div>
+              </div>
+            </li>
+          </ul>
+        </section>
+      </div>
+    </div>
+  </div>
+</body>
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/ThreadCard.test.tsx:140:37
+    138|       render([sample], shelf === "Inbox" ? [] : [parkedRow(sample.id, …
+    139|       if (shelf !== "Inbox") {
+    140|         const region = await screen.findByRole("region", { name: shelf…
+       |                                     ^
+    141|         expect(within(region).queryByRole("listitem")).toBeNull();
+    142|         fireEvent.click(within(region).getByRole("button"));
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/35]⎯
+
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > machine row regressions > retains card navigation and shortcuts with modifier false
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > machine row regressions > retains card navigation and shortcuts with modifier true
+TestingLibraryElementError: Unable to find an accessible element with the role "img" and name "Cloud"
+
+Here are the accessible roles:
+
+  combobox:
+
+  Name "Project scope: All projects":
+  <button
+    aria-autocomplete="none"
+    aria-expanded="false"
+    aria-label="Project scope: All projects"
+    class="flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"
+    data-state="closed"
+    dir="ltr"
+    role="combobox"
+    type="button"
+  />
+
+  --------------------------------------------------
+  list:
+
+  Name "":
+  <ul
+    class="flex flex-col gap-px"
+  />
+
+  --------------------------------------------------
+  listitem:
+
+  Name "":
+  <li
+    class="list-none"
+    data-state="closed"
+  />
+
+  --------------------------------------------------
+  link:
+
+  Name "Review parser":
+  <a
+    aria-label="Review parser"
+    class="absolute inset-0 cursor-pointer rounded-md"
+    data-sidebar-thread-id="thr_synsample"
+    data-sidebar-thread-shortcut-target=""
+    href="#"
+  />
+
+  --------------------------------------------------
+  button:
+
+  Name "Snooze until tomorrow":
+  <button
+    aria-label="Snooze until tomorrow"
+    class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+    type="button"
+  />
+
+  Name "Settle thread":
+  <button
+    aria-label="Settle thread"
+    class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+    type="button"
+  />
+
+  --------------------------------------------------
+  img:
+
+  Name "synthetic-agent":
+  <span
+    aria-label="synthetic-agent"
+    class="flex size-3.5 shrink-0 items-center justify-center"
+    role="img"
+  />
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+<body
+  style=""
+>
+  <div>
+    <div
+      class="flex min-h-0 flex-1 flex-col"
+    >
+      <div
+        class="flex shrink-0 items-center gap-1 px-2 pb-1"
+      >
+        <button
+          aria-autocomplete="none"
+          aria-expanded="false"
+          aria-label="Project scope: All projects"
+          class="flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"
+          data-state="closed"
+          dir="ltr"
+          role="combobox"
+          type="button"
+        >
+          <span
+            style="pointer-events: none;"
+          >
+            All projects
+          </span>
+          <svg
+            aria-hidden="true"
+            class="size-4 opacity-50"
+            color="currentColor"
+            data-icon="ChevronDown"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+      </div>
+      <div
+        class="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2"
+      >
+        <section>
+          <ul
+            class="flex flex-col gap-px"
+          >
+            <li
+              class="list-none"
+              data-state="closed"
+            >
+              <div
+                class="group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"
+              >
+                <a
+                  aria-label="Review parser"
+                  class="absolute inset-0 cursor-pointer rounded-md"
+                  data-sidebar-thread-id="thr_synsample"
+                  data-sidebar-thread-shortcut-target=""
+                  href="#"
+                />
+                <div
+                  class="pointer-events-none relative flex h-5 items-center gap-1.5"
+                >
+                  <span
+                    class="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"
+                  >
+                    Orchard
+                  </span>
+                  <span
+                    class="pointer-events-auto hidden items-center gap-0.5 group-hover/card:flex"
+                  >
+                    <button
+                      aria-label="Snooze until tomorrow"
+                      class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+                      type="button"
+                    >
+                      <svg
+                        class="size-3.5"
+                        color="currentColor"
+                        data-icon="Clock"
+                        fill="none"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        width="24"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <circle
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          stroke-width="1.5"
+                        />
+                        <path
+                          d="M12 8V12L14 14"
+                          stroke="currentColor"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="1.5"
+                        />
+                      </svg>
+                    </button>
+                    <button
+                      aria-label="Settle thread"
+                      class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+                      type="button"
+                    >
+                      <svg
+                        class="size-3.5"
+                        color="currentColor"
+                        data-icon="Check"
+                        fill="none"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        width="24"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M5 14L8.5 17.5L19 6.5"
+                          stroke="currentColor"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="1.5"
+                        />
+                      </svg>
+                    </button>
+                  </span>
+                  <span
+                    class="flex w-7 shrink-0 items-center justify-end group-hover/card:hidden"
+                  >
+                    <span
+                      class="tabular-nums text-2xs text-muted-foreground"
+                    >
+                      7m
+                    </span>
+                  </span>
+                </div>
+                <div
+                  class="pointer-events-none relative mt-0.5 truncate text-sm text-foreground"
+                >
+                  Review parser
+                </div>
+                <div
+                  class="pointer-events-none relative mt-0.5 flex h-4 items-center gap-1.5 text-2xs text-muted-foreground"
+                >
+                  <span
+                    class="flex-1"
+                  />
+                  <span
+                    aria-label="synthetic-agent"
+                    class="flex size-3.5 shrink-0 items-center justify-center"
+                    role="img"
+                  >
+                    <span
+                      class="size-2 rounded-full bg-muted-foreground/50"
+                    />
+                  </span>
+                </div>
+              </div>
+            </li>
+          </ul>
+        </section>
+      </div>
+    </div>
+  </div>
+</body>
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/ThreadCard.test.tsx:178:19
+    176|     expect(link.hasAttribute("data-sidebar-thread-shortcut-target")).t…
+    177|     expect(screen.getByText("7m")).toBeDefined();
+    178|     expect(screen.getByRole("img", { name: "Cloud" })).toBeDefined();
+       |                   ^
+    179|     fireEvent.click(link, { metaKey: modifier });
+    180|     expect(rendered.sidebarActionCalls).toEqual([{ method: "open", thr…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/35]⎯
+
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > machine row regressions > retains Snoozed wake/status, navigation and restore controls
+TestingLibraryElementError: Unable to find an accessible element with the role "img" and name "Cloud"
+
+Here are the accessible roles:
+
+  button:
+
+  Name "Snoozed":
+  <button
+    aria-expanded="true"
+    class="mt-3 flex w-full items-center gap-2 px-2.5 pb-1 text-left"
+    type="button"
+  />
+
+  --------------------------------------------------list:
+
+  Name "":
+  <ul
+    class="flex flex-col gap-px"
+  />
+
+  --------------------------------------------------
+  listitem:
+
+  Name "":
+  <li
+    class="list-none"
+    data-state="closed"
+  />
+
+  --------------------------------------------------
+  link:
+
+  Name "Review parser":
+  <a
+    aria-label="Review parser"
+    class="absolute inset-0 cursor-pointer rounded-md"
+    data-sidebar-thread-id="thr_synsample"
+    data-sidebar-thread-shortcut-target=""
+    href="#"
+  />
+
+  --------------------------------------------------
+  button:
+
+  Name "Wake thread now":
+  <button
+    aria-label="Wake thread now"
+    class="pointer-events-auto absolute -right-0.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground opacity-0 hover:text-foreground focus-visible:opacity-100 group-hover/slim:opacity-100"
+    type="button"
+  />
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+<section
+  aria-label="Snoozed"
+>
+  <button
+    aria-expanded="true"
+    class="mt-3 flex w-full items-center gap-2 px-2.5 pb-1 text-left"
+    type="button"
+  >
+    <span
+      class="text-2xs font-medium text-muted-foreground/70"
+    >
+      Snoozed
+    </span>
+    <span
+      class="h-px flex-1 bg-sidebar-border"
+    />
+    <span
+      class="flex size-3.5 shrink-0 items-center justify-center"
+    >
+      <svg
+        class="size-3 text-muted-foreground/70 transition-transform rotate-180"
+        color="currentColor"
+        data-icon="ChevronDown"
+        fill="none"
+        height="24"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="1.5"
+        />
+      </svg>
+    </span>
+  </button>
+  <ul
+    class="flex flex-col gap-px"
+  >
+    <li
+      class="list-none"
+      data-state="closed"
+    >
+      <div
+        class="group/slim relative flex h-8 items-center gap-2 rounded-md px-2.5 text-xs hover:bg-sidebar-accent/60"
+      >
+        <a
+          aria-label="Review parser"
+          class="absolute inset-0 cursor-pointer rounded-md"
+          data-sidebar-thread-id="thr_synsample"
+          data-sidebar-thread-shortcut-target=""
+          href="#"
+        />
+        <span
+          class="pointer-events-none relative min-w-0 flex-1 truncate text-muted-foreground/70 group-hover/slim:text-foreground"
+        >
+          Review parser
+        </span>
+        <span
+          class="flex w-7 shrink-0 items-center justify-end pointer-events-none relative tabular-nums text-2xs text-muted-foreground/60"
+        >
+          <span
+            class="flex items-center group-hover/slim:opacity-0"
+          >
+            1d
+          </span>
+          <button
+            aria-label="Wake thread now"
+            class="pointer-events-auto absolute -right-0.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground opacity-0 hover:text-foreground focus-visible:opacity-100 group-hover/slim:opacity-100"
+            type="button"
+          >
+            <svg
+              class="size-3.5"
+              color="currentColor"
+              data-icon="Clock"
+              fill="none"
+              height="24"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <circle
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="1.5"
+              />
+              <path
+                d="M12 8V12L14 14"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="1.5"
+              />
+            </svg>
+          </button>
+        </span>
+      </div>
+    </li>
+  </ul>
+</section>
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:109:15
+ ❯ src/ThreadCard.test.tsx:208:27
+    206|     await waitFor(() => expect(shelf === "Snoozed" ? rendered.unsnooze…
+    207|     expect(rendered.onNavigate).toHaveBeenCalledTimes(1);
+    208|     expect(within(region).getAllByRole("img", { name: "Cloud" })).toHa…
+       |                           ^
+    209|   });
+    210| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/35]⎯
+
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > machine row regressions > retains Settled wake/status, navigation and restore controls
+TestingLibraryElementError: Unable to find an accessible element with the role "img" and name "Cloud"
+
+Here are the accessible roles:
+
+  button:
+
+  Name "Settled":
+  <button
+    aria-expanded="true"
+    class="mt-3 flex w-full items-center gap-2 px-2.5 pb-1 text-left"
+    type="button"
+  />
+
+  --------------------------------------------------list:
+
+  Name "":
+  <ul
+    class="flex flex-col gap-px"
+  />
+
+  --------------------------------------------------
+  listitem:
+
+  Name "":
+  <li
+    class="list-none"
+    data-state="closed"
+  />
+
+  --------------------------------------------------
+  link:
+
+  Name "Review parser":
+  <a
+    aria-label="Review parser"
+    class="absolute inset-0 cursor-pointer rounded-md"
+    data-sidebar-thread-id="thr_synsample"
+    data-sidebar-thread-shortcut-target=""
+    href="#"
+  />
+
+  --------------------------------------------------
+  button:
+
+  Name "Un-settle thread":
+  <button
+    aria-label="Un-settle thread"
+    class="pointer-events-auto absolute -right-0.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground opacity-0 hover:text-foreground focus-visible:opacity-100 group-hover/slim:opacity-100"
+    type="button"
+  />
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+<section
+  aria-label="Settled"
+>
+  <button
+    aria-expanded="true"
+    class="mt-3 flex w-full items-center gap-2 px-2.5 pb-1 text-left"
+    type="button"
+  >
+    <span
+      class="text-2xs font-medium text-muted-foreground/70"
+    >
+      Settled
+    </span>
+    <span
+      class="h-px flex-1 bg-sidebar-border"
+    />
+    <span
+      class="flex size-3.5 shrink-0 items-center justify-center"
+    >
+      <svg
+        class="size-3 text-muted-foreground/70 transition-transform rotate-180"
+        color="currentColor"
+        data-icon="ChevronDown"
+        fill="none"
+        height="24"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="1.5"
+        />
+      </svg>
+    </span>
+  </button>
+  <ul
+    class="flex flex-col gap-px"
+  >
+    <li
+      class="list-none"
+      data-state="closed"
+    >
+      <div
+        class="group/slim relative flex h-8 items-center gap-2 rounded-md px-2.5 text-xs hover:bg-sidebar-accent/60"
+      >
+        <a
+          aria-label="Review parser"
+          class="absolute inset-0 cursor-pointer rounded-md"
+          data-sidebar-thread-id="thr_synsample"
+          data-sidebar-thread-shortcut-target=""
+          href="#"
+        />
+        <span
+          class="pointer-events-none relative min-w-0 flex-1 truncate text-muted-foreground/70 group-hover/slim:text-foreground"
+        >
+          Review parser
+        </span>
+        <span
+          class="flex w-7 shrink-0 items-center justify-end pointer-events-none relative tabular-nums text-2xs text-muted-foreground/60"
+        >
+          <span
+            class="flex items-center group-hover/slim:opacity-0"
+          >
+            <span
+              class="tabular-nums text-2xs text-muted-foreground"
+            >
+              7m
+            </span>
+          </span>
+          <button
+            aria-label="Un-settle thread"
+            class="pointer-events-auto absolute -right-0.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground opacity-0 hover:text-foreground focus-visible:opacity-100 group-hover/slim:opacity-100"
+            type="button"
+          >
+            <svg
+              class="size-3.5"
+              color="currentColor"
+              data-icon="ArrowTurnBackward"
+              fill="none"
+              height="24"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M11 6H15.5C17.9853 6 20 8.01472 20 10.5C20 12.9853 17.9853 15 15.5 15H4"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="1.5"
+              />
+              <path
+                d="M6.99998 12C6.99998 12 4.00001 14.2095 4 15C3.99999 15.7906 7 18 7 18"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="1.5"
+              />
+            </svg>
+          </button>
+        </span>
+      </div>
+    </li>
+  </ul>
+</section>
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:109:15
+ ❯ src/ThreadCard.test.tsx:208:27
+    206|     await waitFor(() => expect(shelf === "Snoozed" ? rendered.unsnooze…
+    207|     expect(rendered.onNavigate).toHaveBeenCalledTimes(1);
+    208|     expect(within(region).getAllByRole("img", { name: "Cloud" })).toHa…
+       |                           ^
+    209|   });
+    210| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/35]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  35 failed | 55 passed (90)
+   Start at  05:46:02
+   Duration  13.97s (transform 133ms, setup 0ms, import 453ms, tests 12.73s, environment 672ms)

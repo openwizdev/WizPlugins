@@ -1,0 +1,58 @@
+
+> bb-plugin-wizbar@0.1.0 test
+> vitest run --config vitest.config.ts --maxWorkers=2 src/MachineIcon.test.tsx
+
+
+ RUN  v4.1.10 <checkout>/wizbar
+
+ ❯ |bb-plugin-wizbar| src/MachineIcon.test.tsx (4 tests | 3 failed) 153ms
+     × ready observed input, icons enabled true 47ms
+     × loading suppresses a stale Local row and reports unavailable while hidden too 17ms
+     × error suppresses a stale Local row and reports unavailable while hidden too 9ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/MachineIcon.test.tsx > N5 source availability and visibility at the rendered boundary > ready observed input, icons enabled true
+AssertionError: expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ src/MachineIcon.test.tsx:25:61
+     23|       sidebarThreads: { status: "ready" },
+     24|     });
+     25|     expect(screen.queryAllByRole("img", { name: "Cloud" })).toHaveLeng…
+       |                                                             ^
+     26|     if (enabled) {
+     27|       const marker = screen.getByRole("img", { name: "Cloud" });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  |bb-plugin-wizbar| src/MachineIcon.test.tsx > N5 source availability and visibility at the rendered boundary > loading suppresses a stale Local row and reports unavailable while hidden too
+ FAIL  |bb-plugin-wizbar| src/MachineIcon.test.tsx > N5 source availability and visibility at the rendered boundary > error suppresses a stale Local row and reports unavailable while hidden too
+AssertionError: expected [ <span role="img" …(3)>…(1)</span> ] to have a length of +0 but got 1
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ src/MachineIcon.test.tsx:53:73
+     51|         sidebarThreads: { status },
+     52|       });
+     53|       expect(screen.queryAllByRole("img", { name: /^(Cloud|Local)$/ })…
+       |                                                                         ^
+     54|       expect(getSourceStatuses(pluginId).icons).toBe("unavailable");
+     55|       expect(screen.getByText("The Cloud/Local source is not connected…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 1 passed (4)
+   Start at  05:46:55
+   Duration  1.23s (transform 126ms, setup 0ms, import 436ms, tests 153ms, environment 517ms)

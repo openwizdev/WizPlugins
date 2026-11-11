@@ -105,27 +105,40 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.useRealTimers(); });
 
-const cases = [
-  { name: "null provider", environment: environment(null), marker: "Cloud" },
-  { name: "empty provider with branch", environment: environment("", "feature/parser"), marker: "Cloud" },
-  { name: "project checkout with branch", environment: environment("project-checkout", "feature/parser"), marker: "Local" },
-  { name: "personal workspace without branch", environment: environment("personal-workspace"), marker: "Local" },
-  { name: "other set provider", environment: environment("synthetic-provider"), marker: "Local" },
-  { name: "null environment", environment: null, marker: null },
-  { name: "missing environment", environment: undefined, marker: null },
-  // Malformed runtime payloads, not extra SDK fields or a proposed schema.
-  { name: "missing provider", environment: JSON.parse('{"branchName":"feature/parser"}'), marker: null },
-  { name: "numeric provider", environment: JSON.parse('{"providerId":0}'), marker: null },
-  { name: "boolean provider", environment: JSON.parse('{"providerId":false}'), marker: null },
-  { name: "object provider", environment: JSON.parse('{"providerId":{}}'), marker: null },
+// N5: projection shapes from the keeper record and the scoped source ruling.
+// Null/empty providers on an environment object are Local, never Cloud.
+const cases: { name: string; input: Partial<PluginSidebarThread>; marker: string | null; inboxOnly?: boolean }[] = [
+  { name: "observed idle Cloud", input: { environment: null, host: null }, marker: "Cloud" },
+  ...(["active", "pending", "error", "stopping"] as const).map((runtimeStatus) => ({
+    name: `recognised ${runtimeStatus} Cloud`, input: { environment: null, host: null, runtimeStatus }, marker: "Cloud",
+  })),
+  ...[null, "", "project-checkout", "git-worktree", "personal-workspace", "synthetic-provider"].map((provider) => ({
+    name: `environment object with ${String(provider)} provider`,
+    input: { environment: environment(provider, "feature/parser") }, marker: "Local",
+  })),
+  ...(["starting", "provisioning", "waiting-for-host"] as const).map((runtimeStatus) => ({
+    name: `Local startup ${runtimeStatus} stays unmarked`, input: { environment: null, host: null, runtimeStatus }, marker: null, inboxOnly: runtimeStatus === "waiting-for-host",
+  })),
+  { name: "unknown runtime", input: JSON.parse('{"environment":null,"host":null,"runtimeStatus":"future-state"}'), marker: null, inboxOnly: true },
+  { name: "missing runtime", input: { environment: null, host: null, runtimeStatus: undefined }, marker: null, inboxOnly: true },
+  { name: "null runtime", input: JSON.parse('{"environment":null,"host":null,"runtimeStatus":null}'), marker: null, inboxOnly: true },
+  { name: "empty runtime", input: JSON.parse('{"environment":null,"host":null,"runtimeStatus":""}'), marker: null, inboxOnly: true },
+  { name: "host without environment", input: { environment: null }, marker: null },
+  { name: "missing host", input: { environment: null, host: undefined }, marker: null },
+  { name: "missing environment", input: { environment: undefined, host: null }, marker: null },
+  ...['[]', '""', 'false', '{"branchName":"feature/parser"}', '{"providerId":0}', '{"providerId":false}', '{"providerId":{}}'].map((value) => ({
+    name: `malformed environment ${value}`, input: { environment: JSON.parse(value), host: null }, marker: null,
+  })),
 ];
 
 for (const shelf of ["Inbox", "Snoozed", "Settled"] as const) {
   describe(`${shelf} machine markers at the registered app boundary`, () => {
-    it.each(cases)("$name", async ({ environment, marker }) => {
-      const sample = thread({ environment });
+    it.each(cases)("$name", async ({ input, marker, inboxOnly }) => {
+      // Invalid parking authority keeps these rows in Inbox, independently of icons.
+      const shownShelf = inboxOnly ? "Inbox" : shelf;
+      const sample = thread(input);
       render([sample], shelf === "Inbox" ? [] : [parkedRow(sample.id, shelf)]);
-      if (shelf !== "Inbox") {
+      if (shownShelf !== "Inbox") {
         const region = await screen.findByRole("region", { name: shelf });
         expect(within(region).queryByRole("listitem")).toBeNull();
         fireEvent.click(within(region).getByRole("button"));
@@ -133,7 +146,7 @@ for (const shelf of ["Inbox", "Snoozed", "Settled"] as const) {
       const row = screen.getByRole("listitem");
       const markers = within(row).queryAllByRole("img", { name: /^(Cloud|Local)$/ });
       expect(markers.map((icon) => icon.getAttribute("aria-label"))).toEqual(marker ? [marker] : []);
-      if (shelf !== "Inbox") {
+      if (shownShelf !== "Inbox") {
         const region = screen.getByRole("region", { name: shelf });
         fireEvent.click(within(region).getByRole("button", { name: shelf }));
         expect(within(region).queryByRole("listitem")).toBeNull();
@@ -147,7 +160,7 @@ for (const shelf of ["Inbox", "Snoozed", "Settled"] as const) {
 describe("machine row regressions", () => {
   it("keeps the correct marker after search and project filtering", () => {
     render([
-      thread({ environment: environment(null) }),
+      thread({ environment: null, host: null }),
       thread({ id: "thr_synguide", projectId: projects[1]!.id, title: "Write guide", environment: environment("personal-workspace") }),
     ], [], "guide");
     fireEvent.keyDown(screen.getByLabelText(/Project scope/), { key: "Enter" });
@@ -159,7 +172,7 @@ describe("machine row regressions", () => {
   });
 
   it.each([false, true])("retains card navigation and shortcuts with modifier %s", (modifier) => {
-    const rendered = render([thread({ environment: environment(null) })]);
+    const rendered = render([thread({ environment: null, host: null })]);
     const link = screen.getByRole("link", { name: "Review parser" });
     expect(link.getAttribute("data-sidebar-thread-id")).toBe("thr_synsample");
     expect(link.hasAttribute("data-sidebar-thread-shortcut-target")).toBe(true);
@@ -181,7 +194,7 @@ describe("machine row regressions", () => {
   });
 
   it.each(["Snoozed", "Settled"] as const)("retains %s wake/status, navigation and restore controls", async (shelf) => {
-    const sample = thread({ environment: environment(null) });
+    const sample = thread({ environment: null, host: null });
     const rendered = render([sample], [parkedRow(sample.id, shelf)]);
     const region = await screen.findByRole("region", { name: shelf });
     fireEvent.click(within(region).getByRole("button"));
@@ -196,4 +209,43 @@ describe("machine row regressions", () => {
     expect(rendered.onNavigate).toHaveBeenCalledTimes(1);
     expect(within(region).getAllByRole("img", { name: "Cloud" })).toHaveLength(1);
   });
+});
+
+// PR #35 R1: the muted row has separate prop plumbing from the other shelves.
+describe("Muted machine markers at the registered app boundary", () => {
+  for (const enabled of [true, false]) {
+    it.each([
+      { name: "Cloud", input: { environment: null, host: null }, marker: "Cloud" },
+      { name: "Local", input: { environment: environment("project-checkout") }, marker: "Local" },
+      { name: "unknown startup", input: { environment: null, host: null, runtimeStatus: "starting" as const }, marker: null },
+    ])(`R1 $name with icons enabled ${enabled}`, async ({ input, marker }) => {
+      const sample = thread({ status: "active", runtimeStatus: "active", indicator: "runtime", ...input });
+      const unmute = vi.fn(() => ({ ok: true }));
+      const onNavigate = vi.fn();
+      const rendered = renderSlot(inbox, {
+        activeThreadId: null, activeProjectId: null, isCompactViewport: false,
+        onNavigate, searchQuery: "",
+      }, {
+        settings: { machineIconsEnabled: enabled },
+        sidebarThreads: { status: "ready", threads: [sample], projects },
+        rpc: { listLifecycle: () => ({ rows: [{
+          threadId: sample.id, settledAt: null, snoozedAt: null, snoozedUntil: null,
+          mutedAt: NOW, muteAttentionAt: sample.latestAttentionAt,
+        }] }), unmute },
+      });
+      const shelf = await screen.findByRole("region", { name: "Muted" });
+      expect(within(shelf).queryByRole("listitem")).toBeNull();
+      fireEvent.click(within(shelf).getByRole("button"));
+      const link = within(shelf).getByRole("link", { name: "Review parser" });
+      expect(link.getAttribute("data-sidebar-thread-id")).toBe(sample.id);
+      expect(link.hasAttribute("data-sidebar-thread-shortcut-target")).toBe(true);
+      fireEvent.click(link, { ctrlKey: true });
+      expect(rendered.sidebarActionCalls).toEqual([{ method: "open", threadId: sample.id, options: { split: true } }]);
+      expect(onNavigate).toHaveBeenCalledTimes(1);
+      fireEvent.click(within(shelf).getByRole("button", { name: "Unmute thread" }));
+      await waitFor(() => expect(unmute).toHaveBeenCalledWith({ threadId: sample.id }));
+      expect(within(shelf).queryAllByRole("img", { name: /^(Cloud|Local)$/ })
+        .map((icon) => icon.getAttribute("aria-label"))).toEqual(enabled && marker ? [marker] : []);
+    });
+  }
 });

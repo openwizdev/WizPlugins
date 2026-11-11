@@ -1,29 +1,14 @@
-import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
+import { experimental_useSidebarThreads as useSidebarThreads } from "@get-bb/plugin-sdk/app";
 import { Icon } from "./components/Icon";
 import { useWizBarSettings } from "./SettingsPage";
+import { classifyMachine, type MachineInput } from "./machine-source";
 
-/** WD5's observed mapping, not a general SDK guarantee. Unknown stays unmarked. */
-export function MachineIcon({
-  environment,
-}: {
-  environment: PluginSidebarThread["environment"] | undefined;
-}) {
+/** Suppress row markers until the sidebar source is ready. */
+export function MachineIcon(input: MachineInput) {
+  const { status } = useSidebarThreads();
   const { machineIconsEnabled } = useWizBarSettings();
   if (!machineIconsEnabled) return null;
-  if (
-    !environment ||
-    typeof environment !== "object" ||
-    Array.isArray(environment)
-  ) {
-    return null;
-  }
-  const providerId = environment.providerId;
-  const kind =
-    providerId === null || providerId === ""
-      ? "Cloud"
-      : typeof providerId === "string"
-        ? "Local"
-        : null;
+  const kind = status === "ready" ? classifyMachine(input) : null;
   if (kind === null) return null;
 
   return (

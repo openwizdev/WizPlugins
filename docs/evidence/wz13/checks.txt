@@ -1,0 +1,18 @@
+Checked source commit: 4e89cef2c459da4bb25841e0f129bf801c0be607.
+Commands run from wizbar/.
+npm ci: exit 0; existing lockfile unchanged.
+npm run typecheck: exit 0.
+npm test -- --maxWorkers=2 src/ThreadCard.test.tsx src/MachineIcon.test.tsx: exit 0, 94/94.
+Full plugin suite:
+
+> bb-plugin-wizbar@0.1.0 test
+> vitest run --config vitest.config.ts --maxWorkers=2
+
+
+ RUN  v4.1.10 <checkout>/wizbar
+
+
+ Test Files  14 passed (14)
+      Tests  385 passed (385)
+   Start at  05:50:49
+   Duration  17.63s (transform 271ms, setup 0ms, import 2.69s, tests 26.97s, environment 3.46s)
