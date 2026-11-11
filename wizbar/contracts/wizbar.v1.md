@@ -131,8 +131,11 @@ existing WZ11 visibility guard is preserved; no settings API or persistence chan
 [WZ12-F1](https://github.com/openwizdev/wizplugins/issues/28#issuecomment-6786760739)
 approves the numeric custom artwork as the icon of one no-op
 `experimental_sidebarFooter` action, honoring host sizing, with no disclosure,
-panel, card or alternate strip. Its static label/update and empty-wrapper limits
-are the subject of WZ12-F2 on the ticket. The real host's sizing, wrapping, tooltip
+panel, card or alternate strip. [WZ12-F2](https://github.com/openwizdev/wizplugins/issues/28#issuecomment-6787335036)
+permits a fixed honest host label while artwork owns dynamic hover/focus text.
+Disabled/unavailable input returns blank artwork; host wrapper removal is not
+established by that result or waived as an acceptance requirement. No mutable
+label, conditional-hide or host DOM/CSS override is used. The real host's sizing, wrapping, tooltip
 arbitration, placement, count agreement and updates remain Unverified until keeper
 #9. Synthetic captures cannot establish those outcomes.
 
