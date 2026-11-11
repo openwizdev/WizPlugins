@@ -25,3 +25,14 @@ change is authorized. No dependency or SDK change. Helpers: none needed.
 Before each test edit: the owning row above states the contract, plausible bug
 and missing coverage. Existing WZ5 tests only test explicitly asserted complete
 input and never connect the production hook; new cases fill that gap.
+
+## Continuation: approved registration
+
+WZ12-F2 is resolved by the [orchestrator ruling](https://github.com/openwizdev/wizplugins/issues/28#issuecomment-6787335036).
+The existing N4-footer registration test owns the observable contract: exactly one
+no-op action with the honest static label and registered numeric artwork. Without
+registration, no footer counter can be mounted by the host. Historical artwork
+rendering alone misses that bug. Re-run this existing proof red before adding the
+registration; retain the original source/count/red chronology without reset.
+Blank disabled/unavailable artwork does not prove the host hides its wrapper;
+keeper #9 still owns hiding, tooltip arbitration, sizing and placement acceptance.
