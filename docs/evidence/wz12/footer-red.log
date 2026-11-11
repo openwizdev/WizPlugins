@@ -1,0 +1,97 @@
+
+> bb-plugin-wizbar@0.1.0 test
+> vitest run --config vitest.config.ts src/FooterCounter.test.tsx --maxWorkers=2
+
+
+ RUN  v4.1.10 <public-checkout>/wizbar
+
+ ❯ |bb-plugin-wizbar| src/FooterCounter.test.tsx (10 tests | 4 failed) 855ms
+     × registers numeric artwork in one no-op action, with no disclosure 14ms
+     × reads raw observable projects/children and publishes unverified coverage 18ms
+     × keeps source status independent of WZ11's disabled visibility and reconnects 7ms
+     × updates observable artwork to dim zero, clears stale hover on failure and discloses thread-only input 28ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/FooterCounter.test.tsx > N4: approved observable footer route > registers numeric artwork in one no-op action, with no disclosure
+AssertionError: expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ src/FooterCounter.test.tsx:99:48
+     97|   it("registers numeric artwork in one no-op action, with no disclosur…
+     98|     expect(app.sidebarFooterActions).toEqual([]);
+     99|     expect(app.experimentalSidebarFooterItems).toHaveLength(1);
+       |                                                ^
+    100|     const action = app.experimentalSidebarFooterItems[0]!;
+    101|     expect(action.kind).toBe("action");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  |bb-plugin-wizbar| src/FooterCounter.test.tsx > N4: approved observable footer route > reads raw observable projects/children and publishes unverified coverage
+TestingLibraryElementError: Unable to find an accessible element with the role "status" and name "2 running"
+
+There are no accessible roles. But there might be some inaccessible roles. If you wish to access them, then set the `hidden` option to `true`. Learn more about this here: https://testing-library.com/docs/dom-testing-library/api-queries#byrole
+
+Ignored nodes: comments, script, style
+[36m<body[39m
+  [33mstyle[39m=[32m""[39m
+[36m>[39m
+  [36m<div />[39m
+[36m</body>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/FooterCounter.test.tsx:114:28
+    112|       pluginId: "synthetic-running-source", sidebarThreads: { status: …
+    113|     });
+    114|     const counter = screen.getByRole("status", { name: "2 running" });
+       |                            ^
+    115|     expect(counter.textContent).toBe("2");
+    116|     expect(getSourceStatuses("synthetic-running-source").footer).toBe(…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  |bb-plugin-wizbar| src/FooterCounter.test.tsx > N4: approved observable footer route > keeps source status independent of WZ11's disabled visibility and reconnects
+AssertionError: expected 'unavailable' to be 'unverified' // Object.is equality
+
+Expected: "unverified"
+Received: "unavailable"
+
+ ❯ src/FooterCounter.test.tsx:143:48
+    141|     });
+    142|     expect(rendered.container.innerHTML).toBe("");
+    143|     expect(getSourceStatuses(pluginId).footer).toBe("unverified");
+       |                                                ^
+    144|     await rendered.setRealtimeConnectionState("reconnecting");
+    145|     expect(getSourceStatuses(pluginId).footer).toBe("unavailable");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  |bb-plugin-wizbar| src/FooterCounter.test.tsx > N4: approved observable footer route > updates observable artwork to dim zero, clears stale hover on failure and discloses thread-only input
+AssertionError: expected '0 threads,  subagents' to be '0 running · subagents not counted yet…' // Object.is equality
+
+Expected: "0 running · subagents not counted yet · some threads may be unseen"
+Received: "0 threads,  subagents"
+
+ ❯ src/FooterCounter.test.tsx:158:53
+    156|     expect(zero.style.color).toBe("var(--muted-foreground)");
+    157|     expect(rendered.container.querySelector("svg")?.style.animation).t…
+    158|     expect(screen.getByRole("tooltip").textContent).toBe("0 running · …
+       |                                                     ^
+    159|     rendered.rerender(<FooterCounterArtwork source={readRunningSource(…
+    160|     expect(screen.queryByRole("status")).toBeNull();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed | 6 passed (10)
+   Start at  04:13:24
+   Duration  3.06s (transform 293ms, setup 0ms, import 941ms, tests 855ms, environment 987ms)
+
