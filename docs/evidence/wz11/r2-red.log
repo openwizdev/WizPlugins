@@ -1,0 +1,55 @@
+
+> bb-plugin-wizbar@0.1.0 test
+> vitest run --config vitest.config.ts src/SettingsPage.test.tsx --maxWorkers=2
+
+
+ RUN  v4.1.10 <plugin>
+
+ ❯ |bb-plugin-wizbar| src/SettingsPage.test.tsx (13 tests | 2 failed) 465ms
+     × R1/R2 keeps the save lock and outcome across closing and reopening: {"succeeds":true,"footerEnabled":false,"message":"Saved","alerts":0} 28ms
+     × R1/R2 keeps the save lock and outcome across closing and reopening: {"succeeds":false,"footerEnabled":true,"message":"Could not save. Try again.","alerts":1} 26ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/SettingsPage.test.tsx > N1: settings through the registered app > R1/R2 keeps the save lock and outcome across closing and reopening: {"succeeds":true,"footerEnabled":false,"message":"Saved","alerts":0}
+AssertionError: expected '' to be 'Saved' // Object.is equality
+
+- Expected
++ Received
+
+- Saved
+
+ ❯ src/SettingsPage.test.tsx:177:79
+    175|     expect(icons.checked).toBe(true);
+    176|     // R2: the initiating page is gone, so its local notification miss…
+    177|     expect(screen.getByRole("status", { name: "Settings save" }).textC…
+       |                                                                               ^
+    178|     expect(screen.queryAllByRole("alert")).toHaveLength(alerts);
+    179|     toggle("Cloud/Local row icons");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  |bb-plugin-wizbar| src/SettingsPage.test.tsx > N1: settings through the registered app > R1/R2 keeps the save lock and outcome across closing and reopening: {"succeeds":false,"footerEnabled":true,"message":"Could not save. Try again.","alerts":1}
+AssertionError: expected '' to be 'Could not save. Try again.' // Object.is equality
+
+- Expected
++ Received
+
+- Could not save. Try again.
+
+ ❯ src/SettingsPage.test.tsx:177:79
+    175|     expect(icons.checked).toBe(true);
+    176|     // R2: the initiating page is gone, so its local notification miss…
+    177|     expect(screen.getByRole("status", { name: "Settings save" }).textC…
+       |                                                                               ^
+    178|     expect(screen.queryAllByRole("alert")).toHaveLength(alerts);
+    179|     toggle("Cloud/Local row icons");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 11 passed (13)
+   Start at  01:51:12
+   Duration  1.47s (transform 126ms, setup 0ms, import 407ms, tests 465ms, environment 494ms)
+

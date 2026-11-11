@@ -154,9 +154,9 @@ describe("N1: settings through the registered app", () => {
   });
 
   it.each([
-    { succeeds: true, footerEnabled: false },
-    { succeeds: false, footerEnabled: true },
-  ])("R1 keeps the save lock across closing and reopening until settlement: %j", async ({ succeeds, footerEnabled }) => {
+    { succeeds: true, footerEnabled: false, message: "Saved", alerts: 0 },
+    { succeeds: false, footerEnabled: true, message: "Could not save. Try again.", alerts: 1 },
+  ])("R1/R2 keeps the save lock and outcome across closing and reopening: %j", async ({ succeeds, footerEnabled, message, alerts }) => {
     const fixture = deferredPage();
     const first = fixture.open();
     toggle("Footer count");
@@ -173,10 +173,16 @@ describe("N1: settings through the registered app", () => {
     await waitFor(() => expect(footer.disabled).toBe(false));
     expect(footer.checked).toBe(footerEnabled);
     expect(icons.checked).toBe(true);
+    // R2: the initiating page is gone, so its local notification misses this page.
+    expect(screen.getByRole("status", { name: "Settings save" }).textContent).toBe(message);
+    expect(screen.queryAllByRole("alert")).toHaveLength(alerts);
     toggle("Cloud/Local row icons");
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.getByRole("status", { name: "Settings save" }).textContent).toBe("Saving…");
     await waitFor(() => expect(icons.checked).toBe(false));
     expect(fixture.updateSettings).toHaveBeenCalledTimes(2);
     expect(footer.checked).toBe(footerEnabled);
+    expect(screen.getByRole("status", { name: "Settings save" }).textContent).toBe("Saved");
   });
 
   it.each([true, false])("R1 clears settled acknowledgements with no mounted consumers, success=%s", async (succeeds) => {
@@ -190,6 +196,8 @@ describe("N1: settings through the registered app", () => {
     expect(footer.disabled).toBe(false);
     expect(footer.checked).toBe(true);
     expect(fixture.updateSettings).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("status", { name: "Settings save" }).textContent).toBe("");
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 
   it("retains prior values after a rejected write and announces the error", async () => {
