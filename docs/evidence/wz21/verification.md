@@ -24,6 +24,10 @@ Ticket #42, against the merged contract [`wizbar/contracts/sidebar-v3.v1.md`](..
 - **R1:** each realtime connection change starts a new epoch. The post-call read is taken only while connected, and a read from an earlier epoch is dropped (a fresh one is started), so reconnect-time cached rows can never agree with an older read. Proof: rendered "R1 never reconciles against a read taken before a reconnect" (the host order changes during the disconnect; the second move stays blocked).
 - **R5:** the whole reconciliation attempt, read included, ends after 5 s; a late answer is ignored, and each retry attempt is bounded, so the next retry can run. Proof: rendered "R5 bounds a never-settling read" (unknown message and unavailable shelves after 5 s).
 
+## Review round 3 (R6 on `503c10c`)
+
+`review3-red.log` (commit `6b697c7`, before the fix): 1 failure. A read superseded by a reconnect that later fails no longer ends the attempt; only the current epoch's read failure does. Proof: rendered "R6 ignores a late failure from a read superseded by a reconnect" (read A rejects after read B started; no alert, and B's agreeing answer reconciles).
+
 ## Claims and their proof
 
 | Claim (acceptance criterion) | Proof |
@@ -40,7 +44,7 @@ Ticket #42, against the merged contract [`wizbar/contracts/sidebar-v3.v1.md`](..
 
 ## Checks at the hand-back commit
 
-From `wizbar/`: `npm ci`; `npm run typecheck` (`typecheck.log`, clean); `npm test -- --maxWorkers=2` (`full-suite.log`: 17 files, 544 tests passed).
+From `wizbar/`: `npm ci`; `npm run typecheck` (`typecheck.log`, clean); `npm test -- --maxWorkers=2` (`full-suite.log`: 17 files, 545 tests passed).
 
 ## Rendered drag (synthetic)
 

@@ -486,7 +486,9 @@ function useDragPins(
         const { order } = await rpc.call("pinnedOrder", {});
         if (at === epoch.current) snapshot = { order, epoch: at };
       } catch {
-        finish(false);
+        // Only a failure of the current epoch's read decides; a superseded
+        // read's failure is ignored like its success.
+        if (at === epoch.current) finish(false);
       } finally {
         if (readingEpoch === at) readingEpoch = null;
       }
