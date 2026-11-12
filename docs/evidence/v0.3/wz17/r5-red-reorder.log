@@ -1,0 +1,38 @@
+
+ RUN  v4.1.10 <repo>/wizbar
+
+ ❯ |bb-plugin-wizbar| src/fixtures/v3-fixtures.test.ts (10 tests | 1 failed) 15ms
+     × states every drag-into-Pinned outcome as call results, separate from the refreshed rows 6ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/fixtures/v3-fixtures.test.ts > V0: synthetic v0.3 fixtures cover the contract's cases > states every drag-into-Pinned outcome as call results, separate from the refreshed rows
+AssertionError: expected [ [ 'ok', 'failed', 'ready' ] ] to deep equally contain [ 'ok', 'ok', 'ready' ]
+
+- Expected
++ Received
+
+  [
+-   "ok",
++   [
+      "ok",
++     "failed",
+      "ready",
++   ],
+  ]
+
+ ❯ src/fixtures/v3-fixtures.test.ts:113:42
+    111|     for (const c of v3DragPinCases) {
+    112|       const rule = table[c.outcome.kind];
+    113|       if (rule.calls) expect(rule.calls).toContainEqual([c.pin, c.reor…
+       |                                          ^
+    114|       else expect(c.rowsAfter).toBe("unavailable");
+    115|       expect(c.reorder === "skipped").toBe(c.pin === "failed");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 9 passed (10)
+   Start at  08:55:40
+   Duration  252ms (transform 104ms, setup 0ms, import 126ms, tests 15ms, environment 0ms)

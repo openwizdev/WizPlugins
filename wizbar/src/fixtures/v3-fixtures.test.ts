@@ -95,15 +95,27 @@ describe("V0: synthetic v0.3 fixtures cover the contract's cases", () => {
 
   // R2: an outcome reports what the host calls did; current pin state comes
   // only from the refreshed rows, which another actor may have changed.
+  // R2: an outcome reports what the host calls did; current pin state comes
+  // only from the refreshed rows, which another actor may have changed.
+  // R5: each outcome must sit on exactly the call results the contract's table
+  // gives it, with its own message prefix, or later tickets inherit a wrong case.
   it("states every drag-into-Pinned outcome as call results, separate from the refreshed rows", () => {
-    expect(new Set(v3DragPinCases.map((c) => c.outcome.kind))).toEqual(
-      new Set(["pinned-placed", "pin-failed", "pinned-not-placed", "unknown"]),
-    );
+    const table = {
+      "pinned-placed": { calls: [["ok", "ok", "ready"]], prefix: null },
+      "pin-failed": { calls: [["failed", "skipped", "ready"]], prefix: "Pin failed: " },
+      "pinned-not-placed": { calls: [["ok", "failed", "ready"]], prefix: "Pin succeeded, but placement failed: " },
+      // The calls' results are known, but the re-read failed: any calls.
+      unknown: { calls: null, prefix: "Pin result unknown: " },
+    } as const;
+    expect(new Set(v3DragPinCases.map((c) => c.outcome.kind))).toEqual(new Set(Object.keys(table)));
     for (const c of v3DragPinCases) {
+      const rule = table[c.outcome.kind];
+      if (rule.calls) expect(rule.calls).toContainEqual([c.pin, c.reorder, c.rowsAfter]);
+      else expect(c.rowsAfter).toBe("unavailable");
       expect(c.reorder === "skipped").toBe(c.pin === "failed");
-      expect(c.outcome.kind === "unknown").toBe(c.rowsAfter === "unavailable");
       expect(c.refreshedIsPinned === null).toBe(c.rowsAfter === "unavailable");
-      if ("message" in c.outcome) expect(c.outcome.message).toMatch(/^(Pin failed|Pin succeeded, but placement failed|Pin result unknown): /);
+      if (rule.prefix === null) expect("message" in c.outcome).toBe(false);
+      else expect("message" in c.outcome && c.outcome.message.startsWith(rule.prefix), c.outcome.kind).toBe(true);
     }
     const partial = v3DragPinCases.filter((c) => c.outcome.kind === "pinned-not-placed");
     expect(partial.map((c) => c.refreshedIsPinned).sort()).toEqual([false, true]);

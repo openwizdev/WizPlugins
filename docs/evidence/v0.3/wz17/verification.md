@@ -23,6 +23,7 @@ From `wizbar/`: `npm ci`, `npm run typecheck`, `npm test -- --maxWorkers=2`. The
 - `read-red.log`: the settings reader before it read the two new keys: six failures. Committed before the fix.
 - `review-red.log`: the fixture test after the round-1 test changes, before the fixtures and types: three assertion failures (no counterexample row, total not above the list-bottom count, no drag cases).
 - `r2-red.log`: the fixture test after the R2 re-check change, before the types and fixtures: one assertion failure (messages still stated current pin state; no case where the re-read rows disagree with the call results).
+- `r5-red.log`, `r5-red-reorder.log`: the strengthened drag test against the reviewer's two scratch mutations of the fixtures (a placement-failure message on a `pin-failed` case; both partial cases with `reorder: "ok"`): each fails one assertion. The mutations were not committed; the real fixtures pass.
 - `settings-count-red.log`: `src/SettingsPage.test.tsx` with the old switch count, against this branch: the section now draws 4 switches, so `toHaveLength(2)` fails.
 - `green.log`, `typecheck.log`, `full-suite.log`: the same subset passing, typecheck and the full suite at the hand-back commit. Local paths are replaced with `<repo>`.
 
@@ -42,6 +43,10 @@ The orchestrator ruled on #39 that there is one running number everywhere: worki
 ## Re-check 1 (R2 at `24d1165`)
 
 Outcomes and messages now report only the host calls' results (`Pin failed`, `Pin succeeded, but placement failed`, `Pin result unknown`); the UI draws the re-read rows exactly as returned. `DragPinCaseV3.refreshedIsPinned` records what the rows say, and `v3DragPinCases` adds a case where someone unpinned the thread in between. No-undo rule kept. Proof: `v3-fixtures.test.ts`, red first (`r2-red.log`).
+
+## Re-check 2 (R5 at `e347d8d`)
+
+The drag test again pins each outcome to the contract table's call results (`pin`, `reorder`, `rowsAfter`), including both `pinned-not-placed` cases, and to its own message prefix; `unknown` needs only unavailable rows, whatever the calls did. The concurrent-unpin coverage stays. Proof: `r5-red.log` and `r5-red-reorder.log`.
 
 ## Supporting edit outside the listed owned paths
 
