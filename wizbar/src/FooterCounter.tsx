@@ -2,28 +2,38 @@ import { useEffect, useId, useState } from "react";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk";
 import { countRunning, type ObservableRunningSource, type RunningCountSource } from "./running-count";
 import { isRunning, readSidebarRows, type SidebarRowsStatus } from "./stats";
-import { experimental_useSidebarThreads, useRealtimeConnectionState } from "@get-bb/plugin-sdk/app";
+import { experimental_usePluginId, experimental_useSidebarThreads, useRealtimeConnectionState } from "@get-bb/plugin-sdk/app";
 import { useFeatureSourceStatus, useWizBarSettings } from "./SettingsPage";
 
 /**
- * Snapshots seen during a gap (not ready, not connected, malformed). Plugin
- * scoped, so a disclosure the host mounts later still knows what the list line
- * saw: a reconnect alone cannot certify the same retained snapshot, and only a
- * new snapshot from the host clears it. No age is guessed.
+ * One owner per plugin: the row objects of the last snapshot seen during a gap
+ * (not ready, not connected, malformed). Each hook instance may build its own
+ * array, so arrays are never compared; the host keeps a row object while its
+ * thread is unchanged, so the rows themselves are. After a gap, rows are
+ * unavailable while they are the same row objects in the same order: a
+ * reconnect or another consumer's array cannot certify retained rows. The first
+ * ready snapshot that differs clears the gap for every consumer. An initial
+ * load that has no rows yet is not a gap. No age is guessed.
  */
-const untrustedSnapshots = new WeakSet<object>();
+const gapRows = new Map<string, readonly unknown[]>();
+const sameRows = (a: readonly unknown[], b: readonly unknown[]) =>
+  a.length === b.length && a.every((row, i) => row === b[i]);
 
 /** The observable host rows, or null when they cannot be trusted right now. */
 export function useObservableRows(): { status: SidebarRowsStatus; rows: readonly PluginSidebarThread[] | null } {
+  const pluginId = experimental_usePluginId();
   const state = experimental_useSidebarThreads();
   const connection = useRealtimeConnectionState();
   const read = readSidebarRows(state, connection);
-  const snapshot = state?.threads;
+  const rows: readonly unknown[] = Array.isArray(state?.threads) ? state.threads : [];
   if (read.status !== "ready") {
-    if (snapshot && typeof snapshot === "object") untrustedSnapshots.add(snapshot);
+    if (!(read.status === "unavailable" && rows.length === 0)) gapRows.set(pluginId, [...rows]);
     return read;
   }
-  return untrustedSnapshots.has(snapshot) ? { status: "stale", rows: null } : read;
+  const gap = gapRows.get(pluginId);
+  if (gap && sameRows(read.rows!, gap)) return { status: "stale", rows: null };
+  gapRows.delete(pluginId);
+  return read;
 }
 
 /** Observable host cache only; neither coverage nor freshness is claimed live.

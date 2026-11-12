@@ -4,6 +4,6 @@
 
  Test Files  18 passed (18)
       Tests  489 passed (489)
-   Start at  12:19:55
-   Duration  11.82s (transform 328ms, setup 0ms, import 2.96s, tests 14.33s, environment 3.88s)
+   Start at  13:04:17
+   Duration  10.93s (transform 837ms, setup 0ms, import 3.55s, tests 11.76s, environment 3.98s)
 
