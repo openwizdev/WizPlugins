@@ -72,3 +72,11 @@ describe("CLI text", () => {
     expect(formatStatsText({ ...v3Stats, finishedToday: { source: "host", count: 18 } }).split("\n")[2]).toBe("Finished today: 18");
   });
 });
+
+// R2 (review of #49): a malformed waiting flag never decides the split.
+describe("the waiting flag", () => {
+  it.each([["missing", undefined], ["a string", "false"]])("is unavailable when %s", (_, flag) => {
+    const row = { ...byId("thr_v3_child_working"), hasPendingInteraction: flag } as unknown as PluginSidebarThread;
+    expect(computeStats([row], v3Now, v3TimeZone)).toEqual(unavailable);
+  });
+});
