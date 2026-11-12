@@ -792,3 +792,126 @@ describe("WZ16: visible list-bottom running count", () => {
     expect(screen.queryByRole("tooltip")).toBeNull();
   });
 });
+
+// V4 (WZ21): drag pins, unpins and reorders through WizBar's server operations
+// (which call the host's pins); rows are always drawn as the host returns them.
+describe("WZ21: drag to pin, unpin and reorder", () => {
+  const rows = () => [
+    thread({ id: "pin_b", title: "Pinned second", isPinned: true, pinnedAt: 50, pinSortKey: "a1", createdAt: 300 }),
+    thread({ id: "pin_a", title: "Pinned first", isPinned: true, pinnedAt: 40, pinSortKey: "a0", createdAt: 100 }),
+    thread({ id: "in_old", title: "Inbox older", createdAt: 10 }),
+    thread({ id: "in_new", title: "Inbox newer", createdAt: 20 }),
+  ];
+  type Handler = (input: any) => unknown;
+  function renderDrag(threads = rows(), handlers: Record<string, Handler> = {}) {
+    return renderSlot(inbox, listProps, {
+      sidebarThreads: { status: "ready", threads, projects: [] },
+      rpc: { listLifecycle: () => ({ rows: [] }), pin: () => ({ ok: true }), unpin: () => ({ ok: true }),
+        move: () => ({ ok: true }), ...handlers },
+    });
+  }
+  const card = (title: string) => screen.getByRole("link", { name: title });
+  const row = (title: string) => card(title).closest("li")!;
+  const titlesIn = (region: HTMLElement) =>
+    within(region).getAllByRole("link").map((link) => link.getAttribute("aria-label"));
+  const inboxTitles = () => screen.getAllByRole("link").map((l) => l.getAttribute("aria-label"))
+    .filter((t) => t!.startsWith("Inbox"));
+  const drag = (from: HTMLElement, to: HTMLElement, clientY = 0) => {
+    fireEvent.dragStart(from, { dataTransfer: { setData() {}, effectAllowed: "all" } });
+    fireEvent.dragOver(to, { clientY });
+    fireEvent.drop(to, { clientY });
+    fireEvent.dragEnd(from);
+  };
+  const pinCalls = (rendered: { rpcCalls: { method: string; input: unknown }[] }) =>
+    rendered.rpcCalls.filter((c) => c.method !== "listLifecycle").map((c) => [c.method, c.input]);
+
+  it("draws Pinned in the host's pinned order, not creation order", () => {
+    renderDrag();
+    expect(titlesIn(screen.getByRole("region", { name: "Pinned" }))).toEqual(["Pinned first", "Pinned second"]);
+  });
+
+  it("pins a card dropped into Pinned, then places it where it was dropped", async () => {
+    const rendered = renderDrag();
+    drag(card("Inbox older"), row("Pinned second"));
+    await waitFor(() => expect(pinCalls(rendered)).toEqual([
+      ["pin", { threadId: "in_old" }], ["move", { threadId: "in_old", position: { before: "pin_b" } }],
+    ]));
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("unpins a pinned card dropped outside Pinned", async () => {
+    const rendered = renderDrag();
+    drag(card("Pinned first"), row("Inbox newer"));
+    await waitFor(() => expect(pinCalls(rendered)).toEqual([["unpin", { threadId: "pin_a" }]]));
+  });
+
+  it("reorders inside Pinned, after the card when dropped on its lower half", async () => {
+    const rendered = renderDrag();
+    drag(card("Pinned first"), row("Pinned second"), 10);
+    await waitFor(() => expect(pinCalls(rendered)).toEqual([
+      ["move", { threadId: "pin_a", position: { after: "pin_b" } }],
+    ]));
+  });
+
+  it("never re-orders the Inbox: an Inbox-to-Inbox drop calls nothing", async () => {
+    const rendered = renderDrag();
+    expect(inboxTitles()).toEqual(["Inbox newer", "Inbox older"]);
+    drag(card("Inbox newer"), row("Inbox older"), 10);
+    await Promise.resolve();
+    expect(pinCalls(rendered)).toEqual([]);
+    expect(inboxTitles()).toEqual(["Inbox newer", "Inbox older"]);
+  });
+
+  it("offers an empty Pinned drop target while dragging when nothing is pinned", async () => {
+    const rendered = renderDrag([thread({ id: "in_only", title: "Inbox only" })]);
+    expect(screen.queryByRole("region", { name: "Pinned" })).toBeNull();
+    fireEvent.dragStart(card("Inbox only"));
+    const target = screen.getByRole("region", { name: "Pinned" });
+    fireEvent.dragOver(target);
+    fireEvent.drop(target);
+    await waitFor(() => expect(pinCalls(rendered)).toEqual([
+      ["pin", { threadId: "in_only" }], ["move", { threadId: "in_only", position: { last: true } }],
+    ]));
+    fireEvent.dragEnd(card("Inbox only"));
+    expect(screen.queryByRole("region", { name: "Pinned" })).toBeNull();
+  });
+
+  it.each([
+    ["a failed pin", { pin: () => { throw new Error("Sample host refusal."); } }, "Inbox older", "Pinned second",
+      "Pin failed: Sample host refusal.", ["pin"]],
+    ["a failed placement after the pin", { move: () => { throw new Error("Sample host refusal."); } }, "Inbox older",
+      "Pinned second", "Pin succeeded, but placement failed: Sample host refusal.", ["pin", "move"]],
+    ["a failed unpin", { unpin: () => { throw new Error("Sample host refusal."); } }, "Pinned first", "Inbox newer",
+      "Unpin failed: Sample host refusal.", ["unpin"]],
+    ["a failed move", { move: () => { throw new Error("Sample host refusal."); } }, "Pinned first", "Pinned second",
+      "Move failed: Sample host refusal.", ["move"]],
+  ] as const)("shows %s and keeps every card where the host rows put it", async (_n, handlers, from, to, message, calls) => {
+    const rendered = renderDrag(rows(), handlers);
+    drag(card(from), row(to));
+    expect((await screen.findByRole("alert")).textContent).toBe(message);
+    expect(pinCalls(rendered).map(([method]) => method)).toEqual(calls);
+    expect(titlesIn(screen.getByRole("region", { name: "Pinned" }))).toEqual(["Pinned first", "Pinned second"]);
+    expect(inboxTitles()).toEqual(["Inbox newer", "Inbox older"]);
+  });
+
+  it.each([
+    ["Pinned second", "ArrowUp", [["move", { threadId: "pin_b", position: { before: "pin_a" } }]]],
+    ["Pinned first", "ArrowDown", [["move", { threadId: "pin_a", position: { after: "pin_b" } }]]],
+    ["Pinned second", "ArrowDown", [["unpin", { threadId: "pin_b" }]]],
+    ["Inbox older", "ArrowUp", [["pin", { threadId: "in_old" }], ["move", { threadId: "in_old", position: { after: "pin_b" } }]]],
+    ["Inbox older", "ArrowDown", []],
+  ] as const)("moves %s with Alt+%s from the keyboard", async (title, key, expected) => {
+    const rendered = renderDrag();
+    fireEvent.keyDown(card(title), { key });
+    fireEvent.keyDown(card(title), { key, altKey: true });
+    await waitFor(() => expect(pinCalls(rendered)).toEqual(expected));
+  });
+
+  it("keeps a pinned card out of mute, settle and snooze rules it already had", () => {
+    renderDrag([thread({ id: "pin_busy", title: "Pinned busy", isPinned: true, pinnedAt: 1,
+      indicator: "runtime", status: "active", runtimeStatus: "active" })]);
+    const pinned = screen.getByRole("region", { name: "Pinned" });
+    expect(within(pinned).getByText("Pinned busy")).toBeDefined();
+    expect(within(pinned).queryByRole("button", { name: /settle|snooze/i })).toBeNull();
+  });
+});
