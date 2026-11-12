@@ -1,0 +1,29 @@
+== M1 registered but empty panel (values, disclosures, unavailable state): exit 1
+FAIL  |bb-plugin-wizbar| src/StatsPanel.test.tsx > V3: footer stats panel > counts duplicate rows that agree on runtime work but differ only in indicator by the running rule
+FAIL  |bb-plugin-wizbar| src/StatsPanel.test.tsx > V3: footer stats panel > counts duplicate rows that genuinely conflict on runtime work by the running rule
+FAIL  |bb-plugin-wizbar| src/StatsPanel.test.tsx > V3: footer stats panel > drops its numbers when the realtime connection is lost
+FAIL  |bb-plugin-wizbar| src/StatsPanel.test.tsx > V3: footer stats panel > is unavailable on both surfaces when the waiting flag is missing
+FAIL  |bb-plugin-wizbar| src/StatsPanel.test.tsx > V3: footer stats panel > is unavailable on both surfaces when the waiting flag is the string "false"
+FAIL  |bb-plugin-wizbar| src/StatsPanel.test.tsx > V3: footer stats panel > keeps showing its numbers when the list-bottom line is switched off
+FAIL  |bb-plugin-wizbar| src/StatsPanel.test.tsx > V3: footer stats panel > opens unavailable after a gap the list line saw, until a new snapshot arrives
+FAIL  |bb-plugin-wizbar| src/StatsPanel.test.tsx > V3: footer stats panel > shows a plain unavailable state, never a number, for an unrecognised runtime status
+FAIL  |bb-plugin-wizbar| src/StatsPanel.test.tsx > V3: footer stats panel > shows a plain unavailable state, never a number, for error
+FAIL  |bb-plugin-wizbar| src/StatsPanel.test.tsx > V3: footer stats panel > shows a plain unavailable state, never a number, for loading
+FAIL  |bb-plugin-wizbar| src/StatsPanel.test.tsx > V3: footer stats panel > shows the contract's numbers and coverage disclosures for the fixture
+Tests  11 failed (11)
+⎯⎯⎯⎯⎯⎯ Failed Tests 11 ⎯⎯⎯⎯⎯⎯⎯
+== M2 panel trusts raw rows (loading, error, reconnect, gap): exit 1
+FAIL  |bb-plugin-wizbar| src/StatsPanel.test.tsx > V3: footer stats panel > drops its numbers when the realtime connection is lost
+FAIL  |bb-plugin-wizbar| src/StatsPanel.test.tsx > V3: footer stats panel > opens unavailable after a gap the list line saw, until a new snapshot arrives
+FAIL  |bb-plugin-wizbar| src/StatsPanel.test.tsx > V3: footer stats panel > shows a plain unavailable state, never a number, for error
+FAIL  |bb-plugin-wizbar| src/StatsPanel.test.tsx > V3: footer stats panel > shows a plain unavailable state, never a number, for loading
+Tests  4 failed | 7 passed (11)
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+== M3 panel drops the coverage disclosure line: exit 1
+FAIL  |bb-plugin-wizbar| src/StatsPanel.test.tsx > V3: footer stats panel > shows the contract's numbers and coverage disclosures for the fixture
+Tests  1 failed | 10 passed (11)
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+== M4 panel swaps the Cloud and Local numbers: exit 1
+FAIL  |bb-plugin-wizbar| src/StatsPanel.test.tsx > V3: footer stats panel > shows the contract's numbers and coverage disclosures for the fixture
+Tests  1 failed | 10 passed (11)
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯

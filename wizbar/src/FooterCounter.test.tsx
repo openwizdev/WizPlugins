@@ -6,7 +6,13 @@ import type { PluginSidebarThreadsState } from "@get-bb/plugin-sdk";
 import { loadPluginApp, renderSlot } from "@get-bb/plugin-sdk/testing/app";
 import { getSourceStatuses } from "./settings";
 import { readRunningSource } from "./running-source";
-import { positiveSource, positiveThreads } from "../../docs/evidence/wz5/fixtures";
+import { positiveSource, positiveThreads as indicatorThreads } from "../../docs/evidence/wz5/fixtures";
+import { v3Threads } from "./fixtures/v3";
+
+// WZ20 (#41): the line counts the one running rule (runtime work, not waiting
+// on you), so the shared WZ5 rows get runtime work behind their indicators.
+const positiveThreads = indicatorThreads.map((thread) => thread.indicator === "none" ? thread
+  : { ...thread, status: "active" as const, runtimeStatus: "active" as const });
 
 const fixtureFeed = vi.hoisted(() => ({ current: null as Pick<PluginSidebarThreadsState, "status" | "threads"> | null }));
 vi.mock("@get-bb/plugin-sdk/app", async (importOriginal) => {
@@ -17,7 +23,8 @@ vi.mock("@get-bb/plugin-sdk/app", async (importOriginal) => {
 });
 
 const app = await loadPluginApp(() => import("../app"));
-const { FooterCounterArtwork } = await import("./FooterCounter");
+const { FooterCounter, FooterCounterArtwork } = await import("./FooterCounter");
+const line = { component: FooterCounter };
 const candidate = { component: FooterCounterArtwork };
 const empty = { complete: true, threads: [], subagentsByThread: new Map<string, number>() };
 afterEach(() => { cleanup(); vi.restoreAllMocks(); fixtureFeed.current = null; });
@@ -70,8 +77,8 @@ describe("W3: synthetic footer artwork through the SDK rendering harness", () =>
     expect(screen.queryByRole("tooltip")).toBeNull();
   });
   it("does not narrow synthetic input when inbox search, project and shelves change", async () => {
-    const rawThreads = positiveThreads.map((thread) => thread.id === "sample-parent" ? { ...thread, runtimeStatus: "active" as const } : thread);
-    const footer = renderSlot({ component: app.icons.find(({ name }) => name === "wizbar-running-count")!.component }, {}, {
+    const rawThreads = positiveThreads;
+    const footer = renderSlot(line, {}, {
       sidebarThreads: { status: "ready", threads: rawThreads },
     });
     const inbox = renderSlot(app.threadLists[0]!, {
@@ -105,19 +112,24 @@ describe("W3: synthetic footer artwork through the SDK rendering harness", () =>
 
 // N4: the historical artwork tests never mounted a connected production source.
 // These proofs fail if the app remains unwired or promotes observable coverage to live.
+// Snapshot validity is plugin-wide (review R1): a test that puts rows through a
+// gap passes its own copy, as a host would hand over a new snapshot.
 describe("N4: approved observable footer route", () => {
-  const icon = app.icons.find(({ name }) => name === "wizbar-running-count")!;
-  it("registers one no-op action directing readers to the live list count", () => {
+  const icon = line;
+  // WZ20 (#41): one disclosure with a named host icon and a fixed label
+  // replaces the no-op action and its count artwork icon.
+  it("registers one fixed-label disclosure on the host's bolt icon and no count artwork", () => {
     expect(app.sidebarFooterActions).toEqual([]);
+    expect(app.icons).toEqual([]);
     expect(app.experimentalSidebarFooterItems).toHaveLength(1);
-    const action = app.experimentalSidebarFooterItems[0]!;
-    expect(action.kind).toBe("action");
-    expect(action.icon).toBe("wizbar-running-count");
-    expect(action.label).toBe("Running count: see the line at the bottom of the list");
-    const openPluginDetails = vi.fn();
-    if (action.kind !== "action") throw new Error("Expected approved no-op action");
-    action.onActivate({ openPluginDetails });
-    expect(openPluginDetails).not.toHaveBeenCalled();
+    // The harness adds its own `runtime` and `source`; the rest is the registration.
+    const { runtime: _runtime, source: _source, ...item } = app.experimentalSidebarFooterItems[0]! as typeof app.experimentalSidebarFooterItems[0] & { source?: string };
+    expect(item).toEqual({ id: "stats", kind: "disclosure", label: "WizBar stats", icon: "Zap", component: expect.any(Function) });
+    renderSlot({ component: item.kind === "disclosure" ? item.component : () => null }, { dismiss() {} }, {
+      sidebarThreads: { status: "ready", threads: v3Threads },
+    });
+    expect(app.experimentalSidebarFooterItems).toHaveLength(1);
+    expect(app.experimentalSidebarFooterItems[0]!.label).toBe("WizBar stats");
   });
 
   it("reads raw observable projects/children and publishes unverified coverage", () => {
@@ -140,7 +152,7 @@ describe("N4: approved observable footer route", () => {
   it.each(["loading", "error"] as const)("renders no number and reports unavailable for %s with retained rows", (status) => {
     const pluginId = `synthetic-running-${status}`;
     const rendered = renderSlot({ component: icon.component }, {}, {
-      pluginId, sidebarThreads: { status, threads: positiveThreads },
+      pluginId, sidebarThreads: { status, threads: [...positiveThreads] },
     });
     expect(rendered.container.innerHTML).toBe("");
     expect(getSourceStatuses(pluginId).footer).toBe("unavailable");
@@ -150,7 +162,7 @@ describe("N4: approved observable footer route", () => {
     const pluginId = "synthetic-hidden-running";
     const rendered = renderSlot({ component: icon.component }, {}, {
       pluginId, settings: { footerCountEnabled: false },
-      sidebarThreads: { status: "ready", threads: positiveThreads },
+      sidebarThreads: { status: "ready", threads: [...positiveThreads] },
     });
     expect(rendered.container.innerHTML).toBe("");
     expect(getSourceStatuses(pluginId).footer).toBe("unverified");
@@ -165,7 +177,7 @@ describe("N4: approved observable footer route", () => {
         activeThreadId: null, activeProjectId: null, isCompactViewport: false,
         searchQuery: "", onNavigate() {},
       }) : createElement(icon.component);
-    fixtureFeed.current = { status: "ready", threads: positiveThreads };
+    fixtureFeed.current = { status: "ready", threads: [...positiveThreads] };
     const pluginId = `synthetic-updating-footer-${view}`;
     const rendered = renderSlot({ component: View }, {}, { pluginId, rpc: { listLifecycle: () => ({ rows: [] }) } });
     expect(screen.getByRole("status", { name: "2 running" })).toBeDefined();
@@ -208,5 +220,29 @@ describe("N4: approved observable footer route", () => {
     expect(screen.queryByRole("tooltip")).toBeNull();
     fireEvent.focus(screen.getByRole("status"));
     expect(screen.getByRole("tooltip").textContent).toContain("subagents not counted yet");
+  });
+});
+
+// WZ20 (#41): the list-bottom line moves to the contract's one running rule:
+// runtime work by the shared fact, and not waiting on you.
+describe("V3: the list-bottom line counts the one running rule", () => {
+  const base = v3Threads.find(({ id }) => id === "thr_v3_pinned_idle")!;
+  it("shows the stats panel's running total for the fixture rows", () => {
+    renderSlot(line, {}, { sidebarThreads: { status: "ready", threads: v3Threads } });
+    expect(screen.getByRole("status", { name: "4 running" }).textContent).toBe("4");
+  });
+  it.each([
+    ["busy but waiting on you", { hasPendingInteraction: true, indicator: "waiting-for-input" as const,
+      activity: { ...base.activity, backgroundCommands: 1 } }, "0"],
+    ["an attention indicator over an idle runtime", { indicator: "runtime" as const }, "0"],
+    ["runtime work behind no indicator", { status: "active" as const, runtimeStatus: "active" as const }, "1"],
+  ])("counts %s by runtime work, not the indicator", (_, overrides, expected) => {
+    renderSlot(line, {}, { sidebarThreads: { status: "ready", threads: [{ ...base, ...overrides }] } });
+    expect(screen.getByRole("status", { name: `${expected} running` }).textContent).toBe(expected);
+  });
+  it("hides the number when a row's runtime status is unrecognised", () => {
+    const rendered = renderSlot(line, {}, { sidebarThreads: { status: "ready",
+      threads: [...v3Threads, { ...base, id: "thr_v3_future", runtimeStatus: "host-reconnecting" as never }] } });
+    expect(rendered.container.innerHTML).toBe("");
   });
 });

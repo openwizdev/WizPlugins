@@ -8,23 +8,19 @@ import { definePluginApp } from "@get-bb/plugin-sdk/app";
 import { ThreadInbox } from "./src/ThreadInbox";
 import { ParentChip } from "./src/ParentChip";
 import { SubagentsChip } from "./src/SubagentsChip";
-import { FooterCounter } from "./src/FooterCounter";
+import { StatsPanel } from "./src/StatsPanel";
 import { SettingsPage } from "./src/SettingsPage";
 
 export default definePluginApp((app) => {
   app.slots.settingsSection({ id: "wizbar-settings", component: SettingsPage });
-  // WZ12-F1/F2: the host owns sizing and its static label; the artwork owns
-  // the observable count and dynamic hover. Host presentation remains for #9.
-  app.experimental_icons.register({
-    name: "wizbar-running-count",
-    component: FooterCounter,
-  });
+  // WZ20 (#41): one disclosure on the host's own bolt icon, with a fixed
+  // label. The live number stays in the list-bottom "N running" line.
   app.experimental_sidebarFooter.register({
-    id: "running-count",
-    kind: "action",
-    label: "Running count: see the line at the bottom of the list",
-    icon: "wizbar-running-count",
-    onActivate() {},
+    id: "stats",
+    kind: "disclosure",
+    label: "WizBar stats",
+    icon: "Zap",
+    component: StatsPanel,
   });
 
   app.slots.experimental_threadList({

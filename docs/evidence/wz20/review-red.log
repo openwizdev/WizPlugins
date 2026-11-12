@@ -1,0 +1,178 @@
+
+ RUN  v4.1.10 wizbar
+
+ ❯ |bb-plugin-wizbar| src/stats.test.ts (16 tests | 2 failed) 27ms
+     × is unavailable when missing 6ms
+     × is unavailable when a string 1ms
+ ❯ |bb-plugin-wizbar| src/StatsPanel.test.tsx (11 tests | 4 failed) 210ms
+     × opens unavailable after a gap the list line saw, until a new snapshot arrives 25ms
+     × is unavailable on both surfaces when the waiting flag is missing 10ms
+     × is unavailable on both surfaces when the waiting flag is the string "false" 10ms
+     × counts duplicate rows that agree on runtime work but differ only in indicator by the running rule 7ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/StatsPanel.test.tsx > V3: footer stats panel > opens unavailable after a gap the list line saw, until a new snapshot arrives
+AssertionError: expected '4 running · 2 top-level, 2 children' to be 'Stats unavailable' // Object.is equality
+
+Expected: "Stats unavailable"
+Received: "4 running · 2 top-level, 2 children"
+
+ ❯ src/StatsPanel.test.tsx:88:24
+     86|     rendered.rerender(createElement(View, { open: true }));
+     87|     expect(screen.queryByRole("status", { name: /running$/ })).toBeNul…
+     88|     expect(lines()[0]).toBe("Stats unavailable");
+       |                        ^
+     89|     fixtureFeed.current = { status: "ready", threads: [...v3Threads] };
+     90|     rendered.rerender(createElement(View, { open: true }));
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+ FAIL  |bb-plugin-wizbar| src/StatsPanel.test.tsx > V3: footer stats panel > is unavailable on both surfaces when the waiting flag is missing
+AssertionError: expected '1 running · 1 top-level, 0 children' to be 'Stats unavailable' // Object.is equality
+
+Expected: "Stats unavailable"
+Received: "1 running · 1 top-level, 0 children"
+
+ ❯ src/StatsPanel.test.tsx:105:24
+    103|       sidebarThreads: { status: "ready", threads: [active as unknown a…
+    104|     });
+    105|     expect(lines()[0]).toBe("Stats unavailable");
+       |                        ^
+    106|     expect(screen.queryByRole("status", { name: /running$/ })).toBeNul…
+    107|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯
+
+ FAIL  |bb-plugin-wizbar| src/StatsPanel.test.tsx > V3: footer stats panel > is unavailable on both surfaces when the waiting flag is the string "false"
+AssertionError: expected '0 running · 0 top-level, 0 children' to be 'Stats unavailable' // Object.is equality
+
+Expected: "Stats unavailable"
+Received: "0 running · 0 top-level, 0 children"
+
+ ❯ src/StatsPanel.test.tsx:105:24
+    103|       sidebarThreads: { status: "ready", threads: [active as unknown a…
+    104|     });
+    105|     expect(lines()[0]).toBe("Stats unavailable");
+       |                        ^
+    106|     expect(screen.queryByRole("status", { name: /running$/ })).toBeNul…
+    107|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/6]⎯
+
+ FAIL  |bb-plugin-wizbar| src/StatsPanel.test.tsx > V3: footer stats panel > counts duplicate rows that agree on runtime work but differ only in indicator by the running rule
+AssertionError: expected 'Stats unavailable' to be '1 running · 1 top-level, 0 children' // Object.is equality
+
+Expected: "1 running · 1 top-level, 0 children"
+Received: "Stats unavailable"
+
+ ❯ src/StatsPanel.test.tsx:119:24
+    117|       sidebarThreads: { status: "ready", threads: [row, copy] },
+    118|     });
+    119|     expect(lines()[0]).toBe(panelLine);
+       |                        ^
+    120|     if (lineName) expect(screen.getByRole("status", { name: lineName }…
+    121|     else expect(screen.queryByRole("status", { name: /running$/ })).to…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/6]⎯
+
+ FAIL  |bb-plugin-wizbar| src/stats.test.ts > the waiting flag > is unavailable when missing
+AssertionError: expected { version: 1, status: 'ready', …(5) } to deeply equal { version: 1, …(6) }
+
+- Expected
++ Received
+
+@@ -2,15 +2,25 @@
+    "coverage": {
+      "scope": "observable-sidebar",
+      "subagents": "not-counted",
+      "unseen": "possible",
+    },
+-   "finishedToday": null,
+-   "running": null,
+-   "status": "unavailable",
++   "finishedToday": {
++     "count": null,
++     "source": "none",
++   },
++   "running": {
++     "children": 1,
++     "cloud": 1,
++     "local": 0,
++     "topLevel": 0,
++     "total": 1,
++     "unknown": 0,
++   },
++   "status": "ready",
+    "version": 1,
+-   "waitingOnYou": null,
++   "waitingOnYou": 0,
+    "window": {
+      "end": 1794528000000,
+      "start": 1794441600000,
+      "timeZone": "UTC",
+    },
+
+ ❯ src/stats.test.ts:80:52
+     78|   it.each([["missing", undefined], ["a string", "false"]])("is unavail…
+     79|     const row = { ...byId("thr_v3_child_working"), hasPendingInteracti…
+     80|     expect(computeStats([row], v3Now, v3TimeZone)).toEqual(unavailable…
+       |                                                    ^
+     81|   });
+     82| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/6]⎯
+
+ FAIL  |bb-plugin-wizbar| src/stats.test.ts > the waiting flag > is unavailable when a string
+AssertionError: expected { version: 1, status: 'ready', …(5) } to deeply equal { version: 1, …(6) }
+
+- Expected
++ Received
+
+@@ -2,15 +2,25 @@
+    "coverage": {
+      "scope": "observable-sidebar",
+      "subagents": "not-counted",
+      "unseen": "possible",
+    },
+-   "finishedToday": null,
+-   "running": null,
+-   "status": "unavailable",
++   "finishedToday": {
++     "count": null,
++     "source": "none",
++   },
++   "running": {
++     "children": 0,
++     "cloud": 0,
++     "local": 0,
++     "topLevel": 0,
++     "total": 0,
++     "unknown": 0,
++   },
++   "status": "ready",
+    "version": 1,
+-   "waitingOnYou": null,
++   "waitingOnYou": 1,
+    "window": {
+      "end": 1794528000000,
+      "start": 1794441600000,
+      "timeZone": "UTC",
+    },
+
+ ❯ src/stats.test.ts:80:52
+     78|   it.each([["missing", undefined], ["a string", "false"]])("is unavail…
+     79|     const row = { ...byId("thr_v3_child_working"), hasPendingInteracti…
+     80|     expect(computeStats([row], v3Now, v3TimeZone)).toEqual(unavailable…
+       |                                                    ^
+     81|   });
+     82| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/6]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  6 failed | 21 passed (27)
+   Start at  12:17:19
+   Duration  1.35s (transform 311ms, setup 0ms, import 604ms, tests 237ms, environment 485ms)
+

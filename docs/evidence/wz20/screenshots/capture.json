@@ -1,0 +1,72 @@
+[
+  {
+    "device": "desktop",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "state": "ready",
+    "screenshot": "desktop-ready.png",
+    "ready": "true",
+    "lines": [
+      "4 running · 2 top-level, 2 children",
+      "1 cloud, 2 local, 1 unknown",
+      "subagents not counted yet · some threads may be unseen",
+      "Waiting on you: 3",
+      "Finished today: not available yet"
+    ],
+    "listLine": "4 running",
+    "boltLabel": "WizBar stats"
+  },
+  {
+    "device": "desktop",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "state": "unavailable",
+    "screenshot": "desktop-unavailable.png",
+    "ready": "true",
+    "lines": [
+      "Stats unavailable",
+      "subagents not counted yet · some threads may be unseen"
+    ],
+    "listLine": null,
+    "boltLabel": "WizBar stats"
+  },
+  {
+    "device": "phone",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "state": "ready",
+    "screenshot": "phone-ready.png",
+    "ready": "true",
+    "lines": [
+      "4 running · 2 top-level, 2 children",
+      "1 cloud, 2 local, 1 unknown",
+      "subagents not counted yet · some threads may be unseen",
+      "Waiting on you: 3",
+      "Finished today: not available yet"
+    ],
+    "listLine": "4 running",
+    "boltLabel": "WizBar stats"
+  },
+  {
+    "device": "phone",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "state": "unavailable",
+    "screenshot": "phone-unavailable.png",
+    "ready": "true",
+    "lines": [
+      "Stats unavailable",
+      "subagents not counted yet · some threads may be unseen"
+    ],
+    "listLine": null,
+    "boltLabel": "WizBar stats"
+  }
+]

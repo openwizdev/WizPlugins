@@ -1,0 +1,377 @@
+
+ RUN  v4.1.10 wizbar
+
+ ❯ |bb-plugin-wizbar| src/FooterCounter.test.tsx (17 tests | 5 failed) 507ms
+     × registers one fixed-label disclosure on the host's bolt icon and no count artwork 7ms
+     × counts busy but waiting on you by runtime work, not the indicator 11ms
+     × counts an attention indicator over an idle runtime by runtime work, not the indicator 8ms
+     × counts runtime work behind no indicator by runtime work, not the indicator 7ms
+     × hides the number when a row's runtime status is unrecognised 3ms
+ ❯ |bb-plugin-wizbar| src/StatsPanel.test.tsx (0 test)
+ ❯ |bb-plugin-wizbar| src/stats.test.ts (0 test)
+ ❯ |bb-plugin-wizbar| src/server.test.ts (117 tests | 11 failed) 6222ms
+     × prints the panel's numbers for the same fixture rows as JSON 21ms
+     × prints the contract's text lines 17ms
+     × reads every page until a short one 20ms
+     × reports state_unavailable, never a number, for a failed read 19ms
+     × reports state_unavailable, never a number, for a malformed row 18ms
+     × reports state_unavailable, never a number, for an unrecognised runtime status 18ms
+     × reports state_unavailable, never a number, for an ID repeated across pages 16ms
+     × is a usage error for "stats" 18ms
+     × is a usage error for "stats" 16ms
+     × is a usage error for "stats" 16ms
+     × is a usage error for "stats" 16ms
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/StatsPanel.test.tsx [ src/StatsPanel.test.tsx ]
+TypeError: Cannot read properties of undefined (reading 'kind')
+ ❯ src/StatsPanel.test.tsx:13:33
+     11| const app = await loadPluginApp(() => import("../app"));
+     12| const item = app.experimentalSidebarFooterItems.find(({ id }) => id ==…
+     13| const panel = { component: item.kind === "disclosure" ? item.component…
+       |                                 ^
+     14| const props = { dismiss() {} };
+     15| afterEach(cleanup);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/18]⎯
+
+ FAIL  |bb-plugin-wizbar| src/stats.test.ts [ src/stats.test.ts ]
+Error: Cannot find module './stats' imported from wizbar/src/stats.test.ts
+ ❯ src/stats.test.ts:7:1
+      5| import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
+      6| import { v3Now, v3Stats, v3Threads, v3TimeZone } from "./fixtures/v3";
+      7| import { computeStats, formatStatsText, isRunning, statsWindow } from …
+       | ^
+      8|
+      9| const byId = (id: string) => v3Threads.find((t) => t.id === id)!;
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/18]⎯
+
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 16 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/FooterCounter.test.tsx > N4: approved observable footer route > registers one fixed-label disclosure on the host's bolt icon and no count artwork
+AssertionError: expected [ { …(2) } ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   {
++     "component": [Function FooterCounter],
++     "name": "wizbar-running-count",
++   },
++ ]
+
+ ❯ src/FooterCounter.test.tsx:121:23
+    119|   it("registers one fixed-label disclosure on the host's bolt icon and…
+    120|     expect(app.sidebarFooterActions).toEqual([]);
+    121|     expect(app.icons).toEqual([]);
+       |                       ^
+    122|     expect(app.experimentalSidebarFooterItems).toHaveLength(1);
+    123|     const { runtime: _runtime, ...item } = app.experimentalSidebarFoot…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/18]⎯
+
+ FAIL  |bb-plugin-wizbar| src/FooterCounter.test.tsx > V3: the list-bottom line counts the one running rule > counts busy but waiting on you by runtime work, not the indicator
+ FAIL  |bb-plugin-wizbar| src/FooterCounter.test.tsx > V3: the list-bottom line counts the one running rule > counts an attention indicator over an idle runtime by runtime work, not the indicator
+TestingLibraryElementError: Unable to find an accessible element with the role "status" and name "0 running"
+
+Here are the accessible roles:
+
+  status:
+
+  Name "1 running":
+  [36m<span[39m
+    [33maria-label[39m=[32m"1 running"[39m
+    [33maria-live[39m=[32m"polite"[39m
+    [33mrole[39m=[32m"status"[39m
+    [33mstyle[39m=[32m"position: relative; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-variant-numeric: tabular-nums; line-height: 20px; color: var(--foreground);"[39m
+    [33mtabindex[39m=[32m"0"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<body[39m
+  [33mstyle[39m=[32m""[39m
+[36m>[39m
+  [36m<div>[39m
+    [36m<span[39m
+      [33maria-label[39m=[32m"1 running"[39m
+      [33maria-live[39m=[32m"polite"[39m
+      [33mrole[39m=[32m"status"[39m
+      [33mstyle[39m=[32m"position: relative; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-variant-numeric: tabular-nums; line-height: 20px; color: var(--foreground);"[39m
+      [33mtabindex[39m=[32m"0"[39m
+    [36m>[39m
+      [36m<svg[39m
+        [33maria-hidden[39m=[32m"true"[39m
+        [33mclass[39m=[32m"wizbar-running-spinner"[39m
+        [33mfill[39m=[32m"none"[39m
+        [33mheight[39m=[32m"14"[39m
+        [33mstyle[39m=[32m"flex-shrink: 0; animation: wizbar-running-spin 1s linear infinite;"[39m
+        [33mviewBox[39m=[32m"0 0 16 16"[39m
+        [33mwidth[39m=[32m"14"[39m
+      [36m>[39m
+        [36m<circle[39m
+          [33mcx[39m=[32m"8"[39m
+          [33mcy[39m=[32m"8"[39m
+          [33mopacity[39m=[32m"0.25"[39m
+          [33mr[39m=[32m"6"[39m
+          [33mstroke[39m=[32m"currentColor"[39m
+          [33mstroke-width[39m=[32m"2"[39m
+        [36m/>[39m
+        [36m<path[39m
+          [33md[39m=[32m"M8 2a6 6 0 0 1 6 6"[39m
+          [33mstroke[39m=[32m"currentColor"[39m
+          [33mstroke-linecap[39m=[32m"round"[39m
+          [33mstroke-width[39m=[32m"2"[39m
+        [36m/>[39m
+      [36m</svg>[39m
+      [36m<span>[39m
+        [0m1[0m
+      [36m</span>[39m
+    [36m</span>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/FooterCounter.test.tsx:238:19
+    236|   ])("counts %s by runtime work, not the indicator", (_, overrides, ex…
+    237|     renderSlot(line, {}, { sidebarThreads: { status: "ready", threads:…
+    238|     expect(screen.getByRole("status", { name: `${expected} running` })…
+       |                   ^
+    239|   });
+    240|   it("hides the number when a row's runtime status is unrecognised", (…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/18]⎯
+
+ FAIL  |bb-plugin-wizbar| src/FooterCounter.test.tsx > V3: the list-bottom line counts the one running rule > counts runtime work behind no indicator by runtime work, not the indicator
+TestingLibraryElementError: Unable to find an accessible element with the role "status" and name "1 running"
+
+Here are the accessible roles:
+
+  status:
+
+  Name "0 running":
+  [36m<span[39m
+    [33maria-label[39m=[32m"0 running"[39m
+    [33maria-live[39m=[32m"polite"[39m
+    [33mrole[39m=[32m"status"[39m
+    [33mstyle[39m=[32m"position: relative; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-variant-numeric: tabular-nums; line-height: 20px; color: var(--muted-foreground);"[39m
+    [33mtabindex[39m=[32m"0"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<body[39m
+  [33mstyle[39m=[32m""[39m
+[36m>[39m
+  [36m<div>[39m
+    [36m<span[39m
+      [33maria-label[39m=[32m"0 running"[39m
+      [33maria-live[39m=[32m"polite"[39m
+      [33mrole[39m=[32m"status"[39m
+      [33mstyle[39m=[32m"position: relative; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-variant-numeric: tabular-nums; line-height: 20px; color: var(--muted-foreground);"[39m
+      [33mtabindex[39m=[32m"0"[39m
+    [36m>[39m
+      [36m<svg[39m
+        [33maria-hidden[39m=[32m"true"[39m
+        [33mclass[39m=[32m"wizbar-running-spinner"[39m
+        [33mfill[39m=[32m"none"[39m
+        [33mheight[39m=[32m"14"[39m
+        [33mstyle[39m=[32m"flex-shrink: 0;"[39m
+        [33mviewBox[39m=[32m"0 0 16 16"[39m
+        [33mwidth[39m=[32m"14"[39m
+      [36m>[39m
+        [36m<circle[39m
+          [33mcx[39m=[32m"8"[39m
+          [33mcy[39m=[32m"8"[39m
+          [33mopacity[39m=[32m"0.25"[39m
+          [33mr[39m=[32m"6"[39m
+          [33mstroke[39m=[32m"currentColor"[39m
+          [33mstroke-width[39m=[32m"2"[39m
+        [36m/>[39m
+        [36m<path[39m
+          [33md[39m=[32m"M8 2a6 6 0 0 1 6 6"[39m
+          [33mstroke[39m=[32m"currentColor"[39m
+          [33mstroke-linecap[39m=[32m"round"[39m
+          [33mstroke-width[39m=[32m"2"[39m
+        [36m/>[39m
+      [36m</svg>[39m
+      [36m<span>[39m
+        [0m0[0m
+      [36m</span>[39m
+    [36m</span>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/FooterCounter.test.tsx:238:19
+    236|   ])("counts %s by runtime work, not the indicator", (_, overrides, ex…
+    237|     renderSlot(line, {}, { sidebarThreads: { status: "ready", threads:…
+    238|     expect(screen.getByRole("status", { name: `${expected} running` })…
+       |                   ^
+    239|   });
+    240|   it("hides the number when a row's runtime status is unrecognised", (…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/18]⎯
+
+ FAIL  |bb-plugin-wizbar| src/FooterCounter.test.tsx > V3: the list-bottom line counts the one running rule > hides the number when a row's runtime status is unrecognised
+AssertionError: expected '<style>@keyframes wizbar-running-spin…' to be '' // Object.is equality
+
+- Expected
++ Received
+
++ <style>@keyframes wizbar-running-spin { to { transform: rotate(360deg); } } @media (prefers-reduced-motion: reduce) { .wizbar-running-spinner { animation: none !important; } }</style><span role="status" aria-label="4 running" aria-live="polite" tabindex="0" style="position: relative; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-variant-numeric: tabular-nums; line-height: 20px; color: var(--foreground);"><svg class="wizbar-running-spinner" viewBox="0 0 16 16" width="14" height="14" fill="none" aria-hidden="true" style="flex-shrink: 0; animation: wizbar-running-spin 1s linear infinite;"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="2" opacity="0.25"></circle><path d="M8 2a6 6 0 0 1 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg><span>4</span></span>
+
+ ❯ src/FooterCounter.test.tsx:243:42
+    241|     const rendered = renderSlot(line, {}, { sidebarThreads: { status: …
+    242|       threads: [...v3Threads, { ...base, id: "thr_v3_future", runtimeS…
+    243|     expect(rendered.container.innerHTML).toBe("");
+       |                                          ^
+    244|   });
+    245| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/18]⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > wizbar stats > prints the panel's numbers for the same fixture rows as JSON
+AssertionError: expected 2 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 2
+
+ ❯ src/server.test.ts:387:29
+    385|     const host = statsHost(v3Threads.map(raw));
+    386|     const result = await host.run(["stats", "--json"]);
+    387|     expect(result.exitCode).toBe(0);
+       |                             ^
+    388|     expect(JSON.parse(result.stdout!)).toEqual(v3Stats);
+    389|     expect(host.list).toHaveBeenCalledWith(expect.objectContaining({ a…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/18]⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > wizbar stats > prints the contract's text lines
+AssertionError: expected 2 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 2
+
+ ❯ src/server.test.ts:395:29
+    393|   it("prints the contract's text lines", async () => {
+    394|     const result = await statsHost(v3Threads.map(raw)).run(["stats"]);
+    395|     expect(result.exitCode).toBe(0);
+       |                             ^
+    396|     expect(result.stdout).toBe([
+    397|       "4 running · 2 top-level, 2 children · 1 cloud, 2 local, 1 unkno…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/18]⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > wizbar stats > reads every page until a short one
+AssertionError: expected [] to deeply equal [ +0, 100 ]
+
+- Expected
++ Received
+
+- [
+-   0,
+-   100,
+- ]
++ []
+
+ ❯ src/server.test.ts:407:63
+    405|     const host = statsHost(rows);
+    406|     const result = await host.run(["stats", "--json"]);
+    407|     expect(host.list.mock.calls.map(([args]) => args.offset)).toEqual(…
+       |                                                               ^
+    408|     expect(JSON.parse(result.stdout!).running.total).toBe(1);
+    409|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/18]⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > wizbar stats > reports state_unavailable, never a number, for a failed read
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > wizbar stats > reports state_unavailable, never a number, for a malformed row
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > wizbar stats > reports state_unavailable, never a number, for an unrecognised runtime status
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > wizbar stats > reports state_unavailable, never a number, for an ID repeated across pages
+AssertionError: expected { exitCode: 2, …(2) } to match object { exitCode: 1 }
+(2 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "exitCode": 1,
++   "exitCode": 2,
+  }
+
+ ❯ src/server.test.ts:419:18
+    417|     const host = statsHost(rows as unknown[] | (() => never));
+    418|     const json = await host.run(["stats", "--json"]);
+    419|     expect(json).toMatchObject({ exitCode: 1 });
+       |                  ^
+    420|     expect(JSON.parse(json.stdout!)).toEqual({ error: { code: "state_u…
+    421|     const text = await host.run(["stats"]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/18]⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > wizbar stats > is a usage error for "stats"
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > wizbar stats > is a usage error for "stats"
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > wizbar stats > is a usage error for "stats"
+AssertionError: expected 'wizbar <settle|unsettle|snooze|unsnoo…' to match /^(\{"error":\{"code":"usage","message…/
+
+- Expected:
+/^(\{"error":\{"code":"usage","message":")?wizbar <[^>]*\bstats\b/
+
++ Received:
+"wizbar <settle|unsettle|snooze|unsnooze|mute|unmute|list> <id>... [--until <absolute-time|hour|evening|tomorrow|next-week>] [--json]
+"
+
+ ❯ src/server.test.ts:431:62
+    429|       expect(result.exitCode).toBe(2);
+    430|       // The usage line lists every operation, stats included.
+    431|       expect(`${result.stdout ?? ""}${result.stderr ?? ""}`).toMatch(/…
+       |                                                              ^
+    432|     });
+    433| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/18]⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > wizbar stats > is a usage error for "stats"
+AssertionError: expected '{"error":{"code":"usage","message":"w…' to match /^(\{"error":\{"code":"usage","message…/
+
+- Expected:
+/^(\{"error":\{"code":"usage","message":")?wizbar <[^>]*\bstats\b/
+
++ Received:
+"{\"error\":{\"code\":\"usage\",\"message\":\"wizbar <settle|unsettle|snooze|unsnooze|mute|unmute|list> <id>... [--until <absolute-time|hour|evening|tomorrow|next-week>] [--json]\"}}
+"
+
+ ❯ src/server.test.ts:431:62
+    429|       expect(result.exitCode).toBe(2);
+    430|       // The usage line lists every operation, stats included.
+    431|       expect(`${result.stdout ?? ""}${result.stderr ?? ""}`).toMatch(/…
+       |                                                              ^
+    432|     });
+    433| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/18]⎯
+
+
+ Test Files  4 failed (4)
+      Tests  16 failed | 118 passed (134)
+   Start at  10:43:23
+   Duration  6.51s (transform 210ms, setup 0ms, import 595ms, tests 6.73s, environment 1.00s)
+
