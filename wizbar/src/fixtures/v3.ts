@@ -4,7 +4,7 @@
 // test their computations against them.
 import type { PluginSidebarPullRequest, PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import type {
-  CardMetaV3, CardModelsResultV3, ChildrenResultV3, PullRequestStateV3, StatsV3,
+  CardMetaV3, CardModelsResultV3, ChildrenResultV3, DragPinCaseV3, PullRequestStateV3, StatsV3,
 } from "../v3-types";
 
 const MINUTE = 60_000;
@@ -70,8 +70,10 @@ const waiting = {
 } as const;
 
 /**
- * Eleven sidebar rows, as `experimental_useSidebarThreads()` would return them.
- * Running: parent_many, child_working, child_local, starting.
+ * Twelve sidebar rows, as `experimental_useSidebarThreads()` would return them.
+ * Running (shared runtime rule): parent_many, child_working, child_local,
+ * starting, active_waiting. The footer's `isWorking` misses active_waiting:
+ * its indicator shows the attention, not the runtime work behind it.
  */
 export const v3Threads: readonly PluginSidebarThread[] = [
   thread({
@@ -132,6 +134,11 @@ export const v3Threads: readonly PluginSidebarThread[] = [
     projectId: "prj_v3_forge", status: "error", runtimeStatus: "error", isUnread: true,
     indicator: "unread-error", indicatorLabel: "Thread failed",
     createdAt: v3Now - 7 * HOUR, updatedAt: v3Now - 30 * MINUTE, latestAttentionAt: v3Now - 30 * MINUTE,
+  }),
+  thread({
+    id: "thr_v3_active_waiting", displayTitle: "Sample confirm schema change", machine: "cloud",
+    projectId: "prj_v3_studio", status: "active", runtimeStatus: "active", ...waiting,
+    createdAt: v3Now - 40 * MINUTE, updatedAt: v3Now - 3 * MINUTE, latestAttentionAt: v3Now - 3 * MINUTE,
   }),
   thread({
     id: "thr_v3_pinned_idle", displayTitle: "Sample release checklist", machine: "local",
@@ -210,6 +217,7 @@ export const v3CardMeta: Readonly<Record<string, CardMetaV3>> = Object.fromEntri
   ["thr_v3_finished_today", { kind: "pull-request", issueNumber: null, pullRequest: { number: 1046, url: "https://github.com/example/sample-repo/pull/1046" } }, 0, "feature/polish-empty-states"],
   ["thr_v3_finished_yesterday", null, 0, null],
   ["thr_v3_failed", null, 0, null],
+  ["thr_v3_active_waiting", null, 0, null],
   ["thr_v3_pinned_idle", null, 0, "main"],
 ] as const).map(([threadId, link, childCount, branch]) => [
   threadId, { threadId, model: null, effort: null, link, childCount, branch } as CardMetaV3,
@@ -238,6 +246,7 @@ export const v3Children: Readonly<Record<string, ChildrenResultV3>> = {
   thr_v3_finished_today: noChildren("thr_v3_finished_today"),
   thr_v3_finished_yesterday: noChildren("thr_v3_finished_yesterday"),
   thr_v3_failed: noChildren("thr_v3_failed"),
+  thr_v3_active_waiting: noChildren("thr_v3_active_waiting"),
   thr_v3_pinned_idle: noChildren("thr_v3_pinned_idle"),
 };
 
@@ -245,12 +254,30 @@ export const v3Children: Readonly<Record<string, ChildrenResultV3>> = {
 export const v3Stats: StatsV3 = {
   version: 1,
   status: "ready",
-  running: { total: 4, topLevel: 2, children: 2, cloud: 1, local: 2, unknown: 1 },
-  waitingOnYou: 2,
-  finishedToday: 2,
+  running: { total: 5, topLevel: 3, children: 2, cloud: 2, local: 2, unknown: 1 },
+  waitingOnYou: 3,
+  // No host finish time yet. Once one exists, finished_today and child_finished count here.
+  finishedToday: { source: "none", count: null },
   window: { timeZone: "UTC", start: Date.parse("2026-11-12T00:00:00Z"), end: Date.parse("2026-11-13T00:00:00Z") },
   coverage: { scope: "observable-sidebar", subagents: "not-counted", unseen: "possible" },
 };
 
 /** The host's pinned order: keyed pins by key, then unkeyed pins. */
 export const v3PinnedOrder: readonly string[] = ["thr_v3_parent_many", "thr_v3_pinned_idle", "thr_v3_parent_one"];
+
+/** Drag into Pinned: `pin`, then `reorderPinned`, two host calls with no atomic pair. */
+export const v3DragPinCases: readonly DragPinCaseV3[] = [
+  { pin: "ok", reorder: "ok", rowsAfter: "ready", outcome: { kind: "pinned-placed" } },
+  {
+    pin: "failed", reorder: "skipped", rowsAfter: "ready",
+    outcome: { kind: "pin-failed", message: "Could not pin: Sample host refusal." },
+  },
+  {
+    pin: "ok", reorder: "failed", rowsAfter: "ready",
+    outcome: { kind: "pinned-not-placed", message: "Pinned, but could not place it: Sample host refusal." },
+  },
+  {
+    pin: "ok", reorder: "failed", rowsAfter: "unavailable",
+    outcome: { kind: "unknown", message: "Pin state unknown: Sample host refusal." },
+  },
+];

@@ -7,7 +7,7 @@
 
 
  Test Files  3 passed (3)
-      Tests  32 passed (32)
-   Start at  07:09:59
-   Duration  1.48s (transform 297ms, setup 0ms, import 679ms, tests 560ms, environment 479ms)
+      Tests  34 passed (34)
+   Start at  08:06:31
+   Duration  1.63s (transform 359ms, setup 0ms, import 773ms, tests 668ms, environment 494ms)
 

@@ -95,8 +95,14 @@ export interface RunningSplitV3 {
   unknown: number;
 }
 
+/**
+ * "Finished today" needs a host finish time. SDK 0.6.33 declares none, so the
+ * count is unavailable (`source: "none"`) while the other numbers stay ready.
+ */
+export type FinishedTodayV3 = { source: "none"; count: null } | { source: "host"; count: number };
+
 export type StatsV3 = { version: 1; window: StatsWindowV3; coverage: StatsCoverageV3 } & (
-  | { status: "ready"; running: RunningSplitV3; waitingOnYou: number; finishedToday: number }
+  | { status: "ready"; running: RunningSplitV3; waitingOnYou: number; finishedToday: FinishedTodayV3 }
   | { status: "unavailable"; running: null; waitingOnYou: null; finishedToday: null }
 );
 
@@ -110,6 +116,21 @@ export type MovePositionV3 =
   | { after: string }
   | { first: true }
   | { last: true };
+
+/**
+ * One drag into Pinned. The host has no atomic pin-and-place, so each step can
+ * fail on its own. `rowsAfter` is whether the sidebar rows could be re-read.
+ */
+export interface DragPinCaseV3 {
+  pin: "ok" | "failed";
+  reorder: "ok" | "failed" | "skipped";
+  rowsAfter: "ready" | "unavailable";
+  outcome:
+    | { kind: "pinned-placed" }
+    | { kind: "pin-failed"; message: string }
+    | { kind: "pinned-not-placed"; message: string }
+    | { kind: "unknown"; message: string };
+}
 
 // ---- CLI -------------------------------------------------------------------
 

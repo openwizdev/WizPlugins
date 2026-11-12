@@ -6,8 +6,8 @@ import { countRunning } from "../running-count";
 import { readRunningSource } from "../running-source";
 import { isWorking } from "../useLifecycle";
 import {
-  v3BranchCases, v3CardMeta, v3CardModelsNone, v3Children, v3IssueNumbers, v3Now, v3PinnedOrder,
-  v3PullRequests, v3Stats, v3Threads, v3TimeZone,
+  v3BranchCases, v3CardMeta, v3CardModelsNone, v3Children, v3DragPinCases, v3IssueNumbers, v3Now,
+  v3PinnedOrder, v3PullRequests, v3Stats, v3Threads, v3TimeZone,
 } from "./v3";
 
 // V0 (WZ17): later tickets test their cards, children, stats and pins on these
@@ -17,6 +17,8 @@ import {
 // them encode a wrong answer. The shipped readers below are independent of
 // every v0.3 computation, which does not exist yet.
 const byId = new Map(v3Threads.map((thread) => [thread.id, thread]));
+// The contract's shared working fact: the same inputs on both readers.
+const working = (t: (typeof v3Threads)[number]) => hasRuntimeWork(t.runtimeStatus, Object.values(t.activity));
 
 describe("V0: synthetic v0.3 fixtures cover the contract's cases", () => {
   it("uses only made-up ids, titles and hosts, with no paths", () => {
@@ -41,7 +43,7 @@ describe("V0: synthetic v0.3 fixtures cover the contract's cases", () => {
   it("has Cloud, Local and unknown rows by the shipped machine rule, running and not", () => {
     const kinds = (rows: typeof v3Threads) => new Set(rows.map((t) => classifyMachine(t)));
     expect(kinds(v3Threads)).toEqual(new Set(["Cloud", "Local", null]));
-    expect(kinds(v3Threads.filter(isWorking))).toEqual(new Set(["Cloud", "Local", null]));
+    expect(kinds(v3Threads.filter(working))).toEqual(new Set(["Cloud", "Local", null]));
   });
 
   it("has waiting, failed, pinned (keyed and unkeyed) and finished-today rows", () => {
@@ -52,31 +54,61 @@ describe("V0: synthetic v0.3 fixtures cover the contract's cases", () => {
     expect(v3TimeZone).toBe("UTC");
     const startOfToday = Date.parse("2026-11-12T00:00:00Z");
     expect(v3Now).toBeGreaterThan(startOfToday);
-    const finished = v3Threads.filter((t) => !isWorking(t) && !t.hasPendingInteraction && t.status !== "error");
+    const finished = v3Threads.filter((t) => !working(t) && !t.hasPendingInteraction && t.status !== "error");
     expect(finished.some((t) => t.latestAttentionAt >= startOfToday)).toBe(true);
     expect(finished.some((t) => t.latestAttentionAt < startOfToday)).toBe(true);
   });
 
-  it("gives the same working answer to the UI rule and the server rule on every row", () => {
-    for (const t of v3Threads) {
-      expect(hasRuntimeWork(t.runtimeStatus, Object.values(t.activity)), t.id).toBe(isWorking(t));
-    }
+  it("has the row where the footer's indicator rule and the shared runtime rule disagree", () => {
+    // Runtime work behind an attention indicator: isWorking says no, the shared rule says yes.
+    const masked = v3Threads.filter((t) => working(t) !== isWorking(t)).map((t) => t.id);
+    expect(masked).toEqual(["thr_v3_active_waiting"]);
+    const row = byId.get("thr_v3_active_waiting");
+    expect([row?.runtimeStatus, row?.indicator, row?.hasPendingInteraction]).toEqual(["active", "waiting-for-input", true]);
+    expect(Object.values(row?.activity ?? {}).every((count) => count === 0)).toBe(true);
   });
 
-  it("states expected stats that agree with the shipped running count and machine rule", () => {
+  it("states expected stats from the shared runtime rule, with finished today unavailable", () => {
     if (v3Stats.status !== "ready") throw new Error("fixture stats must be ready");
+    const running = v3Threads.filter(working);
+    expect(v3Stats.running.total).toBe(running.length);
+    // The list-bottom line keeps isWorking; here it is one lower, the masked row.
     const shipped = countRunning(readRunningSource({ status: "ready", threads: v3Threads }, "connected"));
-    expect(v3Stats.running.total).toBe(shipped?.threads);
-    const running = v3Threads.filter(isWorking);
+    expect(v3Stats.running.total - (shipped?.threads ?? NaN)).toBe(1);
     expect(v3Stats.running.topLevel).toBe(running.filter((t) => t.parentThreadId === null).length);
     expect(v3Stats.running.children).toBe(running.filter((t) => t.parentThreadId !== null).length);
     expect([v3Stats.running.cloud, v3Stats.running.local, v3Stats.running.unknown]).toEqual(
       (["Cloud", "Local", null] as const).map((kind) => running.filter((t) => classifyMachine(t) === kind).length),
     );
+    expect(v3Stats.waitingOnYou).toBe(v3Threads.filter((t) => t.hasPendingInteraction).length);
+    expect(v3Stats.finishedToday).toEqual({ source: "none", count: null });
     expect(v3Stats.window).toEqual({
       timeZone: "UTC", start: Date.parse("2026-11-12T00:00:00Z"), end: Date.parse("2026-11-13T00:00:00Z"),
     });
     expect(v3Stats.coverage).toEqual({ scope: "observable-sidebar", subagents: "not-counted", unseen: "possible" });
+  });
+
+  it("states every drag-into-Pinned outcome, including pinned but not placed", () => {
+    expect(v3DragPinCases.map((c) => c.outcome.kind)).toEqual(["pinned-placed", "pin-failed", "pinned-not-placed", "unknown"]);
+    for (const c of v3DragPinCases) {
+      expect(c.reorder === "skipped").toBe(c.pin === "failed");
+      expect(c.outcome.kind === "unknown").toBe(c.rowsAfter === "unavailable");
+    }
+    const partial = v3DragPinCases.find((c) => c.outcome.kind === "pinned-not-placed");
+    expect([partial?.pin, partial?.reorder, partial?.rowsAfter]).toEqual(["ok", "failed", "ready"]);
+  });
+
+  it("states child statuses from the shared runtime rule", () => {
+    for (const { children } of Object.values(v3Children)) {
+      for (const child of children) {
+        const row = byId.get(child.id);
+        if (!row) throw new Error(child.id);
+        const failed = row.status === "error" || row.runtimeStatus === "error" || row.queuedWork === "failed";
+        const status = row.hasPendingInteraction ? "waiting" : failed ? "failed" : working(row) ? "working"
+          : row.isUnread ? "unread" : "idle";
+        expect(child.status, child.id).toBe(status);
+      }
+    }
   });
 
   it("states expected children that are the shipped parent-link set, with titles from the rows", () => {

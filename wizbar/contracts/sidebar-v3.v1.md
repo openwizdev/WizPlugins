@@ -26,15 +26,24 @@ Raw-to-row mapping for the CLI reader (`threads.list` row → `PluginSidebarThre
 | `id`, `projectId`, `parentThreadId`, `createdAt`, `updatedAt`, `latestAttentionAt`, `lastReadAt`, `hasPendingInteraction`, `queuedWork`, `status`, `pinnedAt`, `pinSortKey` | The same-named field |
 | `displayTitle` | `title`, else `titleFallback`, else the ID. Mention resolution is a host frontend step the server does not have; a title containing a mention can differ from the UI |
 | `runtimeStatus` | `runtime.displayStatus` |
-| `activity` | `activeWorkflowCount`, `activeBackgroundAgentCount`, `activeBackgroundCommandCount`, `activePlanModeCount`, `activeGoalCount` |
+| `activity.workflows` | `activity.activeWorkflowCount` |
+| `activity.backgroundAgents` | `activity.activeBackgroundAgentCount` |
+| `activity.backgroundCommands` | `activity.activeBackgroundCommandCount` |
+| `activity.planMode` | `activity.activePlanModeCount` |
+| `activity.goals` | `activity.activeGoalCount` |
 | `isPinned` | `pinnedAt !== null` |
 | `isUnread` | `(lastReadAt ?? 0) < latestAttentionAt`, the server rule already in `server.ts` |
 | `environment` | `null` when `environmentId` is null (the shipped projection rule the keeper observed); otherwise `{ id: environmentId, branchName: environmentBranchName, providerId: environmentProviderId, … }` |
 | `host` | `null` when `environmentHostId` is null; otherwise `{ id: environmentHostId }` |
 
-**Working, per reader.** The UI uses the unchanged `isWorking` (WZ12, the list-bottom line's rule). Raw rows carry no `indicator`, so the CLI uses the unchanged server rule `hasRuntimeWork(runtime.displayStatus, activity counters)` that mute already uses. The fixture test checks that the two agree on every fixture row; whether they agree on every real row is the gap `host-observation.v1.md` already records ("equivalence … needs validation"). The live check (#9) compares `wizbar stats --json` with the panel at one moment and reports any difference.
+The nested raw `activity` object is the one `server.ts` already validates (`liveThreadSchema`).
 
-Parity in tests means: for the same rows (as `PluginSidebarThread`), the UI and the CLI computation return equal JSON.
+**Working: one shared fact.** Every v0.3 computation (children status, stats) calls a row working when `hasRuntimeWork(runtimeStatus, [workflows, backgroundAgents, backgroundCommands, planMode, goals])` is true: the existing shared rule mute already uses on both the server and the sidebar (mute.v1.md). Both readers have exactly these inputs, so the UI and the CLI compute the same answer for the same rows. `indicator` is not an input: the host resolves it "attention before work", so a thread waiting for input while its runtime is active shows `waiting-for-input`, not `runtime`.
+
+- **Unavailable:** a `runtimeStatus` outside SDK 0.6.33's `ThreadRuntimeDisplayStatus` (`idle`, `error`, `active`, `pending`, `starting`, `stopping`, `provisioning`, `waiting-for-host`) cannot mean idle, so that reader's children and stats results are unavailable (section 4), never a guess. The CLI reader rejects such a row as malformed.
+- **The footer rule is unchanged.** The list-bottom "N running" line (#37) keeps the exported `isWorking`. It can therefore be lower than the stats panel's `running.total` for the same rows: by the rows whose runtime work hides behind an attention indicator. `thr_v3_active_waiting` is that case in the fixtures (total 5, list-bottom 4). Whether a real row can be working by `isWorking` but not by the shared rule is Unverified until #9.
+
+Parity in tests means: for the same rows (as `PluginSidebarThread`), the UI and the CLI computation return equal JSON. The live check (#9) compares `wizbar stats --json` with the panel at one moment and reports any difference.
 
 ## 2. Card metadata
 
@@ -91,7 +100,7 @@ The children of thread `P` are the input rows whose `parentThreadId === P`: the 
 | --- | --- |
 | `waiting` | `hasPendingInteraction` |
 | `failed` | `status === "error"`, `runtimeStatus === "error"` or `queuedWork === "failed"` (the mute contract's failure rule) |
-| `working` | Working, per reader (section 1) |
+| `working` | Working: the shared fact (section 1) |
 | `unread` | `isUnread` |
 | `idle` | Otherwise |
 
@@ -103,20 +112,20 @@ One computation over the reader's rows (section 1), at a given `now` and IANA `t
 
 | Number | Exact definition |
 | --- | --- |
-| `running.total` | Rows that are working (section 1). Equals the WZ12 list-bottom number for the same rows |
+| `running.total` | Rows that are working by the shared fact (section 1). Can exceed the list-bottom number, as section 1 says |
 | `running.topLevel` | Running rows with `parentThreadId === null` |
 | `running.children` | Running rows with `parentThreadId !== null`, whether or not the parent is in the input |
 | `running.cloud`, `running.local`, `running.unknown` | Running rows by the shared `classifyMachine` (approved #29 rule): `"Cloud"`, `"Local"`, `null`. The three add up to `total` |
 | `waitingOnYou` | Rows with `hasPendingInteraction`, working or not |
-| `finishedToday` | Rows that are not working, not waiting and not failed (section 3's failed rule), whose `latestAttentionAt` is inside today's window |
+| `finishedToday` | `{ source: "none", count: null }`: unavailable, because SDK 0.6.33 declares no finish time (below). Once a host finish-time field is adopted (a plan change and a keeper observation): `{ source: "host", count }`, the rows that are not working, not waiting and not failed whose finish time is inside today's window |
 
 **"Today"** is the reader's local calendar day: from local midnight today (inclusive) to local midnight tomorrow (exclusive), in the reader's IANA time zone (`Intl.DateTimeFormat().resolvedOptions().timeZone`), computed with calendar arithmetic like `resolveSnoozePresets`, so a 23- or 25-hour day is handled. The result reports `window: { timeZone, start, end }`. The panel uses the browser's zone and the CLI the server process's zone; when they differ, the window shows it.
 
-**`latestAttentionAt` as "finished".** The SDK declares no finish time. `latestAttentionAt` is the host's latest attention time, which the existing park rules already treat as "newer activity". That it equals the time work finished is Unverified until #9.
+**No finish source.** The SDK declares no finish time. `latestAttentionAt` is the host's latest attention time: a waiting, failed or merely updated thread moves it too, so it is not used as one. "Finished today" stays unavailable on its own while the other numbers are ready: the panel shows "Finished today: not available yet", the CLI text `Finished today: not available yet`, and the JSON `source: "none"`. The window is still reported, so the definition of "today" is fixed before the source exists.
 
 **Coverage disclosures,** always present (`coverage`): `scope: "observable-sidebar"`, `subagents: "not-counted"`, `unseen: "possible"`. The panel says "subagents not counted yet" and "some threads may be unseen", the WZ12 wording. Subagents stay uncounted: background-agent activity makes a thread working but is never counted on its own.
 
-**Unavailable.** When the reader's rows are unavailable, the result is `status: "unavailable"` with `running`, `waitingOnYou` and `finishedToday` all null. The panel shows a plain "unavailable" state, never a guessed number.
+**Unavailable.** When the reader's rows are unavailable (including a row with an unrecognised `runtimeStatus`, section 1), the result is `status: "unavailable"` with `running`, `waitingOnYou` and `finishedToday` all null. The panel shows a plain "unavailable" state, never a guessed number.
 
 ## 5. Drag rules and pinned order
 
@@ -130,7 +139,17 @@ One computation over the reader's rows (section 1), at a given `now` and IANA `t
 | Anything else (Inbox to Inbox, onto Snoozed, Settled or Muted from an unpinned card) | Nothing | None |
 
 - The Inbox stays newest-first and is never re-ordered by any drop. An unpinned card lands at its own creation-time place.
-- Drag and the CLI call the same WizBar server operations (#42), which call the host operations above. The UI updates from the host's sidebar rows, not from its own guess; a failed call puts the card back and shows the error.
+- Drag and the CLI call the same WizBar server operations (#42), which call the host operations above. The UI always draws the host's sidebar rows, never its own guess, and keeps no optimistic position to restore.
+- **Drag into Pinned is two host calls.** The SDK declares no atomic pin-and-place: `pin` can succeed and `reorderPinned` then fail. WizBar never undoes a step (no automatic unpin, no writing back an older order over changes made meanwhile). After the drop it re-reads the rows and reports one outcome (`DragPinCaseV3`, fixtures `v3DragPinCases`):
+
+| Pin | Reorder | Rows after | Outcome | Shown |
+| --- | --- | --- | --- | --- |
+| ok | ok | ready | `pinned-placed` | The host's rows |
+| failed | skipped | ready | `pin-failed` | The host's rows (unchanged) and `Could not pin: <error>` |
+| ok | failed | ready | `pinned-not-placed` | The host's rows (pinned, at the host's own place) and `Pinned, but could not place it: <error>` |
+| any | any | unavailable | `unknown` | `Pin state unknown: <error>`; the shelves show the existing unavailable state until the rows return |
+
+The CLI has no combined command: `wizbar pin` and `wizbar move` are separate, so each reports its own result.
 - Pinning does not change mute, settle or snooze rules: a pinned thread still cannot be muted (mute.v1.md), and pinned rows stay visible.
 
 ## 6. Footer
@@ -197,7 +216,7 @@ No children: `"children":[]`, exit 0. An unknown ID: `{"error":{"code":"unknown_
 No IDs, else usage. The stats object of section 4, as `StatsV3`.
 
 ```json
-{"version":1,"status":"ready","running":{"total":7,"topLevel":4,"children":3,"cloud":6,"local":1,"unknown":0},"waitingOnYou":2,"finishedToday":18,"window":{"timeZone":"UTC","start":1794441600000,"end":1794528000000},"coverage":{"scope":"observable-sidebar","subagents":"not-counted","unseen":"possible"}}
+{"version":1,"status":"ready","running":{"total":7,"topLevel":4,"children":3,"cloud":6,"local":1,"unknown":0},"waitingOnYou":2,"finishedToday":{"source":"none","count":null},"window":{"timeZone":"UTC","start":1794441600000,"end":1794528000000},"coverage":{"scope":"observable-sidebar","subagents":"not-counted","unseen":"possible"}}
 ```
 
 Unavailable rows: `{"error":{"code":"state_unavailable","message":"Thread state is unavailable."}}`, exit 1. Text:
@@ -205,8 +224,10 @@ Unavailable rows: `{"error":{"code":"state_unavailable","message":"Thread state 
 ```text
 7 running · 4 top-level, 3 children · 6 cloud, 1 local, 0 unknown · subagents not counted yet · some threads may be unseen
 Waiting on you: 2
-Finished today: 18
+Finished today: not available yet
 ```
+
+Once a host finish source is adopted, the last line becomes `Finished today: <count>`.
 
 ## 8. Header-chip settings
 
@@ -226,10 +247,10 @@ Read with the existing rule: a missing key reads its default; exactly `true` is 
 | `cardModels` RPC shape, `CardMetaV3`, the issue parse rule, `v3PullRequests`, `v3BranchCases`, `v3CardMeta`, `v3CardModelsNone` | #40 |
 | `ChildV3`/`ChildrenResultV3`, the `children` CLI, `v3Children`, the two header-chip settings | #43 |
 | `StatsV3`, the footer registration, the `stats` CLI, `v3Stats` | #41 |
-| `MovePositionV3`, pin/move results, the drag table, `v3PinnedOrder` | #42 |
+| `MovePositionV3`, pin/move results, the drag table, `DragPinCaseV3`, `v3PinnedOrder`, `v3DragPinCases` | #42 |
 | `wizbarOperationsV3`, exit and error codes, every JSON shape | #44 (parity test) |
 
 ## Evidence limits
 
-- Fixtures and these shapes prove no host behaviour. Model/effort availability, the Cloud projection's missing branch and PR, the real pinned order, `latestAttentionAt` as a finish time, the server reader's equivalence to the sidebar hook, footer placement and the disclosure's real look stay Unverified until #9.
+- Fixtures and these shapes prove no host behaviour. Model/effort availability, the Cloud projection's missing branch and PR, the real pinned order, any host finish time, the server reader's equivalence to the sidebar hook, how often the list-bottom line and `running.total` differ on real rows, footer placement and the disclosure's real look stay Unverified until #9.
 - The JSON timestamps in this document are examples; tests use the fixtures.
