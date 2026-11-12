@@ -159,28 +159,33 @@ describe("N4: approved observable footer route", () => {
     expect(rendered.container.innerHTML).toBe("");
   });
 
-  it("updates from host snapshots and rejects stale reuse after reconnect/error", async () => {
+  it.each(["artwork", "list"])("updates %s from host snapshots and rejects stale reuse after reconnect/error", async (view) => {
+    const View = () => view === "list"
+      ? createElement(app.threadLists[0]!.component, {
+        activeThreadId: null, activeProjectId: null, isCompactViewport: false,
+        searchQuery: "", onNavigate() {},
+      }) : createElement(icon.component);
     fixtureFeed.current = { status: "ready", threads: positiveThreads };
-    const pluginId = "synthetic-updating-footer";
-    const rendered = renderSlot({ component: icon.component }, {}, { pluginId });
+    const pluginId = `synthetic-updating-footer-${view}`;
+    const rendered = renderSlot({ component: View }, {}, { pluginId, rpc: { listLifecycle: () => ({ rows: [] }) } });
     expect(screen.getByRole("status", { name: "2 running" })).toBeDefined();
     await rendered.setRealtimeConnectionState("reconnecting");
-    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.queryByRole("status", { name: /^\d+ running$/ })).toBeNull();
     await rendered.setRealtimeConnectionState("connected");
-    expect(screen.queryByRole("status"), "reconnect alone cannot certify the old cache").toBeNull();
+    expect(screen.queryByRole("status", { name: /^\d+ running$/ }), "reconnect alone cannot certify the old cache").toBeNull();
     expect(getSourceStatuses(pluginId).footer).toBe("unavailable");
     fixtureFeed.current = { status: "ready", threads: [] };
-    rendered.rerender(createElement(icon.component));
+    rendered.rerender(createElement(View));
     expect(screen.getByRole("status", { name: "0 running" })).toBeDefined();
     expect(getSourceStatuses(pluginId).footer).toBe("unverified");
     fixtureFeed.current = { ...fixtureFeed.current, status: "error" };
-    rendered.rerender(createElement(icon.component));
-    expect(screen.queryByRole("status")).toBeNull();
+    rendered.rerender(createElement(View));
+    expect(screen.queryByRole("status", { name: /^\d+ running$/ })).toBeNull();
     fixtureFeed.current = { ...fixtureFeed.current, status: "ready" };
-    rendered.rerender(createElement(icon.component));
-    expect(screen.queryByRole("status"), "error recovery needs a new host snapshot").toBeNull();
+    rendered.rerender(createElement(View));
+    expect(screen.queryByRole("status", { name: /^\d+ running$/ }), "error recovery needs a new host snapshot").toBeNull();
     fixtureFeed.current = { status: "ready", threads: [...positiveThreads] };
-    rendered.rerender(createElement(icon.component));
+    rendered.rerender(createElement(View));
     expect(screen.getByRole("status", { name: "2 running" })).toBeDefined();
     expect(getSourceStatuses(pluginId).footer).toBe("unverified");
   });
