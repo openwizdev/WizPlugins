@@ -112,6 +112,8 @@ describe("W3: synthetic footer artwork through the SDK rendering harness", () =>
 
 // N4: the historical artwork tests never mounted a connected production source.
 // These proofs fail if the app remains unwired or promotes observable coverage to live.
+// Snapshot validity is plugin-wide (review R1): a test that puts rows through a
+// gap passes its own copy, as a host would hand over a new snapshot.
 describe("N4: approved observable footer route", () => {
   const icon = line;
   // WZ20 (#41): one disclosure with a named host icon and a fixed label
@@ -150,7 +152,7 @@ describe("N4: approved observable footer route", () => {
   it.each(["loading", "error"] as const)("renders no number and reports unavailable for %s with retained rows", (status) => {
     const pluginId = `synthetic-running-${status}`;
     const rendered = renderSlot({ component: icon.component }, {}, {
-      pluginId, sidebarThreads: { status, threads: positiveThreads },
+      pluginId, sidebarThreads: { status, threads: [...positiveThreads] },
     });
     expect(rendered.container.innerHTML).toBe("");
     expect(getSourceStatuses(pluginId).footer).toBe("unavailable");
@@ -160,7 +162,7 @@ describe("N4: approved observable footer route", () => {
     const pluginId = "synthetic-hidden-running";
     const rendered = renderSlot({ component: icon.component }, {}, {
       pluginId, settings: { footerCountEnabled: false },
-      sidebarThreads: { status: "ready", threads: positiveThreads },
+      sidebarThreads: { status: "ready", threads: [...positiveThreads] },
     });
     expect(rendered.container.innerHTML).toBe("");
     expect(getSourceStatuses(pluginId).footer).toBe("unverified");
@@ -175,7 +177,7 @@ describe("N4: approved observable footer route", () => {
         activeThreadId: null, activeProjectId: null, isCompactViewport: false,
         searchQuery: "", onNavigate() {},
       }) : createElement(icon.component);
-    fixtureFeed.current = { status: "ready", threads: positiveThreads };
+    fixtureFeed.current = { status: "ready", threads: [...positiveThreads] };
     const pluginId = `synthetic-updating-footer-${view}`;
     const rendered = renderSlot({ component: View }, {}, { pluginId, rpc: { listLifecycle: () => ({ rows: [] }) } });
     expect(screen.getByRole("status", { name: "2 running" })).toBeDefined();

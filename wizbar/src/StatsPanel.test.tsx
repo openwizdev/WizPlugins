@@ -55,8 +55,8 @@ describe("V3: footer stats panel", () => {
 
   const unknownRuntime = [...v3Threads, { ...v3Threads[0]!, id: "thr_v3_future", runtimeStatus: "host-reconnecting" as never }];
   it.each([
-    ["loading", { status: "loading" as const, threads: v3Threads }],
-    ["error", { status: "error" as const, threads: v3Threads }],
+    ["loading", { status: "loading" as const, threads: [...v3Threads] }],
+    ["error", { status: "error" as const, threads: [...v3Threads] }],
     ["an unrecognised runtime status", { status: "ready" as const, threads: unknownRuntime as PluginSidebarThread[] }],
   ])("shows a plain unavailable state, never a number, for %s", (_, sidebarThreads) => {
     renderSlot(panel, props, { sidebarThreads });
@@ -64,7 +64,7 @@ describe("V3: footer stats panel", () => {
   });
 
   it("drops its numbers when the realtime connection is lost", async () => {
-    const rendered = renderSlot(panel, props, { sidebarThreads: { status: "ready", threads: v3Threads } });
+    const rendered = renderSlot(panel, props, { sidebarThreads: { status: "ready", threads: [...v3Threads] } });
     expect(lines()[0]).toBe("4 running · 2 top-level, 2 children");
     await rendered.setRealtimeConnectionState("reconnecting");
     expect(lines()[0]).toBe("Stats unavailable");

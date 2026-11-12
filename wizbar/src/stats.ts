@@ -3,6 +3,7 @@
 // same rows give the same numbers everywhere.
 import { hasRuntimeWork } from "./lifecycle";
 import { classifyMachine } from "./machine-source";
+import type { PluginRealtimeConnectionState, PluginSidebarThreadsState } from "@get-bb/plugin-sdk";
 import type { StatsCoverageV3, StatsV3, StatsWindowV3, ThreadV3 } from "./v3-types";
 
 /** SDK 0.6.33 `ThreadRuntimeDisplayStatus`; anything else cannot mean idle. */
@@ -60,7 +61,8 @@ export function computeStats(rows: readonly StatsRow[] | null, now: number, time
   const running = { total: 0, topLevel: 0, children: 0, cloud: 0, local: 0, unknown: 0 };
   let waitingOnYou = 0;
   for (const row of rows) {
-    if (!(runtimeDisplayStatuses as readonly string[]).includes(row.runtimeStatus)) return unavailable;
+    if (!(runtimeDisplayStatuses as readonly string[]).includes(row.runtimeStatus) ||
+      typeof row.hasPendingInteraction !== "boolean") return unavailable;
     const counted = isRunning(row);
     const machine = classifyMachine(row);
     const facts = JSON.stringify([counted, row.hasPendingInteraction, row.parentThreadId, machine]);
@@ -77,6 +79,46 @@ export function computeStats(rows: readonly StatsRow[] | null, now: number, time
     running[machine === "Cloud" ? "cloud" : machine === "Local" ? "local" : "unknown"]++;
   }
   return { version: 1, status: "ready", running, waitingOnYou, finishedToday: { source: "none", count: null }, window, coverage };
+}
+
+export type SidebarRowsStatus = "ready" | "unavailable" | "incomplete" | "stale" | "error";
+
+const stableId = (value: unknown): value is string => typeof value === "string" && value.trim().length > 0;
+
+/**
+ * The UI reader (contract section 1): the sidebar hook's rows when they are
+ * ready, connected and carry every field a v0.3 computation reads. Repeated IDs
+ * are checked on the membership and running-rule facts only, never the
+ * indicator; `computeStats` rejects rows that conflict on those facts.
+ */
+export function readSidebarRows(
+  state: Pick<PluginSidebarThreadsState, "status" | "threads">,
+  connection: PluginRealtimeConnectionState,
+): { status: SidebarRowsStatus; rows: readonly ThreadV3[] | null } {
+  const gap = (status: Exclude<SidebarRowsStatus, "ready">) => ({ status, rows: null });
+  if (!state || typeof state !== "object" || Array.isArray(state)) return gap("incomplete");
+  if (state.status === "error") return gap("error");
+  if (state.status === "loading") return gap("unavailable");
+  if (state.status !== "ready" || !Array.isArray(state.threads)) return gap("incomplete");
+  if (connection !== "connected") return gap("stale");
+  const projects = new Map<string, string>();
+  for (const row of state.threads as readonly unknown[]) {
+    if (!row || typeof row !== "object" || Array.isArray(row)) return gap("incomplete");
+    const t = row as ThreadV3;
+    const activity = t.activity as unknown;
+    if (!stableId(t.id) || !stableId(t.projectId) || !(t.parentThreadId === null || stableId(t.parentThreadId)) ||
+      typeof t.hasPendingInteraction !== "boolean" ||
+      !(runtimeDisplayStatuses as readonly string[]).includes(t.runtimeStatus) ||
+      !activity || typeof activity !== "object" || Array.isArray(activity) || Object.keys(activity).length !== 5 ||
+      ![t.activity.workflows, t.activity.backgroundAgents, t.activity.backgroundCommands, t.activity.planMode, t.activity.goals]
+        .every((n) => Number.isSafeInteger(n) && n >= 0)) return gap("incomplete");
+    const prior = projects.get(t.id);
+    if (prior !== undefined && prior !== t.projectId) return gap("incomplete");
+    projects.set(t.id, t.projectId);
+  }
+  // Repeats that disagree on the running rule's facts are unavailable too.
+  if (computeStats(state.threads, 0, "UTC").status !== "ready") return gap("incomplete");
+  return { status: "ready", rows: state.threads };
 }
 
 /** The panel's and the CLI's wording for the finish line. */

@@ -1,39 +1,39 @@
 import { useEffect, useId, useState } from "react";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk";
 import { countRunning, type ObservableRunningSource, type RunningCountSource } from "./running-count";
-import { computeStats, isRunning } from "./stats";
+import { isRunning, readSidebarRows, type SidebarRowsStatus } from "./stats";
 import { experimental_useSidebarThreads, useRealtimeConnectionState } from "@get-bb/plugin-sdk/app";
 import { useFeatureSourceStatus, useWizBarSettings } from "./SettingsPage";
-import { readRunningSource } from "./running-source";
 
 /**
- * The observable host rows, or null when they cannot be trusted right now: not
- * ready, not connected, malformed, or a retained snapshot after a gap. The
- * hook owns cache/realtime ordering; a reconnect alone cannot certify the same
- * retained snapshot. No age is guessed.
+ * Snapshots seen during a gap (not ready, not connected, malformed). Plugin
+ * scoped, so a disclosure the host mounts later still knows what the list line
+ * saw: a reconnect alone cannot certify the same retained snapshot, and only a
+ * new snapshot from the host clears it. No age is guessed.
  */
-export function useObservableRows(): { input: ObservableRunningSource; rows: readonly PluginSidebarThread[] | null } {
+const untrustedSnapshots = new WeakSet<object>();
+
+/** The observable host rows, or null when they cannot be trusted right now. */
+export function useObservableRows(): { status: SidebarRowsStatus; rows: readonly PluginSidebarThread[] | null } {
   const state = experimental_useSidebarThreads();
   const connection = useRealtimeConnectionState();
-  const input = readRunningSource(state, connection);
-  const [invalidatedSnapshot, setInvalidatedSnapshot] = useState<readonly PluginSidebarThread[] | null>(null);
-  useEffect(() => {
-    if (input.status !== "ready") setInvalidatedSnapshot(state.threads);
-  }, [input.status, state.threads]);
-  const stale = input.status === "ready" && invalidatedSnapshot === state.threads;
-  return { input: stale ? { ...input, status: "stale", threads: null } : input,
-    rows: input.status === "ready" && !stale ? state.threads : null };
+  const read = readSidebarRows(state, connection);
+  const snapshot = state?.threads;
+  if (read.status !== "ready") {
+    if (snapshot && typeof snapshot === "object") untrustedSnapshots.add(snapshot);
+    return read;
+  }
+  return untrustedSnapshots.has(snapshot) ? { status: "stale", rows: null } : read;
 }
 
 /** Observable host cache only; neither coverage nor freshness is claimed live.
  * WZ20 (#41): counts the one running rule (stats.ts), the stats panel's total. */
 export function FooterCounter({ className }: { className?: string }) {
-  const { input, rows } = useObservableRows();
-  // Same availability as the stats panel; the day window is not used here.
-  const stats = rows ? computeStats(rows, 0, "UTC") : null;
-  const source: ObservableRunningSource = rows && input.status === "ready" && stats?.status === "ready"
-    ? { ...input, threads: rows.map((t) => ({ id: t.id, projectId: t.projectId, parentThreadId: t.parentThreadId, isWorking: isRunning(t) })) }
-    : input.status === "ready" ? { ...input, status: "incomplete", threads: null } : input;
+  const { status, rows } = useObservableRows();
+  const base = { version: 1, scope: "observable-sidebar", subagents: { status: "unproven", count: null } } as const;
+  const source: ObservableRunningSource = rows && status === "ready"
+    ? { ...base, status, threads: rows.map((t) => ({ id: t.id, projectId: t.projectId, parentThreadId: t.parentThreadId, isWorking: isRunning(t) })) }
+    : { ...base, status: status === "ready" ? "incomplete" : status, threads: null };
   useFeatureSourceStatus("footer", source.status === "ready" ? "unverified" : "unavailable");
   return <FooterCounterArtwork className={className} source={source} />;
 }
