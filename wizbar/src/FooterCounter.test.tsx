@@ -120,7 +120,8 @@ describe("N4: approved observable footer route", () => {
     expect(app.sidebarFooterActions).toEqual([]);
     expect(app.icons).toEqual([]);
     expect(app.experimentalSidebarFooterItems).toHaveLength(1);
-    const { runtime: _runtime, ...item } = app.experimentalSidebarFooterItems[0]!;
+    // The harness adds its own `runtime` and `source`; the rest is the registration.
+    const { runtime: _runtime, source: _source, ...item } = app.experimentalSidebarFooterItems[0]! as typeof app.experimentalSidebarFooterItems[0] & { source?: string };
     expect(item).toEqual({ id: "stats", kind: "disclosure", label: "WizBar stats", icon: "Zap", component: expect.any(Function) });
     renderSlot({ component: item.kind === "disclosure" ? item.component : () => null }, { dismiss() {} }, {
       sidebarThreads: { status: "ready", threads: v3Threads },

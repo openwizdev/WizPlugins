@@ -1,6 +1,8 @@
 import type { PluginCliRegistration, PluginCliResult } from "@get-bb/plugin-sdk";
 import { z } from "zod";
 import { resolveSnoozePresets, type ThreadShelf } from "./lifecycle";
+import { formatStatsText } from "./stats";
+import type { StatsV3 } from "./v3-types";
 
 export type LifecycleOperation = "settle" | "unsettle" | "snooze" | "unsnooze" | "mute" | "unmute" | "list";
 export interface LifecycleSuccess {
@@ -20,7 +22,7 @@ export class LifecycleError extends Error {
 
 type Execute = (operation: LifecycleOperation, threadId: string, until?: number, signal?: AbortSignal) => Promise<LifecycleSuccess>;
 const operations = ["settle", "unsettle", "snooze", "unsnooze", "mute", "unmute", "list"] as const;
-const usage = "wizbar <settle|unsettle|snooze|unsnooze|mute|unmute|list> <id>... [--until <absolute-time|hour|evening|tomorrow|next-week>] [--json]";
+const usage = "wizbar <settle|unsettle|snooze|unsnooze|mute|unmute|list> <id>... [--until <absolute-time|hour|evening|tomorrow|next-week>] [--json] | wizbar stats [--json]";
 
 function wakeTime(value: string, now: number): number {
   const preset = resolveSnoozePresets(new Date(now)).find((p) => p.id === value);
@@ -32,11 +34,17 @@ function wakeTime(value: string, now: number): number {
   return until;
 }
 
-export function createLifecycleCommand(execute: Execute): PluginCliRegistration {
+/** WZ20 (#41): reads every row and computes stats; an unavailable read gives `status: "unavailable"`. */
+type ReadStats = (signal?: AbortSignal) => Promise<StatsV3>;
+
+export function createLifecycleCommand(execute: Execute, readStats: ReadStats): PluginCliRegistration {
   return {
     name: "wizbar",
     summary: "List or change WizBar thread shelves.",
-    commands: operations.map((name) => ({ name, summary: `${name} one or many threads`, usage: `${name} <id>...${name === "snooze" ? " --until <time>" : ""} [--json]` })),
+    commands: [
+      ...operations.map((name) => ({ name, summary: `${name} one or many threads`, usage: `${name} <id>...${name === "snooze" ? " --until <time>" : ""} [--json]` })),
+      { name: "stats", summary: "running, waiting and finished-today numbers", usage: "stats [--json]" },
+    ],
     async run(argv, ctx): Promise<PluginCliResult> {
       const endOfOptions = argv.indexOf("--");
       const json = argv.slice(1, endOfOptions < 0 ? undefined : endOfOptions).includes("--json");
@@ -45,6 +53,16 @@ export function createLifecycleCommand(execute: Execute): PluginCliRegistration 
         ...(json ? { stdout: JSON.stringify({ error: { code: "usage", message: usage } }) + "\n" } : { stderr: usage + "\n" }),
       });
       const operation = argv[0];
+      if (operation === "stats") {
+        const rest = argv.slice(1);
+        if (rest.length > 1 || (rest.length === 1 && rest[0] !== "--json")) return failUsage();
+        const stats = await readStats(ctx.signal);
+        if (stats.status !== "ready") {
+          const error = { code: "state_unavailable", message: "Thread state is unavailable." };
+          return { exitCode: 1, stdout: (json ? JSON.stringify({ error }) : formatStatsText(stats)) + "\n" };
+        }
+        return { exitCode: 0, stdout: (json ? JSON.stringify(stats) : formatStatsText(stats)) + "\n" };
+      }
       if (!operations.includes(operation as LifecycleOperation)) return failUsage();
       const ids: string[] = [];
       let untilText: string | undefined;

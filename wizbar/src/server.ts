@@ -9,6 +9,7 @@ import { z } from "zod";
 import { wizbarSettingDescriptors } from "./settings";
 import { canMute, canPark, hasRuntimeWork, resolveShelf, type ThreadActivitySignals } from "./lifecycle";
 import { createLifecycleCommand, LifecycleError, type LifecycleOperation, type LifecycleSuccess } from "./command";
+import { computeStats, runtimeDisplayStatuses, type StatsRow } from "./stats";
 
 const migrations = [
   `CREATE TABLE IF NOT EXISTS thread_lifecycle (
@@ -163,6 +164,54 @@ async function readSignals(bb: BbPluginApi, threadId: string, signal?: AbortSign
       throw new LifecycleError("unknown_id", "Unknown thread ID.");
     }
     throw unavailable();
+  }
+}
+
+// WZ20 (#41): the CLI reader of contracts/sidebar-v3.v1.md section 1, for stats.
+// Every non-archived page, hidden rows included, no project filter. A failed
+// read, a malformed row or an ID repeated across pages gives null.
+const statsRowSchema = z.object({
+  id: z.string().trim().min(1),
+  parentThreadId: z.string().nullable(),
+  hasPendingInteraction: z.boolean(),
+  runtime: z.object({ displayStatus: z.enum(runtimeDisplayStatuses) }),
+  activity: liveThreadSchema.shape.activity,
+  environmentId: z.string().nullable(),
+  environmentBranchName: z.string().nullable(),
+  environmentProviderId: z.string().nullable(),
+  environmentHostId: z.string().nullable(),
+}).transform((raw): StatsRow => ({
+  id: raw.id, parentThreadId: raw.parentThreadId, hasPendingInteraction: raw.hasPendingInteraction,
+  runtimeStatus: raw.runtime.displayStatus,
+  activity: {
+    workflows: raw.activity.activeWorkflowCount, backgroundAgents: raw.activity.activeBackgroundAgentCount,
+    backgroundCommands: raw.activity.activeBackgroundCommandCount, planMode: raw.activity.activePlanModeCount,
+    goals: raw.activity.activeGoalCount,
+  },
+  // Only the fields `classifyMachine` reads; the rest of the shapes stay the host's.
+  environment: raw.environmentId === null ? null : {
+    id: raw.environmentId, branchName: raw.environmentBranchName, providerId: raw.environmentProviderId,
+  } as StatsRow["environment"],
+  host: raw.environmentHostId === null ? null : { id: raw.environmentHostId } as StatsRow["host"],
+}));
+
+async function readStatsRows(bb: BbPluginApi, signal?: AbortSignal): Promise<StatsRow[] | null> {
+  try {
+    const rows: StatsRow[] = [];
+    const seen = new Set<string>();
+    for (let offset = 0; ; offset += 100) {
+      const page = await bb.sdk.threads.list({ archived: false, includeHidden: true, limit: 100, offset, signal });
+      if (!Array.isArray(page)) return null;
+      for (const raw of page) {
+        const parsed = statsRowSchema.safeParse(raw);
+        if (!parsed.success || seen.has(parsed.data.id)) return null;
+        seen.add(parsed.data.id);
+        rows.push(parsed.data);
+      }
+      if (page.length < 100) return rows;
+    }
+  } catch {
+    return null;
   }
 }
 
@@ -362,7 +411,8 @@ export default function plugin(bb: BbPluginApi) {
     async mute({ threadId }) { await perform("mute", threadId); return { ok: true }; },
     async unmute({ threadId }) { await perform("unmute", threadId); return { ok: true }; },
   });
-  bb.cli.register(createLifecycleCommand(perform));
+  bb.cli.register(createLifecycleCommand(perform, async (signal) =>
+    computeStats(await readStatsRows(bb, signal), Date.now(), Intl.DateTimeFormat().resolvedOptions().timeZone)));
 
   bb.events.on("interaction.pending", ({ thread }) => breakMute(thread.id));
   bb.events.on("thread.failed", ({ thread }) => breakMute(thread.id));

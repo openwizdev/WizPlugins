@@ -372,7 +372,7 @@ describe("wizbar stats", () => {
   });
   const idle = (id: string) => raw({ ...v3Threads.find((t) => t.id === "thr_v3_pinned_idle")!, id });
   function statsHost(rows: unknown[] | (() => never)) {
-    const list = vi.fn(async ({ offset = 0, limit = 100 }: { offset?: number; limit?: number }) =>
+    const list = vi.fn(async ({ offset = 0, limit = 100 }: { offset?: number; limit?: number } = {}) =>
       typeof rows === "function" ? rows() : rows.slice(offset, offset + limit));
     const host = createFakePluginHost({ pluginId: "wizbar", sdk: { threads: { get: vi.fn(), list } } });
     hosts.push(host);
@@ -404,7 +404,7 @@ describe("wizbar stats", () => {
     const rows = [...Array.from({ length: 100 }, (_, i) => idle(`thr_page_${i}`)), raw(v3Threads[0]!)];
     const host = statsHost(rows);
     const result = await host.run(["stats", "--json"]);
-    expect(host.list.mock.calls.map(([args]) => args.offset)).toEqual([0, 100]);
+    expect(host.list.mock.calls.map(([args]) => args?.offset)).toEqual([0, 100]);
     expect(JSON.parse(result.stdout!).running.total).toBe(1);
   });
 
@@ -428,6 +428,6 @@ describe("wizbar stats", () => {
       const result = await statsHost([]).run(argv);
       expect(result.exitCode).toBe(2);
       // The usage line lists every operation, stats included.
-      expect(`${result.stdout ?? ""}${result.stderr ?? ""}`).toMatch(/^(\{"error":\{"code":"usage","message":")?wizbar <[^>]*\bstats\b/);
+      expect(`${result.stdout ?? ""}${result.stderr ?? ""}`).toMatch(/^(\{"error":\{"code":"usage","message":")?wizbar .*\bstats\b/);
     });
 });
