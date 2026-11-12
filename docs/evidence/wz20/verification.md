@@ -1,0 +1,31 @@
+# WZ20 verification (#41)
+
+Footer bolt stats panel, the list-bottom line on the one running rule, and `wizbar stats`, built against [sidebar-v3.v1.md](../../../wizbar/contracts/sidebar-v3.v1.md) sections 1, 4, 6 and 7. Every row is the synthetic v0.3 fixture (`wizbar/src/fixtures/v3.ts`); expected numbers are its hand-worked `v3Stats` (4 running: 2 top-level, 2 children; 1 Cloud, 2 Local, 1 unknown; 3 waiting on you; finished today unavailable).
+
+## Reproduce
+
+From `wizbar/`: `npm ci`, `npm run typecheck`, `npm test -- --maxWorkers=2`. The scoped proof is `npm test -- --maxWorkers=2 src/stats.test.ts src/StatsPanel.test.tsx src/FooterCounter.test.tsx src/server.test.ts`.
+
+Screenshots: from the repository root, `node docs/evidence/wz20/serve.mjs`, then `browser-harness < docs/evidence/wz20/capture.py` in a second shell; stop the server afterwards. The script owns one tab, asserts the panel's lines, the list-bottom line and the fixed bolt label for each state, and writes `screenshots/`. It uses the locked Vite and SDK test harness already in the plugin's dependency tree; it installs nothing and contacts no host.
+
+## Results
+
+- `red.log`: the first failing run, committed before any implementation (`27aa587`). 16 tests failed at their assertions: the footer still registered as the no-op action with its count icon, the list line still counting `isWorking` (indicator), and `wizbar stats` an unknown operation. Two files failed in setup and ran none of their tests: `stats.test.ts` (no `./stats` module) and `StatsPanel.test.tsx` (the missing registration threw while the file loaded). So that first run proved the panel was missing, not what each panel assertion catches. That limit stays part of the record.
+- `review-red.log`: the review's R1–R3 regressions, committed before their fix (`b6147aa`). 6 tests failed at their assertions: a disclosure mounted after a gap the list line saw showed the retained numbers (R1); a missing or string waiting flag gave a ready number (R2); two copies of one row differing only in indicator made the panel unavailable (R3).
+- `review2-red.log`: the R1 re-check regression, committed before its fix (`c19a9a9`). The fixture hook now returns its own array on every call, as the host's per-hook projection does. After a gap, the same retained rows in a new array brought the numbers back (1 failure). The fix keeps one gap record per plugin. It compares row objects, not arrays: the host keeps a row object while its thread is unchanged. The same rows in another array stay unavailable, and the first snapshot with different rows clears the gap for every consumer. One cost: if nothing changes after a reconnect, the numbers stay hidden until some thread updates. That is the fail-closed choice, never a guess.
+- `review3-red.log`: the R1 re-check 2 regression, committed before its fix (`87429d9`). The fixture hook now gives each hook instance its own array **and its own row objects** over the same data. That corrects `review2-red.log`'s assumption: the SDK promises a row object's identity across updates within one hook, not across hook instances. A panel opened after a gap the line saw showed the retained numbers (1 failure). The fix, per the orchestrator's diagnosis on #41, keys one module-level gap store per plugin on values: the sorted `id` and `updatedAt` of the rows, plus a connection epoch that increments when a gap begins. Any consumer's projection of the same retained data stays unavailable, closing and reopening the panel included; the first ready snapshot with a revised row clears it for both surfaces. In `ThreadInbox.test.tsx`'s WZ16 block, the loading/error case renders under its own synthetic plugin id so its gap record does not reach the next test (input only, no assertion changed).
+- `panel-mutations.log` (`panel-mutations.py`): **post-implementation** mutation replay for R4, not an earlier run. `StatsPanel.test.tsx` now looks up the registration inside each render, so a missing or broken panel fails each test at its own assertions. Four deliberate breaks of the registered panel each fail the claims they should: an empty panel fails all 11; a panel that trusts raw rows fails loading, error, reconnect and the gap case; a dropped disclosure line and swapped Cloud/Local numbers each fail the values test.
+- `typecheck.log`: passes.
+- `full-suite.log`: 489 passed, 18 files. The three WZ16 list tests in `wizbar/src/ThreadInbox.test.tsx` had put `indicator: "runtime"` over an idle runtime (not running under the contract's rule) and rendered the removed count icon. Per the [orchestrator ruling on #41](https://github.com/openwizdev/wizplugins/issues/41#issuecomment-6822185931), #41 owns only that block for this change: its runtime rows gain `runtimeStatus: "active"`, the removed artwork goes, and one counter is expected where there were two. Every other assertion is unchanged.
+- `screenshots/`: `desktop-ready.png` and `phone-ready.png` show the registered panel with the fixture's numbers and the "4" list line below the list; `*-unavailable.png` show "Stats unavailable" with no number. `beside-target-c.png` puts the desktop render beside target picture C. `capture.json` records each asserted state.
+
+## Differences from picture C
+
+- The picture's numbers (7 running, 18 finished) are illustrative; the render shows the fixture's. "Finished today" reads "not available yet": SDK 0.6.33 declares no finish time (contract section 4).
+- The panel adds the Cloud/Local "unknown" count (contract section 4) and "some threads may be unseen" (coverage disclosure).
+- The list-bottom line keeps #37's look (spinner and number, dim zero); only its counting rule changed.
+- The host footer, its bolt and the disclosure frame in the render are placeholders. The host draws the real ones; their look and placement stay Unverified until the live check (#9).
+
+## Limits
+
+Fixture tests prove the computation, the registration shape and the rendered panel, not host behaviour. Whether the server reader's rows equal the sidebar hook's, the host's disclosure placement, and a live `wizbar stats` against the panel at one moment stay for #9. No plugin build, installation or publication was performed. Helpers: none.

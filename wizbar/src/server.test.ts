@@ -1,6 +1,8 @@
 import { createFakePluginHost, makeThreadResponse, type FakePluginHost } from "@get-bb/plugin-sdk/testing";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import plugin from "./server";
+import type { PluginSidebarThread } from "@get-bb/plugin-sdk";
+import { v3Now, v3Stats, v3Threads } from "./fixtures/v3";
 
 const NOW = Date.parse("2030-05-06T10:00:00Z");
 function thread(id = "example-a") {
@@ -348,6 +350,86 @@ describe("pending parking invalidation lifetime", () => {
     expect((await pending).exitCode).toBe(0);
     expect(host.rows()).toEqual([{ thread_id: "example-a", settled_at: NOW, snoozed_until: null, snoozed_at: null }]);
   });
+});
+
+// WZ20 (#41): `wizbar stats` reads every non-archived page and computes the
+// same stats as the panel. Raw rows are the v0.3 fixture rows written in the
+// host's `threads.list` shape by the contract's mapping table.
+describe("wizbar stats", () => {
+  const raw = (t: PluginSidebarThread) => ({
+    id: t.id, projectId: t.projectId, parentThreadId: t.parentThreadId, archivedAt: null, deletedAt: null,
+    title: t.title, titleFallback: t.titleFallback, createdAt: t.createdAt, updatedAt: t.updatedAt,
+    lastReadAt: t.lastReadAt, latestAttentionAt: t.latestAttentionAt, hasPendingInteraction: t.hasPendingInteraction,
+    queuedWork: t.queuedWork, status: t.status, pinnedAt: t.pinnedAt, pinSortKey: t.pinSortKey,
+    runtime: { displayStatus: t.runtimeStatus, hostReconnectGraceExpiresAt: null },
+    activity: {
+      activeWorkflowCount: t.activity.workflows, activeBackgroundAgentCount: t.activity.backgroundAgents,
+      activeBackgroundCommandCount: t.activity.backgroundCommands, activePlanModeCount: t.activity.planMode,
+      activeGoalCount: t.activity.goals,
+    },
+    environmentId: t.environment?.id ?? null, environmentBranchName: t.environment?.branchName ?? null,
+    environmentProviderId: t.environment?.providerId ?? null, environmentHostId: t.host?.id ?? null,
+  });
+  const idle = (id: string) => raw({ ...v3Threads.find((t) => t.id === "thr_v3_pinned_idle")!, id });
+  function statsHost(rows: unknown[] | (() => never)) {
+    const list = vi.fn(async ({ offset = 0, limit = 100 }: { offset?: number; limit?: number } = {}) =>
+      typeof rows === "function" ? rows() : rows.slice(offset, offset + limit));
+    const host = createFakePluginHost({ pluginId: "wizbar", sdk: { threads: { get: vi.fn(), list } } });
+    hosts.push(host);
+    plugin(host.bb);
+    return { list, run: (argv: string[]) => host.harness.behavior.runCli(argv) };
+  }
+  beforeEach(() => { vi.setSystemTime(v3Now); });
+
+  it("prints the panel's numbers for the same fixture rows as JSON", async () => {
+    const host = statsHost(v3Threads.map(raw));
+    const result = await host.run(["stats", "--json"]);
+    expect(result.exitCode).toBe(0);
+    expect(JSON.parse(result.stdout!)).toEqual(v3Stats);
+    expect(host.list).toHaveBeenCalledWith(expect.objectContaining({ archived: false, includeHidden: true, limit: 100, offset: 0 }));
+    expect(host.list.mock.calls[0]![0]).not.toHaveProperty("projectId");
+  });
+
+  it("prints the contract's text lines", async () => {
+    const result = await statsHost(v3Threads.map(raw)).run(["stats"]);
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toBe([
+      "4 running · 2 top-level, 2 children · 1 cloud, 2 local, 1 unknown · subagents not counted yet · some threads may be unseen",
+      "Waiting on you: 3",
+      "Finished today: not available yet",
+    ].join("\n") + "\n");
+  });
+
+  it("reads every page until a short one", async () => {
+    const rows = [...Array.from({ length: 100 }, (_, i) => idle(`thr_page_${i}`)), raw(v3Threads[0]!)];
+    const host = statsHost(rows);
+    const result = await host.run(["stats", "--json"]);
+    expect(host.list.mock.calls.map(([args]) => args?.offset)).toEqual([0, 100]);
+    expect(JSON.parse(result.stdout!).running.total).toBe(1);
+  });
+
+  it.each([
+    ["a failed read", () => { throw new Error("offline"); }],
+    ["a malformed row", [{ ...raw(v3Threads[0]!), activity: {} }]],
+    ["an unrecognised runtime status", [{ ...raw(v3Threads[0]!), runtime: { displayStatus: "host-reconnecting" } }]],
+    ["an ID repeated across pages", [...Array.from({ length: 100 }, (_, i) => idle(`thr_page_${i}`)), idle("thr_page_0")]],
+  ])("reports state_unavailable, never a number, for %s", async (_, rows) => {
+    const host = statsHost(rows as unknown[] | (() => never));
+    const json = await host.run(["stats", "--json"]);
+    expect(json).toMatchObject({ exitCode: 1 });
+    expect(JSON.parse(json.stdout!)).toEqual({ error: { code: "state_unavailable", message: "Thread state is unavailable." } });
+    const text = await host.run(["stats"]);
+    expect(text.exitCode).toBe(1);
+    expect(text.stdout).toBe("ERROR state_unavailable: Thread state is unavailable.\n");
+  });
+
+  it.each([["stats", "thr_v3_parent_many"], ["stats", "--json", "--json"], ["stats", "--until", "hour"], ["stats", "--", "x"]])(
+    "is a usage error for %j", async (...argv) => {
+      const result = await statsHost([]).run(argv);
+      expect(result.exitCode).toBe(2);
+      // The usage line lists every operation, stats included.
+      expect(`${result.stdout ?? ""}${result.stderr ?? ""}`).toMatch(/^(\{"error":\{"code":"usage","message":")?wizbar .*\bstats\b/);
+    });
 });
 
 // WZ18 (#40): cardModels serves model and effort; no host field is adopted

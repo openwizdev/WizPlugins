@@ -1,7 +1,8 @@
 import type { PluginCliRegistration, PluginCliResult } from "@get-bb/plugin-sdk";
 import { z } from "zod";
 import { resolveSnoozePresets, type ThreadShelf } from "./lifecycle";
-import type { MovePositionV3, MoveResultV3, PinResultV3 } from "./v3-types";
+import { formatStatsText } from "./stats";
+import type { MovePositionV3, MoveResultV3, PinResultV3, StatsV3 } from "./v3-types";
 
 export type LifecycleOperation = "settle" | "unsettle" | "snooze" | "unsnooze" | "mute" | "unmute" | "list";
 export interface LifecycleSuccess {
@@ -21,7 +22,7 @@ export class LifecycleError extends Error {
 
 type Execute = (operation: LifecycleOperation, threadId: string, until?: number, signal?: AbortSignal) => Promise<LifecycleSuccess>;
 const operations = ["settle", "unsettle", "snooze", "unsnooze", "mute", "unmute", "list"] as const;
-const usage = "wizbar <settle|unsettle|snooze|unsnooze|mute|unmute|list|pin|unpin|move> <id>... [--until <absolute-time|hour|evening|tomorrow|next-week>] [--before <id>|--after <id>|--first|--last] [--json]";
+const usage = "wizbar <settle|unsettle|snooze|unsnooze|mute|unmute|list|pin|unpin|move> <id>... [--until <absolute-time|hour|evening|tomorrow|next-week>] [--before <id>|--after <id>|--first|--last] [--json] | wizbar stats [--json]";
 
 /** WZ21: the host's pins, through WizBar's server (sidebar-v3.v1.md section 7). */
 export interface PinOperations {
@@ -88,12 +89,16 @@ function wakeTime(value: string, now: number): number {
   return until;
 }
 
-export function createLifecycleCommand(execute: Execute, pins?: PinOperations): PluginCliRegistration {
+/** WZ20 (#41): reads every row and computes stats; an unavailable read gives `status: "unavailable"`. */
+type ReadStats = (signal?: AbortSignal) => Promise<StatsV3>;
+
+export function createLifecycleCommand(execute: Execute, readStats: ReadStats, pins?: PinOperations): PluginCliRegistration {
   return {
     name: "wizbar",
     summary: "List or change WizBar thread shelves.",
     commands: [
       ...operations.map((name) => ({ name, summary: `${name} one or many threads`, usage: `${name} <id>...${name === "snooze" ? " --until <time>" : ""} [--json]` })),
+      { name: "stats", summary: "running, waiting and finished-today numbers", usage: "stats [--json]" },
       ...(pins ? [
         { name: "pin", summary: "pin one or many threads", usage: "pin <id>... [--json]" },
         { name: "unpin", summary: "unpin one or many threads", usage: "unpin <id>... [--json]" },
@@ -108,6 +113,16 @@ export function createLifecycleCommand(execute: Execute, pins?: PinOperations): 
         ...(json ? { stdout: JSON.stringify({ error: { code: "usage", message: usage } }) + "\n" } : { stderr: usage + "\n" }),
       });
       const operation = argv[0];
+      if (operation === "stats") {
+        const rest = argv.slice(1);
+        if (rest.length > 1 || (rest.length === 1 && rest[0] !== "--json")) return failUsage();
+        const stats = await readStats(ctx.signal);
+        if (stats.status !== "ready") {
+          const error = { code: "state_unavailable", message: "Thread state is unavailable." };
+          return { exitCode: 1, stdout: (json ? JSON.stringify({ error }) : formatStatsText(stats)) + "\n" };
+        }
+        return { exitCode: 0, stdout: (json ? JSON.stringify(stats) : formatStatsText(stats)) + "\n" };
+      }
       if (pins && pinOperations.includes(operation as never)) {
         return await runPins(argv, json, pins, ctx.signal) ?? failUsage();
       }

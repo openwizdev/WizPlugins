@@ -1,23 +1,59 @@
 import { useEffect, useId, useState } from "react";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk";
-import { countRunning, type RunningCountSource } from "./running-count";
-import { experimental_useSidebarThreads, useRealtimeConnectionState } from "@get-bb/plugin-sdk/app";
+import { countRunning, type ObservableRunningSource, type RunningCountSource } from "./running-count";
+import { isRunning, readSidebarRows, type SidebarRowsStatus } from "./stats";
+import { experimental_usePluginId, experimental_useSidebarThreads, useRealtimeConnectionState } from "@get-bb/plugin-sdk/app";
 import { useFeatureSourceStatus, useWizBarSettings } from "./SettingsPage";
-import { readRunningSource } from "./running-source";
 
-/** Observable host cache only; neither coverage nor freshness is claimed live. */
-export function FooterCounter({ className }: { className?: string }) {
+/**
+ * One module-level gap store per plugin, shared by the list line and the panel.
+ * It is keyed on values, never on arrays or row objects: hook instances may
+ * project the same host data into their own arrays and objects. A snapshot's
+ * fingerprint is the sorted list of each row's `id` and `updatedAt`. When a
+ * gap begins (not ready, not connected, malformed) the connection epoch
+ * increments; the store keeps the fingerprint of the rows retained during it.
+ * After a gap, ready rows with that fingerprint stay unavailable in every
+ * consumer; the first ready snapshot with another fingerprint clears the gap
+ * for all of them. An initial load that has no rows yet is not a gap. No age is
+ * guessed, and a reconnect with no row revised stays unavailable (fails closed).
+ */
+const gapStore = new Map<string, { epoch: number; gap: string | null }>();
+const fingerprint = (rows: readonly unknown[]): string => JSON.stringify(rows
+  .map((row) => {
+    const r = (row && typeof row === "object" ? row : {}) as { id?: unknown; updatedAt?: unknown };
+    return [String(r.id), String(r.updatedAt)];
+  })
+  .sort(([a, x], [b, y]) => (a < b ? -1 : a > b ? 1 : x < y ? -1 : x > y ? 1 : 0)));
+
+/** The observable host rows, or null when they cannot be trusted right now. */
+export function useObservableRows(): { status: SidebarRowsStatus; rows: readonly PluginSidebarThread[] | null } {
+  const pluginId = experimental_usePluginId();
   const state = experimental_useSidebarThreads();
   const connection = useRealtimeConnectionState();
-  const input = readRunningSource(state, connection);
-  const [invalidatedSnapshot, setInvalidatedSnapshot] = useState<readonly PluginSidebarThread[] | null>(null);
-  // The hook owns cache/realtime ordering. After an observable gap, a transport
-  // reconnect alone cannot certify the same retained snapshot. No age is guessed.
-  useEffect(() => {
-    if (input.status !== "ready") setInvalidatedSnapshot(state.threads);
-  }, [input.status, state.threads]);
-  const source = input.status === "ready" && invalidatedSnapshot === state.threads
-    ? { ...input, status: "stale" as const, threads: null } : input;
+  const read = readSidebarRows(state, connection);
+  const rows: readonly unknown[] = Array.isArray(state?.threads) ? state.threads : [];
+  const entry = gapStore.get(pluginId) ?? { epoch: 0, gap: null };
+  gapStore.set(pluginId, entry);
+  if (read.status !== "ready") {
+    if (!(read.status === "unavailable" && rows.length === 0)) {
+      if (entry.gap === null) entry.epoch += 1;
+      entry.gap = fingerprint(rows);
+    }
+    return read;
+  }
+  if (entry.gap !== null && fingerprint(read.rows!) === entry.gap) return { status: "stale", rows: null };
+  entry.gap = null;
+  return read;
+}
+
+/** Observable host cache only; neither coverage nor freshness is claimed live.
+ * WZ20 (#41): counts the one running rule (stats.ts), the stats panel's total. */
+export function FooterCounter({ className }: { className?: string }) {
+  const { status, rows } = useObservableRows();
+  const base = { version: 1, scope: "observable-sidebar", subagents: { status: "unproven", count: null } } as const;
+  const source: ObservableRunningSource = rows && status === "ready"
+    ? { ...base, status, threads: rows.map((t) => ({ id: t.id, projectId: t.projectId, parentThreadId: t.parentThreadId, isWorking: isRunning(t) })) }
+    : { ...base, status: status === "ready" ? "incomplete" : status, threads: null };
   useFeatureSourceStatus("footer", source.status === "ready" ? "unverified" : "unavailable");
   return <FooterCounterArtwork className={className} source={source} />;
 }
