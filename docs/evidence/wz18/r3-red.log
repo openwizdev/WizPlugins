@@ -1,0 +1,36 @@
+
+ RUN  v4.1.10 <repo>/wizbar
+
+ ❯ |bb-plugin-wizbar| src/ThreadCard.test.tsx (116 tests | 1 failed | 115 skipped) 170ms
+     × R3 Escape dismisses the revealed location until the next interaction 169ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > WZ18 card metadata at the registered app boundary > R3 Escape dismisses the revealed location until the next interaction
+AssertionError: expected [ 'group-hover/card:block', …(1) ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "group-hover/card:block",
++   "group-focus-within/card:block",
++ ]
+
+ ❯ src/ThreadCard.test.tsx:381:23
+    379|     expect(location().textContent).toBe("room/1042-refine-command-pale…
+    380|     expect(location().className.split(/\s+/)).toContain("hidden");
+    381|     expect(reveals()).toEqual([]);
+       |                       ^
+    382|     fireEvent.blur(link, { relatedTarget: document.body });
+    383|     link.focus();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 115 skipped (116)
+   Start at  13:02:35
+   Duration  1.98s (transform 887ms, setup 0ms, import 1.19s, tests 170ms, environment 508ms)
+
