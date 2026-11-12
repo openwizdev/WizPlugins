@@ -1,6 +1,7 @@
 // Synthetic registered-app fixture only; no host, backend or live identifiers.
 import { loadPluginApp, renderSlot } from "@get-bb/plugin-sdk/testing/app";
 import { v3Threads } from "../../../wizbar/src/fixtures/v3";
+import { sortPinned } from "../../../wizbar/src/inbox";
 const app = await loadPluginApp(() => import("../../../wizbar/app"));
 const mode = new URLSearchParams(location.search).get("state") ?? "before";
 const notes: Record<string, string> = {
@@ -31,7 +32,9 @@ const rendered = renderSlot(app.threadLists[0]!, {
     { id: "prj_v3_web", name: "Sample web", isPersonal: false, href: "/projects/prj_v3_web", settingsHref: "/projects/prj_v3_web/settings" },
     { id: "prj_v3_studio", name: "Sample studio", isPersonal: false, href: "/projects/prj_v3_studio", settingsHref: "/projects/prj_v3_studio/settings" },
   ] },
-  rpc: { listLifecycle: () => ({ rows: [] }), pin: record("pin"), unpin: record("unpin"), move: record("move") },
+  // The fresh post-call read agrees with the drawn rows, as after the host redraws them.
+  rpc: { listLifecycle: () => ({ rows: [] }), pin: record("pin"), unpin: record("unpin"), move: record("move"),
+    pinnedOrder: () => ({ order: sortPinned(threads.filter((t) => t.isPinned)).map((t) => t.id) }) },
 });
 document.querySelector("#slot")!.append(rendered.container);
 const anchor = (id: string) => rendered.container.querySelector<HTMLElement>(`[data-sidebar-thread-id="${id}"]`)!;

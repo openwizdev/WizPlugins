@@ -3,6 +3,7 @@
 // app runtime. Every effect goes through WizBar's server operations, which
 // call the host's own pin, unpin and reorderPinned.
 import type { DragPinCaseV3, MovePositionV3 } from "./v3-types";
+import { sortPinned, type PinnedSortable } from "./inbox";
 
 /** Where a card was dropped: into Pinned at a position, or anywhere else. */
 export type DropTarget = { inPinned: false } | { inPinned: true; position: MovePositionV3 };
@@ -94,7 +95,30 @@ export function dragPinOutcome(pin: HostStep, reorder: HostStep | null, rowsRead
   return { kind: "pinned-placed" };
 }
 
-/** The message for a failed single-call drag (unpin, or a move inside Pinned). */
-export function stepFailureMessage(kind: "unpin" | "move", error: string): string {
-  return `${kind === "unpin" ? "Unpin" : "Move"} failed: ${error}`;
+/**
+ * The message for a single-call drag (unpin, or a move inside Pinned). When the
+ * rows could not be re-read, the result is unknown, as for a drag into Pinned.
+ */
+export function stepOutcome(kind: "unpin" | "move", step: HostStep, rowsReady: boolean): string | null {
+  const name = kind === "unpin" ? "Unpin" : "Move";
+  if (!rowsReady) return `${name} result unknown: ${step.ok ? "Thread rows are unavailable." : step.error}`;
+  return step.ok ? null : `${name} failed: ${step.error}`;
+}
+
+export interface ReconcileRow extends PinnedSortable {
+  readonly isPinned: boolean;
+  readonly isArchived: boolean;
+}
+
+/**
+ * True when the sidebar rows draw the pinned order a fresh server read
+ * returned: on every active thread the sidebar has, the same pins in the same
+ * order. Threads the sidebar does not have are left out of the comparison.
+ */
+export function isReconciled(snapshot: readonly string[], rows: readonly ReconcileRow[]): boolean {
+  const live = rows.filter((row) => !row.isArchived);
+  const ids = new Set(live.map((row) => row.id));
+  const expected = snapshot.filter((id) => ids.has(id));
+  const drawn = sortPinned(live.filter((row) => row.isPinned)).map((row) => row.id);
+  return expected.length === drawn.length && expected.every((id, i) => id === drawn[i]);
 }

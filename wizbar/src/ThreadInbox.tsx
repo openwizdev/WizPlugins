@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   experimental_useSidebarThreadActions as useSidebarThreadActions,
   experimental_useSidebarThreads as useSidebarThreads,
+  useRealtimeConnectionState,
   useRpc,
   type PluginSidebarThread,
   type PluginThreadListProps,
@@ -27,8 +28,9 @@ import type { MovePositionV3 } from "./v3-types";
 import {
   dragPinOutcome,
   dropAction,
+  isReconciled,
   keyboardAction,
-  stepFailureMessage,
+  stepOutcome,
   type DragAction,
   type DropTarget,
   type HostStep,
@@ -101,7 +103,9 @@ export function ThreadInbox({
     const onSettledShelf: typeof matched = [];
     const onMutedShelf: typeof matched = [];
     for (const thread of matched) {
-      const shelf = lifecycle.shelfFor(thread);
+      // Pinned rows always stay visible: the host's pin wins over a stored
+      // settle or snooze, which is kept for when the thread is unpinned.
+      const shelf = thread.isPinned ? "active" : lifecycle.shelfFor(thread);
       if (shelf === "snoozed") onSnoozeShelf.push(thread);
       else if (shelf === "settled") onSettledShelf.push(thread);
       else if (shelf === "muted") onMutedShelf.push(thread);
@@ -122,7 +126,8 @@ export function ThreadInbox({
     };
   }, [lifecycle, scope, searchQuery, threads]);
 
-  const drag = useDragPins(status, pinned, inbox);
+  const connection = useRealtimeConnectionState();
+  const drag = useDragPins(status, connection, threads, pinned);
 
   const scopeLabel =
     scope === ALL_PROJECTS
@@ -168,7 +173,7 @@ export function ThreadInbox({
         {drag.message ? (
           <p role="alert" className="px-2.5 py-1 text-xs text-destructive-text">{drag.message}</p>
         ) : null}
-        {status === "loading" ? null : status === "error" ? (
+        {status === "loading" ? null : status === "error" || drag.rowsUnknown ? (
           <p
             role="status"
             className="px-2 py-6 text-center text-xs text-muted-foreground"
@@ -423,24 +428,67 @@ const threadIdAt = (target: EventTarget | null): string | null =>
  * moved optimistically: the shelves always draw the host's rows, so a failed
  * call leaves every card where the host has it and only adds a message.
  */
+/** How long the rows may take to draw a fresh post-call read before the result is unknown. */
+const RECONCILE_MS = 5_000;
+
 function useDragPins(
   status: "error" | "loading" | "ready",
+  connection: "connected" | "connecting" | "reconnecting",
+  threads: readonly PluginSidebarThread[],
   pinned: readonly PluginSidebarThread[],
-  inbox: readonly PluginSidebarThread[],
 ) {
   const rpc = useRpc<typeof t3sidebarRpcContract>();
   const containerRef = useRef<HTMLDivElement>(null);
-  const statusRef = useRef(status);
-  statusRef.current = status;
+  const latest = useRef({ status, connection, threads });
+  latest.current = { status, connection, threads };
+  const waiters = useRef(new Set<() => void>());
+  const [rowsUnknown, setRowsUnknown] = useState(false);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dropAt, setDropAt] = useState<MovePositionV3 | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [focusId, setFocusId] = useState<string | null>(null);
-  // One action, one effect: a held key or a second drop while a move is out
-  // would compute from rows the host has not redrawn yet, so it is ignored.
+  // One action, one effect: a held key or a second drop while a move is out,
+  // or before its rows are reconciled, would compute from rows the host has
+  // not redrawn yet, so it is ignored.
   const inFlight = useRef(false);
   const pinnedIds = pinned.map((thread) => thread.id);
-  const inboxIds = new Set(inbox.map((thread) => thread.id));
+
+  useEffect(() => {
+    for (const check of [...waiters.current]) check();
+  }, [status, connection, threads]);
+
+  // The rows count as re-read only when a fresh server read of the pinned
+  // order agrees with them while the realtime connection is up.
+  const reconcile = async (): Promise<boolean> => {
+    let order: string[];
+    try { order = (await rpc.call("pinnedOrder", {})).order; } catch { return false; }
+    const agrees = () => latest.current.status === "ready" && latest.current.connection === "connected" &&
+      isReconciled(order, latest.current.threads);
+    if (agrees()) return true;
+    return new Promise<boolean>((resolve) => {
+      const check = () => { if (agrees()) done(true); };
+      const timer = setTimeout(() => done(false), RECONCILE_MS);
+      const done = (value: boolean) => { clearTimeout(timer); waiters.current.delete(check); resolve(value); };
+      waiters.current.add(check);
+    });
+  };
+
+  // While the result is unknown the shelves show the unavailable state; keep
+  // trying to reconcile until the rows return.
+  useEffect(() => {
+    if (!rowsUnknown) return;
+    let cancelled = false, running = false;
+    const attempt = async () => {
+      if (running) return;
+      running = true;
+      const ok = await reconcile();
+      running = false;
+      if (ok && !cancelled) setRowsUnknown(false);
+    };
+    void attempt();
+    const timer = setInterval(() => void attempt(), RECONCILE_MS);
+    return () => { cancelled = true; clearInterval(timer); };
+  }, [rowsUnknown]);
 
   // A keyboard move can re-mount the card on another shelf; give focus back
   // to it there, but never take focus from wherever the user has moved it.
@@ -453,7 +501,7 @@ function useDragPins(
     for (const anchor of anchors) {
       if (anchor.getAttribute("data-sidebar-thread-id") === focusId) anchor.focus();
     }
-  }, [focusId, pinned, inbox]);
+  }, [focusId, threads]);
 
   const errorText = (error: unknown) =>
     error instanceof Error && error.message.trim() ? error.message : "Unknown error.";
@@ -477,16 +525,22 @@ function useDragPins(
           reorder = { ok: true };
         } catch (error) { reorder = { ok: false, error: errorText(error) }; }
       }
-      const outcome = dragPinOutcome(pin, reorder, statusRef.current === "ready");
+      const ready = await reconcile();
+      const outcome = dragPinOutcome(pin, reorder, ready);
+      setRowsUnknown(!ready);
       setMessage(outcome.kind === "pinned-placed" ? null : outcome.message);
       return;
     }
+    let step: HostStep = { ok: true };
     try {
       if (action.kind === "unpin") await rpc.call("unpin", { threadId });
       else await rpc.call("move", { threadId, position: action.position });
     } catch (error) {
-      setMessage(stepFailureMessage(action.kind, errorText(error)));
+      step = { ok: false, error: errorText(error) };
     }
+    const ready = await reconcile();
+    setRowsUnknown(!ready);
+    setMessage(stepOutcome(action.kind, step, ready));
   };
 
   const targetOf = (event: React.DragEvent): DropTarget => {
@@ -532,7 +586,8 @@ function useDragPins(
     onKeyDown(event: React.KeyboardEvent) {
       if (!event.altKey || event.shiftKey || event.ctrlKey || event.metaKey) return;
       const id = threadIdAt(event.target);
-      if (id === null || (!pinnedIds.includes(id) && !inboxIds.has(id))) return;
+      // Any displayed row: Pinned, Inbox, or an expanded parked shelf.
+      if (id === null) return;
       const action = keyboardAction(event.key, id, pinnedIds);
       if (action.kind === "none") return;
       event.preventDefault();
@@ -552,5 +607,5 @@ function useDragPins(
   const markerAtEnd = () => dropAt !== null && pinnedIds.length > 0 && draggingId !== pinnedIds[pinnedIds.length - 1] &&
     ("after" in dropAt ? dropAt.after === pinnedIds[pinnedIds.length - 1] : "last" in dropAt);
 
-  return { containerRef, handlers, draggingId, message, markerBefore, markerAtEnd };
+  return { containerRef, handlers, draggingId, message, rowsUnknown, markerBefore, markerAtEnd };
 }

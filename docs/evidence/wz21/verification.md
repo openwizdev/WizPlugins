@@ -8,6 +8,15 @@ Ticket #42, against the merged contract [`wizbar/contracts/sidebar-v3.v1.md`](..
 - Two test-only corrections after that red run, before green: two rows of the server `move` table were no-ops on their fixture order (the thread was already last), so the fixture order was changed so every row really moves; and the rendered drag helper now sets `clientY` on the event itself, because jsdom has no `DragEvent` and dropped the coordinate. Neither weakens an assertion.
 - `guard-red.log`: committed in `902a321` before the fix. A repeated Alt+Up and a drop while a move was still out made 4 server calls instead of 1. The fix ignores new moves while one is in flight.
 
+## Review round 1 (R1 to R4 on `8c7042f`)
+
+`review1-red.log` (commit `bcc46d6`, before the fixes): 23 failures for the four findings.
+
+- **R1:** after the host calls, the sidebar asks WizBar's server for a fresh pinned order (`pinnedOrder` RPC) and waits, up to 5 s, until the sidebar rows draw that order (`isReconciled`) while the rows are ready and the realtime connection is up. Only then is the outcome reported as placed/failed; otherwise it is unknown and the shelves show the existing unavailable state, retrying the read every 5 s until the rows return. Further moves wait until reconciliation ends. Proof: `drag.test.ts` `isReconciled` and `stepOutcome`; rendered "R1 …" cases (agreeing read, rows that never catch up, lost connection, a held read blocking the next move).
+- **R2:** the RPC `move` used by drag reports only the host call (`place`); the CLI `move` still reads the pinned order after it and reports `state_unavailable` when that read fails. Proof: `server.test.ts` "WZ21 R2".
+- **R3:** Alt+Up pins a focused row from an expanded Snoozed, Settled or Muted shelf, placing it at the bottom of Pinned. Proof: rendered "R3 …" cases for all three shelves.
+- **R4:** a row the host reports pinned is drawn in Pinned even with a stored settle or snooze; the stored row is kept, so after an unpin it returns to its shelf. Proof: rendered "R4 …" cases.
+
 ## Claims and their proof
 
 | Claim (acceptance criterion) | Proof |
@@ -24,7 +33,7 @@ Ticket #42, against the merged contract [`wizbar/contracts/sidebar-v3.v1.md`](..
 
 ## Checks at the hand-back commit
 
-From `wizbar/`: `npm ci`; `npm run typecheck` (`typecheck.log`, clean); `npm test -- --maxWorkers=2` (`full-suite.log`: 17 files, 519 tests passed).
+From `wizbar/`: `npm ci`; `npm run typecheck` (`typecheck.log`, clean); `npm test -- --maxWorkers=2` (`full-suite.log`: 17 files, 542 tests passed).
 
 ## Rendered drag (synthetic)
 
@@ -45,6 +54,6 @@ Reproduce from the repository root: `node docs/evidence/wz21/serve.mjs`, then op
 
 - The real host's pinned order, `pin`/`unpin`/`reorderPinned` behaviour and errors, and whether an RPC error's message reaches the sidebar unchanged (the test harness passes it through).
 - Native drag in the host's sidebar (the card's full-bleed link is the drag source), the drop marker's look with the host's styles, and whether Alt+Up/Alt+Down collide with a host shortcut.
-- The "rows unavailable after the calls" outcome is proven on `dragPinOutcome` only; the slot harness cannot change the sidebar status mid-test.
+- The slot harness cannot change the sidebar rows mid-test, so the reconciled case uses a post-call read that already agrees with the fixed rows; the "rows catch up later" path is covered only by `isReconciled` and the waiter, not by a rendered row change. If the live host's pinned order differs from `sortPinned`, every drag would end as unknown after 5 s (#9 checks the order).
 
 Helpers: none. No live host access, new dependency, plugin build, installation or publication.
