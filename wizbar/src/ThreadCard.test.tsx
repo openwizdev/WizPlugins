@@ -349,6 +349,21 @@ describe("WZ18 card metadata at the registered app boundary", () => {
     expect(line.textContent).not.toMatch(/·|Opus|High|Unknown|model/i);
   });
 
+  // PR #48 R1: keyboard and screen-reader users reach the location too: the
+  // card link describes it, and focusing the card reveals it like hovering.
+  it.each([
+    { name: "branch", input: { environment: environment("git-worktree", "room/1042-refine-command-palette-a1b2") }, text: "room/1042-refine-command-palette-a1b2" },
+    { name: "machine without a branch", input: { environment: null }, text: "Synthetic workspace" },
+  ])("R1 exposes the $name to keyboard and screen-reader users", ({ input, text }) => {
+    renderMeta([thread(input)]);
+    const link = screen.getByRole("link", { name: "Review parser" });
+    const ids = (link.getAttribute("aria-describedby") ?? "").split(/\s+/).filter(Boolean);
+    expect(ids.map((id) => document.getElementById(id)?.textContent)).toEqual([text]);
+    const location = document.getElementById(ids[0]!)!;
+    expect(location.className.split(/\s+/)).toEqual(expect.arrayContaining(["hidden", "group-focus-within/card:block"]));
+    expect(within(card()).getByRole("group", { name: "Thread details" }).textContent).not.toContain(text);
+  });
+
   it("shows the branch only on hover, never on the card face", () => {
     renderMeta([thread({ environment: environment("git-worktree", "room/1042-refine-command-palette-a1b2") })]);
     const face = within(card()).getByRole("group", { name: "Thread details" });
