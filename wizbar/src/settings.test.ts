@@ -24,12 +24,29 @@ function setup() {
 }
 
 describe("N1: actual WizBar settings declarations and persistent reload", () => {
-  it("declares exactly two named boolean switches with defaults", () => {
+  it("declares exactly four named boolean switches with defaults", () => {
     const { host } = setup();
     const descriptors = host.harness.inspection.registrations.settingsDescriptors;
-    expect(Object.keys(descriptors).sort()).toEqual(["footerCountEnabled", "machineIconsEnabled"]);
+    expect(Object.keys(descriptors).sort()).toEqual([
+      "childrenChipEnabled", "footerCountEnabled", "machineIconsEnabled", "parentChipEnabled",
+    ]);
     expect(descriptors.footerCountEnabled).toMatchObject({ type: "boolean", label: "Footer count", default: true });
     expect(descriptors.machineIconsEnabled).toMatchObject({ type: "boolean", label: "Cloud/Local row icons", default: true });
+    expect(descriptors.childrenChipEnabled).toMatchObject({ type: "boolean", label: "Children chip in thread header", default: false });
+    expect(descriptors.parentChipEnabled).toMatchObject({ type: "boolean", label: "Parent chip in thread header", default: true });
+  });
+
+  // WZ17: a missing header-chip key must read its declared default from the
+  // host store: children chip off, parent chip on (sidebar-v3 contract).
+  it("reads the header-chip defaults when nothing is stored, and each key independently", async () => {
+    const fixture = setup();
+    expect(await fixture.readSettings()).toMatchObject({ childrenChipEnabled: false, parentChipEnabled: true });
+    await fixture.host.harness.behavior.setSettings({ childrenChipEnabled: true });
+    expect(await fixture.readSettings()).toMatchObject({ childrenChipEnabled: true, parentChipEnabled: true });
+    await fixture.host.harness.behavior.setSettings({ parentChipEnabled: false });
+    expect(await fixture.readSettings()).toMatchObject({ childrenChipEnabled: true, parentChipEnabled: false });
+    await expect(fixture.host.harness.behavior.setSettings({ parentChipEnabled: "false" })).rejects.toThrow();
+    expect(await fixture.readSettings()).toMatchObject({ childrenChipEnabled: true, parentChipEnabled: false });
   });
 
   it("keeps both values across actual server reload and independent partial writes", async () => {
@@ -39,9 +56,13 @@ describe("N1: actual WizBar settings declarations and persistent reload", () => 
     await host.harness.behavior.setSettings({ machineIconsEnabled: false });
     host = await host.harness.lifecycle.reload(fixture.factory);
     hosts.push(host);
-    expect(await fixture.readSettings()).toEqual({ footerCountEnabled: false, machineIconsEnabled: false });
+    expect(await fixture.readSettings()).toEqual({
+      footerCountEnabled: false, machineIconsEnabled: false, childrenChipEnabled: false, parentChipEnabled: true,
+    });
     await host.harness.behavior.setSettings({ footerCountEnabled: true });
-    expect(await fixture.readSettings()).toEqual({ footerCountEnabled: true, machineIconsEnabled: false });
+    expect(await fixture.readSettings()).toEqual({
+      footerCountEnabled: true, machineIconsEnabled: false, childrenChipEnabled: false, parentChipEnabled: true,
+    });
   });
 
   it("rejects wrong types and unknown keys without changing saved settings", async () => {
@@ -51,7 +72,9 @@ describe("N1: actual WizBar settings declarations and persistent reload", () => 
     await expect(host.harness.behavior.setSettings({ footerCountEnabled: "true" })).rejects.toThrow();
     await expect(host.harness.behavior.setSettings({ machineIconsEnabled: 1 })).rejects.toThrow();
     await expect(host.harness.behavior.setSettings({ syntheticUnknown: true })).rejects.toThrow();
-    expect(await fixture.readSettings()).toEqual({ footerCountEnabled: false, machineIconsEnabled: true });
+    expect(await fixture.readSettings()).toEqual({
+      footerCountEnabled: false, machineIconsEnabled: true, childrenChipEnabled: false, parentChipEnabled: true,
+    });
   });
 });
 
@@ -60,10 +83,12 @@ describe("N1: actual WizBar settings declarations and persistent reload", () => 
 // These pure boundary cases complement the rendered controls, not storage.
 describe("N1: boolean settings and source status boundary", () => {
   it.each([
-    [undefined, { footerCountEnabled: true, machineIconsEnabled: true }],
-    [{}, { footerCountEnabled: true, machineIconsEnabled: true }],
-    [{ footerCountEnabled: false }, { footerCountEnabled: false, machineIconsEnabled: true }],
-    [{ footerCountEnabled: "true", machineIconsEnabled: 1 }, { footerCountEnabled: false, machineIconsEnabled: false }],
+    [undefined, { footerCountEnabled: true, machineIconsEnabled: true, childrenChipEnabled: false, parentChipEnabled: true }],
+    [{}, { footerCountEnabled: true, machineIconsEnabled: true, childrenChipEnabled: false, parentChipEnabled: true }],
+    [{ footerCountEnabled: false }, { footerCountEnabled: false, machineIconsEnabled: true, childrenChipEnabled: false, parentChipEnabled: true }],
+    [{ footerCountEnabled: "true", machineIconsEnabled: 1 }, { footerCountEnabled: false, machineIconsEnabled: false, childrenChipEnabled: false, parentChipEnabled: true }],
+    [{ childrenChipEnabled: true, parentChipEnabled: false }, { footerCountEnabled: true, machineIconsEnabled: true, childrenChipEnabled: true, parentChipEnabled: false }],
+    [{ childrenChipEnabled: "true", parentChipEnabled: 1 }, { footerCountEnabled: true, machineIconsEnabled: true, childrenChipEnabled: false, parentChipEnabled: false }],
   ] as const)("reads exact booleans from %j", async (values, expected) => {
     const { readWizBarSettings } = await import("./settings");
     expect(readWizBarSettings(values)).toEqual(expected);

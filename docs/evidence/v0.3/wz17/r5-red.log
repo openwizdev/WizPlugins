@@ -1,0 +1,32 @@
+
+ RUN  v4.1.10 <repo>/wizbar
+
+ ❯ |bb-plugin-wizbar| src/fixtures/v3-fixtures.test.ts (10 tests | 1 failed) 13ms
+     × states every drag-into-Pinned outcome as call results, separate from the refreshed rows 4ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/fixtures/v3-fixtures.test.ts > V0: synthetic v0.3 fixtures cover the contract's cases > states every drag-into-Pinned outcome as call results, separate from the refreshed rows
+AssertionError: pin-failed: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ src/fixtures/v3-fixtures.test.ts:118:104
+    116|       expect(c.refreshedIsPinned === null).toBe(c.rowsAfter === "unava…
+    117|       if (rule.prefix === null) expect("message" in c.outcome).toBe(fa…
+    118|       else expect("message" in c.outcome && c.outcome.message.startsWi…
+       |                                                                                                        ^
+    119|     }
+    120|     const partial = v3DragPinCases.filter((c) => c.outcome.kind === "p…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 9 passed (10)
+   Start at  08:55:34
+   Duration  236ms (transform 68ms, setup 0ms, import 93ms, tests 13ms, environment 0ms)

@@ -1,0 +1,32 @@
+
+ RUN  v4.1.10 <repo>/wizbar
+
+ ❯ |bb-plugin-wizbar| src/SettingsPage.test.tsx (13 tests | 1 failed) 499ms
+     × registers one section, actual version and honest independent source status 144ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/SettingsPage.test.tsx > N1: settings through the registered app > registers one section, actual version and honest independent source status
+AssertionError: expected [ …(4) ] to have a length of 2 but got 4
+
+- Expected
++ Received
+
+- 2
++ 4
+
+ ❯ src/SettingsPage.test.tsx:106:43
+    104|     expect(screen.getByRole("heading", { name: "WizBar" })).toBeDefine…
+    105|     expect(screen.getByText(`Version ${manifest.version}`)).toBeDefine…
+    106|     expect(screen.getAllByRole("switch")).toHaveLength(2);
+       |                                           ^
+    107|     expect(screen.getByText("Footer: Enabled · Not connected yet")).to…
+    108|     expect(screen.getByText("Icons: Enabled · Not connected yet")).toB…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 12 passed (13)
+   Start at  07:09:38
+   Duration  1.59s (transform 217ms, setup 0ms, import 498ms, tests 499ms, environment 491ms)

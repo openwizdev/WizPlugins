@@ -1,0 +1,134 @@
+
+ RUN  v4.1.10 <repo>/wizbar
+
+ ❯ |bb-plugin-wizbar| src/settings.test.ts (11 tests | 6 failed) 82ms
+     × reads exact booleans from undefined 6ms
+     × reads exact booleans from {} 1ms
+     × reads exact booleans from {"footerCountEnabled":false} 1ms
+     × reads exact booleans from {"footerCountEnabled":"true","machineIconsEnabled":1} 1ms
+     × reads exact booleans from {"childrenChipEnabled":true,"parentChipEnabled":false} 0ms
+     × reads exact booleans from {"childrenChipEnabled":"true","parentChipEnabled":1} 0ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/settings.test.ts > N1: boolean settings and source status boundary > reads exact booleans from undefined
+ FAIL  |bb-plugin-wizbar| src/settings.test.ts > N1: boolean settings and source status boundary > reads exact booleans from {}
+AssertionError: expected { footerCountEnabled: true, …(1) } to deeply equal { footerCountEnabled: true, …(3) }
+
+- Expected
++ Received
+
+  {
+-   "childrenChipEnabled": false,
+    "footerCountEnabled": true,
+    "machineIconsEnabled": true,
+-   "parentChipEnabled": true,
+  }
+
+ ❯ src/settings.test.ts:94:40
+     92|   ] as const)("reads exact booleans from %j", async (values, expected)…
+     93|     const { readWizBarSettings } = await import("./settings");
+     94|     expect(readWizBarSettings(values)).toEqual(expected);
+       |                                        ^
+     95|   });
+     96|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+ FAIL  |bb-plugin-wizbar| src/settings.test.ts > N1: boolean settings and source status boundary > reads exact booleans from {"footerCountEnabled":false}
+AssertionError: expected { footerCountEnabled: false, …(1) } to deeply equal { footerCountEnabled: false, …(3) }
+
+- Expected
++ Received
+
+  {
+-   "childrenChipEnabled": false,
+    "footerCountEnabled": false,
+    "machineIconsEnabled": true,
+-   "parentChipEnabled": true,
+  }
+
+ ❯ src/settings.test.ts:94:40
+     92|   ] as const)("reads exact booleans from %j", async (values, expected)…
+     93|     const { readWizBarSettings } = await import("./settings");
+     94|     expect(readWizBarSettings(values)).toEqual(expected);
+       |                                        ^
+     95|   });
+     96|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯
+
+ FAIL  |bb-plugin-wizbar| src/settings.test.ts > N1: boolean settings and source status boundary > reads exact booleans from {"footerCountEnabled":"true","machineIconsEnabled":1}
+AssertionError: expected { footerCountEnabled: false, …(1) } to deeply equal { footerCountEnabled: false, …(3) }
+
+- Expected
++ Received
+
+  {
+-   "childrenChipEnabled": false,
+    "footerCountEnabled": false,
+    "machineIconsEnabled": false,
+-   "parentChipEnabled": true,
+  }
+
+ ❯ src/settings.test.ts:94:40
+     92|   ] as const)("reads exact booleans from %j", async (values, expected)…
+     93|     const { readWizBarSettings } = await import("./settings");
+     94|     expect(readWizBarSettings(values)).toEqual(expected);
+       |                                        ^
+     95|   });
+     96|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/6]⎯
+
+ FAIL  |bb-plugin-wizbar| src/settings.test.ts > N1: boolean settings and source status boundary > reads exact booleans from {"childrenChipEnabled":true,"parentChipEnabled":false}
+AssertionError: expected { footerCountEnabled: true, …(1) } to deeply equal { footerCountEnabled: true, …(3) }
+
+- Expected
++ Received
+
+  {
+-   "childrenChipEnabled": true,
+    "footerCountEnabled": true,
+    "machineIconsEnabled": true,
+-   "parentChipEnabled": false,
+  }
+
+ ❯ src/settings.test.ts:94:40
+     92|   ] as const)("reads exact booleans from %j", async (values, expected)…
+     93|     const { readWizBarSettings } = await import("./settings");
+     94|     expect(readWizBarSettings(values)).toEqual(expected);
+       |                                        ^
+     95|   });
+     96|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/6]⎯
+
+ FAIL  |bb-plugin-wizbar| src/settings.test.ts > N1: boolean settings and source status boundary > reads exact booleans from {"childrenChipEnabled":"true","parentChipEnabled":1}
+AssertionError: expected { footerCountEnabled: true, …(1) } to deeply equal { footerCountEnabled: true, …(3) }
+
+- Expected
++ Received
+
+  {
+-   "childrenChipEnabled": false,
+    "footerCountEnabled": true,
+    "machineIconsEnabled": true,
+-   "parentChipEnabled": false,
+  }
+
+ ❯ src/settings.test.ts:94:40
+     92|   ] as const)("reads exact booleans from %j", async (values, expected)…
+     93|     const { readWizBarSettings } = await import("./settings");
+     94|     expect(readWizBarSettings(values)).toEqual(expected);
+       |                                        ^
+     95|   });
+     96|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/6]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  6 failed | 5 passed (11)
+   Start at  06:17:43
+   Duration  372ms (transform 90ms, setup 0ms, import 184ms, tests 82ms, environment 0ms)

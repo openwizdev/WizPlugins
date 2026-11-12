@@ -9,9 +9,20 @@ export const wizbarSettingDescriptors = {
     type: "boolean", label: "Cloud/Local row icons", default: true,
     description: "Show machine icons when classification is available.",
   },
+  childrenChipEnabled: {
+    type: "boolean", label: "Children chip in thread header", default: false,
+    description: "Show a parent thread's children chip in its header.",
+  },
+  parentChipEnabled: {
+    type: "boolean", label: "Parent chip in thread header", default: true,
+    description: "Show a child thread's chip back to its parent in its header.",
+  },
 } satisfies PluginSettingDescriptors;
 
-export type WizBarSettings = { footerCountEnabled: boolean; machineIconsEnabled: boolean };
+export type WizBarSettings = {
+  footerCountEnabled: boolean; machineIconsEnabled: boolean;
+  childrenChipEnabled: boolean; parentChipEnabled: boolean;
+};
 export type SettingValues = Record<string, unknown> | undefined;
 export type Feature = "footer" | "icons";
 export type SourceStatus = "live" | "unavailable" | "unverified";
@@ -23,7 +34,10 @@ export function readWizBarSettings(values: SettingValues): WizBarSettings {
     const value = values?.[key];
     return value === undefined ? wizbarSettingDescriptors[key].default : value === true;
   };
-  return { footerCountEnabled: read("footerCountEnabled"), machineIconsEnabled: read("machineIconsEnabled") };
+  return {
+    footerCountEnabled: read("footerCountEnabled"), machineIconsEnabled: read("machineIconsEnabled"),
+    childrenChipEnabled: read("childrenChipEnabled"), parentChipEnabled: read("parentChipEnabled"),
+  };
 }
 
 const defaults: SourceStatuses = { footer: "unavailable", icons: "unverified" };

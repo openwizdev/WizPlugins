@@ -10,6 +10,13 @@ supersedes historical no-settings assumptions.
 | --- | --- | --- | --- | --- |
 | `footerCountEnabled` | boolean | true | Footer count | #28 footer visibility |
 | `machineIconsEnabled` | boolean | true | Cloud/Local row icons | #29 row visibility |
+| `childrenChipEnabled` | boolean | false | Children chip in thread header | #43 parent's children chip |
+| `parentChipEnabled` | boolean | true | Parent chip in thread header | #43 child's chip to its parent |
+
+WZ17 (#39) adds the two header-chip keys for v0.3, under [sidebar-v3.v1.md](sidebar-v3.v1.md):
+the parent's children chip is off by default and the child's chip back to its
+parent stays on by default. They use the same declaration, store and read rule
+as the keys above; each gates only its own chip, and neither supplies data.
 
 Defaults preserve the existing features' visibility policy; they never enable a
 data source. In particular an enabled footer still renders nothing without a

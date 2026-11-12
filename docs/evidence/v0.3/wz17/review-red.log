@@ -1,0 +1,67 @@
+
+ RUN  v4.1.10 <repo>/wizbar
+
+ ❯ |bb-plugin-wizbar| src/fixtures/v3-fixtures.test.ts (10 tests | 3 failed) 14ms
+     × has the row where the footer's indicator rule and the shared runtime rule disagree 5ms
+     × states expected stats from the shared runtime rule, with finished today unavailable 1ms
+     × states every drag-into-Pinned outcome, including pinned but not placed 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/fixtures/v3-fixtures.test.ts > V0: synthetic v0.3 fixtures cover the contract's cases > has the row where the footer's indicator rule and the shared runtime rule disagree
+AssertionError: expected [] to deeply equal [ 'thr_v3_active_waiting' ]
+
+- Expected
++ Received
+
+- [
+-   "thr_v3_active_waiting",
+- ]
++ []
+
+ ❯ src/fixtures/v3-fixtures.test.ts:65:20
+     63|     // Runtime work behind an attention indicator: isWorking says no, …
+     64|     const masked = v3Threads.filter((t) => working(t) !== isWorking(t)…
+     65|     expect(masked).toEqual(["thr_v3_active_waiting"]);
+       |                    ^
+     66|     const row = byId.get("thr_v3_active_waiting");
+     67|     expect([row?.runtimeStatus, row?.indicator, row?.hasPendingInterac…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  |bb-plugin-wizbar| src/fixtures/v3-fixtures.test.ts > V0: synthetic v0.3 fixtures cover the contract's cases > states expected stats from the shared runtime rule, with finished today unavailable
+AssertionError: expected +0 to be 1 // Object.is equality
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ src/fixtures/v3-fixtures.test.ts:77:63
+     75|     // The list-bottom line keeps isWorking; here it is one lower, the…
+     76|     const shipped = countRunning(readRunningSource({ status: "ready", …
+     77|     expect(v3Stats.running.total - (shipped?.threads ?? NaN)).toBe(1);
+       |                                                               ^
+     78|     expect(v3Stats.running.topLevel).toBe(running.filter((t) => t.pare…
+     79|     expect(v3Stats.running.children).toBe(running.filter((t) => t.pare…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  |bb-plugin-wizbar| src/fixtures/v3-fixtures.test.ts > V0: synthetic v0.3 fixtures cover the contract's cases > states every drag-into-Pinned outcome, including pinned but not placed
+TypeError: Cannot read properties of undefined (reading 'map')
+ ❯ src/fixtures/v3-fixtures.test.ts:92:27
+     90|
+     91|   it("states every drag-into-Pinned outcome, including pinned but not …
+     92|     expect(v3DragPinCases.map((c) => c.outcome.kind)).toEqual(["pinned…
+       |                           ^
+     93|     for (const c of v3DragPinCases) {
+     94|       expect(c.reorder === "skipped").toBe(c.pin === "failed");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 7 passed (10)
+   Start at  08:05:02
+   Duration  289ms (transform 115ms, setup 0ms, import 142ms, tests 14ms, environment 0ms)
