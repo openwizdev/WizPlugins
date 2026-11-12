@@ -6,18 +6,24 @@ import { experimental_usePluginId, experimental_useSidebarThreads, useRealtimeCo
 import { useFeatureSourceStatus, useWizBarSettings } from "./SettingsPage";
 
 /**
- * One owner per plugin: the row objects of the last snapshot seen during a gap
- * (not ready, not connected, malformed). Each hook instance may build its own
- * array, so arrays are never compared; the host keeps a row object while its
- * thread is unchanged, so the rows themselves are. After a gap, rows are
- * unavailable while they are the same row objects in the same order: a
- * reconnect or another consumer's array cannot certify retained rows. The first
- * ready snapshot that differs clears the gap for every consumer. An initial
- * load that has no rows yet is not a gap. No age is guessed.
+ * One module-level gap store per plugin, shared by the list line and the panel.
+ * It is keyed on values, never on arrays or row objects: hook instances may
+ * project the same host data into their own arrays and objects. A snapshot's
+ * fingerprint is the sorted list of each row's `id` and `updatedAt`. When a
+ * gap begins (not ready, not connected, malformed) the connection epoch
+ * increments; the store keeps the fingerprint of the rows retained during it.
+ * After a gap, ready rows with that fingerprint stay unavailable in every
+ * consumer; the first ready snapshot with another fingerprint clears the gap
+ * for all of them. An initial load that has no rows yet is not a gap. No age is
+ * guessed, and a reconnect with no row revised stays unavailable (fails closed).
  */
-const gapRows = new Map<string, readonly unknown[]>();
-const sameRows = (a: readonly unknown[], b: readonly unknown[]) =>
-  a.length === b.length && a.every((row, i) => row === b[i]);
+const gapStore = new Map<string, { epoch: number; gap: string | null }>();
+const fingerprint = (rows: readonly unknown[]): string => JSON.stringify(rows
+  .map((row) => {
+    const r = (row && typeof row === "object" ? row : {}) as { id?: unknown; updatedAt?: unknown };
+    return [String(r.id), String(r.updatedAt)];
+  })
+  .sort(([a, x], [b, y]) => (a < b ? -1 : a > b ? 1 : x < y ? -1 : x > y ? 1 : 0)));
 
 /** The observable host rows, or null when they cannot be trusted right now. */
 export function useObservableRows(): { status: SidebarRowsStatus; rows: readonly PluginSidebarThread[] | null } {
@@ -26,13 +32,17 @@ export function useObservableRows(): { status: SidebarRowsStatus; rows: readonly
   const connection = useRealtimeConnectionState();
   const read = readSidebarRows(state, connection);
   const rows: readonly unknown[] = Array.isArray(state?.threads) ? state.threads : [];
+  const entry = gapStore.get(pluginId) ?? { epoch: 0, gap: null };
+  gapStore.set(pluginId, entry);
   if (read.status !== "ready") {
-    if (!(read.status === "unavailable" && rows.length === 0)) gapRows.set(pluginId, [...rows]);
+    if (!(read.status === "unavailable" && rows.length === 0)) {
+      if (entry.gap === null) entry.epoch += 1;
+      entry.gap = fingerprint(rows);
+    }
     return read;
   }
-  const gap = gapRows.get(pluginId);
-  if (gap && sameRows(read.rows!, gap)) return { status: "stale", rows: null };
-  gapRows.delete(pluginId);
+  if (entry.gap !== null && fingerprint(read.rows!) === entry.gap) return { status: "stale", rows: null };
+  entry.gap = null;
   return read;
 }
 

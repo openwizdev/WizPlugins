@@ -747,6 +747,7 @@ describe("WZ16: visible list-bottom running count", () => {
 
   it.each(["loading", "error"] as const)("hides the number for %s despite retained rows", (status) => {
     const rendered = renderSlot(inbox, listProps, {
+      pluginId: "synthetic-wz16-gap", // the plugin's gap record (WZ20) outlives this render
       sidebarThreads: { status, threads: [thread({ indicator: "runtime", runtimeStatus: "active" })] },
       rpc: { listLifecycle: () => ({ rows: [] }) },
     });
