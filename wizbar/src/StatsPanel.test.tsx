@@ -9,14 +9,19 @@ import { loadPluginApp, renderSlot } from "@get-bb/plugin-sdk/testing/app";
 import type { PluginSidebarThread, PluginSidebarThreadsState } from "@get-bb/plugin-sdk";
 import { v3Threads } from "./fixtures/v3";
 
-// Lets a test hand the hook the same or a new snapshot across rerenders.
+// Lets a test hand the hook the same or a new host snapshot across rerenders.
+// Like the host's per-hook projection, every call returns its own array over
+// the same row objects, so no two consumers ever share an array.
 const fixtureFeed = vi.hoisted(() => ({ current: null as Pick<PluginSidebarThreadsState, "status" | "threads"> | null }));
 vi.mock("@get-bb/plugin-sdk/app", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@get-bb/plugin-sdk/app")>();
   return { ...actual, experimental_useSidebarThreads: (...args: Parameters<typeof actual.experimental_useSidebarThreads>) =>
-    fixtureFeed.current ? { ...fixtureFeed.current, projects: [], sections: [], experimental_archived: null }
+    fixtureFeed.current ? { ...fixtureFeed.current, threads: [...fixtureFeed.current.threads],
+      projects: [], sections: [], experimental_archived: null }
       : actual.experimental_useSidebarThreads(...args) };
 });
+/** A new host snapshot: new row objects with the fixture's values. */
+const fresh = () => v3Threads.map((thread) => ({ ...thread }));
 
 const app = await loadPluginApp(() => import("../app"));
 const { FooterCounter } = await import("./FooterCounter");
@@ -55,8 +60,8 @@ describe("V3: footer stats panel", () => {
 
   const unknownRuntime = [...v3Threads, { ...v3Threads[0]!, id: "thr_v3_future", runtimeStatus: "host-reconnecting" as never }];
   it.each([
-    ["loading", { status: "loading" as const, threads: [...v3Threads] }],
-    ["error", { status: "error" as const, threads: [...v3Threads] }],
+    ["loading", { status: "loading" as const, threads: fresh() }],
+    ["error", { status: "error" as const, threads: fresh() }],
     ["an unrecognised runtime status", { status: "ready" as const, threads: unknownRuntime as PluginSidebarThread[] }],
   ])("shows a plain unavailable state, never a number, for %s", (_, sidebarThreads) => {
     renderSlot(panel, props, { sidebarThreads });
@@ -64,7 +69,7 @@ describe("V3: footer stats panel", () => {
   });
 
   it("drops its numbers when the realtime connection is lost", async () => {
-    const rendered = renderSlot(panel, props, { sidebarThreads: { status: "ready", threads: [...v3Threads] } });
+    const rendered = renderSlot(panel, props, { sidebarThreads: { status: "ready", threads: fresh() } });
     expect(lines()[0]).toBe("4 running · 2 top-level, 2 children");
     await rendered.setRealtimeConnectionState("reconnecting");
     expect(lines()[0]).toBe("Stats unavailable");
@@ -75,8 +80,7 @@ describe("V3: footer stats panel", () => {
   // R1: snapshot validity is the plugin's, not one component's. The host may
   // mount the disclosure only when it opens, after a gap the line observed.
   it("opens unavailable after a gap the list line saw, until a new snapshot arrives", async () => {
-    const retained = [...v3Threads];
-    fixtureFeed.current = { status: "ready", threads: retained };
+    fixtureFeed.current = { status: "ready", threads: fresh() };
     const View = ({ open }: { open: boolean }) => createElement("div", null,
       createElement(FooterCounter), open ? createElement(Panel, props) : null);
     const rendered = renderSlot({ component: View }, { open: false }, { pluginId: "synthetic-wz20-gap" });
@@ -86,7 +90,11 @@ describe("V3: footer stats panel", () => {
     rendered.rerender(createElement(View, { open: true }));
     expect(screen.queryByRole("status", { name: /running$/ })).toBeNull();
     expect(lines()[0]).toBe("Stats unavailable");
-    fixtureFeed.current = { status: "ready", threads: [...v3Threads] };
+    // The same retained rows in another array still do not clear the gap.
+    fixtureFeed.current = { status: "ready", threads: [...fixtureFeed.current.threads] };
+    rendered.rerender(createElement(View, { open: true }));
+    expect(lines()[0]).toBe("Stats unavailable");
+    fixtureFeed.current = { status: "ready", threads: fresh() };
     rendered.rerender(createElement(View, { open: true }));
     expect(lines()[0]).toBe("4 running · 2 top-level, 2 children");
     expect(screen.getByRole("status", { name: "4 running" })).toBeDefined();
