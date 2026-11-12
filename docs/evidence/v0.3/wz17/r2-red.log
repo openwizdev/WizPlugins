@@ -1,0 +1,33 @@
+
+ RUN  v4.1.10 <repo>/wizbar
+
+ ❯ |bb-plugin-wizbar| src/fixtures/v3-fixtures.test.ts (10 tests | 1 failed) 12ms
+     × states every drag-into-Pinned outcome as call results, separate from the refreshed rows 4ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/fixtures/v3-fixtures.test.ts > V0: synthetic v0.3 fixtures cover the contract's cases > states every drag-into-Pinned outcome as call results, separate from the refreshed rows
+AssertionError: expected 'Could not pin: Sample host refusal.' to match /^(Pin failed|Pin succeeded, but place…/
+
+- Expected:
+/^(Pin failed|Pin succeeded, but placement failed|Pin result unknown): /
+
++ Received:
+"Could not pin: Sample host refusal."
+
+ ❯ src/fixtures/v3-fixtures.test.ts:106:61
+    104|       expect(c.outcome.kind === "unknown").toBe(c.rowsAfter === "unava…
+    105|       expect(c.refreshedIsPinned === null).toBe(c.rowsAfter === "unava…
+    106|       if ("message" in c.outcome) expect(c.outcome.message).toMatch(/^…
+       |                                                             ^
+    107|     }
+    108|     const partial = v3DragPinCases.filter((c) => c.outcome.kind === "p…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 9 passed (10)
+   Start at  08:40:38
+   Duration  236ms (transform 65ms, setup 0ms, import 90ms, tests 12ms, environment 0ms)
+

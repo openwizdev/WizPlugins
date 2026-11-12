@@ -93,14 +93,20 @@ describe("V0: synthetic v0.3 fixtures cover the contract's cases", () => {
     expect(v3Stats.coverage).toEqual({ scope: "observable-sidebar", subagents: "not-counted", unseen: "possible" });
   });
 
-  it("states every drag-into-Pinned outcome, including pinned but not placed", () => {
-    expect(v3DragPinCases.map((c) => c.outcome.kind)).toEqual(["pinned-placed", "pin-failed", "pinned-not-placed", "unknown"]);
+  // R2: an outcome reports what the host calls did; current pin state comes
+  // only from the refreshed rows, which another actor may have changed.
+  it("states every drag-into-Pinned outcome as call results, separate from the refreshed rows", () => {
+    expect(new Set(v3DragPinCases.map((c) => c.outcome.kind))).toEqual(
+      new Set(["pinned-placed", "pin-failed", "pinned-not-placed", "unknown"]),
+    );
     for (const c of v3DragPinCases) {
       expect(c.reorder === "skipped").toBe(c.pin === "failed");
       expect(c.outcome.kind === "unknown").toBe(c.rowsAfter === "unavailable");
+      expect(c.refreshedIsPinned === null).toBe(c.rowsAfter === "unavailable");
+      if ("message" in c.outcome) expect(c.outcome.message).toMatch(/^(Pin failed|Pin succeeded, but placement failed|Pin result unknown): /);
     }
-    const partial = v3DragPinCases.find((c) => c.outcome.kind === "pinned-not-placed");
-    expect([partial?.pin, partial?.reorder, partial?.rowsAfter]).toEqual(["ok", "failed", "ready"]);
+    const partial = v3DragPinCases.filter((c) => c.outcome.kind === "pinned-not-placed");
+    expect(partial.map((c) => c.refreshedIsPinned).sort()).toEqual([false, true]);
   });
 
   it("states child statuses from the shared runtime rule", () => {
