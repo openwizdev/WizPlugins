@@ -10,6 +10,9 @@ const app = await loadPluginApp(() => import("../app"));
 const parentChip = app.threadHeaderActions.find(
   (slot) => slot.id === "parent",
 )!;
+const childrenChip = app.threadHeaderActions.find(
+  (slot) => slot.id === "children",
+)!;
 
 function thread(
   overrides: Partial<PluginSidebarThread> = {},
@@ -62,11 +65,14 @@ function render(
   threads: PluginSidebarThread[],
   threadId: string,
   isCompactViewport = false,
+  settings?: Record<string, string | number | boolean>,
+  slot = parentChip,
 ) {
   return renderSlot(
-    parentChip,
+    slot,
     { threadId, projectId: "proj_1", isCompactViewport },
     {
+      settings,
       sidebarThreads: {
         status: "ready",
         threads,
@@ -140,5 +146,31 @@ describe("ParentChip", () => {
     expect(button.getAttribute("aria-label")).toBe(
       "Back to parent: Parent thread",
     );
+  });
+});
+
+// WZ19 (#43), V2: each header chip renders only while its own setting is on.
+// No stored values: the children chip is off and the parent chip on.
+describe("header-chip settings", () => {
+  const family = [
+    thread({ id: "parent", title: "Parent thread" }),
+    thread({ id: "child", parentThreadId: "parent", title: "Child thread" }),
+  ];
+  const parentShown = () => screen.queryByRole("button", { name: "Back to parent: Parent thread" }) !== null;
+  const childrenShown = () => screen.queryByRole("button", { name: "1 child threads" }) !== null;
+
+  it.each([
+    { name: "no stored values", settings: undefined, parent: true, children: false },
+    { name: "an unrelated stored key", settings: { footerCountEnabled: false }, parent: true, children: false },
+    { name: "both on", settings: { childrenChipEnabled: true, parentChipEnabled: true }, parent: true, children: true },
+    { name: "both off", settings: { childrenChipEnabled: false, parentChipEnabled: false }, parent: false, children: false },
+    { name: "children on only", settings: { childrenChipEnabled: true, parentChipEnabled: false }, parent: false, children: true },
+    { name: "non-boolean values fail closed", settings: { childrenChipEnabled: "true", parentChipEnabled: "true" }, parent: false, children: false },
+  ])("$name", ({ settings, parent, children }) => {
+    render(family, "child", false, settings, parentChip);
+    expect(parentShown()).toBe(parent);
+    cleanup();
+    render(family, "parent", false, settings, childrenChip);
+    expect(childrenShown()).toBe(children);
   });
 });

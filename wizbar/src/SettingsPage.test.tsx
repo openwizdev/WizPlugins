@@ -250,3 +250,65 @@ describe("N1: settings through the registered app", () => {
     expectFeatures(footer, icons);
   });
 });
+
+// WZ19 (#43), V2: the two header-chip switches on the settings page. Each one
+// turns only its own chip on and off; the host store saves exactly that key.
+describe("header-chip switches", () => {
+  const parentSlot = app.threadHeaderActions.find(({ id }) => id === "parent")!;
+  const childrenSlot = app.threadHeaderActions.find(({ id }) => id === "children")!;
+  const row = (id: string, parentThreadId: string | null) => ({
+    id, projectId: "prj_synthetic", title: `Thread ${id}`, titleFallback: null, displayTitle: `Thread ${id}`,
+    parentThreadId, lifecycleOwnerThreadId: null, sourceThreadId: null, sectionId: null, originKind: null,
+    originPluginId: null, providerId: "synthetic", status: "idle", runtimeStatus: "idle", queuedWork: "none",
+    hasPendingInteraction: false, activity: { workflows: 0, backgroundAgents: 0, backgroundCommands: 0, planMode: 0, goals: 0 },
+    indicator: "none", indicatorLabel: null, isUnread: false, isPinned: false, pinnedAt: null, pinSortKey: null,
+    isArchived: false, archivedAt: null, href: `/t/${id}`, isHidden: false, environment: null, host: null,
+    createdAt: 1, updatedAt: 1, lastReadAt: 1, latestAttentionAt: 1,
+  }) as const;
+
+  function mountChips() {
+    const Page = app.settingsSections.find(({ id }) => id === "wizbar-settings")!.component;
+    const Parent = parentSlot.component, Children = childrenSlot.component;
+    let stored: Record<string, unknown> = {};
+    const updateSettings = vi.fn(async ({ values }: { values: Record<string, unknown> }) => {
+      stored = { ...stored, ...values };
+      return { ok: true as const, schema: {}, values: stored };
+    });
+    renderSlot({ component: () => <>
+      <Page />
+      <div aria-label="Child header"><Parent threadId="thr_c" projectId="prj_synthetic" isCompactViewport={false} /></div>
+      <div aria-label="Parent header"><Children threadId="thr_p" projectId="prj_synthetic" isCompactViewport={false} /></div>
+    </> }, {}, {
+      pluginId: `synthetic-header-chips-${++fixtureNumber}`, settings: {},
+      sidebarThreads: { status: "ready", threads: [row("thr_p", null), row("thr_c", "thr_p")] as never, projects: [] },
+      sdk: { plugins: { updateSettings } },
+    });
+    return { updateSettings };
+  }
+  const shown = () => ({
+    parent: screen.queryByRole("button", { name: "Back to parent: Thread thr_p" }) !== null,
+    children: screen.queryByRole("button", { name: "1 child threads" }) !== null,
+  });
+
+  it("starts with the children chip off and the parent chip on, and each switch changes only its own chip", async () => {
+    const { updateSettings } = mountChips();
+    const childrenSwitch = screen.getByRole("switch", { name: "Children chip in thread header" }) as HTMLInputElement;
+    const parentSwitch = screen.getByRole("switch", { name: "Parent chip in thread header" }) as HTMLInputElement;
+    expect([childrenSwitch.checked, parentSwitch.checked]).toEqual([false, true]);
+    expect(shown()).toEqual({ parent: true, children: false });
+
+    fireEvent.click(childrenSwitch);
+    await waitFor(() => expect(shown()).toEqual({ parent: true, children: true }));
+    expect(updateSettings).toHaveBeenLastCalledWith(expect.objectContaining({ values: { childrenChipEnabled: true } }));
+
+    await waitFor(() => expect(parentSwitch.disabled).toBe(false));
+    fireEvent.click(parentSwitch);
+    await waitFor(() => expect(shown()).toEqual({ parent: false, children: true }));
+    expect(updateSettings).toHaveBeenLastCalledWith(expect.objectContaining({ values: { parentChipEnabled: false } }));
+
+    await waitFor(() => expect(childrenSwitch.disabled).toBe(false));
+    fireEvent.click(childrenSwitch);
+    await waitFor(() => expect(shown()).toEqual({ parent: false, children: false }));
+    expect(updateSettings).toHaveBeenCalledTimes(3);
+  });
+});
