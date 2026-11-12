@@ -63,6 +63,9 @@ export function ThreadCard({
   // The branch, or the machine when there is no worktree, on hover only.
   const location = meta.branch ?? thread.host?.name ?? null;
   const locationId = useId();
+  // Escape hides the overlay (it can cover the next card) without moving focus;
+  // the next focus or hover shows it again. The description stays either way.
+  const [locationDismissed, setLocationDismissed] = useState(false);
 
   return (
     <RowContextMenu thread={thread}>
@@ -75,6 +78,11 @@ export function ThreadCard({
             // row, so the two states stay distinguishable.
             !isActive && layout !== null && "bg-sidebar-accent/30",
           )}
+          onKeyDown={(event) => {
+            if (event.key === "Escape" && location) setLocationDismissed(true);
+          }}
+          onFocus={() => setLocationDismissed(false)}
+          onMouseEnter={() => setLocationDismissed(false)}
         >
           <a
             // Both attributes, or bb's nine thread shortcuts stop finding rows.
@@ -188,10 +196,12 @@ export function ThreadCard({
           {location ? (
             // Overlays rather than adds a line, so hovering never moves the list.
             // Keyboard focus reveals it too, and the card link describes it.
+            // Escape dismisses it until the next focus or hover.
             <span
               id={locationId}
               className={cn(
-                "pointer-events-none absolute left-2.5 right-2.5 top-full z-10 -mt-1 hidden truncate rounded border border-border bg-popover px-1.5 py-0.5 text-2xs text-popover-foreground shadow-sm group-hover/card:block group-focus-within/card:block",
+                "pointer-events-none absolute left-2.5 right-2.5 top-full z-10 -mt-1 hidden truncate rounded border border-border bg-popover px-1.5 py-0.5 text-2xs text-popover-foreground shadow-sm",
+                !locationDismissed && "group-hover/card:block group-focus-within/card:block",
                 meta.branch && "font-mono",
               )}
             >

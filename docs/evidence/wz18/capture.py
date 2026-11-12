@@ -13,7 +13,7 @@ try:
     cdp('Emulation.setEmulatedMedia', features=[{'name':'prefers-reduced-motion','value':'reduce'}])
     for width in [320, 390]:
         cdp('Emulation.setDeviceMetricsOverride', width=width, height=844, deviceScaleFactor=2, mobile=False)
-        for state in ['none', 'host', 'hover', 'focus']:
+        for state in ['none', 'host', 'hover', 'focus', 'escape']:
             goto_url(base + ('none' if state == 'none' else 'host'))
             wait_for_load()
             for _ in range(50):
@@ -25,9 +25,13 @@ try:
                 box = js('''(() => {const b=[...document.querySelectorAll('li')][0].getBoundingClientRect();
                   return {x:b.x+b.width/2, y:b.y+12};})()''')
                 cdp('Input.dispatchMouseEvent', type='mouseMoved', x=box['x'], y=box['y'])
-            if state == 'focus':
+            if state in ['focus', 'escape']:
                 # PR #48 R1: keyboard focus on the first card's link, pointer away.
                 js("document.querySelector('li a[data-sidebar-thread-id]').focus()")
+            if state == 'escape':
+                # PR #48 R3: Escape hides the overlay; focus stays on the link.
+                for kind in ['keyDown', 'keyUp']:
+                    cdp('Input.dispatchKeyEvent', type=kind, key='Escape', code='Escape', windowsVirtualKeyCode=27)
             wait(0.3)
             data = js('''(() => {
               const cards = [...document.querySelectorAll('li')].map(li => {
@@ -50,7 +54,9 @@ try:
                   described,
                 };
               });
-              return {cards, pageOverflow: document.documentElement.scrollWidth > innerWidth};
+              const first = document.querySelector('li a[data-sidebar-thread-id]');
+              return {cards, pageOverflow: document.documentElement.scrollWidth > innerWidth,
+                firstLinkFocused: document.activeElement === first};
             })()''')
             first = data['cards'][0]
             assert first['title'] == 'Sample refine command palette', first
@@ -65,6 +71,7 @@ try:
             visible = [c['title'] for c in data['cards'] if c['hoverVisible']]
             assert visible == (['Sample refine command palette'] if state in ['hover', 'focus'] else []), visible
             assert first['described'] == ['room/1042-refine-command-palette-a1b2'], first
+            assert data['firstLinkFocused'] == (state in ['focus', 'escape']), data
             if state in ['hover', 'focus']:
                 assert first['hoverText'] == 'room/1042-refine-command-palette-a1b2', first
             shot = cdp('Page.captureScreenshot', format='png', captureBeyondViewport=False)
@@ -72,7 +79,7 @@ try:
             (out / filename).write_bytes(base64.b64decode(shot['data']))
             records.append({'width': width, 'state': state, 'screenshot': filename, **data})
     (out / 'capture.json').write_text(json.dumps(records, indent=2, ensure_ascii=False) + '\n')
-    print('PASS: 8 synthetic captures at 320 and 390 px; chips wrap without clipping; branch on hover or keyboard focus only, and described to screen readers.')
+    print('PASS: 10 synthetic captures at 320 and 390 px; chips wrap without clipping; branch on hover or keyboard focus only, Escape hides it with focus kept, and described to screen readers.')
 finally:
     cdp('Emulation.clearDeviceMetricsOverride')
     close_tab()
