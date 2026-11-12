@@ -13,7 +13,7 @@ try:
     cdp('Emulation.setEmulatedMedia', features=[{'name': 'prefers-reduced-motion', 'value': 'reduce'}])
     for width in [320, 390]:
         cdp('Emulation.setDeviceMetricsOverride', width=width, height=844, deviceScaleFactor=2, mobile=False)
-        for state in ['hover-none', 'hover-host', 'focus-host', 'escape-host', 'click-host']:
+        for state in ['hover-none', 'hover-host', 'focus-host', 'escape-host', 'click-host', 'tap-host']:
             goto_url(base + state.split('-')[1])
             wait_for_load()
             for _ in range(80):
@@ -24,7 +24,19 @@ try:
             chip = '3 children' if state != 'focus-host' and state != 'escape-host' else '1 child'
             box = js('''(() => {const b=[...document.querySelectorAll('button')].find(e => e.textContent === %s).getBoundingClientRect();
               return {x:b.x+b.width/2, y:b.y+b.height/2};})()''' % json.dumps(chip))
-            if state.startswith('hover') or state == 'click-host':
+            if state == 'tap-host':
+                # PR #55 R1: two real touch taps on the count; the panel stays open after each.
+                cdp('Emulation.setTouchEmulationEnabled', enabled=True, maxTouchPoints=1)
+                taps = []
+                for _ in range(2):
+                    for kind in ['touchStart', 'touchEnd']:
+                        cdp('Input.dispatchTouchEvent', type=kind,
+                            touchPoints=[] if kind == 'touchEnd' else [{'x': box['x'], 'y': box['y']}])
+                    wait(0.4)
+                    taps.append(js("!!document.querySelector('[role=dialog]')"))
+                cdp('Emulation.setTouchEmulationEnabled', enabled=False)
+                assert taps == [True, True], taps
+            elif state.startswith('hover') or state == 'click-host':
                 cdp('Input.dispatchMouseEvent', type='mouseMoved', x=box['x'], y=box['y'])
             else:
                 js('[...document.querySelectorAll("button")].find(e => e.textContent === %s).focus()' % json.dumps(chip))
@@ -61,7 +73,7 @@ try:
                 wait(0.2)
                 data['openCalls'] = js('window.calls().filter(c => c.method === "open").map(c => c.threadId)')
                 assert data['openCalls'] == ['thr_v3_child_waiting'], data
-            else:
+            elif state != 'tap-host':
                 shot = cdp('Page.captureScreenshot', format='png', captureBeyondViewport=False)
                 filename = f'{width}-{state}.png'
                 (out / filename).write_bytes(base64.b64decode(shot['data']))

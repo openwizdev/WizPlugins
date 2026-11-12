@@ -178,7 +178,7 @@ export function ThreadCard({
               <Chip>{cardLinkText(meta.link)}</Chip>
             ) : null}
             {/* WZ19: hover or focus the count to list the children. */}
-            {children ? <ChildrenPopover parent={thread} threads={threads} label={children} now={now} /> : null}
+            {children ? <ChildrenPopover parent={thread} threads={threads} label={children} now={now} onNavigate={onNavigate} /> : null}
             {thread.activity.workflows > 0 ? (
               <ActivityCount
                 label="workflows"

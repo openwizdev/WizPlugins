@@ -1,0 +1,26 @@
+
+ RUN  v4.1.10 <repo>/wizbar
+
+ ❯ |bb-plugin-wizbar| src/ChildrenPopover.test.tsx (15 tests | 1 failed) 2047ms
+     × stays open through a complete tap, and a second tap 351ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/ChildrenPopover.test.tsx > children on hover (picture B) > stays open through a complete tap, and a second tap
+AssertionError: tap 1: expected null not to be null
+ ❯ src/ChildrenPopover.test.tsx:152:45
+    150|       fireEvent.mouseLeave(count);
+    151|       await new Promise((resolve) => setTimeout(resolve, 300));
+    152|       expect(panel(), `tap ${tap + 1}`).not.toBeNull();
+       |                                             ^
+    153|       expect(count.getAttribute("aria-expanded")).toBe("true");
+    154|     }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 14 passed (15)
+   Start at  21:05:14
+   Duration  3.10s (transform 181ms, setup 0ms, import 467ms, tests 2.05s, environment 481ms)
+

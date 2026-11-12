@@ -144,6 +144,11 @@ describe("children on hover (picture B)", () => {
       fireEvent.focus(count);
       fireEvent.pointerUp(count, { pointerType: "touch" });
       fireEvent.click(count);
+      // Chromium then reports the touch pointer, and its compatibility mouse,
+      // leaving the page (seen in a real-browser tap).
+      fireEvent.pointerLeave(count, { pointerType: "touch" });
+      fireEvent.mouseLeave(count);
+      await new Promise((resolve) => setTimeout(resolve, 300));
       expect(panel(), `tap ${tap + 1}`).not.toBeNull();
       expect(count.getAttribute("aria-expanded")).toBe("true");
     }
@@ -164,7 +169,8 @@ describe("children on hover (picture B)", () => {
     expect(within(list).getByText("Children are unavailable right now."), "a reconnect alone cannot certify retained rows").toBeDefined();
     fixtureFeed.current = { status: "ready", threads: v3Threads.map((t) =>
       t.id === "thr_v3_child_waiting" ? { ...t, updatedAt: t.updatedAt + 1, hasPendingInteraction: false } : t) };
-    await rendered.setRealtimeConnectionState("connected");
+    // Close and reopen, so the panel renders again with the fresh snapshot.
+    fireEvent.keyDown(chip("3 children"), { key: "Escape" });
     fireEvent.mouseEnter(chip("3 children"));
     await waitFor(() => expect(screen.getByRole("button", { name: /^Open child: Sample check focus order, idle/ })).toBeDefined());
   });

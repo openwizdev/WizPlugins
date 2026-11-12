@@ -10,6 +10,7 @@ import { childrenList } from "./children";
 import { modelLabel } from "./card-meta";
 import { relativeTimeLabel } from "./relative-time";
 import { StatusGlyph } from "./StatusGlyph";
+import { useObservableRows } from "./FooterCounter";
 import { TRAILING_GLYPH_BOX_CLASS } from "./StatusSlot";
 import type { t3sidebarRpcContract } from "./server";
 import type { CardModelsResultV3, ChildStatusV3 } from "./v3-types";
@@ -46,6 +47,7 @@ export function ChildrenPopover({
   threads,
   label,
   now,
+  onNavigate,
 }: {
   parent: PluginSidebarThread;
   /** The same active-lifecycle rows the card's count reads. */
@@ -53,6 +55,8 @@ export function ChildrenPopover({
   /** The count chip's text, e.g. "3 children". */
   label: string;
   now: number;
+  /** The host's after-navigation callback: closes a compact sidebar drawer. */
+  onNavigate: () => void;
 }) {
   const actions = useSidebarThreadActions();
   const [open, setOpen] = useState(false);
@@ -65,7 +69,10 @@ export function ChildrenPopover({
   const refocusing = useRef(false);
   const panelId = useId();
   const models = useChildModels(open ? threads.filter((t) => t.parentThreadId === parent.id).map((t) => t.id) : []);
-  const list = childrenList(threads, parent.id, models ?? undefined);
+  // Statuses only from rows the shared freshness-aware reader still trusts: a
+  // connection gap makes them unavailable until a fresh snapshot (section 1).
+  const fresh = useObservableRows();
+  const list = fresh.status === "ready" && fresh.rows ? childrenList(fresh.rows, parent.id, models ?? undefined) : null;
 
   const cancelClose = () => clearTimeout(closeTimer.current);
   const show = () => { cancelClose(); setOpen(true); };
@@ -97,6 +104,7 @@ export function ChildrenPopover({
   const openThread = (threadId: string) => {
     hide();
     actions.open(threadId);
+    onNavigate();
   };
 
   return (
@@ -132,8 +140,10 @@ export function ChildrenPopover({
         aria-haspopup="dialog"
         aria-controls={open ? panelId : undefined}
         onClick={(event) => {
+          // Opening is idempotent: a tap's compatibility hover and focus already
+          // opened it, and its click must not undo that. Escape or leaving closes.
           event.stopPropagation();
-          if (open) hide(); else show();
+          show();
         }}
         className="max-w-full rounded border border-border px-1 leading-4 [overflow-wrap:anywhere] hover:bg-accent hover:text-foreground"
       >
