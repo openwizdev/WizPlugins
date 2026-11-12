@@ -1,0 +1,38 @@
+Command from wizbar/: npm test -- --maxWorkers=2 src/FooterCounter.test.tsx
+Base: 8c28b81 (test expectation changed only)
+
+> bb-plugin-wizbar@0.1.0 test
+> vitest run --config vitest.config.ts --maxWorkers=2 src/FooterCounter.test.tsx
+
+
+ RUN  v4.1.10 <checkout>/wizbar
+
+ ❯ |bb-plugin-wizbar| src/FooterCounter.test.tsx (12 tests | 1 failed) 444ms
+     × registers one no-op action directing readers to the live list count 6ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/FooterCounter.test.tsx > N4: approved observable footer route > registers one no-op action directing readers to the live list count
+AssertionError: expected 'Running · subagents not counted yet ·…' to be 'Running count: see the line at the bo…' // Object.is equality
+
+Expected: "Running count: see the line at the bottom of the list"
+Received: "Running · subagents not counted yet · some threads may be unseen"
+
+ ❯ src/FooterCounter.test.tsx:116:26
+    114|     expect(action.kind).toBe("action");
+    115|     expect(action.icon).toBe("wizbar-running-count");
+    116|     expect(action.label).toBe("Running count: see the line at the bott…
+       |                          ^
+    117|     const openPluginDetails = vi.fn();
+    118|     if (action.kind !== "action") throw new Error("Expected approved n…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 11 passed (12)
+   Start at  05:09:21
+   Duration  1.51s (transform 164ms, setup 0ms, import 455ms, tests 444ms, environment 507ms)
+
+
+Exit: 1

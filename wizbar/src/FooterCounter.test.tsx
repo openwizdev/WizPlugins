@@ -107,13 +107,13 @@ describe("W3: synthetic footer artwork through the SDK rendering harness", () =>
 // These proofs fail if the app remains unwired or promotes observable coverage to live.
 describe("N4: approved observable footer route", () => {
   const icon = app.icons.find(({ name }) => name === "wizbar-running-count")!;
-  it("registers numeric artwork in one no-op action, with no disclosure", () => {
+  it("registers one no-op action directing readers to the live list count", () => {
     expect(app.sidebarFooterActions).toEqual([]);
     expect(app.experimentalSidebarFooterItems).toHaveLength(1);
     const action = app.experimentalSidebarFooterItems[0]!;
     expect(action.kind).toBe("action");
     expect(action.icon).toBe("wizbar-running-count");
-    expect(action.label).toBe("Running · subagents not counted yet · some threads may be unseen");
+    expect(action.label).toBe("Running count: see the line at the bottom of the list");
     const openPluginDetails = vi.fn();
     if (action.kind !== "action") throw new Error("Expected approved no-op action");
     action.onActivate({ openPluginDetails });
