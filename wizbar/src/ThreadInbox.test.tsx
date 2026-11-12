@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  act,
   cleanup,
+  createEvent,
   fireEvent,
   screen,
   waitFor,
@@ -790,5 +792,288 @@ describe("WZ16: visible list-bottom running count", () => {
     await connected.setRealtimeConnectionState("reconnecting");
     expect(screen.queryByRole("status", { name: "1 running" })).toBeNull();
     expect(screen.queryByRole("tooltip")).toBeNull();
+  });
+});
+
+// V4 (WZ21): drag pins, unpins and reorders through WizBar's server operations
+// (which call the host's pins); rows are always drawn as the host returns them.
+describe("WZ21: drag to pin, unpin and reorder", () => {
+  const rows = () => [
+    thread({ id: "pin_b", title: "Pinned second", isPinned: true, pinnedAt: 50, pinSortKey: "a1", createdAt: 300 }),
+    thread({ id: "pin_a", title: "Pinned first", isPinned: true, pinnedAt: 40, pinSortKey: "a0", createdAt: 100 }),
+    thread({ id: "in_old", title: "Inbox older", createdAt: 10 }),
+    thread({ id: "in_new", title: "Inbox newer", createdAt: 20 }),
+  ];
+  type Handler = (input: any) => unknown;
+  // `pinnedOrder` is the server's fresh read after the calls. By default it
+  // agrees with the fixed sidebar rows, i.e. the host has already redrawn them.
+  const keyedOrder = (threads: PluginSidebarThread[]) => threads.filter((t) => t.isPinned)
+    .sort((a, b) => ((a.pinSortKey ?? "~") < (b.pinSortKey ?? "~") ? -1 : 1)).map((t) => t.id);
+  function renderDrag(threads = rows(), handlers: Record<string, Handler> = {}, lifecycleRows: unknown[] = []) {
+    return renderSlot(inbox, listProps, {
+      sidebarThreads: { status: "ready", threads, projects: [] },
+      rpc: { listLifecycle: () => ({ rows: lifecycleRows }), pin: () => ({ ok: true }), unpin: () => ({ ok: true }),
+        move: () => ({ ok: true }), pinnedOrder: () => ({ order: keyedOrder(threads) }), ...handlers },
+    });
+  }
+  const card = (title: string) => screen.getByRole("link", { name: title });
+  const row = (title: string) => card(title).closest("li")!;
+  const titlesIn = (region: HTMLElement) =>
+    within(region).getAllByRole("link").map((link) => link.getAttribute("aria-label"));
+  const inboxTitles = () => screen.getAllByRole("link").map((l) => l.getAttribute("aria-label"))
+    .filter((t) => t!.startsWith("Inbox"));
+  // jsdom has no DragEvent, so pointer coordinates are set on the event itself.
+  // Rows measure 0 px there: clientY 0 is the upper half, 10 the lower half.
+  const at = (event: Event, clientY: number) => Object.defineProperty(event, "clientY", { value: clientY });
+  const drag = (from: HTMLElement, to: HTMLElement, clientY = 0) => {
+    fireEvent.dragStart(from, { dataTransfer: { setData() {}, effectAllowed: "all" } });
+    fireEvent(to, at(createEvent.dragOver(to), clientY));
+    fireEvent(to, at(createEvent.drop(to), clientY));
+    fireEvent.dragEnd(from);
+  };
+  const pinCalls = (rendered: { rpcCalls: { method: string; input: unknown }[] }) =>
+    rendered.rpcCalls.filter((c) => c.method !== "listLifecycle" && c.method !== "pinnedOrder")
+      .map((c) => [c.method, c.input]);
+  const reads = (rendered: { rpcCalls: { method: string }[] }) =>
+    rendered.rpcCalls.filter((c) => c.method === "pinnedOrder").length;
+
+  it("draws Pinned in the host's pinned order, not creation order", () => {
+    renderDrag();
+    expect(titlesIn(screen.getByRole("region", { name: "Pinned" }))).toEqual(["Pinned first", "Pinned second"]);
+  });
+
+  it("pins a card dropped into Pinned, then places it where it was dropped", async () => {
+    const rendered = renderDrag();
+    drag(card("Inbox older"), row("Pinned second"));
+    await waitFor(() => expect(pinCalls(rendered)).toEqual([
+      ["pin", { threadId: "in_old" }], ["move", { threadId: "in_old", position: { before: "pin_b" } }],
+    ]));
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("unpins a pinned card dropped outside Pinned", async () => {
+    const rendered = renderDrag();
+    drag(card("Pinned first"), row("Inbox newer"));
+    await waitFor(() => expect(pinCalls(rendered)).toEqual([["unpin", { threadId: "pin_a" }]]));
+  });
+
+  it("reorders inside Pinned, after the card when dropped on its lower half", async () => {
+    const rendered = renderDrag();
+    drag(card("Pinned first"), row("Pinned second"), 10);
+    await waitFor(() => expect(pinCalls(rendered)).toEqual([
+      ["move", { threadId: "pin_a", position: { after: "pin_b" } }],
+    ]));
+  });
+
+  it("never re-orders the Inbox: an Inbox-to-Inbox drop calls nothing", async () => {
+    const rendered = renderDrag();
+    expect(inboxTitles()).toEqual(["Inbox newer", "Inbox older"]);
+    drag(card("Inbox newer"), row("Inbox older"), 10);
+    await Promise.resolve();
+    expect(pinCalls(rendered)).toEqual([]);
+    expect(inboxTitles()).toEqual(["Inbox newer", "Inbox older"]);
+  });
+
+  it("offers an empty Pinned drop target while dragging when nothing is pinned", async () => {
+    const rendered = renderDrag([thread({ id: "in_only", title: "Inbox only" })]);
+    expect(screen.queryByRole("region", { name: "Pinned" })).toBeNull();
+    fireEvent.dragStart(card("Inbox only"));
+    const target = screen.getByRole("region", { name: "Pinned" });
+    fireEvent.dragOver(target);
+    fireEvent.drop(target);
+    await waitFor(() => expect(pinCalls(rendered)).toEqual([
+      ["pin", { threadId: "in_only" }], ["move", { threadId: "in_only", position: { last: true } }],
+    ]));
+    fireEvent.dragEnd(card("Inbox only"));
+    expect(screen.queryByRole("region", { name: "Pinned" })).toBeNull();
+  });
+
+  it.each([
+    ["a failed pin", { pin: () => { throw new Error("Sample host refusal."); } }, "Inbox older", "Pinned second",
+      "Pin failed: Sample host refusal.", ["pin"]],
+    ["a failed placement after the pin", { move: () => { throw new Error("Sample host refusal."); } }, "Inbox older",
+      "Pinned second", "Pin succeeded, but placement failed: Sample host refusal.", ["pin", "move"]],
+    ["a failed unpin", { unpin: () => { throw new Error("Sample host refusal."); } }, "Pinned first", "Inbox newer",
+      "Unpin failed: Sample host refusal.", ["unpin"]],
+    ["a failed move", { move: () => { throw new Error("Sample host refusal."); } }, "Pinned first", "Pinned second",
+      "Move failed: Sample host refusal.", ["move"]],
+  ] as const)("shows %s and keeps every card where the host rows put it", async (_n, handlers, from, to, message, calls) => {
+    const rendered = renderDrag(rows(), handlers);
+    drag(card(from), row(to));
+    expect((await screen.findByRole("alert")).textContent).toBe(message);
+    expect(pinCalls(rendered).map(([method]) => method)).toEqual(calls);
+    expect(titlesIn(screen.getByRole("region", { name: "Pinned" }))).toEqual(["Pinned first", "Pinned second"]);
+    expect(inboxTitles()).toEqual(["Inbox newer", "Inbox older"]);
+  });
+
+  it.each([
+    ["Pinned second", "ArrowUp", [["move", { threadId: "pin_b", position: { before: "pin_a" } }]]],
+    ["Pinned first", "ArrowDown", [["move", { threadId: "pin_a", position: { after: "pin_b" } }]]],
+    ["Pinned second", "ArrowDown", [["unpin", { threadId: "pin_b" }]]],
+    ["Inbox older", "ArrowUp", [["pin", { threadId: "in_old" }], ["move", { threadId: "in_old", position: { after: "pin_b" } }]]],
+    ["Inbox older", "ArrowDown", []],
+  ] as const)("moves %s with Alt+%s from the keyboard", async (title, key, expected) => {
+    const rendered = renderDrag();
+    fireEvent.keyDown(card(title), { key });
+    fireEvent.keyDown(card(title), { key, altKey: true });
+    await waitFor(() => expect(pinCalls(rendered)).toEqual(expected));
+  });
+
+  it("makes one move per action: a repeated key while a move is in flight calls nothing more", async () => {
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => { release = resolve; });
+    const rendered = renderDrag(rows(), { move: async () => { await held; return { ok: true }; } });
+    fireEvent.keyDown(card("Pinned second"), { key: "ArrowUp", altKey: true });
+    fireEvent.keyDown(card("Pinned second"), { key: "ArrowUp", altKey: true, repeat: true });
+    drag(card("Inbox older"), row("Pinned first"));
+    await waitFor(() => expect(pinCalls(rendered)).toHaveLength(1));
+    release();
+    await held;
+    expect(pinCalls(rendered)).toEqual([["move", { threadId: "pin_b", position: { before: "pin_a" } }]]);
+  });
+
+  // R1: a move counts as drawn only once a fresh post-call read agrees with
+  // the sidebar rows while the realtime connection is up.
+  it("R1 re-reads after the calls and reports placed only when the rows agree", async () => {
+    const rendered = renderDrag();
+    drag(card("Inbox older"), row("Pinned second"));
+    await waitFor(() => expect(reads(rendered)).toBe(1));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.getByRole("region", { name: "Pinned" })).toBeDefined();
+  });
+  it("R1 reports an unknown result and the unavailable state when the rows never catch up", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const rendered = renderDrag(rows(), { pinnedOrder: () => ({ order: ["in_old", "pin_a", "pin_b"] }) });
+      drag(card("Inbox older"), row("Pinned first"));
+      await waitFor(() => expect(reads(rendered)).toBe(1));
+      await act(async () => { await vi.advanceTimersByTimeAsync(6000); });
+      expect((await screen.findByRole("alert")).textContent).toBe("Pin result unknown: Thread rows are unavailable.");
+      expect(screen.getByText("Could not load threads.")).toBeDefined();
+      expect(screen.queryByRole("region", { name: "Pinned" })).toBeNull();
+    } finally { vi.useRealTimers(); }
+  });
+  it("R1 treats rows behind a lost realtime connection as unknown", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const rendered = renderDrag();
+      await rendered.setRealtimeConnectionState("reconnecting");
+      drag(card("Pinned first"), row("Inbox newer"));
+      await waitFor(() => expect(pinCalls(rendered)).toEqual([["unpin", { threadId: "pin_a" }]]));
+      await act(async () => { await vi.advanceTimersByTimeAsync(6000); });
+      expect((await screen.findByRole("alert")).textContent).toBe("Unpin result unknown: Thread rows are unavailable.");
+      expect(screen.getByText("Could not load threads.")).toBeDefined();
+    } finally { vi.useRealTimers(); }
+  });
+  it("R1 keeps the next move waiting until the post-call read has reconciled", async () => {
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => { release = resolve; });
+    const rendered = renderDrag(rows(), { pinnedOrder: async () => { await held; return { order: ["pin_a", "pin_b"] }; } });
+    fireEvent.keyDown(card("Pinned second"), { key: "ArrowUp", altKey: true });
+    await waitFor(() => expect(reads(rendered)).toBe(1));
+    fireEvent.keyDown(card("Pinned first"), { key: "ArrowDown", altKey: true });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(pinCalls(rendered)).toHaveLength(1);
+    release();
+    await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    fireEvent.keyDown(card("Pinned first"), { key: "ArrowDown", altKey: true });
+    await waitFor(() => expect(pinCalls(rendered)).toHaveLength(2));
+  });
+
+  // R1 round 2: a read taken before a reconnect is stale; the move gate must
+  // wait for a read made on the restored connection and rows that agree.
+  it("R1 never reconciles against a read taken before a reconnect", async () => {
+    let hostChanged = false;
+    const rendered = renderDrag(rows(), {
+      pinnedOrder: () => ({ order: hostChanged ? ["pin_b", "pin_a"] : ["pin_a", "pin_b"] }),
+    });
+    await rendered.setRealtimeConnectionState("reconnecting");
+    fireEvent.keyDown(card("Pinned second"), { key: "ArrowUp", altKey: true });
+    await waitFor(() => expect(pinCalls(rendered)).toHaveLength(1));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    hostChanged = true;
+    await rendered.setRealtimeConnectionState("connected");
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    fireEvent.keyDown(card("Pinned first"), { key: "ArrowDown", altKey: true });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(pinCalls(rendered)).toHaveLength(1);
+  });
+  // R6: a read from before a reconnect that fails late must not end the
+  // current attempt; the read on the restored connection decides.
+  it("R6 ignores a late failure from a read superseded by a reconnect", async () => {
+    let rejectA!: (error: Error) => void, resolveB!: (value: { order: string[] }) => void;
+    let calls = 0;
+    const rendered = renderDrag(rows(), { pinnedOrder: () => (++calls === 1
+      ? new Promise((_, reject) => { rejectA = reject; })
+      : new Promise((resolve) => { resolveB = resolve; })) });
+    fireEvent.keyDown(card("Pinned second"), { key: "ArrowUp", altKey: true });
+    await waitFor(() => expect(reads(rendered)).toBe(1));
+    await rendered.setRealtimeConnectionState("reconnecting");
+    await rendered.setRealtimeConnectionState("connected");
+    await waitFor(() => expect(reads(rendered)).toBe(2));
+    await act(async () => { rejectA(new Error("Sample stale read failure.")); });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(screen.queryByRole("alert")).toBeNull();
+    await act(async () => { resolveB({ order: ["pin_a", "pin_b"] }); });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.getByRole("region", { name: "Pinned" })).toBeDefined();
+  });
+
+  // R5: a read that never answers still ends in the unknown state on time.
+  it("R5 bounds a never-settling read: unknown result and unavailable shelves", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      renderDrag(rows(), { pinnedOrder: () => new Promise(() => {}) });
+      drag(card("Pinned first"), row("Pinned second"), 10);
+      await act(async () => { await vi.advanceTimersByTimeAsync(6000); });
+      expect((await screen.findByRole("alert")).textContent).toBe("Move result unknown: Thread rows are unavailable.");
+      expect(screen.getByText("Could not load threads.")).toBeDefined();
+    } finally { vi.useRealTimers(); }
+  });
+
+  // R3: the drag table pins from any shelf; the keyboard must too.
+  it.each([
+    ["Settled", { threadId: "parked", settledAt: 200, snoozedUntil: null, snoozedAt: null }, {}],
+    ["Snoozed", { threadId: "parked", settledAt: null, snoozedUntil: Date.now() + 3_600_000, snoozedAt: 200 }, {}],
+    ["Muted", { threadId: "parked", settledAt: null, snoozedUntil: null, snoozedAt: null, mutedAt: 1000, muteAttentionAt: 100 },
+      { indicator: "runtime", status: "active", runtimeStatus: "active" }],
+  ] as const)("R3 pins an expanded %s row with Alt+Up", async (shelf, stored, extra) => {
+    const rendered = renderDrag([...rows(), thread({ id: "parked", title: "Parked row", createdAt: 5, ...extra })], {}, [stored]);
+    const region = await screen.findByRole("region", { name: shelf });
+    fireEvent.click(within(region).getByRole("button", { name: `${shelf} (1)` }));
+    fireEvent.keyDown(within(region).getByRole("link", { name: "Parked row" }), { key: "ArrowUp", altKey: true });
+    await waitFor(() => expect(pinCalls(rendered)).toEqual([
+      ["pin", { threadId: "parked" }], ["move", { threadId: "parked", position: { after: "pin_b" } }],
+    ]));
+  });
+
+  // R4: a pinned thread is shown in Pinned even with a stored settle or snooze;
+  // the stored row is kept, so an unpin returns it to its shelf.
+  it.each([
+    [{ threadId: "parked", settledAt: 200, snoozedUntil: null, snoozedAt: null }, "Settled"],
+    [{ threadId: "parked", settledAt: null, snoozedUntil: Date.now() + 3_600_000, snoozedAt: 200 }, "Snoozed"],
+  ] as const)("R4 shows a pinned thread in Pinned despite its stored %j row", async (stored, shelf) => {
+    const parked = (isPinned: boolean) => thread({ id: "parked", title: "Parked row", createdAt: 5, latestAttentionAt: 100,
+      isPinned, pinnedAt: isPinned ? 300 : null });
+    renderDrag([parked(true)], {}, [stored]);
+    await screen.findByText("Parked row");
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(within(screen.getByRole("region", { name: "Pinned" })).getByText("Parked row")).toBeDefined();
+    expect(screen.queryByRole("region", { name: shelf })).toBeNull();
+    cleanup();
+    renderDrag([parked(false)], {}, [stored]);
+    expect(await screen.findByRole("region", { name: shelf })).toBeDefined();
+    expect(screen.queryByRole("region", { name: "Pinned" })).toBeNull();
+  });
+
+  it("keeps a pinned card out of mute, settle and snooze rules it already had", () => {
+    renderDrag([thread({ id: "pin_busy", title: "Pinned busy", isPinned: true, pinnedAt: 1,
+      indicator: "runtime", status: "active", runtimeStatus: "active" })]);
+    const pinned = screen.getByRole("region", { name: "Pinned" });
+    expect(within(pinned).getByText("Pinned busy")).toBeDefined();
+    expect(within(pinned).queryByRole("button", { name: /settle|snooze/i })).toBeNull();
   });
 });

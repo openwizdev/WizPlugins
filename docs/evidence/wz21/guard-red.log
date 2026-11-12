@@ -1,0 +1,10 @@
+# WZ21 in-flight guard red run (before the guard), base 381fdff + implementation
+# cd wizbar && npx vitest run --config vitest.config.ts --maxWorkers=2 src/ThreadInbox.test.tsx -t "one move per action"
+
+     × makes one move per action: a repeated key while a move is in flight calls nothing more 1231ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  |bb-plugin-wizbar| src/ThreadInbox.test.tsx > WZ21: drag to pin, unpin and reorder > makes one move per action: a repeated key while a move is in flight calls nothing more
+AssertionError: expected [ [ 'move', …(1) ], …(3) ] to have a length of 1 but got 4
+- Expected
++ Received
+      Tests  1 failed | 68 skipped (69)

@@ -1,0 +1,90 @@
+# WZ21 red run before any implementation (base origin/main 8284c1d)
+# cd wizbar && npx vitest run --config vitest.config.ts --maxWorkers=2 src/drag.test.ts src/inbox.test.ts src/server.test.ts src/ThreadInbox.test.tsx
+
+     × pins and unpins each ID, reports mixed batches per ID and exits 1 24ms
+     × prints one text line per ID 20ms
+     × reports a host refusal as operation_failed with the host's message 22ms
+     × moves with ["--before","thr_c"] through reorderPinned's neighbours 19ms
+     × moves with ["--after","thr_c"] through reorderPinned's neighbours 22ms
+     × moves with ["--first"] through reorderPinned's neighbours 26ms
+     × moves with ["--last"] through reorderPinned's neighbours 23ms
+     × prints the moved place as text and skips the host call when nothing moves 17ms
+     × refuses ["move","thr_u","--first"] with not_pinned and exit 1 18ms
+     × refuses ["move","thr_a","--before","thr_a"] with invalid_anchor and exit 1 18ms
+     × refuses ["move","thr_a","--after","thr_u"] with invalid_anchor and exit 1 25ms
+     × refuses ["move","thr_missing","--first"] with unknown_id and exit 1 17ms
+     × refuses ["move"," ","--first"] with invalid_id and exit 1 18ms
+     × reports a failed reorder and an unreadable thread list 20ms
+     × treats ["pin"] as a usage error with exit 2 22ms
+     × treats ["pin","thr_a","--until","hour"] as a usage error with exit 2 27ms
+     × treats ["move","thr_a"] as a usage error with exit 2 25ms
+     × treats ["move","thr_a","thr_b","--first"] as a usage error with exit 2 18ms
+     × treats ["move","thr_a","--first","--last"] as a usage error with exit 2 17ms
+     × treats ["move","thr_a","--before"] as a usage error with exit 2 17ms
+     × treats ["move","--first"] as a usage error with exit 2 15ms
+     × treats ["move","thr_a","--sideways"] as a usage error with exit 2 18ms
+     × serves the same operations over RPC for the sidebar's drag 17ms
+     × gives the contract's pinned order for the v0.3 fixtures 2ms
+     × puts keyed pins first by key, then unkeyed pins newest pin first 0ms
+     × draws Pinned in the host's pinned order, not creation order 28ms
+     × pins a card dropped into Pinned, then places it where it was dropped 1030ms
+     × unpins a pinned card dropped outside Pinned 1031ms
+     × reorders inside Pinned, after the card when dropped on its lower half 1030ms
+     × offers an empty Pinned drop target while dragging when nothing is pinned 34ms
+     × shows a failed pin and keeps every card where the host rows put it 1031ms
+     × shows a failed placement after the pin and keeps every card where the host rows put it 1038ms
+     × shows a failed unpin and keeps every card where the host rows put it 1026ms
+     × shows a failed move and keeps every card where the host rows put it 1027ms
+     × moves Pinned second with Alt+ArrowUp from the keyboard 1027ms
+     × moves Pinned first with Alt+ArrowDown from the keyboard 1026ms
+     × moves Pinned second with Alt+ArrowDown from the keyboard 1028ms
+     × moves Inbox older with Alt+ArrowUp from the keyboard 1027ms
+ FAIL  |bb-plugin-wizbar| src/drag.test.ts [ src/drag.test.ts ]
+ FAIL  |bb-plugin-wizbar| src/ThreadInbox.test.tsx > WZ21: drag to pin, unpin and reorder > draws Pinned in the host's pinned order, not creation order
+ FAIL  |bb-plugin-wizbar| src/ThreadInbox.test.tsx > WZ21: drag to pin, unpin and reorder > pins a card dropped into Pinned, then places it where it was dropped
+ FAIL  |bb-plugin-wizbar| src/ThreadInbox.test.tsx > WZ21: drag to pin, unpin and reorder > unpins a pinned card dropped outside Pinned
+ FAIL  |bb-plugin-wizbar| src/ThreadInbox.test.tsx > WZ21: drag to pin, unpin and reorder > reorders inside Pinned, after the card when dropped on its lower half
+ FAIL  |bb-plugin-wizbar| src/ThreadInbox.test.tsx > WZ21: drag to pin, unpin and reorder > offers an empty Pinned drop target while dragging when nothing is pinned
+ FAIL  |bb-plugin-wizbar| src/ThreadInbox.test.tsx > WZ21: drag to pin, unpin and reorder > shows a failed pin and keeps every card where the host rows put it
+ FAIL  |bb-plugin-wizbar| src/ThreadInbox.test.tsx > WZ21: drag to pin, unpin and reorder > shows a failed placement after the pin and keeps every card where the host rows put it
+ FAIL  |bb-plugin-wizbar| src/ThreadInbox.test.tsx > WZ21: drag to pin, unpin and reorder > shows a failed unpin and keeps every card where the host rows put it
+ FAIL  |bb-plugin-wizbar| src/ThreadInbox.test.tsx > WZ21: drag to pin, unpin and reorder > shows a failed move and keeps every card where the host rows put it
+ FAIL  |bb-plugin-wizbar| src/ThreadInbox.test.tsx > WZ21: drag to pin, unpin and reorder > moves Pinned second with Alt+ArrowUp from the keyboard
+ FAIL  |bb-plugin-wizbar| src/ThreadInbox.test.tsx > WZ21: drag to pin, unpin and reorder > moves Pinned first with Alt+ArrowDown from the keyboard
+ FAIL  |bb-plugin-wizbar| src/ThreadInbox.test.tsx > WZ21: drag to pin, unpin and reorder > moves Pinned second with Alt+ArrowDown from the keyboard
+ FAIL  |bb-plugin-wizbar| src/ThreadInbox.test.tsx > WZ21: drag to pin, unpin and reorder > moves Inbox older with Alt+ArrowUp from the keyboard
+ FAIL  |bb-plugin-wizbar| src/inbox.test.ts > sortPinned > gives the contract's pinned order for the v0.3 fixtures
+TypeError: sortPinned is not a function
+ FAIL  |bb-plugin-wizbar| src/inbox.test.ts > sortPinned > puts keyed pins first by key, then unkeyed pins newest pin first
+TypeError: sortPinned is not a function
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > WZ21 pin, unpin and move > pins and unpins each ID, reports mixed batches per ID and exits 1
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > WZ21 pin, unpin and move > prints one text line per ID
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > WZ21 pin, unpin and move > reports a host refusal as operation_failed with the host's message
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > WZ21 pin, unpin and move > moves with ["--before","thr_c"] through reorderPinned's neighbours
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > WZ21 pin, unpin and move > moves with ["--after","thr_c"] through reorderPinned's neighbours
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > WZ21 pin, unpin and move > moves with ["--first"] through reorderPinned's neighbours
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > WZ21 pin, unpin and move > moves with ["--last"] through reorderPinned's neighbours
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > WZ21 pin, unpin and move > prints the moved place as text and skips the host call when nothing moves
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > WZ21 pin, unpin and move > refuses ["move","thr_u","--first"] with not_pinned and exit 1
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > WZ21 pin, unpin and move > refuses ["move","thr_a","--before","thr_a"] with invalid_anchor and exit 1
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > WZ21 pin, unpin and move > refuses ["move","thr_a","--after","thr_u"] with invalid_anchor and exit 1
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > WZ21 pin, unpin and move > refuses ["move","thr_missing","--first"] with unknown_id and exit 1
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > WZ21 pin, unpin and move > refuses ["move"," ","--first"] with invalid_id and exit 1
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > WZ21 pin, unpin and move > reports a failed reorder and an unreadable thread list
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > WZ21 pin, unpin and move > treats ["pin"] as a usage error with exit 2
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > WZ21 pin, unpin and move > treats ["pin","thr_a","--until","hour"] as a usage error with exit 2
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > WZ21 pin, unpin and move > treats ["move","thr_a"] as a usage error with exit 2
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > WZ21 pin, unpin and move > treats ["move","thr_a","thr_b","--first"] as a usage error with exit 2
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > WZ21 pin, unpin and move > treats ["move","thr_a","--first","--last"] as a usage error with exit 2
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > WZ21 pin, unpin and move > treats ["move","thr_a","--before"] as a usage error with exit 2
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > WZ21 pin, unpin and move > treats ["move","--first"] as a usage error with exit 2
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > WZ21 pin, unpin and move > treats ["move","thr_a","--sideways"] as a usage error with exit 2
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > WZ21 pin, unpin and move > serves the same operations over RPC for the sidebar's drag
+AssertionError: promise rejected "Error: plugin "wizbar" has no rpc method … { code: '…' }" instead of resolving
+Caused by: Error: plugin "wizbar" has no rpc method "pin"
+ Test Files  4 failed (4)
+      Tests  38 failed | 181 passed (219)
+50:Error: Cannot find module './drag' imported from wizbar/src/drag.test.ts
+1857: FAIL  |bb-plugin-wizbar| src/inbox.test.ts > sortPinned > gives the contract's pinned order for the v0.3 fixtures
+1858:TypeError: sortPinned is not a function
+1860:    229| describe("sortPinned", () => {
