@@ -1,0 +1,5 @@
+Use case: ui-mockup
+Asset type: synthetic WizBar WZ16 continuation target picture
+Primary request: high fidelity dark desktop sidebar mockup illustrating the already approved slim running count at the bottom of a thread list, with hover detail. Only synthetic content.
+Composition: a narrow charcoal sidebar headed WizBar, neutral sample thread cards named Sample task A and Sample task B, large flexible dark list area, then a very slim line containing a small spinner and numeral 2, immediately above a separate host footer with simple generic icons. A small tooltip above the count reads "2 running · subagents not counted yet · some threads may be unseen". Include a small annotation below or beside the mockup: "Synthetic target · not a host screenshot" and a second annotation: "Footer hover: Running count: see the line at the bottom of the list". Make the hierarchy calm and compact, dim borders, restrained white text, no people, no live identifiers, no real projects or paths.
+Constraints: count line stays outside scroll area, no click action, mockup reference only. Do not imply real host acceptance.

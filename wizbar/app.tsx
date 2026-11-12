@@ -22,7 +22,7 @@ export default definePluginApp((app) => {
   app.experimental_sidebarFooter.register({
     id: "running-count",
     kind: "action",
-    label: "Running · subagents not counted yet · some threads may be unseen",
+    label: "Running count: see the line at the bottom of the list",
     icon: "wizbar-running-count",
     onActivate() {},
   });

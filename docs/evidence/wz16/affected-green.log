@@ -1,0 +1,16 @@
+Command from wizbar/: npm test -- --maxWorkers=2 src/ThreadInbox.test.tsx src/FooterCounter.test.tsx
+
+> bb-plugin-wizbar@0.1.0 test
+> vitest run --config vitest.config.ts --maxWorkers=2 src/ThreadInbox.test.tsx src/FooterCounter.test.tsx
+
+
+ RUN  v4.1.10 <checkout>/wizbar
+
+
+ Test Files  2 passed (2)
+      Tests  64 passed (64)
+   Start at  05:10:36
+   Duration  2.35s (transform 494ms, setup 0ms, import 1.07s, tests 1.62s, environment 978ms)
+
+
+Exit: 0
