@@ -380,3 +380,207 @@ describe("cardModels RPC", () => {
     await expect(host.harness.behavior.callRpc("cardModels", { threadIds })).rejects.toThrow();
   });
 });
+
+// V4/V5 (WZ21): pin, unpin and move through the host's own pin operations.
+// The fake host keeps pins like the SDK declares them: `pinnedAt`, and a
+// `pinSortKey` that reorderPinned writes from the given neighbours.
+describe("WZ21 pin, unpin and move", () => {
+  type PinRow = ReturnType<typeof thread> & { createdAt: number; pinnedAt: number | null; pinSortKey: string | null };
+  const pinRow = (id: string, pinnedAt: number | null = null, pinSortKey: string | null = null, createdAt = 1): PinRow =>
+    ({ ...thread(id), createdAt, pinnedAt, pinSortKey });
+  function pinSetup(rows: PinRow[]) {
+    const fail: { pin?: string; unpin?: string; reorderPinned?: string } = {};
+    const order = () => rows.filter((r) => r.pinnedAt !== null).sort((a, b) =>
+      (a.pinSortKey === null) !== (b.pinSortKey === null) ? (a.pinSortKey === null ? 1 : -1)
+        : a.pinSortKey !== null && a.pinSortKey !== b.pinSortKey ? (a.pinSortKey < b.pinSortKey! ? -1 : 1)
+          : b.pinnedAt! - a.pinnedAt! || b.createdAt - a.createdAt || (a.id < b.id ? -1 : 1)).map((r) => r.id);
+    const byId = (threadId: string) => {
+      const row = rows.find((r) => r.id === threadId);
+      if (!row) throw Object.assign(new Error("not found"), { status: 404 });
+      return row;
+    };
+    const pin = vi.fn(async ({ threadId }: { threadId: string }) => {
+      if (fail.pin) throw new Error(fail.pin);
+      const row = byId(threadId); row.pinnedAt ??= NOW; return row;
+    });
+    const unpin = vi.fn(async ({ threadId }: { threadId: string }) => {
+      if (fail.unpin) throw new Error(fail.unpin);
+      const row = byId(threadId); row.pinnedAt = null; row.pinSortKey = null; return row;
+    });
+    const reorderPinned = vi.fn(async ({ threadId, previousThreadId, nextThreadId }:
+      { threadId: string; previousThreadId: string | null; nextThreadId: string | null }) => {
+      if (fail.reorderPinned) throw new Error(fail.reorderPinned);
+      const next = order().filter((id) => id !== threadId);
+      const at = previousThreadId === null ? 0 : next.indexOf(previousThreadId) + 1;
+      if (nextThreadId !== null && next[at] !== nextThreadId) throw new Error("neighbours do not match");
+      next.splice(at, 0, threadId);
+      next.forEach((id, i) => { byId(id).pinSortKey = `k${String(i).padStart(3, "0")}`; });
+      return rows;
+    });
+    const get = vi.fn(async ({ threadId }: { threadId: string }) => byId(threadId));
+    const list = vi.fn(async () => rows);
+    const host = createFakePluginHost({ pluginId: "wizbar", sdk: { threads: { get, list, pin, unpin, reorderPinned } } });
+    hosts.push(host);
+    plugin(host.bb);
+    return { host, fail, order, pin, unpin, reorderPinned, list,
+      run: (argv: string[]) => host.harness.behavior.runCli(argv) };
+  }
+
+  it("pins and unpins each ID, reports mixed batches per ID and exits 1", async () => {
+    const s = pinSetup([pinRow("thr_a"), pinRow("thr_b", 5)]);
+    const pinned = await s.run(["pin", "thr_a", "thr_missing", "", "thr_b", "--json"]);
+    expect(pinned.exitCode).toBe(1);
+    expect(JSON.parse(pinned.stdout)).toEqual({ results: [
+      { threadId: "thr_a", ok: true, pinned: true },
+      { threadId: "thr_missing", ok: false, error: { code: "unknown_id", message: "Unknown thread ID." } },
+      { threadId: "", ok: false, error: { code: "invalid_id", message: "Thread ID must be nonempty." } },
+      { threadId: "thr_b", ok: true, pinned: true },
+    ] });
+    // Pinning a pinned thread succeeds and changes nothing.
+    expect(s.pin.mock.calls.map(([args]) => args.threadId)).toEqual(["thr_a"]);
+    const unpinned = await s.run(["unpin", "thr_b", "thr_a", "--json"]);
+    expect(unpinned.exitCode).toBe(0);
+    expect(JSON.parse(unpinned.stdout)).toEqual({ results: [
+      { threadId: "thr_b", ok: true, pinned: false }, { threadId: "thr_a", ok: true, pinned: false },
+    ] });
+    const again = await s.run(["unpin", "thr_a", "--json"]);
+    expect(JSON.parse(again.stdout).results).toEqual([{ threadId: "thr_a", ok: true, pinned: false }]);
+    expect(s.unpin).toHaveBeenCalledTimes(2);
+    expect(s.order()).toEqual([]);
+  });
+
+  it("prints one text line per ID", async () => {
+    const s = pinSetup([pinRow("thr_a"), pinRow("thr_b", 5)]);
+    const pinned = await s.run(["pin", "thr_a", "thr_missing"]);
+    expect(pinned.stdout).toBe('"thr_a": pinned\n"thr_missing": ERROR unknown_id: Unknown thread ID.\n');
+    const unpinned = await s.run(["unpin", "thr_b"]);
+    expect([unpinned.exitCode, unpinned.stdout]).toEqual([0, '"thr_b": unpinned\n']);
+  });
+
+  it("reports a host refusal as operation_failed with the host's message", async () => {
+    const s = pinSetup([pinRow("thr_a"), pinRow("thr_b", 5)]);
+    s.fail.pin = "Sample host refusal."; s.fail.unpin = "Sample host refusal.";
+    const pinned = await s.run(["pin", "thr_a", "--json"]);
+    expect([pinned.exitCode, JSON.parse(pinned.stdout)]).toEqual([1, { results: [
+      { threadId: "thr_a", ok: false, error: { code: "operation_failed", message: "Sample host refusal." } }] }]);
+    const unpinned = await s.run(["unpin", "thr_b", "--json"]);
+    expect(JSON.parse(unpinned.stdout).results[0].error).toEqual({ code: "operation_failed", message: "Sample host refusal." });
+  });
+
+  it.each([
+    [["--before", "thr_d"], ["thr_b", "thr_c", "thr_a", "thr_d"], "thr_c", "thr_d"],
+    [["--after", "thr_c"], ["thr_b", "thr_c", "thr_a", "thr_d"], "thr_c", "thr_d"],
+    [["--first"], ["thr_a", "thr_b", "thr_c", "thr_d"], null, "thr_b"],
+    [["--last"], ["thr_b", "thr_c", "thr_d", "thr_a"], "thr_d", null],
+  ])("moves with %j through reorderPinned's neighbours", async (flags, expected, previous, next) => {
+    // Host order before: keyed thr_b, thr_a, thr_c, then unkeyed thr_d.
+    const s = pinSetup([pinRow("thr_a", 7, "a1"), pinRow("thr_b", 5, "a0"), pinRow("thr_c", 6, "a2"), pinRow("thr_d", 9), pinRow("thr_u")]);
+    expect(s.order()).toEqual(["thr_b", "thr_a", "thr_c", "thr_d"]);
+    const result = await s.run(["move", "thr_a", ...flags, "--json"]);
+    expect(result.exitCode).toBe(0);
+    expect(JSON.parse(result.stdout)).toEqual({ results: [
+      { threadId: "thr_a", ok: true, pinned: true, pinnedOrder: expected }] });
+    expect(s.reorderPinned.mock.calls.map(([a]) => [a.threadId, a.previousThreadId, a.nextThreadId]))
+      .toEqual([["thr_a", previous, next]]);
+  });
+
+  it("prints the moved place as text and skips the host call when nothing moves", async () => {
+    const s = pinSetup([pinRow("thr_a", 7), pinRow("thr_b", 5, "a0")]);
+    const result = await s.run(["move", "thr_a", "--last"]);
+    expect([result.exitCode, result.stdout]).toEqual([0, '"thr_a": moved (2 of 2)\n']);
+    expect(s.reorderPinned).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [["move", "thr_u", "--first"], "not_pinned"],
+    [["move", "thr_a", "--before", "thr_a"], "invalid_anchor"],
+    [["move", "thr_a", "--after", "thr_u"], "invalid_anchor"],
+    [["move", "thr_missing", "--first"], "unknown_id"],
+    [["move", " ", "--first"], "invalid_id"],
+  ])("refuses %j with %s and exit 1", async (argv, code) => {
+    const s = pinSetup([pinRow("thr_a", 7), pinRow("thr_b", 5), pinRow("thr_u")]);
+    const result = await s.run([...argv, "--json"]);
+    expect(result.exitCode).toBe(1);
+    expect(JSON.parse(result.stdout).results).toEqual([
+      { threadId: argv[1], ok: false, error: { code, message: expect.any(String) } }]);
+    expect(s.reorderPinned).not.toHaveBeenCalled();
+  });
+
+  it("reports a failed reorder and an unreadable thread list", async () => {
+    const s = pinSetup([pinRow("thr_a", 7), pinRow("thr_b", 5)]);
+    s.fail.reorderPinned = "Sample host refusal.";
+    const failed = await s.run(["move", "thr_a", "--last", "--json"]);
+    expect([failed.exitCode, JSON.parse(failed.stdout).results[0].error])
+      .toEqual([1, { code: "operation_failed", message: "Sample host refusal." }]);
+    s.list.mockRejectedValueOnce(new Error("offline"));
+    const unread = await s.run(["move", "thr_a", "--last", "--json"]);
+    expect(JSON.parse(unread.stdout).results[0].error.code).toBe("state_unavailable");
+  });
+
+  it.each([
+    [["pin"]], [["unpin", "--json", "--json", "thr_a"]], [["pin", "thr_a", "--until", "hour"]],
+    [["move", "thr_a"]], [["move", "thr_a", "thr_b", "--first"]], [["move", "thr_a", "--first", "--last"]],
+    [["move", "thr_a", "--before"]], [["move", "thr_a", "--after", "--json"]], [["move", "--first"]],
+    [["move", "thr_a", "--sideways"]],
+  ])("treats %j as a usage error with exit 2", async (argv) => {
+    const s = pinSetup([pinRow("thr_a", 7), pinRow("thr_b", 5)]);
+    const result = await s.run(argv);
+    expect(result.exitCode).toBe(2);
+    if (result.stdout) expect(JSON.parse(result.stdout).error.code).toBe("usage");
+    else expect(result.stderr).toMatch(/pin\|unpin\|move/);
+    expect(s.pin).not.toHaveBeenCalled(); expect(s.reorderPinned).not.toHaveBeenCalled();
+  });
+
+  it("serves the same operations over RPC for the sidebar's drag", async () => {
+    const s = pinSetup([pinRow("thr_a"), pinRow("thr_b", 5, "a0")]);
+    await expect(s.host.harness.behavior.callRpc("pin", { threadId: "thr_a" })).resolves.toEqual({ ok: true });
+    await expect(s.host.harness.behavior.callRpc("move", { threadId: "thr_a", position: { before: "thr_b" } }))
+      .resolves.toEqual({ ok: true });
+    expect(s.order()).toEqual(["thr_a", "thr_b"]);
+    s.fail.unpin = "Sample host refusal.";
+    await expect(s.host.harness.behavior.callRpc("unpin", { threadId: "thr_b" })).rejects.toThrow("Sample host refusal.");
+    await expect(s.host.harness.behavior.callRpc("move", { threadId: "thr_a", position: { sideways: true } })).rejects.toThrow();
+  });
+
+  it("leaves mute rules for pinned threads unchanged", async () => {
+    const busy = pinRow("thr_a", 7); busy.runtime.displayStatus = "active";
+    const s = pinSetup([Object.assign(busy, { status: "active", queuedWork: "none" })]);
+    const result = await s.run(["mute", "thr_a", "--json"]);
+    expect(JSON.parse(result.stdout).results[0].error.code).toBe("pinned");
+  });
+});
+
+// R2: a completed reorder is a completed host call even when the read after
+// it fails; the sidebar's RPC reports the call, the CLI still needs the read.
+describe("WZ21 R2: host call and the read after it are separate outcomes", () => {
+  const row = (id: string, pinnedAt: number | null, pinSortKey: string | null) =>
+    ({ ...thread(id), createdAt: 1, pinnedAt, pinSortKey });
+  function twoReads() {
+    const rows = [row("thr_a", 7, null), row("thr_b", 5, "a0")];
+    const reorderPinned = vi.fn(async () => rows);
+    const list = vi.fn(async () => rows);
+    const get = vi.fn(async ({ threadId }: { threadId: string }) => rows.find((r) => r.id === threadId));
+    const host = createFakePluginHost({ pluginId: "wizbar", sdk: { threads: { get, list, reorderPinned } } });
+    hosts.push(host);
+    plugin(host.bb);
+    // The read before the call succeeds; every read after it fails.
+    list.mockImplementation(async () => { if (reorderPinned.mock.calls.length) throw new Error("offline"); return rows; });
+    return { host, reorderPinned };
+  }
+  it("RPC move succeeds once reorderPinned did", async () => {
+    const { host, reorderPinned } = twoReads();
+    await expect(host.harness.behavior.callRpc("move", { threadId: "thr_a", position: { first: true } }))
+      .resolves.toEqual({ ok: true });
+    expect(reorderPinned).toHaveBeenCalledTimes(1);
+  });
+  it("CLI move still reports state_unavailable when its pinnedOrder read fails", async () => {
+    const { host, reorderPinned } = twoReads();
+    const result = await host.harness.behavior.runCli(["move", "thr_a", "--first", "--json"]);
+    expect(reorderPinned).toHaveBeenCalledTimes(1);
+    expect([result.exitCode, JSON.parse(result.stdout).results[0].error.code]).toEqual([1, "state_unavailable"]);
+  });
+  it("serves the fresh pinned order the sidebar reconciles against", async () => {
+    const { host } = twoReads();
+    await expect(host.harness.behavior.callRpc("pinnedOrder", {})).resolves.toEqual({ order: ["thr_b", "thr_a"] });
+  });
+});

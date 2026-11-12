@@ -114,3 +114,27 @@ export function childrenOf(
     .filter((thread) => thread.parentThreadId === parentThreadId)
     .sort((left, right) => left.createdAt - right.createdAt);
 }
+
+/** The fields the host's pinned order reads (sidebar-v3.v1.md section 5). */
+export interface PinnedSortable {
+  readonly id: string;
+  readonly createdAt: number;
+  readonly pinnedAt: number | null;
+  readonly pinSortKey: string | null;
+}
+
+/**
+ * The host's pinned order: pins with a key first, ascending by plain string
+ * comparison; then pins without one, newest pin first, then newest thread,
+ * then id. The sidebar and the CLI both sort with this one rule.
+ */
+export function sortPinned<T extends PinnedSortable>(threads: readonly T[]): T[] {
+  return [...threads].sort((left, right) => {
+    const l = left.pinSortKey, r = right.pinSortKey;
+    if ((l === null) !== (r === null)) return l === null ? 1 : -1;
+    if (l !== null && r !== null && l !== r) return l < r ? -1 : 1;
+    return (right.pinnedAt ?? 0) - (left.pinnedAt ?? 0) ||
+      right.createdAt - left.createdAt ||
+      (left.id < right.id ? -1 : left.id > right.id ? 1 : 0);
+  });
+}

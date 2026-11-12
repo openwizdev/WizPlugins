@@ -1,0 +1,13 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>WizBar synthetic drag to pin</title>
+<link rel="stylesheet" href="../wz14/preview.css">
+<style>
+:root { --foreground:#f1f3f5; --muted-foreground:#9298a1; --popover:#24262b; --popover-foreground:#f1f3f5; --border:#44464d; }
+aside { height:100vh; padding:18px 0 0; display:flex; flex-direction:column; }
+h1 { flex-shrink:0; margin-bottom:16px; } #slot, #slot > div { display:flex; flex:1; min-height:0; flex-direction:column; }
+.px-3 { padding-left:12px; padding-right:12px; } .border-t { border-top:1px solid #34363d; } .border-0 { border:0; }
+.sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; }
+.border-dashed { border:1px dashed #5a5d66; } .h-0\.5 { height:2px; } .bg-sidebar-ring { background:#6ea8fe; }
+.mx-2\.5 { margin-left:10px; margin-right:10px; } .rounded-full { border-radius:999px; } .text-destructive-text { color:#ff8a80; }
+.py-1 { padding-top:4px; padding-bottom:4px; } .py-6 { padding-top:24px; padding-bottom:24px; } .text-center { text-align:center; }
+</style></head><body><aside><h1>WizBar</h1><div id="slot"></div></aside><main><h2>WZ21 · synthetic drag to pin</h2><p>State: <strong id="state"></strong></p><p id="note"></p><p>Actual React list with synthetic SDK rows and a fake WizBar server. Real browser drag events are dispatched by the fixture script. Fixture CSS supplies utility classes; this is not host acceptance (#9).</p><pre id="calls" style="font-size:12px;white-space:pre-wrap"></pre></main><script type="module" src="/docs/evidence/wz21/render.tsx"></script></body></html>
