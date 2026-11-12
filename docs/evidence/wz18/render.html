@@ -1,0 +1,18 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>WizBar synthetic richer cards</title>
+<link rel="stylesheet" href="../wz14/preview.css">
+<style>
+/* Fixture-only utility subset for the classes the WZ18 card line adds. */
+:root { --border:#44464d; --popover:#24262b; --popover-foreground:#f1f3f5; }
+body { display:block; } aside { width:100%; border-right:0; padding:12px 4px; }
+.flex-wrap { flex-wrap:wrap; } .gap-1 { gap:4px; } .mt-1 { margin-top:4px; } .-mt-1 { margin-top:-4px; }
+.rounded { border-radius:4px; } .border { border:1px solid var(--border); } .border-border { border-color:var(--border); }
+.px-1 { padding-left:4px; padding-right:4px; } .px-1\.5 { padding-left:6px; padding-right:6px; } .py-0\.5 { padding-top:2px; padding-bottom:2px; }
+.leading-4 { line-height:16px; } .max-w-full { max-width:100%; } .ml-auto { margin-left:auto; } .\[overflow-wrap\:anywhere\] { overflow-wrap:anywhere; }
+.top-full { top:100%; } .left-2\.5 { left:10px; } .right-2\.5 { right:10px; } .z-10 { z-index:10; }
+.bg-popover { background:var(--popover); } .text-popover-foreground { color:var(--popover-foreground); } .shadow-sm { box-shadow:0 1px 3px #0008; }
+.group\/card:hover .group-hover\/card\:block { display:block; } .group\/card:hover .group-hover\/card\:flex { display:flex; }
+.group\/card:hover .group-hover\/card\:hidden { display:none; }
+.group\/card:focus-within .group-focus-within\/card\:block { display:block; }
+</style></head><body><aside><h1>WizBar</h1><div id="slot"></div></aside>
+<script type="module" src="/docs/evidence/wz18/render.tsx"></script></body></html>

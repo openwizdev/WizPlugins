@@ -1,0 +1,57 @@
+
+ RUN  v4.1.10 <repo>/wizbar
+
+ ❯ |bb-plugin-wizbar| src/ThreadCard.test.tsx (115 tests | 2 failed | 113 skipped) 190ms
+     × R1 exposes the 'branch' to keyboard and screen-reader users 157ms
+     × R1 exposes the 'machine without a branch' to keyboard and screen-reader users 32ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > WZ18 card metadata at the registered app boundary > R1 exposes the 'branch' to keyboard and screen-reader users
+AssertionError: expected [] to deeply equal [ Array(1) ]
+
+- Expected
++ Received
+
+- [
+-   "room/1042-refine-command-palette-a1b2",
+- ]
++ []
+
+ ❯ src/ThreadCard.test.tsx:361:71
+    359|     const link = screen.getByRole("link", { name: "Review parser" });
+    360|     const ids = (link.getAttribute("aria-describedby") ?? "").split(/\…
+    361|     expect(ids.map((id) => document.getElementById(id)?.textContent)).…
+       |                                                                       ^
+    362|     const location = document.getElementById(ids[0]!)!;
+    363|     expect(location.className.split(/\s+/)).toEqual(expect.arrayContai…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > WZ18 card metadata at the registered app boundary > R1 exposes the 'machine without a branch' to keyboard and screen-reader users
+AssertionError: expected [] to deeply equal [ 'Synthetic workspace' ]
+
+- Expected
++ Received
+
+- [
+-   "Synthetic workspace",
+- ]
++ []
+
+ ❯ src/ThreadCard.test.tsx:361:71
+    359|     const link = screen.getByRole("link", { name: "Review parser" });
+    360|     const ids = (link.getAttribute("aria-describedby") ?? "").split(/\…
+    361|     expect(ids.map((id) => document.getElementById(id)?.textContent)).…
+       |                                                                       ^
+    362|     const location = document.getElementById(ids[0]!)!;
+    363|     expect(location.className.split(/\s+/)).toEqual(expect.arrayContai…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 113 skipped (115)
+   Start at  12:16:22
+   Duration  1.23s (transform 153ms, setup 0ms, import 435ms, tests 190ms, environment 488ms)
+

@@ -432,6 +432,37 @@ describe("wizbar stats", () => {
     });
 });
 
+// WZ18 (#40): cardModels serves model and effort; no host field is adopted
+// yet, so every item is null. No host read is needed or made.
+describe("cardModels RPC", () => {
+  it("returns source none with one null item per ID, in input order, unknown IDs included", async () => {
+    const host = setup();
+    const result = await host.harness.behavior.callRpc("cardModels", { threadIds: ["example-b", " example-a ", "unknown-z"] });
+    expect(result).toEqual({ source: "none", items: [
+      { threadId: "example-b", model: null, effort: null },
+      { threadId: "example-a", model: null, effort: null },
+      { threadId: "unknown-z", model: null, effort: null },
+    ] });
+    expect(host.get).not.toHaveBeenCalled(); expect(host.list).not.toHaveBeenCalled();
+  });
+  it("accepts exactly 100 IDs", async () => {
+    const host = setup();
+    const threadIds = Array.from({ length: 100 }, (_, i) => `example-${i}`);
+    const result = await host.harness.behavior.callRpc("cardModels", { threadIds }) as { items: unknown[] };
+    expect(result.items).toHaveLength(100);
+  });
+  it.each([
+    { name: "no IDs", threadIds: [] },
+    { name: "101 IDs", threadIds: Array.from({ length: 101 }, (_, i) => `example-${i}`) },
+    { name: "an empty ID", threadIds: ["example-a", "   "] },
+    { name: "a repeated ID", threadIds: ["example-a", "example-a"] },
+    { name: "an ID repeated after trimming", threadIds: ["example-a", " example-a"] },
+  ])("rejects $name", async ({ threadIds }) => {
+    const host = setup();
+    await expect(host.harness.behavior.callRpc("cardModels", { threadIds })).rejects.toThrow();
+  });
+});
+
 // V4/V5 (WZ21): pin, unpin and move through the host's own pin operations.
 // The fake host keeps pins like the SDK declares them: `pinnedAt`, and a
 // `pinSortKey` that reorderPinned writes from the given neighbours.
