@@ -1,0 +1,502 @@
+[
+  {
+    "width": 320,
+    "state": "none",
+    "screenshot": "320-none.png",
+    "cards": [
+      {
+        "title": "Sample refine command palette",
+        "chips": [
+          "#1042 → PR #1088",
+          "3 children"
+        ],
+        "clipped": [],
+        "lineRows": 1,
+        "hoverText": "room/1042-refine-command-palette-a1b2",
+        "hoverVisible": false
+      },
+      {
+        "title": "Sample choose cache strategy",
+        "chips": [
+          "#1043",
+          "1 child"
+        ],
+        "clipped": [],
+        "lineRows": 1,
+        "hoverText": "room/1043-choose-cache-strategy-c3d4",
+        "hoverVisible": false
+      },
+      {
+        "title": "Sample release checklist",
+        "chips": [],
+        "clipped": [],
+        "lineRows": 0,
+        "hoverText": "main",
+        "hoverVisible": false
+      },
+      {
+        "title": "Sample update color tokens",
+        "chips": [],
+        "clipped": [],
+        "lineRows": 0,
+        "hoverText": null,
+        "hoverVisible": false
+      },
+      {
+        "title": "Sample confirm schema change",
+        "chips": [],
+        "clipped": [],
+        "lineRows": 0,
+        "hoverText": null,
+        "hoverVisible": false
+      },
+      {
+        "title": "Sample polish empty states",
+        "chips": [
+          "PR #1046"
+        ],
+        "clipped": [],
+        "lineRows": 1,
+        "hoverText": "feature/polish-empty-states",
+        "hoverVisible": false
+      },
+      {
+        "title": "Sample migrate settings store",
+        "chips": [],
+        "clipped": [],
+        "lineRows": 0,
+        "hoverText": null,
+        "hoverVisible": false
+      },
+      {
+        "title": "Sample review keyboard navigation",
+        "chips": [],
+        "clipped": [],
+        "lineRows": 0,
+        "hoverText": null,
+        "hoverVisible": false
+      }
+    ],
+    "pageOverflow": false
+  },
+  {
+    "width": 320,
+    "state": "host",
+    "screenshot": "320-host.png",
+    "cards": [
+      {
+        "title": "Sample refine command palette",
+        "chips": [
+          "Opus 5.5 · Medium",
+          "#1042 → PR #1088",
+          "3 children"
+        ],
+        "clipped": [],
+        "lineRows": 2,
+        "hoverText": "room/1042-refine-command-palette-a1b2",
+        "hoverVisible": false
+      },
+      {
+        "title": "Sample choose cache strategy",
+        "chips": [
+          "Sol 6.1 · High",
+          "#1043",
+          "1 child"
+        ],
+        "clipped": [],
+        "lineRows": 1,
+        "hoverText": "room/1043-choose-cache-strategy-c3d4",
+        "hoverVisible": false
+      },
+      {
+        "title": "Sample release checklist",
+        "chips": [],
+        "clipped": [],
+        "lineRows": 0,
+        "hoverText": "main",
+        "hoverVisible": false
+      },
+      {
+        "title": "Sample update color tokens",
+        "chips": [],
+        "clipped": [],
+        "lineRows": 0,
+        "hoverText": null,
+        "hoverVisible": false
+      },
+      {
+        "title": "Sample confirm schema change",
+        "chips": [],
+        "clipped": [],
+        "lineRows": 0,
+        "hoverText": null,
+        "hoverVisible": false
+      },
+      {
+        "title": "Sample polish empty states",
+        "chips": [
+          "Synthetic extended-context model 9.9 · Xhigh",
+          "PR #1046"
+        ],
+        "clipped": [],
+        "lineRows": 2,
+        "hoverText": "feature/polish-empty-states",
+        "hoverVisible": false
+      },
+      {
+        "title": "Sample migrate settings store",
+        "chips": [
+          "Sol 6.1 · High"
+        ],
+        "clipped": [],
+        "lineRows": 1,
+        "hoverText": null,
+        "hoverVisible": false
+      },
+      {
+        "title": "Sample review keyboard navigation",
+        "chips": [],
+        "clipped": [],
+        "lineRows": 0,
+        "hoverText": null,
+        "hoverVisible": false
+      }
+    ],
+    "pageOverflow": false
+  },
+  {
+    "width": 320,
+    "state": "hover",
+    "screenshot": "320-hover.png",
+    "cards": [
+      {
+        "title": "Sample refine command palette",
+        "chips": [
+          "Opus 5.5 · Medium",
+          "#1042 → PR #1088",
+          "3 children"
+        ],
+        "clipped": [],
+        "lineRows": 2,
+        "hoverText": "room/1042-refine-command-palette-a1b2",
+        "hoverVisible": true
+      },
+      {
+        "title": "Sample choose cache strategy",
+        "chips": [
+          "Sol 6.1 · High",
+          "#1043",
+          "1 child"
+        ],
+        "clipped": [],
+        "lineRows": 1,
+        "hoverText": "room/1043-choose-cache-strategy-c3d4",
+        "hoverVisible": false
+      },
+      {
+        "title": "Sample release checklist",
+        "chips": [],
+        "clipped": [],
+        "lineRows": 0,
+        "hoverText": "main",
+        "hoverVisible": false
+      },
+      {
+        "title": "Sample update color tokens",
+        "chips": [],
+        "clipped": [],
+        "lineRows": 0,
+        "hoverText": null,
+        "hoverVisible": false
+      },
+      {
+        "title": "Sample confirm schema change",
+        "chips": [],
+        "clipped": [],
+        "lineRows": 0,
+        "hoverText": null,
+        "hoverVisible": false
+      },
+      {
+        "title": "Sample polish empty states",
+        "chips": [
+          "Synthetic extended-context model 9.9 · Xhigh",
+          "PR #1046"
+        ],
+        "clipped": [],
+        "lineRows": 2,
+        "hoverText": "feature/polish-empty-states",
+        "hoverVisible": false
+      },
+      {
+        "title": "Sample migrate settings store",
+        "chips": [
+          "Sol 6.1 · High"
+        ],
+        "clipped": [],
+        "lineRows": 1,
+        "hoverText": null,
+        "hoverVisible": false
+      },
+      {
+        "title": "Sample review keyboard navigation",
+        "chips": [],
+        "clipped": [],
+        "lineRows": 0,
+        "hoverText": null,
+        "hoverVisible": false
+      }
+    ],
+    "pageOverflow": false
+  },
+  {
+    "width": 390,
+    "state": "none",
+    "screenshot": "390-none.png",
+    "cards": [
+      {
+        "title": "Sample refine command palette",
+        "chips": [
+          "#1042 → PR #1088",
+          "3 children"
+        ],
+        "clipped": [],
+        "lineRows": 1,
+        "hoverText": "room/1042-refine-command-palette-a1b2",
+        "hoverVisible": false
+      },
+      {
+        "title": "Sample choose cache strategy",
+        "chips": [
+          "#1043",
+          "1 child"
+        ],
+        "clipped": [],
+        "lineRows": 1,
+        "hoverText": "room/1043-choose-cache-strategy-c3d4",
+        "hoverVisible": false
+      },
+      {
+        "title": "Sample release checklist",
+        "chips": [],
+        "clipped": [],
+        "lineRows": 0,
+        "hoverText": "main",
+        "hoverVisible": false
+      },
+      {
+        "title": "Sample update color tokens",
+        "chips": [],
+        "clipped": [],
+        "lineRows": 0,
+        "hoverText": null,
+        "hoverVisible": false
+      },
+      {
+        "title": "Sample confirm schema change",
+        "chips": [],
+        "clipped": [],
+        "lineRows": 0,
+        "hoverText": null,
+        "hoverVisible": false
+      },
+      {
+        "title": "Sample polish empty states",
+        "chips": [
+          "PR #1046"
+        ],
+        "clipped": [],
+        "lineRows": 1,
+        "hoverText": "feature/polish-empty-states",
+        "hoverVisible": false
+      },
+      {
+        "title": "Sample migrate settings store",
+        "chips": [],
+        "clipped": [],
+        "lineRows": 0,
+        "hoverText": null,
+        "hoverVisible": false
+      },
+      {
+        "title": "Sample review keyboard navigation",
+        "chips": [],
+        "clipped": [],
+        "lineRows": 0,
+        "hoverText": null,
+        "hoverVisible": false
+      }
+    ],
+    "pageOverflow": false
+  },
+  {
+    "width": 390,
+    "state": "host",
+    "screenshot": "390-host.png",
+    "cards": [
+      {
+        "title": "Sample refine command palette",
+        "chips": [
+          "Opus 5.5 · Medium",
+          "#1042 → PR #1088",
+          "3 children"
+        ],
+        "clipped": [],
+        "lineRows": 1,
+        "hoverText": "room/1042-refine-command-palette-a1b2",
+        "hoverVisible": false
+      },
+      {
+        "title": "Sample choose cache strategy",
+        "chips": [
+          "Sol 6.1 · High",
+          "#1043",
+          "1 child"
+        ],
+        "clipped": [],
+        "lineRows": 1,
+        "hoverText": "room/1043-choose-cache-strategy-c3d4",
+        "hoverVisible": false
+      },
+      {
+        "title": "Sample release checklist",
+        "chips": [],
+        "clipped": [],
+        "lineRows": 0,
+        "hoverText": "main",
+        "hoverVisible": false
+      },
+      {
+        "title": "Sample update color tokens",
+        "chips": [],
+        "clipped": [],
+        "lineRows": 0,
+        "hoverText": null,
+        "hoverVisible": false
+      },
+      {
+        "title": "Sample confirm schema change",
+        "chips": [],
+        "clipped": [],
+        "lineRows": 0,
+        "hoverText": null,
+        "hoverVisible": false
+      },
+      {
+        "title": "Sample polish empty states",
+        "chips": [
+          "Synthetic extended-context model 9.9 · Xhigh",
+          "PR #1046"
+        ],
+        "clipped": [],
+        "lineRows": 1,
+        "hoverText": "feature/polish-empty-states",
+        "hoverVisible": false
+      },
+      {
+        "title": "Sample migrate settings store",
+        "chips": [
+          "Sol 6.1 · High"
+        ],
+        "clipped": [],
+        "lineRows": 1,
+        "hoverText": null,
+        "hoverVisible": false
+      },
+      {
+        "title": "Sample review keyboard navigation",
+        "chips": [],
+        "clipped": [],
+        "lineRows": 0,
+        "hoverText": null,
+        "hoverVisible": false
+      }
+    ],
+    "pageOverflow": false
+  },
+  {
+    "width": 390,
+    "state": "hover",
+    "screenshot": "390-hover.png",
+    "cards": [
+      {
+        "title": "Sample refine command palette",
+        "chips": [
+          "Opus 5.5 · Medium",
+          "#1042 → PR #1088",
+          "3 children"
+        ],
+        "clipped": [],
+        "lineRows": 1,
+        "hoverText": "room/1042-refine-command-palette-a1b2",
+        "hoverVisible": true
+      },
+      {
+        "title": "Sample choose cache strategy",
+        "chips": [
+          "Sol 6.1 · High",
+          "#1043",
+          "1 child"
+        ],
+        "clipped": [],
+        "lineRows": 1,
+        "hoverText": "room/1043-choose-cache-strategy-c3d4",
+        "hoverVisible": false
+      },
+      {
+        "title": "Sample release checklist",
+        "chips": [],
+        "clipped": [],
+        "lineRows": 0,
+        "hoverText": "main",
+        "hoverVisible": false
+      },
+      {
+        "title": "Sample update color tokens",
+        "chips": [],
+        "clipped": [],
+        "lineRows": 0,
+        "hoverText": null,
+        "hoverVisible": false
+      },
+      {
+        "title": "Sample confirm schema change",
+        "chips": [],
+        "clipped": [],
+        "lineRows": 0,
+        "hoverText": null,
+        "hoverVisible": false
+      },
+      {
+        "title": "Sample polish empty states",
+        "chips": [
+          "Synthetic extended-context model 9.9 · Xhigh",
+          "PR #1046"
+        ],
+        "clipped": [],
+        "lineRows": 1,
+        "hoverText": "feature/polish-empty-states",
+        "hoverVisible": false
+      },
+      {
+        "title": "Sample migrate settings store",
+        "chips": [
+          "Sol 6.1 · High"
+        ],
+        "clipped": [],
+        "lineRows": 1,
+        "hoverText": null,
+        "hoverVisible": false
+      },
+      {
+        "title": "Sample review keyboard navigation",
+        "chips": [],
+        "clipped": [],
+        "lineRows": 0,
+        "hoverText": null,
+        "hoverVisible": false
+      }
+    ],
+    "pageOverflow": false
+  }
+]

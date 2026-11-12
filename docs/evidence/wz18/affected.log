@@ -1,0 +1,1063 @@
+
+ RUN  v4.1.10 <repo>/wizbar
+
+ ❯ |bb-plugin-wizbar| src/ThreadInbox.test.tsx (52 tests | 2 failed) 3398ms
+     × links the PR number out to the git host 1016ms
+     × colors the badge from the attention state 1015ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/ThreadInbox.test.tsx > pull request badge > links the PR number out to the git host
+TestingLibraryElementError: Unable to find role="link" and name "#412"
+
+Ignored nodes: comments, script, style
+<body
+  style=""
+>
+  <div>
+    <div
+      class="flex min-h-0 flex-1 flex-col"
+    >
+      <div
+        class="flex shrink-0 items-center gap-1 px-2 pb-1"
+      >
+        <button
+          aria-autocomplete="none"
+          aria-expanded="false"
+          aria-label="Project scope: All projects"
+          class="flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"
+          data-state="closed"
+          dir="ltr"
+          role="combobox"
+          type="button"
+        >
+          <span
+            style="pointer-events: none;"
+          >
+            All projects
+          </span>
+          <svg
+            aria-hidden="true"
+            class="size-4 opacity-50"
+            color="currentColor"
+            data-icon="ChevronDown"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+      </div>
+      <div
+        class="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2"
+      >
+        <section>
+          <ul
+            class="flex flex-col gap-px"
+          >
+            <li
+              class="list-none"
+              data-state="closed"
+            >
+              <div
+                class="group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"
+              >
+                <a
+                  aria-label="A thread"
+                  class="absolute inset-0 cursor-pointer rounded-md"
+                  data-sidebar-thread-id="thr_pr"
+                  data-sidebar-thread-shortcut-target=""
+                  href="#"
+                />
+                <div
+                  class="pointer-events-none relative flex h-5 items-center gap-1.5"
+                >
+                  <span
+                    class="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"
+                  >
+                    bb
+                  </span>
+                  <span
+                    aria-label="Cloud"
+                    class="pointer-events-none relative flex size-3.5 shrink-0 items-center justify-center text-muted-foreground"
+                    role="img"
+                    title="Cloud"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      class="size-3.5"
+                      color="currentColor"
+                      data-icon="Cloud"
+                      fill="none"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      width="24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M17.4776 10.0001C17.485 10 17.4925 10 17.5 10C19.9853 10 22 12.0147 22 14.5C22 16.9853 19.9853 19 17.5 19H7C4.23858 19 2 16.7614 2 14C2 11.4003 3.98398 9.26407 6.52042 9.0227M17.4776 10.0001C17.4924 9.83536 17.5 9.66856 17.5 9.5C17.5 6.46243 15.0376 4 12 4C9.12324 4 6.76233 6.20862 6.52042 9.0227M17.4776 10.0001C17.3753 11.1345 16.9286 12.1696 16.2428 13M6.52042 9.0227C6.67826 9.00768 6.83823 9 7 9C8.12582 9 9.16474 9.37209 10.0005 10"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="1.5"
+                      />
+                    </svg>
+                  </span>
+                  <span
+                    class="pointer-events-auto hidden items-center gap-0.5 group-hover/card:flex"
+                  >
+                    <button
+                      aria-label="Snooze until tomorrow"
+                      class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+                      type="button"
+                    >
+                      <svg
+                        class="size-3.5"
+                        color="currentColor"
+                        data-icon="Clock"
+                        fill="none"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        width="24"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <circle
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          stroke-width="1.5"
+                        />
+                        <path
+                          d="M12 8V12L14 14"
+                          stroke="currentColor"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="1.5"
+                        />
+                      </svg>
+                    </button>
+                    <button
+                      aria-label="Settle thread"
+                      class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+                      type="button"
+                    >
+                      <svg
+                        class="size-3.5"
+                        color="currentColor"
+                        data-icon="Check"
+                        fill="none"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        width="24"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M5 14L8.5 17.5L19 6.5"
+                          stroke="currentColor"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="1.5"
+                        />
+                      </svg>
+                    </button>
+                  </span>
+                  <span
+                    class="flex w-7 shrink-0 items-center justify-end group-hover/card:hidden"
+                  >
+                    <span
+                      class="tabular-nums text-2xs text-muted-foreground"
+                    >
+                      2967w
+                    </span>
+                  </span>
+                </div>
+                <div
+                  class="pointer-events-none relative mt-0.5 truncate text-sm text-foreground"
+                >
+                  A thread
+                </div>
+                <div
+                  aria-label="Thread details"
+                  class="pointer-events-none relative mt-1 flex min-w-0 flex-wrap items-center gap-1 text-2xs text-muted-foreground"
+                  role="group"
+                >
+                  <a
+                    class="max-w-full rounded border border-border px-1 leading-4 [overflow-wrap:anywhere] pointer-events-auto hover:underline text-muted-foreground"
+                    href="https://github.com/o/r/pull/412"
+                    rel="noreferrer"
+                    target="_blank"
+                    title="Fix the flake"
+                  >
+                    PR #412
+                  </a>
+                  <span
+                    class="ml-auto"
+                  />
+                  <span
+                    class="flex size-3.5 shrink-0 items-center justify-center"
+                  >
+                    <svg
+                      aria-label="Codex"
+                      class="size-3 text-muted-foreground/70"
+                      fill="currentColor"
+                      fill-rule="evenodd"
+                      role="img"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        d="M22.28 9.82a5.98 5.98 0 0 0-.51-4.91 6.05 6.05 0 0 0-6.51-2.9A6.07 6.07 0 0 0 4.98 4.18a5.98 5.98 0 0 0-4 2.9 6.05 6.05 0 0 0 .74 7.1 5.98 5.98 0 0 0 .51 4.91 6.05 6.05 0 0 0 6.52 2.9A5.98 5.98 0 0 0 13.26 24a6.06 6.06 0 0 0 5.77-4.21 5.99 5.99 0 0 0 4-2.9 6.06 6.06 0 0 0-.75-7.07zm-9.02 12.6a4.48 4.48 0 0 1-2.88-1.03l.14-.08 4.78-2.76a.79.79 0 0 0 .4-.68v-6.74l2.02 1.17a.07.07 0 0 1 .03.05v5.58a4.5 4.5 0 0 1-4.49 4.5zM3.6 18.3a4.47 4.47 0 0 1-.54-3.02l.15.09 4.78 2.76a.77.77 0 0 0 .78 0l5.84-3.37v2.33a.08.08 0 0 1-.03.06L9.74 19.95a4.5 4.5 0 0 1-6.14-1.65zM2.34 7.9a4.49 4.49 0 0 1 2.37-1.98v5.68a.77.77 0 0 0 .39.68l5.81 3.35-2.02 1.17a.08.08 0 0 1-.07 0l-4.83-2.79A4.5 4.5 0 0 1 2.34 7.9zm16.6 3.86L13.1 8.36l2.02-1.16a.08.08 0 0 1 .07 0l4.83 2.79a4.49 4.49 0 0 1-.68 8.1v-5.67a.79.79 0 0 0-.4-.67zm2.01-3.03l-.14-.08-4.77-2.78a.78.78 0 0 0-.79 0L9.41 9.23V6.9a.07.07 0 0 1 .03-.06l4.83-2.79a4.5 4.5 0 0 1 6.68 4.66zM8.31 12.86l-2.02-1.16a.08.08 0 0 1-.04-.06V6.07a4.5 4.5 0 0 1 7.38-3.45l-.14.08L8.7 5.46a.79.79 0 0 0-.4.68zm1.1-2.36l2.6-1.5 2.6 1.5v3l-2.6 1.5-2.6-1.5z"
+                      />
+                    </svg>
+                  </span>
+                </div>
+              </div>
+            </li>
+          </ul>
+        </section>
+      </div>
+      <span
+        aria-label="0 running"
+        aria-live="polite"
+        class="shrink-0 border-t border-sidebar-border px-3 py-1"
+        role="status"
+        style="position: relative; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-variant-numeric: tabular-nums; line-height: 20px; color: var(--muted-foreground);"
+        tabindex="0"
+      >
+        <svg
+          aria-hidden="true"
+          class="wizbar-running-spinner"
+          fill="none"
+          height="14"
+          style="flex-shrink: 0;"
+          viewBox="0 0 16 16"
+          width="14"
+        >
+          <circle
+            cx="8"
+            cy="8"
+            opacity="0.25"
+            r="6"
+            stroke="currentColor"
+            stroke-width="2"
+          />
+          <path
+            d="M8 2a6 6 0 0 1 6 6"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-width="2"
+          />
+        </svg>
+        <span>
+          0
+        </span>
+      </span>
+    </div>
+  </div>
+</body>
+
+Ignored nodes: comments, script, style
+<body
+  style=""
+>
+  <div>
+    <div
+      class="flex min-h-0 flex-1 flex-col"
+    >
+      <div
+        class="flex shrink-0 items-center gap-1 px-2 pb-1"
+      >
+        <button
+          aria-autocomplete="none"
+          aria-expanded="false"
+          aria-label="Project scope: All projects"
+          class="flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"
+          data-state="closed"
+          dir="ltr"
+          role="combobox"
+          type="button"
+        >
+          <span
+            style="pointer-events: none;"
+          >
+            All projects
+          </span>
+          <svg
+            aria-hidden="true"
+            class="size-4 opacity-50"
+            color="currentColor"
+            data-icon="ChevronDown"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+      </div>
+      <div
+        class="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2"
+      >
+        <section>
+          <ul
+            class="flex flex-col gap-px"
+          >
+            <li
+              class="list-none"
+              data-state="closed"
+            >
+              <div
+                class="group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"
+              >
+                <a
+                  aria-label="A thread"
+                  class="absolute inset-0 cursor-pointer rounded-md"
+                  data-sidebar-thread-id="thr_pr"
+                  data-sidebar-thread-shortcut-target=""
+                  href="#"
+                />
+                <div
+                  class="pointer-events-none relative flex h-5 items-center gap-1.5"
+                >
+                  <span
+                    class="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"
+                  >
+                    bb
+                  </span>
+                  <span
+                    aria-label="Cloud"
+                    class="pointer-events-none relative flex size-3.5 shrink-0 items-center justify-center text-muted-foreground"
+                    role="img"
+                    title="Cloud"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      class="size-3.5"
+                      color="currentColor"
+                      data-icon="Cloud"
+                      fill="none"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      width="24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M17.4776 10.0001C17.485 10 17.4925 10 17.5 10C19.9853 10 22 12.0147 22 14.5C22 16.9853 19.9853 19 17.5 19H7C4.23858 19 2 16.7614 2 14C2 11.4003 3.98398 9.26407 6.52042 9.0227M17.4776 10.0001C17.4924 9.83536 17.5 9.66856 17.5 9.5C17.5 6.46243 15.0376 4 12 4C9.12324 4 6.76233 6.20862 6.52042 9.0227M17.4776 10.0001C17.3753 11.1345 16.9286 12.1696 16.2428 13M6.52042 9.0227C6.67826 9.00768 6.83823 9 7 9C8.12582 9 9.16474 9.37209 10.0005 10"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="1.5"
+                      />
+                    </svg>
+                  </span>
+                  <span
+                    class="pointer-events-auto hidden items-center gap-0.5 group-hover/card:flex"
+                  >
+                    <button
+                      aria-label="Snooze until tomorrow"
+                      class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+                      type="button"
+                    >
+                      <svg
+                        class="size-3.5"
+                        color="currentColor"
+                        data-icon="Clock"
+                        fill="none"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        width="24"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <circle
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          stroke-width="1.5"
+                        />
+                        <path
+                          d="M12 8V12L14 14"
+                          stroke="currentColor"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="1.5"
+                        />
+                      </svg>
+                    </button>
+                    <button
+                      aria-label="Settle thread"
+                      class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+                      type="button"
+                    >
+                      <svg
+                        class="size-3.5"
+                        color="currentColor"
+                        data-icon="Check"
+                        fill="none"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        width="24"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M5 14L8.5 17.5L19 6.5"
+                          stroke="currentColor"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="1.5"
+                        />
+                      </svg>
+                    </button>
+                  </span>
+                  <span
+                    class="flex w-7 shrink-0 items-center justify-end group-hover/card:hidden"
+                  >
+                    <span
+                      class="tabular-nums text-2xs text-muted-foreground"
+                    >
+                      2967w
+                    </span>
+                  </span>
+                </div>
+                <div
+                  class="pointer-events-none relative mt-0.5 truncate text-sm text-foreground"
+                >
+                  A thread
+                </div>
+                <div
+                  aria-label="Thread details"
+                  class="pointer-events-none relative mt-1 flex min-w-0 flex-wrap items-center gap-1 text-2xs text-muted-foreground"
+                  role="group"
+                >
+                  <a
+                    class="max-w-full rounded border border-border px-1 leading-4 [overflow-wrap:anywhere] pointer-events-auto hover:underline text-muted-foreground"
+                    href="https://github.com/o/r/pull/412"
+                    rel="noreferrer"
+                    target="_blank"
+                    title="Fix the flake"
+                  >
+                    PR #412
+                  </a>
+                  <span
+                    class="ml-auto"
+                  />
+                  <span
+                    class="flex size-3.5 shrink-0 items-center justify-center"
+                  >
+                    <svg
+                      aria-label="Codex"
+                      class="size-3 text-muted-foreground/70"
+                      fill="currentColor"
+                      fill-rule="evenodd"
+                      role="img"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        d="M22.28 9.82a5.98 5.98 0 0 0-.51-4.91 6.05 6.05 0 0 0-6.51-2.9A6.07 6.07 0 0 0 4.98 4.18a5.98 5.98 0 0 0-4 2.9 6.05 6.05 0 0 0 .74 7.1 5.98 5.98 0 0 0 .51 4.91 6.05 6.05 0 0 0 6.52 2.9A5.98 5.98 0 0 0 13.26 24a6.06 6.06 0 0 0 5.77-4.21 5.99 5.99 0 0 0 4-2.9 6.06 6.06 0 0 0-.75-7.07zm-9.02 12.6a4.48 4.48 0 0 1-2.88-1.03l.14-.08 4.78-2.76a.79.79 0 0 0 .4-.68v-6.74l2.02 1.17a.07.07 0 0 1 .03.05v5.58a4.5 4.5 0 0 1-4.49 4.5zM3.6 18.3a4.47 4.47 0 0 1-.54-3.02l.15.09 4.78 2.76a.77.77 0 0 0 .78 0l5.84-3.37v2.33a.08.08 0 0 1-.03.06L9.74 19.95a4.5 4.5 0 0 1-6.14-1.65zM2.34 7.9a4.49 4.49 0 0 1 2.37-1.98v5.68a.77.77 0 0 0 .39.68l5.81 3.35-2.02 1.17a.08.08 0 0 1-.07 0l-4.83-2.79A4.5 4.5 0 0 1 2.34 7.9zm16.6 3.86L13.1 8.36l2.02-1.16a.08.08 0 0 1 .07 0l4.83 2.79a4.49 4.49 0 0 1-.68 8.1v-5.67a.79.79 0 0 0-.4-.67zm2.01-3.03l-.14-.08-4.77-2.78a.78.78 0 0 0-.79 0L9.41 9.23V6.9a.07.07 0 0 1 .03-.06l4.83-2.79a4.5 4.5 0 0 1 6.68 4.66zM8.31 12.86l-2.02-1.16a.08.08 0 0 1-.04-.06V6.07a4.5 4.5 0 0 1 7.38-3.45l-.14.08L8.7 5.46a.79.79 0 0 0-.4.68zm1.1-2.36l2.6-1.5 2.6 1.5v3l-2.6 1.5-2.6-1.5z"
+                      />
+                    </svg>
+                  </span>
+                </div>
+              </div>
+            </li>
+          </ul>
+        </section>
+      </div>
+      <span
+        aria-label="0 running"
+        aria-live="polite"
+        class="shrink-0 border-t border-sidebar-border px-3 py-1"
+        role="status"
+        style="position: relative; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-variant-numeric: tabular-nums; line-height: 20px; color: var(--muted-foreground);"
+        tabindex="0"
+      >
+        <svg
+          aria-hidden="true"
+          class="wizbar-running-spinner"
+          fill="none"
+          height="14"
+          style="flex-shrink: 0;"
+          viewBox="0 0 16 16"
+          width="14"
+        >
+          <circle
+            cx="8"
+            cy="8"
+            opacity="0.25"
+            r="6"
+            stroke="currentColor"
+            stroke-width="2"
+          />
+          <path
+            d="M8 2a6 6 0 0 1 6 6"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-width="2"
+          />
+        </svg>
+        <span>
+          0
+        </span>
+      </span>
+    </div>
+  </div>
+</body>
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/ThreadInbox.test.tsx:596:32
+    594|   it("links the PR number out to the git host", async () => {
+    595|     withPr("none");
+    596|     const badge = await screen.findByRole("link", { name: "#412" });
+       |                                ^
+    597|     expect(badge.getAttribute("href")).toBe("https://github.com/o/r/pu…
+    598|     expect(badge.getAttribute("title")).toBe("Fix the flake");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  |bb-plugin-wizbar| src/ThreadInbox.test.tsx > pull request badge > colors the badge from the attention state
+TestingLibraryElementError: Unable to find role="link" and name "#412"
+
+Ignored nodes: comments, script, style
+<body
+  style=""
+>
+  <div>
+    <div
+      class="flex min-h-0 flex-1 flex-col"
+    >
+      <div
+        class="flex shrink-0 items-center gap-1 px-2 pb-1"
+      >
+        <button
+          aria-autocomplete="none"
+          aria-expanded="false"
+          aria-label="Project scope: All projects"
+          class="flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"
+          data-state="closed"
+          dir="ltr"
+          role="combobox"
+          type="button"
+        >
+          <span
+            style="pointer-events: none;"
+          >
+            All projects
+          </span>
+          <svg
+            aria-hidden="true"
+            class="size-4 opacity-50"
+            color="currentColor"
+            data-icon="ChevronDown"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+      </div>
+      <div
+        class="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2"
+      >
+        <section>
+          <ul
+            class="flex flex-col gap-px"
+          >
+            <li
+              class="list-none"
+              data-state="closed"
+            >
+              <div
+                class="group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"
+              >
+                <a
+                  aria-label="A thread"
+                  class="absolute inset-0 cursor-pointer rounded-md"
+                  data-sidebar-thread-id="thr_pr"
+                  data-sidebar-thread-shortcut-target=""
+                  href="#"
+                />
+                <div
+                  class="pointer-events-none relative flex h-5 items-center gap-1.5"
+                >
+                  <span
+                    class="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"
+                  >
+                    bb
+                  </span>
+                  <span
+                    aria-label="Cloud"
+                    class="pointer-events-none relative flex size-3.5 shrink-0 items-center justify-center text-muted-foreground"
+                    role="img"
+                    title="Cloud"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      class="size-3.5"
+                      color="currentColor"
+                      data-icon="Cloud"
+                      fill="none"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      width="24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M17.4776 10.0001C17.485 10 17.4925 10 17.5 10C19.9853 10 22 12.0147 22 14.5C22 16.9853 19.9853 19 17.5 19H7C4.23858 19 2 16.7614 2 14C2 11.4003 3.98398 9.26407 6.52042 9.0227M17.4776 10.0001C17.4924 9.83536 17.5 9.66856 17.5 9.5C17.5 6.46243 15.0376 4 12 4C9.12324 4 6.76233 6.20862 6.52042 9.0227M17.4776 10.0001C17.3753 11.1345 16.9286 12.1696 16.2428 13M6.52042 9.0227C6.67826 9.00768 6.83823 9 7 9C8.12582 9 9.16474 9.37209 10.0005 10"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="1.5"
+                      />
+                    </svg>
+                  </span>
+                  <span
+                    class="pointer-events-auto hidden items-center gap-0.5 group-hover/card:flex"
+                  >
+                    <button
+                      aria-label="Snooze until tomorrow"
+                      class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+                      type="button"
+                    >
+                      <svg
+                        class="size-3.5"
+                        color="currentColor"
+                        data-icon="Clock"
+                        fill="none"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        width="24"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <circle
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          stroke-width="1.5"
+                        />
+                        <path
+                          d="M12 8V12L14 14"
+                          stroke="currentColor"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="1.5"
+                        />
+                      </svg>
+                    </button>
+                    <button
+                      aria-label="Settle thread"
+                      class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+                      type="button"
+                    >
+                      <svg
+                        class="size-3.5"
+                        color="currentColor"
+                        data-icon="Check"
+                        fill="none"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        width="24"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M5 14L8.5 17.5L19 6.5"
+                          stroke="currentColor"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="1.5"
+                        />
+                      </svg>
+                    </button>
+                  </span>
+                  <span
+                    class="flex w-7 shrink-0 items-center justify-end group-hover/card:hidden"
+                  >
+                    <span
+                      class="tabular-nums text-2xs text-muted-foreground"
+                    >
+                      2967w
+                    </span>
+                  </span>
+                </div>
+                <div
+                  class="pointer-events-none relative mt-0.5 truncate text-sm text-foreground"
+                >
+                  A thread
+                </div>
+                <div
+                  aria-label="Thread details"
+                  class="pointer-events-none relative mt-1 flex min-w-0 flex-wrap items-center gap-1 text-2xs text-muted-foreground"
+                  role="group"
+                >
+                  <a
+                    class="max-w-full rounded border border-border px-1 leading-4 [overflow-wrap:anywhere] pointer-events-auto hover:underline text-destructive-text"
+                    href="https://github.com/o/r/pull/412"
+                    rel="noreferrer"
+                    target="_blank"
+                    title="Fix the flake"
+                  >
+                    PR #412
+                  </a>
+                  <span
+                    class="ml-auto"
+                  />
+                  <span
+                    class="flex size-3.5 shrink-0 items-center justify-center"
+                  >
+                    <svg
+                      aria-label="Codex"
+                      class="size-3 text-muted-foreground/70"
+                      fill="currentColor"
+                      fill-rule="evenodd"
+                      role="img"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        d="M22.28 9.82a5.98 5.98 0 0 0-.51-4.91 6.05 6.05 0 0 0-6.51-2.9A6.07 6.07 0 0 0 4.98 4.18a5.98 5.98 0 0 0-4 2.9 6.05 6.05 0 0 0 .74 7.1 5.98 5.98 0 0 0 .51 4.91 6.05 6.05 0 0 0 6.52 2.9A5.98 5.98 0 0 0 13.26 24a6.06 6.06 0 0 0 5.77-4.21 5.99 5.99 0 0 0 4-2.9 6.06 6.06 0 0 0-.75-7.07zm-9.02 12.6a4.48 4.48 0 0 1-2.88-1.03l.14-.08 4.78-2.76a.79.79 0 0 0 .4-.68v-6.74l2.02 1.17a.07.07 0 0 1 .03.05v5.58a4.5 4.5 0 0 1-4.49 4.5zM3.6 18.3a4.47 4.47 0 0 1-.54-3.02l.15.09 4.78 2.76a.77.77 0 0 0 .78 0l5.84-3.37v2.33a.08.08 0 0 1-.03.06L9.74 19.95a4.5 4.5 0 0 1-6.14-1.65zM2.34 7.9a4.49 4.49 0 0 1 2.37-1.98v5.68a.77.77 0 0 0 .39.68l5.81 3.35-2.02 1.17a.08.08 0 0 1-.07 0l-4.83-2.79A4.5 4.5 0 0 1 2.34 7.9zm16.6 3.86L13.1 8.36l2.02-1.16a.08.08 0 0 1 .07 0l4.83 2.79a4.49 4.49 0 0 1-.68 8.1v-5.67a.79.79 0 0 0-.4-.67zm2.01-3.03l-.14-.08-4.77-2.78a.78.78 0 0 0-.79 0L9.41 9.23V6.9a.07.07 0 0 1 .03-.06l4.83-2.79a4.5 4.5 0 0 1 6.68 4.66zM8.31 12.86l-2.02-1.16a.08.08 0 0 1-.04-.06V6.07a4.5 4.5 0 0 1 7.38-3.45l-.14.08L8.7 5.46a.79.79 0 0 0-.4.68zm1.1-2.36l2.6-1.5 2.6 1.5v3l-2.6 1.5-2.6-1.5z"
+                      />
+                    </svg>
+                  </span>
+                </div>
+              </div>
+            </li>
+          </ul>
+        </section>
+      </div>
+      <span
+        aria-label="0 running"
+        aria-live="polite"
+        class="shrink-0 border-t border-sidebar-border px-3 py-1"
+        role="status"
+        style="position: relative; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-variant-numeric: tabular-nums; line-height: 20px; color: var(--muted-foreground);"
+        tabindex="0"
+      >
+        <svg
+          aria-hidden="true"
+          class="wizbar-running-spinner"
+          fill="none"
+          height="14"
+          style="flex-shrink: 0;"
+          viewBox="0 0 16 16"
+          width="14"
+        >
+          <circle
+            cx="8"
+            cy="8"
+            opacity="0.25"
+            r="6"
+            stroke="currentColor"
+            stroke-width="2"
+          />
+          <path
+            d="M8 2a6 6 0 0 1 6 6"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-width="2"
+          />
+        </svg>
+        <span>
+          0
+        </span>
+      </span>
+    </div>
+  </div>
+</body>
+
+Ignored nodes: comments, script, style
+<body
+  style=""
+>
+  <div>
+    <div
+      class="flex min-h-0 flex-1 flex-col"
+    >
+      <div
+        class="flex shrink-0 items-center gap-1 px-2 pb-1"
+      >
+        <button
+          aria-autocomplete="none"
+          aria-expanded="false"
+          aria-label="Project scope: All projects"
+          class="flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"
+          data-state="closed"
+          dir="ltr"
+          role="combobox"
+          type="button"
+        >
+          <span
+            style="pointer-events: none;"
+          >
+            All projects
+          </span>
+          <svg
+            aria-hidden="true"
+            class="size-4 opacity-50"
+            color="currentColor"
+            data-icon="ChevronDown"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+      </div>
+      <div
+        class="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2"
+      >
+        <section>
+          <ul
+            class="flex flex-col gap-px"
+          >
+            <li
+              class="list-none"
+              data-state="closed"
+            >
+              <div
+                class="group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"
+              >
+                <a
+                  aria-label="A thread"
+                  class="absolute inset-0 cursor-pointer rounded-md"
+                  data-sidebar-thread-id="thr_pr"
+                  data-sidebar-thread-shortcut-target=""
+                  href="#"
+                />
+                <div
+                  class="pointer-events-none relative flex h-5 items-center gap-1.5"
+                >
+                  <span
+                    class="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"
+                  >
+                    bb
+                  </span>
+                  <span
+                    aria-label="Cloud"
+                    class="pointer-events-none relative flex size-3.5 shrink-0 items-center justify-center text-muted-foreground"
+                    role="img"
+                    title="Cloud"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      class="size-3.5"
+                      color="currentColor"
+                      data-icon="Cloud"
+                      fill="none"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      width="24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M17.4776 10.0001C17.485 10 17.4925 10 17.5 10C19.9853 10 22 12.0147 22 14.5C22 16.9853 19.9853 19 17.5 19H7C4.23858 19 2 16.7614 2 14C2 11.4003 3.98398 9.26407 6.52042 9.0227M17.4776 10.0001C17.4924 9.83536 17.5 9.66856 17.5 9.5C17.5 6.46243 15.0376 4 12 4C9.12324 4 6.76233 6.20862 6.52042 9.0227M17.4776 10.0001C17.3753 11.1345 16.9286 12.1696 16.2428 13M6.52042 9.0227C6.67826 9.00768 6.83823 9 7 9C8.12582 9 9.16474 9.37209 10.0005 10"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="1.5"
+                      />
+                    </svg>
+                  </span>
+                  <span
+                    class="pointer-events-auto hidden items-center gap-0.5 group-hover/card:flex"
+                  >
+                    <button
+                      aria-label="Snooze until tomorrow"
+                      class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+                      type="button"
+                    >
+                      <svg
+                        class="size-3.5"
+                        color="currentColor"
+                        data-icon="Clock"
+                        fill="none"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        width="24"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <circle
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          stroke-width="1.5"
+                        />
+                        <path
+                          d="M12 8V12L14 14"
+                          stroke="currentColor"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="1.5"
+                        />
+                      </svg>
+                    </button>
+                    <button
+                      aria-label="Settle thread"
+                      class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+                      type="button"
+                    >
+                      <svg
+                        class="size-3.5"
+                        color="currentColor"
+                        data-icon="Check"
+                        fill="none"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        width="24"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M5 14L8.5 17.5L19 6.5"
+                          stroke="currentColor"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="1.5"
+                        />
+                      </svg>
+                    </button>
+                  </span>
+                  <span
+                    class="flex w-7 shrink-0 items-center justify-end group-hover/card:hidden"
+                  >
+                    <span
+                      class="tabular-nums text-2xs text-muted-foreground"
+                    >
+                      2967w
+                    </span>
+                  </span>
+                </div>
+                <div
+                  class="pointer-events-none relative mt-0.5 truncate text-sm text-foreground"
+                >
+                  A thread
+                </div>
+                <div
+                  aria-label="Thread details"
+                  class="pointer-events-none relative mt-1 flex min-w-0 flex-wrap items-center gap-1 text-2xs text-muted-foreground"
+                  role="group"
+                >
+                  <a
+                    class="max-w-full rounded border border-border px-1 leading-4 [overflow-wrap:anywhere] pointer-events-auto hover:underline text-destructive-text"
+                    href="https://github.com/o/r/pull/412"
+                    rel="noreferrer"
+                    target="_blank"
+                    title="Fix the flake"
+                  >
+                    PR #412
+                  </a>
+                  <span
+                    class="ml-auto"
+                  />
+                  <span
+                    class="flex size-3.5 shrink-0 items-center justify-center"
+                  >
+                    <svg
+                      aria-label="Codex"
+                      class="size-3 text-muted-foreground/70"
+                      fill="currentColor"
+                      fill-rule="evenodd"
+                      role="img"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        d="M22.28 9.82a5.98 5.98 0 0 0-.51-4.91 6.05 6.05 0 0 0-6.51-2.9A6.07 6.07 0 0 0 4.98 4.18a5.98 5.98 0 0 0-4 2.9 6.05 6.05 0 0 0 .74 7.1 5.98 5.98 0 0 0 .51 4.91 6.05 6.05 0 0 0 6.52 2.9A5.98 5.98 0 0 0 13.26 24a6.06 6.06 0 0 0 5.77-4.21 5.99 5.99 0 0 0 4-2.9 6.06 6.06 0 0 0-.75-7.07zm-9.02 12.6a4.48 4.48 0 0 1-2.88-1.03l.14-.08 4.78-2.76a.79.79 0 0 0 .4-.68v-6.74l2.02 1.17a.07.07 0 0 1 .03.05v5.58a4.5 4.5 0 0 1-4.49 4.5zM3.6 18.3a4.47 4.47 0 0 1-.54-3.02l.15.09 4.78 2.76a.77.77 0 0 0 .78 0l5.84-3.37v2.33a.08.08 0 0 1-.03.06L9.74 19.95a4.5 4.5 0 0 1-6.14-1.65zM2.34 7.9a4.49 4.49 0 0 1 2.37-1.98v5.68a.77.77 0 0 0 .39.68l5.81 3.35-2.02 1.17a.08.08 0 0 1-.07 0l-4.83-2.79A4.5 4.5 0 0 1 2.34 7.9zm16.6 3.86L13.1 8.36l2.02-1.16a.08.08 0 0 1 .07 0l4.83 2.79a4.49 4.49 0 0 1-.68 8.1v-5.67a.79.79 0 0 0-.4-.67zm2.01-3.03l-.14-.08-4.77-2.78a.78.78 0 0 0-.79 0L9.41 9.23V6.9a.07.07 0 0 1 .03-.06l4.83-2.79a4.5 4.5 0 0 1 6.68 4.66zM8.31 12.86l-2.02-1.16a.08.08 0 0 1-.04-.06V6.07a4.5 4.5 0 0 1 7.38-3.45l-.14.08L8.7 5.46a.79.79 0 0 0-.4.68zm1.1-2.36l2.6-1.5 2.6 1.5v3l-2.6 1.5-2.6-1.5z"
+                      />
+                    </svg>
+                  </span>
+                </div>
+              </div>
+            </li>
+          </ul>
+        </section>
+      </div>
+      <span
+        aria-label="0 running"
+        aria-live="polite"
+        class="shrink-0 border-t border-sidebar-border px-3 py-1"
+        role="status"
+        style="position: relative; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-variant-numeric: tabular-nums; line-height: 20px; color: var(--muted-foreground);"
+        tabindex="0"
+      >
+        <svg
+          aria-hidden="true"
+          class="wizbar-running-spinner"
+          fill="none"
+          height="14"
+          style="flex-shrink: 0;"
+          viewBox="0 0 16 16"
+          width="14"
+        >
+          <circle
+            cx="8"
+            cy="8"
+            opacity="0.25"
+            r="6"
+            stroke="currentColor"
+            stroke-width="2"
+          />
+          <path
+            d="M8 2a6 6 0 0 1 6 6"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-width="2"
+          />
+        </svg>
+        <span>
+          0
+        </span>
+      </span>
+    </div>
+  </div>
+</body>
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/ThreadInbox.test.tsx:612:21
+    610|     const failing = withPr("checks_failed");
+    611|     expect(
+    612|       (await screen.findByRole("link", { name: "#412" })).className,
+       |                     ^
+    613|     ).toContain("destructive");
+    614|     failing.unmount();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed | 3 passed (4)
+      Tests  2 failed | 323 passed (325)
+   Start at  10:44:48
+   Duration  7.56s (transform 247ms, setup 0ms, import 938ms, tests 9.76s, environment 966ms)
+

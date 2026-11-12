@@ -1,4 +1,7 @@
+import { useEffect, useState } from "react";
 import {
+  useRpc,
+  experimental_useSidebarThreads as useSidebarThreads,
   experimental_useSidebarThreadPullRequest as useSidebarThreadPullRequest,
   experimental_useSidebarThreadSplit as useSidebarThreadSplit,
   experimental_useSidebarThreadActions as useSidebarThreadActions,
@@ -12,10 +15,13 @@ import { MachineIcon } from "./MachineIcon";
 import { STATUS_SLOT_CLASS, StatusOrTime } from "./StatusSlot";
 import { threadDisplayTitle } from "./inbox";
 import { resolveSnoozePresets } from "./lifecycle";
+import { cardLinkText, cardMeta, childCountLabel, modelLabel } from "./card-meta";
+import type { t3sidebarRpcContract } from "./server";
+import type { CardModelV3 } from "./v3-types";
 
 /**
- * One thread as a three-line card: project and status, title, then branch and
- * activity. The card is the whole point of this sidebar — status lives in the
+ * One thread as a three-line card: project and status, title, then model,
+ * issue/PR link, child count and activity; the branch shows on hover only. The card is the whole point of this sidebar — status lives in the
  * row instead of in its position, which is what lets the list stay still.
  *
  * The row is a positioned container with a full-bleed anchor UNDER the
@@ -48,6 +54,14 @@ export function ThreadCard({
   // Opt-in per row: this costs a git-host lookup, and threads sharing a
   // worktree share one.
   const { pullRequest } = useSidebarThreadPullRequest(thread.id);
+  // The same active-lifecycle rows the children chip reads (sidebar-v3 §3).
+  const { threads } = useSidebarThreads();
+  const served = useCardModel(thread.id);
+  const meta = cardMeta(thread, threads, pullRequest, served);
+  const model = modelLabel(meta.model, meta.effort);
+  const children = childCountLabel(meta.childCount);
+  // The branch, or the machine when there is no worktree, on hover only.
+  const location = meta.branch ?? thread.host?.name ?? null;
 
   return (
     <RowContextMenu thread={thread}>
@@ -120,21 +134,39 @@ export function ThreadCard({
           >
             {threadDisplayTitle(thread)}
           </div>
-          <div className="pointer-events-none relative mt-0.5 flex h-4 items-center gap-1.5 text-2xs text-muted-foreground">
-            {/* A thread without a worktree still runs somewhere, so the
-                machine takes the branch's place rather than leaving the line
-                blank. */}
-            {thread.environment?.branchName ? (
-              <span className="min-w-0 flex-1 truncate font-mono">
-                {thread.environment.branchName}
-              </span>
-            ) : thread.host ? (
-              <span className="min-w-0 flex-1 truncate">
-                {thread.host.name}
-              </span>
-            ) : (
-              <span className="flex-1" />
-            )}
+          <div
+            role="group"
+            aria-label="Thread details"
+            className="pointer-events-none relative mt-1 flex min-w-0 flex-wrap items-center gap-1 text-2xs text-muted-foreground"
+          >
+            {model ? <Chip>{model}</Chip> : null}
+            {meta.link && pullRequest ? (
+              <a
+                href={meta.link.pullRequest!.url}
+                target="_blank"
+                rel="noreferrer"
+                onClick={(event) => event.stopPropagation()}
+                title={pullRequest.title}
+                className={cn(
+                  CHIP_CLASS,
+                  "pointer-events-auto hover:underline",
+                  pullRequest.state === "merged"
+                    ? "text-[color:var(--pr-merged)]"
+                    : pullRequest.attention === "checks_failed" ||
+                        pullRequest.attention === "conflicts"
+                      ? "text-destructive-text"
+                      : pullRequest.attention === "ready_to_merge"
+                        ? "text-success-foreground"
+                        : "text-muted-foreground",
+                )}
+              >
+                {cardLinkText(meta.link)}
+              </a>
+            ) : meta.link ? (
+              // No source gives the issue's URL, so it is plain text.
+              <Chip>{cardLinkText(meta.link)}</Chip>
+            ) : null}
+            {children ? <Chip>{children}</Chip> : null}
             {thread.activity.workflows > 0 ? (
               <ActivityCount
                 label="workflows"
@@ -147,35 +179,53 @@ export function ThreadCard({
                 count={thread.activity.backgroundAgents}
               />
             ) : null}
-            {pullRequest ? (
-              <a
-                href={pullRequest.url}
-                target="_blank"
-                rel="noreferrer"
-                onClick={(event) => event.stopPropagation()}
-                title={pullRequest.title}
-                className={cn(
-                  "relative shrink-0 font-mono hover:underline",
-                  pullRequest.state === "merged"
-                    ? "text-[color:var(--pr-merged)]"
-                    : pullRequest.attention === "checks_failed" ||
-                        pullRequest.attention === "conflicts"
-                      ? "text-destructive-text"
-                      : pullRequest.attention === "ready_to_merge"
-                        ? "text-success-foreground"
-                        : "text-muted-foreground",
-                )}
-              >
-                #{pullRequest.number}
-              </a>
-            ) : null}
+            <span className="ml-auto" />
             {/* Always drawn, so the line has a fixed right edge. */}
             <ProviderGlyph providerId={thread.providerId} />
           </div>
+          {location ? (
+            // Overlays rather than adds a line, so hovering never moves the list.
+            <span
+              className={cn(
+                "pointer-events-none absolute left-2.5 right-2.5 top-full z-10 -mt-1 hidden truncate rounded border border-border bg-popover px-1.5 py-0.5 text-2xs text-popover-foreground shadow-sm group-hover/card:block",
+                meta.branch && "font-mono",
+              )}
+            >
+              {location}
+            </span>
+          ) : null}
         </div>
       </li>
     </RowContextMenu>
   );
+}
+
+/**
+ * Model and effort from the `cardModels` RPC. Null until it answers, and on
+ * failure: a missing source omits the chip, never shows placeholder text.
+ */
+function useCardModel(threadId: string): CardModelV3 | null {
+  const rpc = useRpc<typeof t3sidebarRpcContract>();
+  const [served, setServed] = useState<CardModelV3 | null>(null);
+  useEffect(() => {
+    let current = true;
+    setServed(null);
+    rpc.call("cardModels", { threadIds: [threadId] }).then(
+      (result) => {
+        const item = result.items.find((candidate) => candidate.threadId === threadId);
+        if (current) setServed(result.source === "host" && item ? item : null);
+      },
+      () => undefined,
+    );
+    return () => { current = false; };
+  }, [rpc, threadId]);
+  return served;
+}
+
+const CHIP_CLASS = "max-w-full rounded border border-border px-1 leading-4 [overflow-wrap:anywhere]";
+
+function Chip({ children }: { children: string }) {
+  return <span className={CHIP_CLASS}>{children}</span>;
 }
 
 function ParkButton({

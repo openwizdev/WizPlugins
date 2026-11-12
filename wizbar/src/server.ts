@@ -9,6 +9,7 @@ import { z } from "zod";
 import { wizbarSettingDescriptors } from "./settings";
 import { canMute, canPark, hasRuntimeWork, resolveShelf, type ThreadActivitySignals } from "./lifecycle";
 import { createLifecycleCommand, LifecycleError, type LifecycleOperation, type LifecycleSuccess } from "./command";
+import { cardModelsNone } from "./card-meta";
 
 const migrations = [
   `CREATE TABLE IF NOT EXISTS thread_lifecycle (
@@ -42,6 +43,17 @@ interface LifecycleDbRow {
 
 const threadIdSchema = z.object({ threadId: z.string().trim().min(1) });
 
+// cardModels (sidebar-v3 contract, section 2): 1..100 distinct trimmed IDs.
+const cardModelsInputSchema = z.object({
+  threadIds: z.array(z.string().trim().min(1)).min(1).max(100)
+    .refine((ids) => new Set(ids).size === ids.length, "Thread IDs must be distinct."),
+});
+const effortSchema = z.enum(["none", "low", "medium", "high", "xhigh", "max", "ultra", "ultracode"]);
+const cardModelsOutputSchema = z.object({
+  source: z.enum(["none", "host"]),
+  items: z.array(z.object({ threadId: z.string(), model: z.string().nullable(), effort: effortSchema.nullable() })),
+});
+
 export const t3sidebarRpcContract = defineRpcContract({
   listLifecycle: {
     input: z.object({}),
@@ -71,6 +83,7 @@ export const t3sidebarRpcContract = defineRpcContract({
   unsnooze: { input: threadIdSchema, output: z.object({ ok: z.boolean() }) },
   mute: { input: threadIdSchema, output: z.object({ ok: z.boolean() }) },
   unmute: { input: threadIdSchema, output: z.object({ ok: z.boolean() }) },
+  cardModels: { input: cardModelsInputSchema, output: cardModelsOutputSchema },
 });
 
 /** Channel the frontend re-reads on. */
@@ -361,6 +374,9 @@ export default function plugin(bb: BbPluginApi) {
     async unsnooze({ threadId }) { await perform("unsnooze", threadId); return { ok: true }; },
     async mute({ threadId }) { await perform("mute", threadId); return { ok: true }; },
     async unmute({ threadId }) { await perform("unmute", threadId); return { ok: true }; },
+    // No host model/effort field is adopted yet: every item is null, with no
+    // host read, so an unknown ID can never hide the other cards' chips.
+    async cardModels({ threadIds }) { return cardModelsNone(threadIds); },
   });
   bb.cli.register(createLifecycleCommand(perform));
 
