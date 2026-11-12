@@ -1,0 +1,2496 @@
+
+ RUN  v4.1.10 <repo>/wizbar
+
+ ❯ |bb-plugin-wizbar| src/server.test.ts (113 tests | 2 failed) 2858ms
+     × returns source none with one null item per ID, in input order, unknown IDs included 19ms
+     × accepts exactly 100 IDs 16ms
+ ❯ |bb-plugin-wizbar| src/card-meta.test.ts (47 tests | 20 failed) 19ms
+     × room/1042-refine-command-palette-a1b2 → 1042 4ms
+     × room/1043-choose-cache-strategy-c3d4 → 1043 1ms
+     × room/7-x → 7 0ms
+     × 'PR and issue' reads '#1042 → PR #1088' 0ms
+     × 'PR only' reads 'PR #1046' 0ms
+     × 'issue only' reads '#1043' 0ms
+     × 1 → 1 child 0ms
+     × 2 → 2 children 0ms
+     × 3 → 3 children 0ms
+     × Opus 5.5 / medium → Opus 5.5 · Medium 0ms
+     × Sol 6.1 / high → Sol 6.1 · High 0ms
+     × Sol 6.1 / xhigh → Sol 6.1 · Xhigh 0ms
+     × Opus 5.5 / null → Opus 5.5 0ms
+     × thr_v3_parent_many 3ms
+     × thr_v3_parent_one 1ms
+     × thr_v3_child_local 1ms
+     × thr_v3_finished_today 0ms
+     × thr_v3_pinned_idle 0ms
+     × uses a host model and effort when served 1ms
+     × returns source none and nulls, in input order 2ms
+ ❯ |bb-plugin-wizbar| src/ThreadCard.test.tsx (113 tests | 11 failed) 10158ms
+     × shows model and effort, the issue → PR link and the child count 1018ms
+     × child count: 'one' 1018ms
+     × child count: 'two' 1019ms
+     × opens the pull request without an issue when the branch does not parse 29ms
+     × shows a parsed issue '#1043' as plain text with no pull request 17ms
+     × shows a parsed issue '#7' as plain text with no pull request 17ms
+     × omits the model chip for 'source none', with no placeholder 1017ms
+     × omits the model chip for 'a failing RPC', with no placeholder 1017ms
+     × omits the model chip for 'no RPC handler', with no placeholder 1017ms
+     × omits the model chip for 'effort without a model', with no placeholder 1018ms
+     × shows the branch only on hover, never on the card face 26ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 33 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > WZ18 card metadata at the registered app boundary > shows model and effort, the issue → PR link and the child count
+TestingLibraryElementError: Unable to find an element with the text: Opus 5.5 · Medium. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<li
+  class="list-none"
+  data-state="closed"
+>
+  <div
+    class="group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"
+  >
+    <a
+      aria-label="Review parser"
+      class="absolute inset-0 cursor-pointer rounded-md"
+      data-sidebar-thread-id="thr_synsample"
+      data-sidebar-thread-shortcut-target=""
+      href="#"
+    />
+    <div
+      class="pointer-events-none relative flex h-5 items-center gap-1.5"
+    >
+      <span
+        class="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"
+      >
+        Orchard
+      </span>
+      <span
+        aria-label="Local"
+        class="pointer-events-none relative flex size-3.5 shrink-0 items-center justify-center text-muted-foreground"
+        role="img"
+        title="Local"
+      >
+        <svg
+          aria-hidden="true"
+          class="size-3.5"
+          color="currentColor"
+          data-icon="Laptop"
+          fill="none"
+          height="24"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M20.4999 16.5V8.5C20.4999 6.14298 20.4999 4.96447 19.7676 4.23223C19.0354 3.5 17.8569 3.5 15.4999 3.5H8.49988C6.14286 3.5 4.96434 3.5 4.23211 4.23223C3.49988 4.96447 3.49988 6.14298 3.49988 8.5V16.5"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="1.5"
+          />
+          <path
+            d="M21.9841 20.5H2.01567C1.63273 20.5 1.38367 20.1088 1.55493 19.7764L3.49988 16.5H20.4999L22.4448 19.7764C22.6161 20.1088 22.367 20.5 21.9841 20.5Z"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="1.5"
+          />
+        </svg>
+      </span>
+      <span
+        class="pointer-events-auto hidden items-center gap-0.5 group-hover/card:flex"
+      >
+        <button
+          aria-label="Snooze until tomorrow"
+          class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+          type="button"
+        >
+          <svg
+            class="size-3.5"
+            color="currentColor"
+            data-icon="Clock"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <circle
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="1.5"
+            />
+            <path
+              d="M12 8V12L14 14"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+        <button
+          aria-label="Settle thread"
+          class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+          type="button"
+        >
+          <svg
+            class="size-3.5"
+            color="currentColor"
+            data-icon="Check"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M5 14L8.5 17.5L19 6.5"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+      </span>
+      <span
+        class="flex w-7 shrink-0 items-center justify-end group-hover/card:hidden"
+      >
+        <span
+          class="tabular-nums text-2xs text-muted-foreground"
+        >
+          7m
+        </span>
+      </span>
+    </div>
+    <div
+      class="pointer-events-none relative mt-0.5 truncate text-sm text-foreground"
+    >
+      Review parser
+    </div>
+    <div
+      class="pointer-events-none relative mt-0.5 flex h-4 items-center gap-1.5 text-2xs text-muted-foreground"
+    >
+      <span
+        class="min-w-0 flex-1 truncate font-mono"
+      >
+        room/1042-refine-command-palette-a1b2
+      </span>
+      <a
+        class="relative shrink-0 font-mono hover:underline text-muted-foreground"
+        href="https://github.com/example/sample-repo/pull/1088"
+        rel="noreferrer"
+        target="_blank"
+        title="Sample pull request 1088"
+      >
+        #
+        1088
+      </a>
+      <span
+        aria-label="synthetic-agent"
+        class="flex size-3.5 shrink-0 items-center justify-center"
+        role="img"
+      >
+        <span
+          class="size-2 rounded-full bg-muted-foreground/50"
+        />
+      </span>
+    </div>
+  </div>
+</li>
+
+Ignored nodes: comments, script, style
+<li
+  class="list-none"
+  data-state="closed"
+>
+  <div
+    class="group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"
+  >
+    <a
+      aria-label="Review parser"
+      class="absolute inset-0 cursor-pointer rounded-md"
+      data-sidebar-thread-id="thr_synsample"
+      data-sidebar-thread-shortcut-target=""
+      href="#"
+    />
+    <div
+      class="pointer-events-none relative flex h-5 items-center gap-1.5"
+    >
+      <span
+        class="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"
+      >
+        Orchard
+      </span>
+      <span
+        aria-label="Local"
+        class="pointer-events-none relative flex size-3.5 shrink-0 items-center justify-center text-muted-foreground"
+        role="img"
+        title="Local"
+      >
+        <svg
+          aria-hidden="true"
+          class="size-3.5"
+          color="currentColor"
+          data-icon="Laptop"
+          fill="none"
+          height="24"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M20.4999 16.5V8.5C20.4999 6.14298 20.4999 4.96447 19.7676 4.23223C19.0354 3.5 17.8569 3.5 15.4999 3.5H8.49988C6.14286 3.5 4.96434 3.5 4.23211 4.23223C3.49988 4.96447 3.49988 6.14298 3.49988 8.5V16.5"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="1.5"
+          />
+          <path
+            d="M21.9841 20.5H2.01567C1.63273 20.5 1.38367 20.1088 1.55493 19.7764L3.49988 16.5H20.4999L22.4448 19.7764C22.6161 20.1088 22.367 20.5 21.9841 20.5Z"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="1.5"
+          />
+        </svg>
+      </span>
+      <span
+        class="pointer-events-auto hidden items-center gap-0.5 group-hover/card:flex"
+      >
+        <button
+          aria-label="Snooze until tomorrow"
+          class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+          type="button"
+        >
+          <svg
+            class="size-3.5"
+            color="currentColor"
+            data-icon="Clock"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <circle
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="1.5"
+            />
+            <path
+              d="M12 8V12L14 14"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+        <button
+          aria-label="Settle thread"
+          class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+          type="button"
+        >
+          <svg
+            class="size-3.5"
+            color="currentColor"
+            data-icon="Check"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M5 14L8.5 17.5L19 6.5"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+      </span>
+      <span
+        class="flex w-7 shrink-0 items-center justify-end group-hover/card:hidden"
+      >
+        <span
+          class="tabular-nums text-2xs text-muted-foreground"
+        >
+          7m
+        </span>
+      </span>
+    </div>
+    <div
+      class="pointer-events-none relative mt-0.5 truncate text-sm text-foreground"
+    >
+      Review parser
+    </div>
+    <div
+      class="pointer-events-none relative mt-0.5 flex h-4 items-center gap-1.5 text-2xs text-muted-foreground"
+    >
+      <span
+        class="min-w-0 flex-1 truncate font-mono"
+      >
+        room/1042-refine-command-palette-a1b2
+      </span>
+      <a
+        class="relative shrink-0 font-mono hover:underline text-muted-foreground"
+        href="https://github.com/example/sample-repo/pull/1088"
+        rel="noreferrer"
+        target="_blank"
+        title="Sample pull request 1088"
+      >
+        #
+        1088
+      </a>
+      <span
+        aria-label="synthetic-agent"
+        class="flex size-3.5 shrink-0 items-center justify-center"
+        role="img"
+      >
+        <span
+          class="size-2 rounded-full bg-muted-foreground/50"
+        />
+      </span>
+    </div>
+  </div>
+</li>
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/ThreadCard.test.tsx:295:33
+    293|       cardModels: hostModels, pullRequests: { thr_synsample: pull(1088…
+    294|     });
+    295|     expect(await within(card()).findByText("Opus 5.5 · Medium")).toBeD…
+       |                                 ^
+    296|     const link = within(card()).getByRole("link", { name: "#1042 → PR …
+    297|     expect(link.getAttribute("href")).toBe(PR_URL);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/33]⎯
+
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > WZ18 card metadata at the registered app boundary > child count: 'one'
+TestingLibraryElementError: Unable to find an element with the text: 1 child. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<li
+  class="list-none"
+  data-state="closed"
+>
+  <div
+    class="group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"
+  >
+    <a
+      aria-label="Review parser"
+      class="absolute inset-0 cursor-pointer rounded-md"
+      data-sidebar-thread-id="thr_synsample"
+      data-sidebar-thread-shortcut-target=""
+      href="#"
+    />
+    <div
+      class="pointer-events-none relative flex h-5 items-center gap-1.5"
+    >
+      <span
+        class="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"
+      >
+        Orchard
+      </span>
+      <span
+        class="pointer-events-auto hidden items-center gap-0.5 group-hover/card:flex"
+      >
+        <button
+          aria-label="Snooze until tomorrow"
+          class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+          type="button"
+        >
+          <svg
+            class="size-3.5"
+            color="currentColor"
+            data-icon="Clock"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <circle
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="1.5"
+            />
+            <path
+              d="M12 8V12L14 14"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+        <button
+          aria-label="Settle thread"
+          class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+          type="button"
+        >
+          <svg
+            class="size-3.5"
+            color="currentColor"
+            data-icon="Check"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M5 14L8.5 17.5L19 6.5"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+      </span>
+      <span
+        class="flex w-7 shrink-0 items-center justify-end group-hover/card:hidden"
+      >
+        <span
+          class="tabular-nums text-2xs text-muted-foreground"
+        >
+          7m
+        </span>
+      </span>
+    </div>
+    <div
+      class="pointer-events-none relative mt-0.5 truncate text-sm text-foreground"
+    >
+      Review parser
+    </div>
+    <div
+      class="pointer-events-none relative mt-0.5 flex h-4 items-center gap-1.5 text-2xs text-muted-foreground"
+    >
+      <span
+        class="min-w-0 flex-1 truncate"
+      >
+        Synthetic workspace
+      </span>
+      <span
+        aria-label="synthetic-agent"
+        class="flex size-3.5 shrink-0 items-center justify-center"
+        role="img"
+      >
+        <span
+          class="size-2 rounded-full bg-muted-foreground/50"
+        />
+      </span>
+    </div>
+  </div>
+</li>
+
+Ignored nodes: comments, script, style
+<li
+  class="list-none"
+  data-state="closed"
+>
+  <div
+    class="group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"
+  >
+    <a
+      aria-label="Review parser"
+      class="absolute inset-0 cursor-pointer rounded-md"
+      data-sidebar-thread-id="thr_synsample"
+      data-sidebar-thread-shortcut-target=""
+      href="#"
+    />
+    <div
+      class="pointer-events-none relative flex h-5 items-center gap-1.5"
+    >
+      <span
+        class="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"
+      >
+        Orchard
+      </span>
+      <span
+        class="pointer-events-auto hidden items-center gap-0.5 group-hover/card:flex"
+      >
+        <button
+          aria-label="Snooze until tomorrow"
+          class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+          type="button"
+        >
+          <svg
+            class="size-3.5"
+            color="currentColor"
+            data-icon="Clock"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <circle
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="1.5"
+            />
+            <path
+              d="M12 8V12L14 14"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+        <button
+          aria-label="Settle thread"
+          class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+          type="button"
+        >
+          <svg
+            class="size-3.5"
+            color="currentColor"
+            data-icon="Check"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M5 14L8.5 17.5L19 6.5"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+      </span>
+      <span
+        class="flex w-7 shrink-0 items-center justify-end group-hover/card:hidden"
+      >
+        <span
+          class="tabular-nums text-2xs text-muted-foreground"
+        >
+          7m
+        </span>
+      </span>
+    </div>
+    <div
+      class="pointer-events-none relative mt-0.5 truncate text-sm text-foreground"
+    >
+      Review parser
+    </div>
+    <div
+      class="pointer-events-none relative mt-0.5 flex h-4 items-center gap-1.5 text-2xs text-muted-foreground"
+    >
+      <span
+        class="min-w-0 flex-1 truncate"
+      >
+        Synthetic workspace
+      </span>
+      <span
+        aria-label="synthetic-agent"
+        class="flex size-3.5 shrink-0 items-center justify-center"
+        role="img"
+      >
+        <span
+          class="size-2 rounded-full bg-muted-foreground/50"
+        />
+      </span>
+    </div>
+  </div>
+</li>
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/ThreadCard.test.tsx:309:42
+    307|       child(9, "thr_synother")]);
+    308|     const line = card();
+    309|     if (label) expect(await within(line).findByText(label)).toBeDefine…
+       |                                          ^
+    310|     else expect(within(line).queryByText(/child/)).toBeNull();
+    311|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/33]⎯
+
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > WZ18 card metadata at the registered app boundary > child count: 'two'
+TestingLibraryElementError: Unable to find an element with the text: 2 children. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<li
+  class="list-none"
+  data-state="closed"
+>
+  <div
+    class="group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"
+  >
+    <a
+      aria-label="Review parser"
+      class="absolute inset-0 cursor-pointer rounded-md"
+      data-sidebar-thread-id="thr_synsample"
+      data-sidebar-thread-shortcut-target=""
+      href="#"
+    />
+    <div
+      class="pointer-events-none relative flex h-5 items-center gap-1.5"
+    >
+      <span
+        class="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"
+      >
+        Orchard
+      </span>
+      <span
+        class="pointer-events-auto hidden items-center gap-0.5 group-hover/card:flex"
+      >
+        <button
+          aria-label="Snooze until tomorrow"
+          class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+          type="button"
+        >
+          <svg
+            class="size-3.5"
+            color="currentColor"
+            data-icon="Clock"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <circle
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="1.5"
+            />
+            <path
+              d="M12 8V12L14 14"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+        <button
+          aria-label="Settle thread"
+          class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+          type="button"
+        >
+          <svg
+            class="size-3.5"
+            color="currentColor"
+            data-icon="Check"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M5 14L8.5 17.5L19 6.5"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+      </span>
+      <span
+        class="flex w-7 shrink-0 items-center justify-end group-hover/card:hidden"
+      >
+        <span
+          class="tabular-nums text-2xs text-muted-foreground"
+        >
+          7m
+        </span>
+      </span>
+    </div>
+    <div
+      class="pointer-events-none relative mt-0.5 truncate text-sm text-foreground"
+    >
+      Review parser
+    </div>
+    <div
+      class="pointer-events-none relative mt-0.5 flex h-4 items-center gap-1.5 text-2xs text-muted-foreground"
+    >
+      <span
+        class="min-w-0 flex-1 truncate"
+      >
+        Synthetic workspace
+      </span>
+      <span
+        aria-label="synthetic-agent"
+        class="flex size-3.5 shrink-0 items-center justify-center"
+        role="img"
+      >
+        <span
+          class="size-2 rounded-full bg-muted-foreground/50"
+        />
+      </span>
+    </div>
+  </div>
+</li>
+
+Ignored nodes: comments, script, style
+<li
+  class="list-none"
+  data-state="closed"
+>
+  <div
+    class="group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"
+  >
+    <a
+      aria-label="Review parser"
+      class="absolute inset-0 cursor-pointer rounded-md"
+      data-sidebar-thread-id="thr_synsample"
+      data-sidebar-thread-shortcut-target=""
+      href="#"
+    />
+    <div
+      class="pointer-events-none relative flex h-5 items-center gap-1.5"
+    >
+      <span
+        class="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"
+      >
+        Orchard
+      </span>
+      <span
+        class="pointer-events-auto hidden items-center gap-0.5 group-hover/card:flex"
+      >
+        <button
+          aria-label="Snooze until tomorrow"
+          class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+          type="button"
+        >
+          <svg
+            class="size-3.5"
+            color="currentColor"
+            data-icon="Clock"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <circle
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="1.5"
+            />
+            <path
+              d="M12 8V12L14 14"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+        <button
+          aria-label="Settle thread"
+          class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+          type="button"
+        >
+          <svg
+            class="size-3.5"
+            color="currentColor"
+            data-icon="Check"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M5 14L8.5 17.5L19 6.5"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+      </span>
+      <span
+        class="flex w-7 shrink-0 items-center justify-end group-hover/card:hidden"
+      >
+        <span
+          class="tabular-nums text-2xs text-muted-foreground"
+        >
+          7m
+        </span>
+      </span>
+    </div>
+    <div
+      class="pointer-events-none relative mt-0.5 truncate text-sm text-foreground"
+    >
+      Review parser
+    </div>
+    <div
+      class="pointer-events-none relative mt-0.5 flex h-4 items-center gap-1.5 text-2xs text-muted-foreground"
+    >
+      <span
+        class="min-w-0 flex-1 truncate"
+      >
+        Synthetic workspace
+      </span>
+      <span
+        aria-label="synthetic-agent"
+        class="flex size-3.5 shrink-0 items-center justify-center"
+        role="img"
+      >
+        <span
+          class="size-2 rounded-full bg-muted-foreground/50"
+        />
+      </span>
+    </div>
+  </div>
+</li>
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/ThreadCard.test.tsx:309:42
+    307|       child(9, "thr_synother")]);
+    308|     const line = card();
+    309|     if (label) expect(await within(line).findByText(label)).toBeDefine…
+       |                                          ^
+    310|     else expect(within(line).queryByText(/child/)).toBeNull();
+    311|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/33]⎯
+
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > WZ18 card metadata at the registered app boundary > opens the pull request without an issue when the branch does not parse
+TestingLibraryElementError: Unable to find an accessible element with the role "link" and name "PR #1046"
+
+Here are the accessible roles:
+
+  link:
+
+  Name "Review parser":
+  <a
+    aria-label="Review parser"
+    class="absolute inset-0 cursor-pointer rounded-md"
+    data-sidebar-thread-id="thr_synsample"
+    data-sidebar-thread-shortcut-target=""
+    href="#"
+  />
+
+  Name "#1046":
+  <a
+    class="relative shrink-0 font-mono hover:underline text-muted-foreground"
+    href="https://github.com/example/sample-repo/pull/1046"
+    rel="noreferrer"
+    target="_blank"
+    title="Sample pull request 1046"
+  />
+
+  --------------------------------------------------
+  img:
+
+  Name "Local":
+  <span
+    aria-label="Local"
+    class="pointer-events-none relative flex size-3.5 shrink-0 items-center justify-center text-muted-foreground"
+    role="img"
+    title="Local"
+  />
+
+  Name "synthetic-agent":
+  <span
+    aria-label="synthetic-agent"
+    class="flex size-3.5 shrink-0 items-center justify-center"
+    role="img"
+  />
+
+  --------------------------------------------------
+  button:
+
+  Name "Snooze until tomorrow":
+  <button
+    aria-label="Snooze until tomorrow"
+    class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+    type="button"
+  />
+
+  Name "Settle thread":
+  <button
+    aria-label="Settle thread"
+    class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+    type="button"
+  />
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+<li
+  class="list-none"
+  data-state="closed"
+>
+  <div
+    class="group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"
+  >
+    <a
+      aria-label="Review parser"
+      class="absolute inset-0 cursor-pointer rounded-md"
+      data-sidebar-thread-id="thr_synsample"
+      data-sidebar-thread-shortcut-target=""
+      href="#"
+    />
+    <div
+      class="pointer-events-none relative flex h-5 items-center gap-1.5"
+    >
+      <span
+        class="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"
+      >
+        Orchard
+      </span>
+      <span
+        aria-label="Local"
+        class="pointer-events-none relative flex size-3.5 shrink-0 items-center justify-center text-muted-foreground"
+        role="img"
+        title="Local"
+      >
+        <svg
+          aria-hidden="true"
+          class="size-3.5"
+          color="currentColor"
+          data-icon="Laptop"
+          fill="none"
+          height="24"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M20.4999 16.5V8.5C20.4999 6.14298 20.4999 4.96447 19.7676 4.23223C19.0354 3.5 17.8569 3.5 15.4999 3.5H8.49988C6.14286 3.5 4.96434 3.5 4.23211 4.23223C3.49988 4.96447 3.49988 6.14298 3.49988 8.5V16.5"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="1.5"
+          />
+          <path
+            d="M21.9841 20.5H2.01567C1.63273 20.5 1.38367 20.1088 1.55493 19.7764L3.49988 16.5H20.4999L22.4448 19.7764C22.6161 20.1088 22.367 20.5 21.9841 20.5Z"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="1.5"
+          />
+        </svg>
+      </span>
+      <span
+        class="pointer-events-auto hidden items-center gap-0.5 group-hover/card:flex"
+      >
+        <button
+          aria-label="Snooze until tomorrow"
+          class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+          type="button"
+        >
+          <svg
+            class="size-3.5"
+            color="currentColor"
+            data-icon="Clock"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <circle
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="1.5"
+            />
+            <path
+              d="M12 8V12L14 14"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+        <button
+          aria-label="Settle thread"
+          class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+          type="button"
+        >
+          <svg
+            class="size-3.5"
+            color="currentColor"
+            data-icon="Check"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M5 14L8.5 17.5L19 6.5"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+      </span>
+      <span
+        class="flex w-7 shrink-0 items-center justify-end group-hover/card:hidden"
+      >
+        <span
+          class="tabular-nums text-2xs text-muted-foreground"
+        >
+          7m
+        </span>
+      </span>
+    </div>
+    <div
+      class="pointer-events-none relative mt-0.5 truncate text-sm text-foreground"
+    >
+      Review parser
+    </div>
+    <div
+      class="pointer-events-none relative mt-0.5 flex h-4 items-center gap-1.5 text-2xs text-muted-foreground"
+    >
+      <span
+        class="min-w-0 flex-1 truncate font-mono"
+      >
+        feature/polish-empty-states
+      </span>
+      <a
+        class="relative shrink-0 font-mono hover:underline text-muted-foreground"
+        href="https://github.com/example/sample-repo/pull/1046"
+        rel="noreferrer"
+        target="_blank"
+        title="Sample pull request 1046"
+      >
+        #
+        1046
+      </a>
+      <span
+        aria-label="synthetic-agent"
+        class="flex size-3.5 shrink-0 items-center justify-center"
+        role="img"
+      >
+        <span
+          class="size-2 rounded-full bg-muted-foreground/50"
+        />
+      </span>
+    </div>
+  </div>
+</li>
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/ThreadCard.test.tsx:317:33
+    315|       pullRequests: { thr_synsample: pull(1046) },
+    316|     });
+    317|     const link = within(card()).getByRole("link", { name: "PR #1046" }…
+       |                                 ^
+    318|     expect(link.getAttribute("href")).toBe("https://github.com/example…
+    319|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/33]⎯
+
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > WZ18 card metadata at the registered app boundary > shows a parsed issue '#1043' as plain text with no pull request
+TestingLibraryElementError: Unable to find an element with the text: #1043. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<li
+  class="list-none"
+  data-state="closed"
+>
+  <div
+    class="group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"
+  >
+    <a
+      aria-label="Review parser"
+      class="absolute inset-0 cursor-pointer rounded-md"
+      data-sidebar-thread-id="thr_synsample"
+      data-sidebar-thread-shortcut-target=""
+      href="#"
+    />
+    <div
+      class="pointer-events-none relative flex h-5 items-center gap-1.5"
+    >
+      <span
+        class="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"
+      >
+        Orchard
+      </span>
+      <span
+        aria-label="Local"
+        class="pointer-events-none relative flex size-3.5 shrink-0 items-center justify-center text-muted-foreground"
+        role="img"
+        title="Local"
+      >
+        <svg
+          aria-hidden="true"
+          class="size-3.5"
+          color="currentColor"
+          data-icon="Laptop"
+          fill="none"
+          height="24"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M20.4999 16.5V8.5C20.4999 6.14298 20.4999 4.96447 19.7676 4.23223C19.0354 3.5 17.8569 3.5 15.4999 3.5H8.49988C6.14286 3.5 4.96434 3.5 4.23211 4.23223C3.49988 4.96447 3.49988 6.14298 3.49988 8.5V16.5"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="1.5"
+          />
+          <path
+            d="M21.9841 20.5H2.01567C1.63273 20.5 1.38367 20.1088 1.55493 19.7764L3.49988 16.5H20.4999L22.4448 19.7764C22.6161 20.1088 22.367 20.5 21.9841 20.5Z"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="1.5"
+          />
+        </svg>
+      </span>
+      <span
+        class="pointer-events-auto hidden items-center gap-0.5 group-hover/card:flex"
+      >
+        <button
+          aria-label="Snooze until tomorrow"
+          class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+          type="button"
+        >
+          <svg
+            class="size-3.5"
+            color="currentColor"
+            data-icon="Clock"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <circle
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="1.5"
+            />
+            <path
+              d="M12 8V12L14 14"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+        <button
+          aria-label="Settle thread"
+          class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+          type="button"
+        >
+          <svg
+            class="size-3.5"
+            color="currentColor"
+            data-icon="Check"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M5 14L8.5 17.5L19 6.5"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+      </span>
+      <span
+        class="flex w-7 shrink-0 items-center justify-end group-hover/card:hidden"
+      >
+        <span
+          class="tabular-nums text-2xs text-muted-foreground"
+        >
+          7m
+        </span>
+      </span>
+    </div>
+    <div
+      class="pointer-events-none relative mt-0.5 truncate text-sm text-foreground"
+    >
+      Review parser
+    </div>
+    <div
+      class="pointer-events-none relative mt-0.5 flex h-4 items-center gap-1.5 text-2xs text-muted-foreground"
+    >
+      <span
+        class="min-w-0 flex-1 truncate font-mono"
+      >
+        room/1043-choose-cache-strategy-c3d4
+      </span>
+      <span
+        aria-label="synthetic-agent"
+        class="flex size-3.5 shrink-0 items-center justify-center"
+        role="img"
+      >
+        <span
+          class="size-2 rounded-full bg-muted-foreground/50"
+        />
+      </span>
+    </div>
+  </div>
+</li>
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/ThreadCard.test.tsx:326:27
+    324|   ])("shows a parsed issue $text as plain text with no pull request", …
+    325|     renderMeta([thread({ environment: environment("git-worktree", bran…
+    326|     expect(within(card()).getByText(text)).toBeDefined();
+       |                           ^
+    327|     expect(within(card()).queryByRole("link", { name: /#/ })).toBeNull…
+    328|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/33]⎯
+
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > WZ18 card metadata at the registered app boundary > shows a parsed issue '#7' as plain text with no pull request
+TestingLibraryElementError: Unable to find an element with the text: #7. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<li
+  class="list-none"
+  data-state="closed"
+>
+  <div
+    class="group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"
+  >
+    <a
+      aria-label="Review parser"
+      class="absolute inset-0 cursor-pointer rounded-md"
+      data-sidebar-thread-id="thr_synsample"
+      data-sidebar-thread-shortcut-target=""
+      href="#"
+    />
+    <div
+      class="pointer-events-none relative flex h-5 items-center gap-1.5"
+    >
+      <span
+        class="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"
+      >
+        Orchard
+      </span>
+      <span
+        aria-label="Local"
+        class="pointer-events-none relative flex size-3.5 shrink-0 items-center justify-center text-muted-foreground"
+        role="img"
+        title="Local"
+      >
+        <svg
+          aria-hidden="true"
+          class="size-3.5"
+          color="currentColor"
+          data-icon="Laptop"
+          fill="none"
+          height="24"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M20.4999 16.5V8.5C20.4999 6.14298 20.4999 4.96447 19.7676 4.23223C19.0354 3.5 17.8569 3.5 15.4999 3.5H8.49988C6.14286 3.5 4.96434 3.5 4.23211 4.23223C3.49988 4.96447 3.49988 6.14298 3.49988 8.5V16.5"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="1.5"
+          />
+          <path
+            d="M21.9841 20.5H2.01567C1.63273 20.5 1.38367 20.1088 1.55493 19.7764L3.49988 16.5H20.4999L22.4448 19.7764C22.6161 20.1088 22.367 20.5 21.9841 20.5Z"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="1.5"
+          />
+        </svg>
+      </span>
+      <span
+        class="pointer-events-auto hidden items-center gap-0.5 group-hover/card:flex"
+      >
+        <button
+          aria-label="Snooze until tomorrow"
+          class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+          type="button"
+        >
+          <svg
+            class="size-3.5"
+            color="currentColor"
+            data-icon="Clock"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <circle
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="1.5"
+            />
+            <path
+              d="M12 8V12L14 14"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+        <button
+          aria-label="Settle thread"
+          class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+          type="button"
+        >
+          <svg
+            class="size-3.5"
+            color="currentColor"
+            data-icon="Check"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M5 14L8.5 17.5L19 6.5"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+      </span>
+      <span
+        class="flex w-7 shrink-0 items-center justify-end group-hover/card:hidden"
+      >
+        <span
+          class="tabular-nums text-2xs text-muted-foreground"
+        >
+          7m
+        </span>
+      </span>
+    </div>
+    <div
+      class="pointer-events-none relative mt-0.5 truncate text-sm text-foreground"
+    >
+      Review parser
+    </div>
+    <div
+      class="pointer-events-none relative mt-0.5 flex h-4 items-center gap-1.5 text-2xs text-muted-foreground"
+    >
+      <span
+        class="min-w-0 flex-1 truncate font-mono"
+      >
+        room/7-x
+      </span>
+      <span
+        aria-label="synthetic-agent"
+        class="flex size-3.5 shrink-0 items-center justify-center"
+        role="img"
+      >
+        <span
+          class="size-2 rounded-full bg-muted-foreground/50"
+        />
+      </span>
+    </div>
+  </div>
+</li>
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/ThreadCard.test.tsx:326:27
+    324|   ])("shows a parsed issue $text as plain text with no pull request", …
+    325|     renderMeta([thread({ environment: environment("git-worktree", bran…
+    326|     expect(within(card()).getByText(text)).toBeDefined();
+       |                           ^
+    327|     expect(within(card()).queryByRole("link", { name: /#/ })).toBeNull…
+    328|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/33]⎯
+
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > WZ18 card metadata at the registered app boundary > omits the model chip for 'source none', with no placeholder
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > WZ18 card metadata at the registered app boundary > omits the model chip for 'a failing RPC', with no placeholder
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > WZ18 card metadata at the registered app boundary > omits the model chip for 'no RPC handler', with no placeholder
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > WZ18 card metadata at the registered app boundary > omits the model chip for 'effort without a model', with no placeholder
+TestingLibraryElementError: Unable to find an element with the text: 1 child. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<li
+  class="list-none"
+  data-state="closed"
+>
+  <div
+    class="group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"
+  >
+    <a
+      aria-label="Review parser"
+      class="absolute inset-0 cursor-pointer rounded-md"
+      data-sidebar-thread-id="thr_synsample"
+      data-sidebar-thread-shortcut-target=""
+      href="#"
+    />
+    <div
+      class="pointer-events-none relative flex h-5 items-center gap-1.5"
+    >
+      <span
+        class="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"
+      >
+        Orchard
+      </span>
+      <span
+        aria-label="Local"
+        class="pointer-events-none relative flex size-3.5 shrink-0 items-center justify-center text-muted-foreground"
+        role="img"
+        title="Local"
+      >
+        <svg
+          aria-hidden="true"
+          class="size-3.5"
+          color="currentColor"
+          data-icon="Laptop"
+          fill="none"
+          height="24"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M20.4999 16.5V8.5C20.4999 6.14298 20.4999 4.96447 19.7676 4.23223C19.0354 3.5 17.8569 3.5 15.4999 3.5H8.49988C6.14286 3.5 4.96434 3.5 4.23211 4.23223C3.49988 4.96447 3.49988 6.14298 3.49988 8.5V16.5"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="1.5"
+          />
+          <path
+            d="M21.9841 20.5H2.01567C1.63273 20.5 1.38367 20.1088 1.55493 19.7764L3.49988 16.5H20.4999L22.4448 19.7764C22.6161 20.1088 22.367 20.5 21.9841 20.5Z"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="1.5"
+          />
+        </svg>
+      </span>
+      <span
+        class="pointer-events-auto hidden items-center gap-0.5 group-hover/card:flex"
+      >
+        <button
+          aria-label="Snooze until tomorrow"
+          class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+          type="button"
+        >
+          <svg
+            class="size-3.5"
+            color="currentColor"
+            data-icon="Clock"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <circle
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="1.5"
+            />
+            <path
+              d="M12 8V12L14 14"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+        <button
+          aria-label="Settle thread"
+          class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+          type="button"
+        >
+          <svg
+            class="size-3.5"
+            color="currentColor"
+            data-icon="Check"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M5 14L8.5 17.5L19 6.5"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+      </span>
+      <span
+        class="flex w-7 shrink-0 items-center justify-end group-hover/card:hidden"
+      >
+        <span
+          class="tabular-nums text-2xs text-muted-foreground"
+        >
+          7m
+        </span>
+      </span>
+    </div>
+    <div
+      class="pointer-events-none relative mt-0.5 truncate text-sm text-foreground"
+    >
+      Review parser
+    </div>
+    <div
+      class="pointer-events-none relative mt-0.5 flex h-4 items-center gap-1.5 text-2xs text-muted-foreground"
+    >
+      <span
+        class="min-w-0 flex-1 truncate font-mono"
+      >
+        room/1043-x
+      </span>
+      <span
+        aria-label="synthetic-agent"
+        class="flex size-3.5 shrink-0 items-center justify-center"
+        role="img"
+      >
+        <span
+          class="size-2 rounded-full bg-muted-foreground/50"
+        />
+      </span>
+    </div>
+  </div>
+</li>
+
+Ignored nodes: comments, script, style
+<li
+  class="list-none"
+  data-state="closed"
+>
+  <div
+    class="group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"
+  >
+    <a
+      aria-label="Review parser"
+      class="absolute inset-0 cursor-pointer rounded-md"
+      data-sidebar-thread-id="thr_synsample"
+      data-sidebar-thread-shortcut-target=""
+      href="#"
+    />
+    <div
+      class="pointer-events-none relative flex h-5 items-center gap-1.5"
+    >
+      <span
+        class="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"
+      >
+        Orchard
+      </span>
+      <span
+        aria-label="Local"
+        class="pointer-events-none relative flex size-3.5 shrink-0 items-center justify-center text-muted-foreground"
+        role="img"
+        title="Local"
+      >
+        <svg
+          aria-hidden="true"
+          class="size-3.5"
+          color="currentColor"
+          data-icon="Laptop"
+          fill="none"
+          height="24"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M20.4999 16.5V8.5C20.4999 6.14298 20.4999 4.96447 19.7676 4.23223C19.0354 3.5 17.8569 3.5 15.4999 3.5H8.49988C6.14286 3.5 4.96434 3.5 4.23211 4.23223C3.49988 4.96447 3.49988 6.14298 3.49988 8.5V16.5"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="1.5"
+          />
+          <path
+            d="M21.9841 20.5H2.01567C1.63273 20.5 1.38367 20.1088 1.55493 19.7764L3.49988 16.5H20.4999L22.4448 19.7764C22.6161 20.1088 22.367 20.5 21.9841 20.5Z"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="1.5"
+          />
+        </svg>
+      </span>
+      <span
+        class="pointer-events-auto hidden items-center gap-0.5 group-hover/card:flex"
+      >
+        <button
+          aria-label="Snooze until tomorrow"
+          class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+          type="button"
+        >
+          <svg
+            class="size-3.5"
+            color="currentColor"
+            data-icon="Clock"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <circle
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="1.5"
+            />
+            <path
+              d="M12 8V12L14 14"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+        <button
+          aria-label="Settle thread"
+          class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+          type="button"
+        >
+          <svg
+            class="size-3.5"
+            color="currentColor"
+            data-icon="Check"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M5 14L8.5 17.5L19 6.5"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+      </span>
+      <span
+        class="flex w-7 shrink-0 items-center justify-end group-hover/card:hidden"
+      >
+        <span
+          class="tabular-nums text-2xs text-muted-foreground"
+        >
+          7m
+        </span>
+      </span>
+    </div>
+    <div
+      class="pointer-events-none relative mt-0.5 truncate text-sm text-foreground"
+    >
+      Review parser
+    </div>
+    <div
+      class="pointer-events-none relative mt-0.5 flex h-4 items-center gap-1.5 text-2xs text-muted-foreground"
+    >
+      <span
+        class="min-w-0 flex-1 truncate font-mono"
+      >
+        room/1043-x
+      </span>
+      <span
+        aria-label="synthetic-agent"
+        class="flex size-3.5 shrink-0 items-center justify-center"
+        role="img"
+      >
+        <span
+          class="size-2 rounded-full bg-muted-foreground/50"
+        />
+      </span>
+    </div>
+  </div>
+</li>
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/ThreadCard.test.tsx:347:31
+    345|     renderMeta([thread({ environment: environment("git-worktree", "roo…
+    346|     const line = card();
+    347|     expect(await within(line).findByText("1 child")).toBeDefined();
+       |                               ^
+    348|     await new Promise((resolve) => setTimeout(resolve, 0));
+    349|     expect(line.textContent).not.toMatch(/·|Opus|High|Unknown|model/i);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/33]⎯
+
+ FAIL  |bb-plugin-wizbar| src/ThreadCard.test.tsx > WZ18 card metadata at the registered app boundary > shows the branch only on hover, never on the card face
+TestingLibraryElementError: Unable to find an accessible element with the role "group" and name "Thread details"
+
+Here are the accessible roles:
+
+  link:
+
+  Name "Review parser":
+  <a
+    aria-label="Review parser"
+    class="absolute inset-0 cursor-pointer rounded-md"
+    data-sidebar-thread-id="thr_synsample"
+    data-sidebar-thread-shortcut-target=""
+    href="#"
+  />
+
+  --------------------------------------------------
+  img:
+
+  Name "Local":
+  <span
+    aria-label="Local"
+    class="pointer-events-none relative flex size-3.5 shrink-0 items-center justify-center text-muted-foreground"
+    role="img"
+    title="Local"
+  />
+
+  Name "synthetic-agent":
+  <span
+    aria-label="synthetic-agent"
+    class="flex size-3.5 shrink-0 items-center justify-center"
+    role="img"
+  />
+
+  --------------------------------------------------
+  button:
+
+  Name "Snooze until tomorrow":
+  <button
+    aria-label="Snooze until tomorrow"
+    class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+    type="button"
+  />
+
+  Name "Settle thread":
+  <button
+    aria-label="Settle thread"
+    class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+    type="button"
+  />
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+<li
+  class="list-none"
+  data-state="closed"
+>
+  <div
+    class="group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"
+  >
+    <a
+      aria-label="Review parser"
+      class="absolute inset-0 cursor-pointer rounded-md"
+      data-sidebar-thread-id="thr_synsample"
+      data-sidebar-thread-shortcut-target=""
+      href="#"
+    />
+    <div
+      class="pointer-events-none relative flex h-5 items-center gap-1.5"
+    >
+      <span
+        class="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"
+      >
+        Orchard
+      </span>
+      <span
+        aria-label="Local"
+        class="pointer-events-none relative flex size-3.5 shrink-0 items-center justify-center text-muted-foreground"
+        role="img"
+        title="Local"
+      >
+        <svg
+          aria-hidden="true"
+          class="size-3.5"
+          color="currentColor"
+          data-icon="Laptop"
+          fill="none"
+          height="24"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M20.4999 16.5V8.5C20.4999 6.14298 20.4999 4.96447 19.7676 4.23223C19.0354 3.5 17.8569 3.5 15.4999 3.5H8.49988C6.14286 3.5 4.96434 3.5 4.23211 4.23223C3.49988 4.96447 3.49988 6.14298 3.49988 8.5V16.5"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="1.5"
+          />
+          <path
+            d="M21.9841 20.5H2.01567C1.63273 20.5 1.38367 20.1088 1.55493 19.7764L3.49988 16.5H20.4999L22.4448 19.7764C22.6161 20.1088 22.367 20.5 21.9841 20.5Z"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="1.5"
+          />
+        </svg>
+      </span>
+      <span
+        class="pointer-events-auto hidden items-center gap-0.5 group-hover/card:flex"
+      >
+        <button
+          aria-label="Snooze until tomorrow"
+          class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+          type="button"
+        >
+          <svg
+            class="size-3.5"
+            color="currentColor"
+            data-icon="Clock"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <circle
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="1.5"
+            />
+            <path
+              d="M12 8V12L14 14"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+        <button
+          aria-label="Settle thread"
+          class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+          type="button"
+        >
+          <svg
+            class="size-3.5"
+            color="currentColor"
+            data-icon="Check"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M5 14L8.5 17.5L19 6.5"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+      </span>
+      <span
+        class="flex w-7 shrink-0 items-center justify-end group-hover/card:hidden"
+      >
+        <span
+          class="tabular-nums text-2xs text-muted-foreground"
+        >
+          7m
+        </span>
+      </span>
+    </div>
+    <div
+      class="pointer-events-none relative mt-0.5 truncate text-sm text-foreground"
+    >
+      Review parser
+    </div>
+    <div
+      class="pointer-events-none relative mt-0.5 flex h-4 items-center gap-1.5 text-2xs text-muted-foreground"
+    >
+      <span
+        class="min-w-0 flex-1 truncate font-mono"
+      >
+        room/1042-refine-command-palette-a1b2
+      </span>
+      <span
+        aria-label="synthetic-agent"
+        class="flex size-3.5 shrink-0 items-center justify-center"
+        role="img"
+      >
+        <span
+          class="size-2 rounded-full bg-muted-foreground/50"
+        />
+      </span>
+    </div>
+  </div>
+</li>
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/ThreadCard.test.tsx:354:33
+    352|   it("shows the branch only on hover, never on the card face", () => {
+    353|     renderMeta([thread({ environment: environment("git-worktree", "roo…
+    354|     const face = within(card()).getByRole("group", { name: "Thread det…
+       |                                 ^
+    355|     expect(face.textContent).not.toContain("room/1042-refine-command-p…
+    356|     const branch = screen.getByText("room/1042-refine-command-palette-…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/33]⎯
+
+ FAIL  |bb-plugin-wizbar| src/card-meta.test.ts > issue number from the branch name (room/<N>-…) > room/1042-refine-command-palette-a1b2 → 1042
+AssertionError: expected null to be 1042 // Object.is equality
+
+- Expected:
+1042
+
++ Received:
+null
+
+ ❯ src/card-meta.test.ts:11:38
+      9| describe("issue number from the branch name (room/<N>-…)", () => {
+     10|   it.each(v3BranchCases)("%s → %s", (branch, expected) => {
+     11|     expect(parseIssueNumber(branch)).toBe(expected);
+       |                                      ^
+     12|   });
+     13|   it("gives nothing for a missing branch", () => {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/33]⎯
+
+ FAIL  |bb-plugin-wizbar| src/card-meta.test.ts > issue number from the branch name (room/<N>-…) > room/1043-choose-cache-strategy-c3d4 → 1043
+AssertionError: expected null to be 1043 // Object.is equality
+
+- Expected:
+1043
+
++ Received:
+null
+
+ ❯ src/card-meta.test.ts:11:38
+      9| describe("issue number from the branch name (room/<N>-…)", () => {
+     10|   it.each(v3BranchCases)("%s → %s", (branch, expected) => {
+     11|     expect(parseIssueNumber(branch)).toBe(expected);
+       |                                      ^
+     12|   });
+     13|   it("gives nothing for a missing branch", () => {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/33]⎯
+
+ FAIL  |bb-plugin-wizbar| src/card-meta.test.ts > issue number from the branch name (room/<N>-…) > room/7-x → 7
+AssertionError: expected null to be 7 // Object.is equality
+
+- Expected:
+7
+
++ Received:
+null
+
+ ❯ src/card-meta.test.ts:11:38
+      9| describe("issue number from the branch name (room/<N>-…)", () => {
+     10|   it.each(v3BranchCases)("%s → %s", (branch, expected) => {
+     11|     expect(parseIssueNumber(branch)).toBe(expected);
+       |                                      ^
+     12|   });
+     13|   it("gives nothing for a missing branch", () => {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/33]⎯
+
+ FAIL  |bb-plugin-wizbar| src/card-meta.test.ts > link chip > 'PR and issue' reads '#1042 → PR #1088'
+ FAIL  |bb-plugin-wizbar| src/card-meta.test.ts > link chip > 'PR only' reads 'PR #1046'
+ FAIL  |bb-plugin-wizbar| src/card-meta.test.ts > link chip > 'issue only' reads '#1043'
+AssertionError: expected null not to be null
+ ❯ src/card-meta.test.ts:24:22
+     22|     { name: "issue only", link: cardLink(null, 1043), text: "#1043" },
+     23|   ])("$name reads $text", ({ link, text }) => {
+     24|     expect(link).not.toBeNull();
+       |                      ^
+     25|     expect(cardLinkText(link!)).toBe(text);
+     26|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/33]⎯
+
+ FAIL  |bb-plugin-wizbar| src/card-meta.test.ts > child-count chip > 1 → 1 child
+AssertionError: expected null to be '1 child' // Object.is equality
+
+- Expected:
+"1 child"
+
++ Received:
+null
+
+ ❯ src/card-meta.test.ts:34:36
+     32| describe("child-count chip", () => {
+     33|   it.each([[0, null], [1, "1 child"], [2, "2 children"], [3, "3 childr…
+     34|     expect(childCountLabel(count)).toBe(label);
+       |                                    ^
+     35|   });
+     36| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/33]⎯
+
+ FAIL  |bb-plugin-wizbar| src/card-meta.test.ts > child-count chip > 2 → 2 children
+AssertionError: expected null to be '2 children' // Object.is equality
+
+- Expected:
+"2 children"
+
++ Received:
+null
+
+ ❯ src/card-meta.test.ts:34:36
+     32| describe("child-count chip", () => {
+     33|   it.each([[0, null], [1, "1 child"], [2, "2 children"], [3, "3 childr…
+     34|     expect(childCountLabel(count)).toBe(label);
+       |                                    ^
+     35|   });
+     36| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/33]⎯
+
+ FAIL  |bb-plugin-wizbar| src/card-meta.test.ts > child-count chip > 3 → 3 children
+AssertionError: expected null to be '3 children' // Object.is equality
+
+- Expected:
+"3 children"
+
++ Received:
+null
+
+ ❯ src/card-meta.test.ts:34:36
+     32| describe("child-count chip", () => {
+     33|   it.each([[0, null], [1, "1 child"], [2, "2 children"], [3, "3 childr…
+     34|     expect(childCountLabel(count)).toBe(label);
+       |                                    ^
+     35|   });
+     36| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/33]⎯
+
+ FAIL  |bb-plugin-wizbar| src/card-meta.test.ts > model chip > Opus 5.5 / medium → Opus 5.5 · Medium
+AssertionError: expected null to be 'Opus 5.5 · Medium' // Object.is equality
+
+- Expected:
+"Opus 5.5 · Medium"
+
++ Received:
+null
+
+ ❯ src/card-meta.test.ts:49:39
+     47|     ["   ", null, null],
+     48|   ] as const)("%s / %s → %s", (model, effort, label) => {
+     49|     expect(modelLabel(model, effort)).toBe(label);
+       |                                       ^
+     50|   });
+     51| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[16/33]⎯
+
+ FAIL  |bb-plugin-wizbar| src/card-meta.test.ts > model chip > Sol 6.1 / high → Sol 6.1 · High
+AssertionError: expected null to be 'Sol 6.1 · High' // Object.is equality
+
+- Expected:
+"Sol 6.1 · High"
+
++ Received:
+null
+
+ ❯ src/card-meta.test.ts:49:39
+     47|     ["   ", null, null],
+     48|   ] as const)("%s / %s → %s", (model, effort, label) => {
+     49|     expect(modelLabel(model, effort)).toBe(label);
+       |                                       ^
+     50|   });
+     51| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[17/33]⎯
+
+ FAIL  |bb-plugin-wizbar| src/card-meta.test.ts > model chip > Sol 6.1 / xhigh → Sol 6.1 · Xhigh
+AssertionError: expected null to be 'Sol 6.1 · Xhigh' // Object.is equality
+
+- Expected:
+"Sol 6.1 · Xhigh"
+
++ Received:
+null
+
+ ❯ src/card-meta.test.ts:49:39
+     47|     ["   ", null, null],
+     48|   ] as const)("%s / %s → %s", (model, effort, label) => {
+     49|     expect(modelLabel(model, effort)).toBe(label);
+       |                                       ^
+     50|   });
+     51| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[18/33]⎯
+
+ FAIL  |bb-plugin-wizbar| src/card-meta.test.ts > model chip > Opus 5.5 / null → Opus 5.5
+AssertionError: expected null to be 'Opus 5.5' // Object.is equality
+
+- Expected:
+"Opus 5.5"
+
++ Received:
+null
+
+ ❯ src/card-meta.test.ts:49:39
+     47|     ["   ", null, null],
+     48|   ] as const)("%s / %s → %s", (model, effort, label) => {
+     49|     expect(modelLabel(model, effort)).toBe(label);
+       |                                       ^
+     50|   });
+     51| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[19/33]⎯
+
+ FAIL  |bb-plugin-wizbar| src/card-meta.test.ts > card metadata over the v3 fixture rows > thr_v3_parent_many
+AssertionError: expected { Object (threadId, model, ...) } to deeply equal { Object (threadId, model, ...) }
+
+- Expected
++ Received
+
+  {
+-   "branch": "room/1042-refine-command-palette-a1b2",
+-   "childCount": 3,
++   "branch": null,
++   "childCount": 0,
+    "effort": null,
+-   "link": {
+-     "issueNumber": 1042,
+-     "kind": "pull-request",
+-     "pullRequest": {
+-       "number": 1088,
+-       "url": "https://github.com/example/sample-repo/pull/1088",
+-     },
+-   },
++   "link": null,
+    "model": null,
+    "threadId": "thr_v3_parent_many",
+  }
+
+ ❯ src/card-meta.test.ts:58:54
+     56|     const pull = state?.pullRequest ?? null;
+     57|     const model = v3CardModelsNone.items.find((item) => item.threadId …
+     58|     expect(cardMeta(thread, v3Threads, pull, model)).toEqual(v3CardMet…
+       |                                                      ^
+     59|   });
+     60|   it("uses a host model and effort when served", () => {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[20/33]⎯
+
+ FAIL  |bb-plugin-wizbar| src/card-meta.test.ts > card metadata over the v3 fixture rows > thr_v3_parent_one
+AssertionError: expected { threadId: 'thr_v3_parent_one', …(5) } to deeply equal { threadId: 'thr_v3_parent_one', …(5) }
+
+- Expected
++ Received
+
+  {
+-   "branch": "room/1043-choose-cache-strategy-c3d4",
+-   "childCount": 1,
++   "branch": null,
++   "childCount": 0,
+    "effort": null,
+-   "link": {
+-     "issueNumber": 1043,
+-     "kind": "issue",
+-     "pullRequest": null,
+-   },
++   "link": null,
+    "model": null,
+    "threadId": "thr_v3_parent_one",
+  }
+
+ ❯ src/card-meta.test.ts:58:54
+     56|     const pull = state?.pullRequest ?? null;
+     57|     const model = v3CardModelsNone.items.find((item) => item.threadId …
+     58|     expect(cardMeta(thread, v3Threads, pull, model)).toEqual(v3CardMet…
+       |                                                      ^
+     59|   });
+     60|   it("uses a host model and effort when served", () => {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[21/33]⎯
+
+ FAIL  |bb-plugin-wizbar| src/card-meta.test.ts > card metadata over the v3 fixture rows > thr_v3_child_local
+AssertionError: expected { Object (threadId, model, ...) } to deeply equal { Object (threadId, model, ...) }
+
+- Expected
++ Received
+
+@@ -1,7 +1,7 @@
+  {
+-   "branch": "agent/helper-e5f6",
++   "branch": null,
+    "childCount": 0,
+    "effort": null,
+    "link": null,
+    "model": null,
+    "threadId": "thr_v3_child_local",
+
+ ❯ src/card-meta.test.ts:58:54
+     56|     const pull = state?.pullRequest ?? null;
+     57|     const model = v3CardModelsNone.items.find((item) => item.threadId …
+     58|     expect(cardMeta(thread, v3Threads, pull, model)).toEqual(v3CardMet…
+       |                                                      ^
+     59|   });
+     60|   it("uses a host model and effort when served", () => {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[22/33]⎯
+
+ FAIL  |bb-plugin-wizbar| src/card-meta.test.ts > card metadata over the v3 fixture rows > thr_v3_finished_today
+AssertionError: expected { …(6) } to deeply equal { …(6) }
+
+- Expected
++ Received
+
+  {
+-   "branch": "feature/polish-empty-states",
++   "branch": null,
+    "childCount": 0,
+    "effort": null,
+-   "link": {
+-     "issueNumber": null,
+-     "kind": "pull-request",
+-     "pullRequest": {
+-       "number": 1046,
+-       "url": "https://github.com/example/sample-repo/pull/1046",
+-     },
+-   },
++   "link": null,
+    "model": null,
+    "threadId": "thr_v3_finished_today",
+  }
+
+ ❯ src/card-meta.test.ts:58:54
+     56|     const pull = state?.pullRequest ?? null;
+     57|     const model = v3CardModelsNone.items.find((item) => item.threadId …
+     58|     expect(cardMeta(thread, v3Threads, pull, model)).toEqual(v3CardMet…
+       |                                                      ^
+     59|   });
+     60|   it("uses a host model and effort when served", () => {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[23/33]⎯
+
+ FAIL  |bb-plugin-wizbar| src/card-meta.test.ts > card metadata over the v3 fixture rows > thr_v3_pinned_idle
+AssertionError: expected { Object (threadId, model, ...) } to deeply equal { Object (threadId, model, ...) }
+
+- Expected
++ Received
+
+@@ -1,7 +1,7 @@
+  {
+-   "branch": "main",
++   "branch": null,
+    "childCount": 0,
+    "effort": null,
+    "link": null,
+    "model": null,
+    "threadId": "thr_v3_pinned_idle",
+
+ ❯ src/card-meta.test.ts:58:54
+     56|     const pull = state?.pullRequest ?? null;
+     57|     const model = v3CardModelsNone.items.find((item) => item.threadId …
+     58|     expect(cardMeta(thread, v3Threads, pull, model)).toEqual(v3CardMet…
+       |                                                      ^
+     59|   });
+     60|   it("uses a host model and effort when served", () => {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[24/33]⎯
+
+ FAIL  |bb-plugin-wizbar| src/card-meta.test.ts > card metadata over the v3 fixture rows > uses a host model and effort when served
+AssertionError: expected { Object (threadId, model, ...) } to match object { model: 'Opus 5.5', …(2) }
+(3 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "childCount": 3,
+-   "effort": "medium",
+-   "model": "Opus 5.5",
++   "childCount": 0,
++   "effort": null,
++   "model": null,
+  }
+
+ ❯ src/card-meta.test.ts:63:18
+     61|     const thread = v3Threads[0]!;
+     62|     const meta = cardMeta(thread, v3Threads, null, { model: "Opus 5.5"…
+     63|     expect(meta).toMatchObject({ model: "Opus 5.5", effort: "medium", …
+       |                  ^
+     64|     expect(meta.link).toEqual({ kind: "issue", issueNumber: 1042, pull…
+     65|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[25/33]⎯
+
+ FAIL  |bb-plugin-wizbar| src/card-meta.test.ts > cardModels while no host field is adopted > returns source none and nulls, in input order
+AssertionError: expected { source: 'host', …(1) } to deeply equal { source: 'none', …(1) }
+
+- Expected
++ Received
+
+  {
+    "items": [
+      {
+        "effort": null,
+-       "model": null,
++       "model": "",
+        "threadId": "thr_v3_parent_many",
+      },
+      {
+        "effort": null,
+-       "model": null,
++       "model": "",
+        "threadId": "thr_v3_child_working",
+      },
+      {
+        "effort": null,
+-       "model": null,
++       "model": "",
+        "threadId": "thr_v3_child_waiting",
+      },
+      {
+        "effort": null,
+-       "model": null,
++       "model": "",
+        "threadId": "thr_v3_child_finished",
+      },
+      {
+        "effort": null,
+-       "model": null,
++       "model": "",
+        "threadId": "thr_v3_parent_one",
+      },
+      {
+        "effort": null,
+-       "model": null,
++       "model": "",
+        "threadId": "thr_v3_child_local",
+      },
+      {
+        "effort": null,
+-       "model": null,
++       "model": "",
+        "threadId": "thr_v3_starting",
+      },
+      {
+        "effort": null,
+-       "model": null,
++       "model": "",
+        "threadId": "thr_v3_finished_today",
+      },
+      {
+        "effort": null,
+-       "model": null,
++       "model": "",
+        "threadId": "thr_v3_finished_yesterday",
+      },
+      {
+        "effort": null,
+-       "model": null,
++       "model": "",
+        "threadId": "thr_v3_failed",
+      },
+      {
+        "effort": null,
+-       "model": null,
++       "model": "",
+        "threadId": "thr_v3_active_waiting",
+      },
+      {
+        "effort": null,
+-       "model": null,
++       "model": "",
+        "threadId": "thr_v3_pinned_idle",
+      },
+    ],
+-   "source": "none",
++   "source": "host",
+  }
+
+ ❯ src/card-meta.test.ts:74:56
+     72| describe("cardModels while no host field is adopted", () => {
+     73|   it("returns source none and nulls, in input order", () => {
+     74|     expect(cardModelsNone(v3Threads.map((t) => t.id))).toEqual(v3CardM…
+       |                                                        ^
+     75|   });
+     76| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[26/33]⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > cardModels RPC > returns source none with one null item per ID, in input order, unknown IDs included
+Error: plugin "wizbar" has no rpc method "cardModels"
+ ❯ throwRpcError node_modules/@get-bb/plugin-sdk/dist/testing/index.js:2928:18
+ ❯ Object.callRpc node_modules/@get-bb/plugin-sdk/dist/testing/index.js:3883:16
+ ❯ src/server.test.ts:358:48
+    356|   it("returns source none with one null item per ID, in input order, u…
+    357|     const host = setup();
+    358|     const result = await host.harness.behavior.callRpc("cardModels", {…
+       |                                                ^
+    359|     expect(result).toEqual({ source: "none", items: [
+    360|       { threadId: "example-b", model: null, effort: null },
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[27/33]⎯
+
+ FAIL  |bb-plugin-wizbar| src/server.test.ts > cardModels RPC > accepts exactly 100 IDs
+Error: plugin "wizbar" has no rpc method "cardModels"
+ ❯ throwRpcError node_modules/@get-bb/plugin-sdk/dist/testing/index.js:2928:18
+ ❯ Object.callRpc node_modules/@get-bb/plugin-sdk/dist/testing/index.js:3883:16
+ ❯ src/server.test.ts:369:48
+    367|     const host = setup();
+    368|     const threadIds = Array.from({ length: 100 }, (_, i) => `example-$…
+    369|     const result = await host.harness.behavior.callRpc("cardModels", {…
+       |                                                ^
+    370|     expect(result.items).toHaveLength(100);
+    371|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[28/33]⎯
+
+
+ Test Files  3 failed (3)
+      Tests  33 failed | 240 passed (273)
+   Start at  10:41:47
+   Duration  12.15s (transform 1.93s, setup 0ms, import 2.35s, tests 13.03s, environment 492ms)
+

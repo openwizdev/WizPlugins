@@ -249,3 +249,111 @@ describe("Muted machine markers at the registered app boundary", () => {
     });
   }
 });
+
+// WZ18 (#40): the card's third line. Synthetic rows; expected text from the
+// sidebar v3 contract's chip table, not from the code under test.
+describe("WZ18 card metadata at the registered app boundary", () => {
+  const PR_URL = "https://github.com/example/sample-repo/pull/1088";
+  function pull(number: number) {
+    return {
+      experimental_autoMerge: false, experimental_inMergeQueue: null,
+      experimental_checks: { state: "passing" as const }, experimental_review: { state: "none" as const },
+      experimental_mergeability: { state: "mergeable" as const },
+      number, title: `Sample pull request ${number}`,
+      url: `https://github.com/example/sample-repo/pull/${number}`, state: "open" as const, attention: "none" as const,
+    };
+  }
+  const child = (n: number, parentThreadId = "thr_synsample") => thread({
+    id: `thr_synchild${n}`, title: `Child ${n}`, displayTitle: `Child ${n}`, parentThreadId,
+  });
+  type Models = (input: { threadIds: string[] }) => unknown;
+  const hostModels: Models = ({ threadIds }) => ({
+    source: "host", items: threadIds.map((threadId) => ({ threadId, model: "Opus 5.5", effort: "medium" })),
+  });
+  const noModels: Models = ({ threadIds }) => ({
+    source: "none", items: threadIds.map((threadId) => ({ threadId, model: null, effort: null })),
+  });
+  function renderMeta(threads: PluginSidebarThread[], {
+    cardModels = noModels, pullRequests = {},
+  }: { cardModels?: Models | null; pullRequests?: Record<string, ReturnType<typeof pull>> } = {}) {
+    return renderSlot(inbox, {
+      activeThreadId: null, activeProjectId: null, isCompactViewport: false,
+      onNavigate: vi.fn(), searchQuery: "",
+    }, {
+      sidebarThreads: { status: "ready", threads, projects },
+      sidebarPullRequests: pullRequests,
+      rpc: { listLifecycle: () => ({ rows: [] }), ...(cardModels ? { cardModels } : {}) } as never,
+    });
+  }
+  const card = (name = "Review parser") => screen.getByRole("link", { name }).closest("li")!;
+
+  it("shows model and effort, the issue → PR link and the child count", async () => {
+    const parent = thread({ environment: environment("git-worktree", "room/1042-refine-command-palette-a1b2") });
+    renderMeta([parent, child(1), child(2), child(3)], {
+      cardModels: hostModels, pullRequests: { thr_synsample: pull(1088) },
+    });
+    expect(await within(card()).findByText("Opus 5.5 · Medium")).toBeDefined();
+    const link = within(card()).getByRole("link", { name: "#1042 → PR #1088" });
+    expect(link.getAttribute("href")).toBe(PR_URL);
+    expect(within(card()).getByText("3 children")).toBeDefined();
+  });
+
+  it.each([
+    { name: "zero", children: 0, label: null },
+    { name: "one", children: 1, label: "1 child" },
+    { name: "two", children: 2, label: "2 children" },
+  ])("child count: $name", async ({ children, label }) => {
+    renderMeta([thread(), ...Array.from({ length: children }, (_, i) => child(i + 1)),
+      child(9, "thr_synother")]);
+    const line = card();
+    if (label) expect(await within(line).findByText(label)).toBeDefined();
+    else expect(within(line).queryByText(/child/)).toBeNull();
+  });
+
+  it("opens the pull request without an issue when the branch does not parse", () => {
+    renderMeta([thread({ environment: environment("git-worktree", "feature/polish-empty-states") })], {
+      pullRequests: { thr_synsample: pull(1046) },
+    });
+    const link = within(card()).getByRole("link", { name: "PR #1046" });
+    expect(link.getAttribute("href")).toBe("https://github.com/example/sample-repo/pull/1046");
+  });
+
+  it.each([
+    { branch: "room/1043-choose-cache-strategy-c3d4", text: "#1043" },
+    { branch: "room/7-x", text: "#7" },
+  ])("shows a parsed issue $text as plain text with no pull request", ({ branch, text }) => {
+    renderMeta([thread({ environment: environment("git-worktree", branch) })]);
+    expect(within(card()).getByText(text)).toBeDefined();
+    expect(within(card()).queryByRole("link", { name: /#/ })).toBeNull();
+  });
+
+  it.each(["main", "room/012-leading-zero", "room/42", "origin/room/45-not-at-start", null])(
+    "shows no link chip for branch %s and no pull request", (branch) => {
+      renderMeta([thread({ environment: environment("git-worktree", branch) })]);
+      expect(within(card()).queryByText(/#/)).toBeNull();
+      expect(within(card()).queryByRole("link", { name: /#/ })).toBeNull();
+    });
+
+  it.each([
+    { name: "source none", cardModels: noModels },
+    { name: "a failing RPC", cardModels: () => { throw new Error("Sample failure."); } },
+    { name: "no RPC handler", cardModels: null },
+    { name: "effort without a model", cardModels: (({ threadIds }) => ({
+      source: "host", items: threadIds.map((threadId) => ({ threadId, model: null, effort: "high" })),
+    })) as Models },
+  ])("omits the model chip for $name, with no placeholder", async ({ cardModels }) => {
+    renderMeta([thread({ environment: environment("git-worktree", "room/1043-x") }), child(1)], { cardModels });
+    const line = card();
+    expect(await within(line).findByText("1 child")).toBeDefined();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(line.textContent).not.toMatch(/·|Opus|High|Unknown|model/i);
+  });
+
+  it("shows the branch only on hover, never on the card face", () => {
+    renderMeta([thread({ environment: environment("git-worktree", "room/1042-refine-command-palette-a1b2") })]);
+    const face = within(card()).getByRole("group", { name: "Thread details" });
+    expect(face.textContent).not.toContain("room/1042-refine-command-palette-a1b2");
+    const branch = screen.getByText("room/1042-refine-command-palette-a1b2");
+    expect(branch.className.split(/\s+/)).toEqual(expect.arrayContaining(["hidden", "group-hover/card:block"]));
+  });
+});
