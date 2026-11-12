@@ -1,0 +1,8 @@
+Implementation head: f32872174a34b7a73eb6c962ae887e40bff72883
+Command from wizbar/: npm run typecheck
+
+> bb-plugin-wizbar@0.1.0 typecheck
+> tsc --noEmit
+
+
+Exit: 0
