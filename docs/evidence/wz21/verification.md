@@ -17,6 +17,13 @@ Ticket #42, against the merged contract [`wizbar/contracts/sidebar-v3.v1.md`](..
 - **R3:** Alt+Up pins a focused row from an expanded Snoozed, Settled or Muted shelf, placing it at the bottom of Pinned. Proof: rendered "R3 …" cases for all three shelves.
 - **R4:** a row the host reports pinned is drawn in Pinned even with a stored settle or snooze; the stored row is kept, so after an unpin it returns to its shelf. Proof: rendered "R4 …" cases.
 
+## Review round 2 (R1 and R5 on `4279601`)
+
+`review2-red.log` (commit `ea553ae`, before the fixes): 2 failures.
+
+- **R1:** each realtime connection change starts a new epoch. The post-call read is taken only while connected, and a read from an earlier epoch is dropped (a fresh one is started), so reconnect-time cached rows can never agree with an older read. Proof: rendered "R1 never reconciles against a read taken before a reconnect" (the host order changes during the disconnect; the second move stays blocked).
+- **R5:** the whole reconciliation attempt, read included, ends after 5 s; a late answer is ignored, and each retry attempt is bounded, so the next retry can run. Proof: rendered "R5 bounds a never-settling read" (unknown message and unavailable shelves after 5 s).
+
 ## Claims and their proof
 
 | Claim (acceptance criterion) | Proof |
@@ -33,7 +40,7 @@ Ticket #42, against the merged contract [`wizbar/contracts/sidebar-v3.v1.md`](..
 
 ## Checks at the hand-back commit
 
-From `wizbar/`: `npm ci`; `npm run typecheck` (`typecheck.log`, clean); `npm test -- --maxWorkers=2` (`full-suite.log`: 17 files, 542 tests passed).
+From `wizbar/`: `npm ci`; `npm run typecheck` (`typecheck.log`, clean); `npm test -- --maxWorkers=2` (`full-suite.log`: 17 files, 544 tests passed).
 
 ## Rendered drag (synthetic)
 

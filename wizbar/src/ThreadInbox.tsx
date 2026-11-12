@@ -453,25 +453,61 @@ function useDragPins(
   const inFlight = useRef(false);
   const pinnedIds = pinned.map((thread) => thread.id);
 
+  // Every connection change starts a new epoch: a read taken in an earlier
+  // epoch may predate host changes the restored connection has not drawn yet.
+  const epoch = useRef(0);
+  const seenConnection = useRef(connection);
   useEffect(() => {
+    if (seenConnection.current !== connection) {
+      seenConnection.current = connection;
+      epoch.current++;
+    }
     for (const check of [...waiters.current]) check();
   }, [status, connection, threads]);
 
   // The rows count as re-read only when a fresh server read of the pinned
-  // order agrees with them while the realtime connection is up.
-  const reconcile = async (): Promise<boolean> => {
-    let order: string[];
-    try { order = (await rpc.call("pinnedOrder", {})).order; } catch { return false; }
-    const agrees = () => latest.current.status === "ready" && latest.current.connection === "connected" &&
-      isReconciled(order, latest.current.threads);
-    if (agrees()) return true;
-    return new Promise<boolean>((resolve) => {
-      const check = () => { if (agrees()) done(true); };
-      const timer = setTimeout(() => done(false), RECONCILE_MS);
-      const done = (value: boolean) => { clearTimeout(timer); waiters.current.delete(check); resolve(value); };
-      waiters.current.add(check);
-    });
-  };
+  // order, taken on the current live connection, agrees with them. The whole
+  // attempt, the read included, ends after RECONCILE_MS; late answers are ignored.
+  const reconcile = () => new Promise<boolean>((resolve) => {
+    let settled = false;
+    let readingEpoch: number | null = null;
+    let snapshot: { order: string[]; epoch: number } | null = null;
+    const finish = (value: boolean) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(deadline);
+      waiters.current.delete(check);
+      resolve(value);
+    };
+    const read = async () => {
+      const at = epoch.current;
+      readingEpoch = at;
+      try {
+        const { order } = await rpc.call("pinnedOrder", {});
+        if (at === epoch.current) snapshot = { order, epoch: at };
+      } catch {
+        finish(false);
+      } finally {
+        if (readingEpoch === at) readingEpoch = null;
+      }
+      check();
+    };
+    const check = () => {
+      if (settled) return;
+      const now = latest.current;
+      if (snapshot && snapshot.epoch !== epoch.current) snapshot = null;
+      if (now.connection !== "connected") return;
+      if (!snapshot) {
+        // A read still out from an earlier epoch cannot count; start a fresh one.
+        if (readingEpoch !== epoch.current) void read();
+        return;
+      }
+      if (now.status === "ready" && isReconciled(snapshot.order, now.threads)) finish(true);
+    };
+    const deadline = setTimeout(() => finish(false), RECONCILE_MS);
+    waiters.current.add(check);
+    check();
+  });
 
   // While the result is unknown the shelves show the unavailable state; keep
   // trying to reconcile until the rows return.
