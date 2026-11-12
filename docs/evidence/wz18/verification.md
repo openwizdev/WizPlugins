@@ -9,7 +9,8 @@ Built against the [sidebar v3 contract](../../../wizbar/contracts/sidebar-v3.v1.
 ## Green
 
 - `affected.log`: `card-meta`, `ThreadCard`, `server` and `ThreadInbox` tests. All new tests pass.
-- `full-suite.log`: `npm test -- --maxWorkers=2`, 517 tests in 17 files pass.
+- `full-suite.log`: `npm test -- --maxWorkers=2`, 519 tests in 17 files pass.
+- Review R1 (PR #48): `r1-red.log` shows the card link had no accessible description of the location (2 failures), committed before the fix. Now the card link's `aria-describedby` names the location overlay, and keyboard focus inside the card reveals it like hovering (`group-focus-within/card:block`).
 - Supporting edit, by the [orchestrator ruling on #40](https://github.com/openwizdev/wizplugins/issues/40#issuecomment-6822185632): in `wizbar/src/ThreadInbox.test.tsx`, exactly the three accessible-name strings `#412` → `PR #412`, the contract's PR chip text (acceptance criterion: the issue/PR link; supports `ThreadCard.tsx`). Href, title and attention-colour assertions there are unchanged. Nothing else in that file changed.
 - `typecheck.log`: `npm run typecheck` passes.
 
@@ -22,10 +23,13 @@ From the repository root: `node docs/evidence/wz18/serve.mjs`, then `browser-har
 | `screenshots/320-none.png`, `390-none.png` | What ships: `cardModels` returns `source: "none"`, so no model chip; links and child counts only |
 | `screenshots/320-host.png`, `390-host.png` | The same rows with made-up model/effort served through `cardModels` (`source: "host"`), as a future host field would; one long synthetic model name tests wrapping |
 | `screenshots/320-hover.png`, `390-hover.png` | Hovering the first card shows its branch as an overlay; no other card shows one |
+| `screenshots/320-focus.png`, `390-focus.png` | Keyboard focus on the first card's link, pointer away: the same overlay shows (review R1) |
 
-`capture.py` asserts, at each width and state: the first card's chips in order, no chip past its card's edge or with clipped text, no page overflow, and the hover branch visible only on the hovered card. `screenshots/capture.json` holds the measurements.
+`capture.py` asserts, at each width and state: the first card's chips in order, no chip past its card's edge or with clipped text, no page overflow, the hover branch visible only on the hovered or focused card, and the first card's link described by its branch. `screenshots/capture.json` holds the measurements.
 
 Compared with [picture A](../v0.3/targets/a-richer-cards.png): same order (model · effort, issue → PR, child count), chips wrap to a second row at 320 px instead of clipping. Differences, by the plan: no "0 children" chip; Cloud rows have no link, because the observed projection gives them no branch or pull request; no GitHub glyph in the link chip (no such icon is registered, and the icon file is not an owned path).
+
+**Known capture issue (review R2, follow-up #51):** `390-host.png` and `390-hover.png` come out byte-identical and both show the overlay, while `capture.json`, read from the same page, records it hidden in the host state. The cause is not established; read the 390 px host state from `capture.json` and `320-host.png`.
 
 ## Behaviour notes
 

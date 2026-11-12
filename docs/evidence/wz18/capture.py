@@ -13,24 +13,31 @@ try:
     cdp('Emulation.setEmulatedMedia', features=[{'name':'prefers-reduced-motion','value':'reduce'}])
     for width in [320, 390]:
         cdp('Emulation.setDeviceMetricsOverride', width=width, height=844, deviceScaleFactor=2, mobile=False)
-        for state in ['none', 'host', 'hover']:
+        for state in ['none', 'host', 'hover', 'focus']:
             goto_url(base + ('none' if state == 'none' else 'host'))
             wait_for_load()
             for _ in range(50):
                 if js('document.documentElement.dataset.ready') == 'true':
                     break
                 wait(0.1)
-            cdp('Input.dispatchMouseEvent', type='mouseMoved', x=width-2, y=840)
+            cdp('Input.dispatchMouseEvent', type='mouseMoved', x=4, y=4)
             if state == 'hover':
                 box = js('''(() => {const b=[...document.querySelectorAll('li')][0].getBoundingClientRect();
                   return {x:b.x+b.width/2, y:b.y+12};})()''')
                 cdp('Input.dispatchMouseEvent', type='mouseMoved', x=box['x'], y=box['y'])
+            if state == 'focus':
+                # PR #48 R1: keyboard focus on the first card's link, pointer away.
+                js("document.querySelector('li a[data-sidebar-thread-id]').focus()")
+            wait(0.3)
             data = js('''(() => {
               const cards = [...document.querySelectorAll('li')].map(li => {
                 const line = li.querySelector('[role=group][aria-label="Thread details"]');
                 const lb = li.getBoundingClientRect();
                 const chips = [...line.children].filter(c => c.textContent.trim());
                 const hover = [...li.querySelectorAll('span')].find(s => s.className.includes('group-hover/card:block'));
+                const link = li.querySelector('a[data-sidebar-thread-id]');
+                const described = (link.getAttribute('aria-describedby') || '').split(' ').filter(Boolean)
+                  .map(id => document.getElementById(id)?.textContent);
                 return {
                   title: li.querySelector('a').getAttribute('aria-label'),
                   chips: chips.map(c => c.textContent.trim()),
@@ -40,6 +47,7 @@ try:
                   lineRows: new Set(chips.map(c => Math.round(c.getBoundingClientRect().top))).size,
                   hoverText: hover ? hover.textContent : null,
                   hoverVisible: hover ? getComputedStyle(hover).display !== 'none' : false,
+                  described,
                 };
               });
               return {cards, pageOverflow: document.documentElement.scrollWidth > innerWidth};
@@ -55,15 +63,16 @@ try:
                 assert card['clipped'] == [], card
                 assert not any('·' in chip for chip in card['chips']) or state != 'none', card
             visible = [c['title'] for c in data['cards'] if c['hoverVisible']]
-            assert visible == (['Sample refine command palette'] if state == 'hover' else []), visible
-            if state == 'hover':
+            assert visible == (['Sample refine command palette'] if state in ['hover', 'focus'] else []), visible
+            assert first['described'] == ['room/1042-refine-command-palette-a1b2'], first
+            if state in ['hover', 'focus']:
                 assert first['hoverText'] == 'room/1042-refine-command-palette-a1b2', first
             shot = cdp('Page.captureScreenshot', format='png', captureBeyondViewport=False)
             filename = f'{width}-{state}.png'
             (out / filename).write_bytes(base64.b64decode(shot['data']))
             records.append({'width': width, 'state': state, 'screenshot': filename, **data})
     (out / 'capture.json').write_text(json.dumps(records, indent=2, ensure_ascii=False) + '\n')
-    print('PASS: 6 synthetic captures at 320 and 390 px; chips wrap without clipping; branch on hover only.')
+    print('PASS: 8 synthetic captures at 320 and 390 px; chips wrap without clipping; branch on hover or keyboard focus only, and described to screen readers.')
 finally:
     cdp('Emulation.clearDeviceMetricsOverride')
     close_tab()

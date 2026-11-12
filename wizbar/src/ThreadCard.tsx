@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import {
   useRpc,
   experimental_useSidebarThreads as useSidebarThreads,
@@ -62,6 +62,7 @@ export function ThreadCard({
   const children = childCountLabel(meta.childCount);
   // The branch, or the machine when there is no worktree, on hover only.
   const location = meta.branch ?? thread.host?.name ?? null;
+  const locationId = useId();
 
   return (
     <RowContextMenu thread={thread}>
@@ -81,6 +82,7 @@ export function ThreadCard({
             data-sidebar-thread-id={thread.id}
             href="#"
             aria-label={threadDisplayTitle(thread)}
+            aria-describedby={location ? locationId : undefined}
             {...splitProps}
             onClick={(event) => {
               event.preventDefault();
@@ -185,9 +187,11 @@ export function ThreadCard({
           </div>
           {location ? (
             // Overlays rather than adds a line, so hovering never moves the list.
+            // Keyboard focus reveals it too, and the card link describes it.
             <span
+              id={locationId}
               className={cn(
-                "pointer-events-none absolute left-2.5 right-2.5 top-full z-10 -mt-1 hidden truncate rounded border border-border bg-popover px-1.5 py-0.5 text-2xs text-popover-foreground shadow-sm group-hover/card:block",
+                "pointer-events-none absolute left-2.5 right-2.5 top-full z-10 -mt-1 hidden truncate rounded border border-border bg-popover px-1.5 py-0.5 text-2xs text-popover-foreground shadow-sm group-hover/card:block group-focus-within/card:block",
                 meta.branch && "font-mono",
               )}
             >
