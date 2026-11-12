@@ -1,8 +1,8 @@
  RUN  v4.1.10 <repo>/wizbar
 
 
- Test Files  20 passed (20)
-      Tests  687 passed (687)
-   Start at  19:15:29
-   Duration  12.61s (transform 379ms, setup 0ms, import 2.98s, tests 15.86s, environment 3.78s)
+ Test Files  22 passed (22)
+      Tests  730 passed (730)
+   Start at  19:17:03
+   Duration  14.78s (transform 750ms, setup 0ms, import 3.68s, tests 18.92s, environment 4.30s)
 

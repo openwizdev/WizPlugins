@@ -45,7 +45,7 @@ Deliberate differences from picture B:
 
 ## Checks at the hand-back commit
 
-From `wizbar/`: `npm ci`, `npm run typecheck` (`typecheck.log`, clean) and `npm test -- --maxWorkers=2` (`full-suite.log`: 20 files, 687 tests passed).
+From `wizbar/`: `npm ci`, `npm run typecheck` (`typecheck.log`, clean) and `npm test -- --maxWorkers=2` (`full-suite.log`: 22 files, 730 tests passed, after merging main with WZ20 stats; the `stats` and `children` commands sit side by side in the shared `command.ts` and `server.ts`).
 
 ## Helpers
 
