@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   experimental_useSidebarThreadActions as useSidebarThreadActions,
   experimental_useSidebarThreads as useSidebarThreads,
+  useRpc,
   type PluginSidebarThread,
   type PluginThreadListProps,
 } from "@get-bb/plugin-sdk/app";
@@ -21,12 +22,24 @@ import { useFeatureSourceStatus } from "./SettingsPage";
 import { SlimRow } from "./SlimRow";
 import { useLifecycle } from "./useLifecycle";
 import { TRAILING_GLYPH_BOX_CLASS } from "./StatusSlot";
+import type { t3sidebarRpcContract } from "./server";
+import type { MovePositionV3 } from "./v3-types";
+import {
+  dragPinOutcome,
+  dropAction,
+  keyboardAction,
+  stepFailureMessage,
+  type DragAction,
+  type DropTarget,
+  type HostStep,
+} from "./drag";
 import {
   filterByProject,
   hideChildrenOfVisibleParents,
   partitionPinned,
   searchThreadsByTitle,
   sortByCreatedAtDescending,
+  sortPinned,
   threadDisplayTitle,
   visibleInboxThreads,
 } from "./inbox";
@@ -96,7 +109,8 @@ export function ThreadInbox({
     }
     const split = partitionPinned(active);
     return {
-      pinned: sortByCreatedAtDescending(split.pinned),
+      // The host's pinned order, so a drag's reorder shows as the host stores it.
+      pinned: sortPinned(split.pinned),
       inbox: sortByCreatedAtDescending(split.inbox),
       // Soonest wake first: "what comes back next" is the shelf's question.
       snoozed: [...onSnoozeShelf].sort(
@@ -107,6 +121,8 @@ export function ThreadInbox({
       muted: sortByCreatedAtDescending(onMutedShelf),
     };
   }, [lifecycle, scope, searchQuery, threads]);
+
+  const drag = useDragPins(status, pinned, inbox);
 
   const scopeLabel =
     scope === ALL_PROJECTS
@@ -144,7 +160,14 @@ export function ThreadInbox({
         </Select>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2">
+      <div className="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2" ref={drag.containerRef} {...drag.handlers}>
+        <p id="wizbar-drag-hint" className="sr-only">
+          Drag a card into Pinned to pin it, out to unpin it, or inside Pinned to reorder it.
+          With a card focused, Alt+Up and Alt+Down do the same.
+        </p>
+        {drag.message ? (
+          <p role="alert" className="px-2.5 py-1 text-xs text-destructive-text">{drag.message}</p>
+        ) : null}
         {status === "loading" ? null : status === "error" ? (
           <p
             role="status"
@@ -162,9 +185,15 @@ export function ThreadInbox({
           </p>
         ) : (
           <>
-            {pinned.length > 0 ? (
-              <Shelf label="Pinned">
-                {pinned.map((thread) => (
+            {pinned.length > 0 || drag.draggingId !== null ? (
+              <Shelf label="Pinned" pinnedDropZone>
+                {pinned.length === 0 ? (
+                  <li className="list-none rounded-md border border-dashed border-sidebar-border px-2.5 py-2 text-xs text-muted-foreground">
+                    Drop here to pin
+                  </li>
+                ) : null}
+                {pinned.flatMap((thread, index) => [
+                  drag.markerBefore(thread.id, index) ? <DropMarker key={`marker-${thread.id}`} /> : null,
                   <ThreadCard
                     key={thread.id}
                     thread={thread}
@@ -175,12 +204,13 @@ export function ThreadInbox({
                     onSettle={() => lifecycle.settle(thread.id)}
                     onSnooze={(until) => lifecycle.snooze(thread.id, until)}
                     now={now}
-                  />
-                ))}
+                  />,
+                ])}
+                {drag.markerAtEnd() ? <DropMarker /> : null}
               </Shelf>
             ) : null}
             {inbox.length > 0 ? (
-              <Shelf label={pinned.length > 0 ? "Inbox" : null}>
+              <Shelf label={pinned.length > 0 || drag.draggingId !== null ? "Inbox" : null}>
                 {inbox.map((thread) => (
                   <ThreadCard
                     key={thread.id}
@@ -353,14 +383,17 @@ function MutedRow({ thread, isActive, onNavigate, onUnmute }: {
 function Shelf({
   label,
   children,
+  pinnedDropZone = false,
 }: {
   label: string | null;
   children: React.ReactNode;
+  /** Marks Pinned as the drop zone that pins, places and reorders (WZ21). */
+  pinnedDropZone?: boolean;
 }) {
   return (
     // A named section is exposed as a landmark region; an unnamed one is not,
     // which is exactly right for the single unlabelled inbox list.
-    <section {...(label ? { "aria-label": label } : {})}>
+    <section {...(label ? { "aria-label": label } : {})} {...(pinnedDropZone ? { "data-wizbar-pinned": "" } : {})}>
       {label ? (
         <h2 className={cn("flex items-center gap-2 px-2.5 pb-1 pt-3")}>
           <span className="text-2xs font-medium text-muted-foreground/70">
@@ -372,4 +405,144 @@ function Shelf({
       <ul className="flex flex-col gap-px">{children}</ul>
     </section>
   );
+}
+
+/** Where a dragged card would land inside Pinned; purely visual. */
+function DropMarker() {
+  return <li aria-hidden="true" className="mx-2.5 h-0.5 list-none rounded-full bg-sidebar-ring" />;
+}
+
+const threadIdAt = (target: EventTarget | null): string | null =>
+  target instanceof Element
+    ? (target.closest("[data-sidebar-thread-id]")?.getAttribute("data-sidebar-thread-id") ?? null)
+    : null;
+
+/**
+ * WZ21 drag and keyboard moves. Every effect is one of WizBar's server
+ * operations (pin, unpin, move), which call the host's own pins. Nothing is
+ * moved optimistically: the shelves always draw the host's rows, so a failed
+ * call leaves every card where the host has it and only adds a message.
+ */
+function useDragPins(
+  status: "error" | "loading" | "ready",
+  pinned: readonly PluginSidebarThread[],
+  inbox: readonly PluginSidebarThread[],
+) {
+  const rpc = useRpc<typeof t3sidebarRpcContract>();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const statusRef = useRef(status);
+  statusRef.current = status;
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [dropAt, setDropAt] = useState<MovePositionV3 | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [focusId, setFocusId] = useState<string | null>(null);
+  const pinnedIds = pinned.map((thread) => thread.id);
+  const inboxIds = new Set(inbox.map((thread) => thread.id));
+
+  // A keyboard move can re-mount the card on another shelf; give focus back
+  // to it there, but never take focus from wherever the user has moved it.
+  useEffect(() => {
+    if (focusId === null) return;
+    const active = document.activeElement;
+    if (active && active !== document.body && threadIdAt(active) === focusId) return;
+    if (active && active !== document.body) return;
+    const anchors = containerRef.current?.querySelectorAll<HTMLElement>("[data-sidebar-thread-id]") ?? [];
+    for (const anchor of anchors) {
+      if (anchor.getAttribute("data-sidebar-thread-id") === focusId) anchor.focus();
+    }
+  }, [focusId, pinned, inbox]);
+
+  const errorText = (error: unknown) =>
+    error instanceof Error && error.message.trim() ? error.message : "Unknown error.";
+
+  const run = async (threadId: string, action: DragAction) => {
+    if (action.kind === "none") return;
+    setMessage(null);
+    if (action.kind === "pin") {
+      // Two host calls with no atomic pair: never undo a step, just report.
+      let pin: HostStep = { ok: true };
+      let reorder: HostStep | null = null;
+      try { await rpc.call("pin", { threadId }); } catch (error) { pin = { ok: false, error: errorText(error) }; }
+      if (pin.ok) {
+        try {
+          await rpc.call("move", { threadId, position: action.position });
+          reorder = { ok: true };
+        } catch (error) { reorder = { ok: false, error: errorText(error) }; }
+      }
+      const outcome = dragPinOutcome(pin, reorder, statusRef.current === "ready");
+      setMessage(outcome.kind === "pinned-placed" ? null : outcome.message);
+      return;
+    }
+    try {
+      if (action.kind === "unpin") await rpc.call("unpin", { threadId });
+      else await rpc.call("move", { threadId, position: action.position });
+    } catch (error) {
+      setMessage(stepFailureMessage(action.kind, errorText(error)));
+    }
+  };
+
+  const targetOf = (event: React.DragEvent): DropTarget => {
+    const element = event.target instanceof Element ? event.target : null;
+    if (!element?.closest("[data-wizbar-pinned]")) return { inPinned: false };
+    const row = element.closest("li");
+    const overId = row?.querySelector("[data-sidebar-thread-id]")?.getAttribute("data-sidebar-thread-id") ?? null;
+    if (row && overId !== null && pinnedIds.includes(overId)) {
+      const box = row.getBoundingClientRect();
+      return { inPinned: true, position: event.clientY > box.top + box.height / 2 ? { after: overId } : { before: overId } };
+    }
+    const last = pinnedIds[pinnedIds.length - 1];
+    return { inPinned: true, position: last === undefined ? { last: true } : { after: last } };
+  };
+
+  const endDrag = () => { setDraggingId(null); setDropAt(null); };
+
+  const handlers = {
+    onDragStart(event: React.DragEvent) {
+      const id = threadIdAt(event.target);
+      if (id === null) return;
+      if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
+      setMessage(null);
+      setFocusId(null);
+      setDraggingId(id);
+    },
+    onDragOver(event: React.DragEvent) {
+      if (draggingId === null) return;
+      event.preventDefault();
+      const target = targetOf(event);
+      const position = target.inPinned ? target.position : null;
+      if (JSON.stringify(position) !== JSON.stringify(dropAt)) setDropAt(position);
+    },
+    onDrop(event: React.DragEvent) {
+      if (draggingId === null) return;
+      event.preventDefault();
+      const id = draggingId;
+      const action = dropAction(id, pinnedIds.includes(id), targetOf(event));
+      endDrag();
+      void run(id, action);
+    },
+    onDragEnd: endDrag,
+    onKeyDown(event: React.KeyboardEvent) {
+      if (!event.altKey || event.shiftKey || event.ctrlKey || event.metaKey) return;
+      const id = threadIdAt(event.target);
+      if (id === null || (!pinnedIds.includes(id) && !inboxIds.has(id))) return;
+      const action = keyboardAction(event.key, id, pinnedIds);
+      if (action.kind === "none") return;
+      event.preventDefault();
+      setFocusId(id);
+      void run(id, action);
+    },
+  };
+
+  // The marker shows the landing place; a drop on the dragged card itself
+  // changes nothing, so it shows none.
+  const markerBefore = (id: string, index: number) => {
+    if (dropAt === null || draggingId === id) return false;
+    if ("before" in dropAt) return dropAt.before === id && dropAt.before !== draggingId;
+    if ("after" in dropAt) return index > 0 && dropAt.after === pinnedIds[index - 1] && dropAt.after !== draggingId;
+    return "first" in dropAt && index === 0;
+  };
+  const markerAtEnd = () => dropAt !== null && pinnedIds.length > 0 && draggingId !== pinnedIds[pinnedIds.length - 1] &&
+    ("after" in dropAt ? dropAt.after === pinnedIds[pinnedIds.length - 1] : "last" in dropAt);
+
+  return { containerRef, handlers, draggingId, message, markerBefore, markerAtEnd };
 }

@@ -437,14 +437,14 @@ describe("WZ21 pin, unpin and move", () => {
   });
 
   it.each([
-    [["--before", "thr_c"], ["thr_b", "thr_a", "thr_c"], "thr_b", "thr_c", "1 of 3"],
-    [["--after", "thr_c"], ["thr_b", "thr_c", "thr_a"], "thr_c", null, "1 of 3"],
-    [["--first"], ["thr_a", "thr_b", "thr_c"], null, "thr_b", "1 of 3"],
-    [["--last"], ["thr_b", "thr_c", "thr_a"], "thr_c", null, "1 of 3"],
+    [["--before", "thr_d"], ["thr_b", "thr_c", "thr_a", "thr_d"], "thr_c", "thr_d"],
+    [["--after", "thr_c"], ["thr_b", "thr_c", "thr_a", "thr_d"], "thr_c", "thr_d"],
+    [["--first"], ["thr_a", "thr_b", "thr_c", "thr_d"], null, "thr_b"],
+    [["--last"], ["thr_b", "thr_c", "thr_d", "thr_a"], "thr_d", null],
   ])("moves with %j through reorderPinned's neighbours", async (flags, expected, previous, next) => {
-    // Host order before: keyed a0 (thr_b), keyed a1 (thr_c), then unkeyed thr_a.
-    const s = pinSetup([pinRow("thr_a", 7), pinRow("thr_b", 5, "a0"), pinRow("thr_c", 6, "a1"), pinRow("thr_u")]);
-    expect(s.order()).toEqual(["thr_b", "thr_c", "thr_a"]);
+    // Host order before: keyed thr_b, thr_a, thr_c, then unkeyed thr_d.
+    const s = pinSetup([pinRow("thr_a", 7, "a1"), pinRow("thr_b", 5, "a0"), pinRow("thr_c", 6, "a2"), pinRow("thr_d", 9), pinRow("thr_u")]);
+    expect(s.order()).toEqual(["thr_b", "thr_a", "thr_c", "thr_d"]);
     const result = await s.run(["move", "thr_a", ...flags, "--json"]);
     expect(result.exitCode).toBe(0);
     expect(JSON.parse(result.stdout)).toEqual({ results: [

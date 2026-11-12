@@ -2,6 +2,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
   cleanup,
+  createEvent,
   fireEvent,
   screen,
   waitFor,
@@ -816,10 +817,13 @@ describe("WZ21: drag to pin, unpin and reorder", () => {
     within(region).getAllByRole("link").map((link) => link.getAttribute("aria-label"));
   const inboxTitles = () => screen.getAllByRole("link").map((l) => l.getAttribute("aria-label"))
     .filter((t) => t!.startsWith("Inbox"));
+  // jsdom has no DragEvent, so pointer coordinates are set on the event itself.
+  // Rows measure 0 px there: clientY 0 is the upper half, 10 the lower half.
+  const at = (event: Event, clientY: number) => Object.defineProperty(event, "clientY", { value: clientY });
   const drag = (from: HTMLElement, to: HTMLElement, clientY = 0) => {
     fireEvent.dragStart(from, { dataTransfer: { setData() {}, effectAllowed: "all" } });
-    fireEvent.dragOver(to, { clientY });
-    fireEvent.drop(to, { clientY });
+    fireEvent(to, at(createEvent.dragOver(to), clientY));
+    fireEvent(to, at(createEvent.drop(to), clientY));
     fireEvent.dragEnd(from);
   };
   const pinCalls = (rendered: { rpcCalls: { method: string; input: unknown }[] }) =>
@@ -905,6 +909,19 @@ describe("WZ21: drag to pin, unpin and reorder", () => {
     fireEvent.keyDown(card(title), { key });
     fireEvent.keyDown(card(title), { key, altKey: true });
     await waitFor(() => expect(pinCalls(rendered)).toEqual(expected));
+  });
+
+  it("makes one move per action: a repeated key while a move is in flight calls nothing more", async () => {
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => { release = resolve; });
+    const rendered = renderDrag(rows(), { move: async () => { await held; return { ok: true }; } });
+    fireEvent.keyDown(card("Pinned second"), { key: "ArrowUp", altKey: true });
+    fireEvent.keyDown(card("Pinned second"), { key: "ArrowUp", altKey: true, repeat: true });
+    drag(card("Inbox older"), row("Pinned first"));
+    await waitFor(() => expect(pinCalls(rendered)).toHaveLength(1));
+    release();
+    await held;
+    expect(pinCalls(rendered)).toEqual([["move", { threadId: "pin_b", position: { before: "pin_a" } }]]);
   });
 
   it("keeps a pinned card out of mute, settle and snooze rules it already had", () => {
