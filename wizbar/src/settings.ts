@@ -19,7 +19,10 @@ export const wizbarSettingDescriptors = {
   },
 } satisfies PluginSettingDescriptors;
 
-export type WizBarSettings = { footerCountEnabled: boolean; machineIconsEnabled: boolean };
+export type WizBarSettings = {
+  footerCountEnabled: boolean; machineIconsEnabled: boolean;
+  childrenChipEnabled: boolean; parentChipEnabled: boolean;
+};
 export type SettingValues = Record<string, unknown> | undefined;
 export type Feature = "footer" | "icons";
 export type SourceStatus = "live" | "unavailable" | "unverified";
@@ -31,7 +34,10 @@ export function readWizBarSettings(values: SettingValues): WizBarSettings {
     const value = values?.[key];
     return value === undefined ? wizbarSettingDescriptors[key].default : value === true;
   };
-  return { footerCountEnabled: read("footerCountEnabled"), machineIconsEnabled: read("machineIconsEnabled") };
+  return {
+    footerCountEnabled: read("footerCountEnabled"), machineIconsEnabled: read("machineIconsEnabled"),
+    childrenChipEnabled: read("childrenChipEnabled"), parentChipEnabled: read("parentChipEnabled"),
+  };
 }
 
 const defaults: SourceStatuses = { footer: "unavailable", icons: "unverified" };
