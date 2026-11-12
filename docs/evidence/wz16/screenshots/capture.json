@@ -1,0 +1,376 @@
+[
+  {
+    "device": "desktop",
+    "viewport": {
+      "width": 1280,
+      "height": 800
+    },
+    "state": "positive",
+    "screenshot": "desktop-positive.png",
+    "ready": "true",
+    "count": "2",
+    "numberCount": 1,
+    "countBox": {
+      "x": 0,
+      "y": 731,
+      "width": 319,
+      "height": 29,
+      "bottom": 760,
+      "right": 319
+    },
+    "scrollBox": {
+      "x": 0,
+      "y": 87,
+      "width": 319,
+      "height": 644,
+      "bottom": 731,
+      "right": 319
+    },
+    "footerBox": {
+      "x": 0,
+      "y": 760,
+      "width": 319,
+      "height": 40,
+      "bottom": 800,
+      "right": 319
+    },
+    "outsideScroll": true,
+    "color": "rgb(241, 243, 245)",
+    "footerLabel": "Running count: see the line at the bottom of the list"
+  },
+  {
+    "device": "desktop",
+    "viewport": {
+      "width": 1280,
+      "height": 800
+    },
+    "state": "hover",
+    "screenshot": "desktop-hover.png",
+    "ready": "true",
+    "count": "2",
+    "numberCount": 1,
+    "countBox": {
+      "x": 0,
+      "y": 731,
+      "width": 319,
+      "height": 29,
+      "bottom": 760,
+      "right": 319
+    },
+    "scrollBox": {
+      "x": 0,
+      "y": 87,
+      "width": 319,
+      "height": 644,
+      "bottom": 731,
+      "right": 319
+    },
+    "footerBox": {
+      "x": 0,
+      "y": 760,
+      "width": 319,
+      "height": 40,
+      "bottom": 800,
+      "right": 319
+    },
+    "outsideScroll": true,
+    "color": "rgb(241, 243, 245)",
+    "footerLabel": "Running count: see the line at the bottom of the list",
+    "tooltip": {
+      "text": "2 running \u00b7 subagents not counted yet \u00b7 some threads may be unseen",
+      "x": 0,
+      "right": 300,
+      "y": 676
+    }
+  },
+  {
+    "device": "desktop",
+    "viewport": {
+      "width": 1280,
+      "height": 800
+    },
+    "state": "zero",
+    "screenshot": "desktop-zero.png",
+    "ready": "true",
+    "count": "0",
+    "numberCount": 1,
+    "countBox": {
+      "x": 0,
+      "y": 731,
+      "width": 319,
+      "height": 29,
+      "bottom": 760,
+      "right": 319
+    },
+    "scrollBox": {
+      "x": 0,
+      "y": 87,
+      "width": 319,
+      "height": 644,
+      "bottom": 731,
+      "right": 319
+    },
+    "footerBox": {
+      "x": 0,
+      "y": 760,
+      "width": 319,
+      "height": 40,
+      "bottom": 800,
+      "right": 319
+    },
+    "outsideScroll": true,
+    "color": "rgb(146, 152, 161)",
+    "footerLabel": "Running count: see the line at the bottom of the list"
+  },
+  {
+    "device": "desktop",
+    "viewport": {
+      "width": 1280,
+      "height": 800
+    },
+    "state": "disabled",
+    "screenshot": "desktop-disabled.png",
+    "ready": "true",
+    "count": null,
+    "numberCount": 0,
+    "countBox": null,
+    "scrollBox": {
+      "x": 0,
+      "y": 87,
+      "width": 319,
+      "height": 673,
+      "bottom": 760,
+      "right": 319
+    },
+    "footerBox": {
+      "x": 0,
+      "y": 760,
+      "width": 319,
+      "height": 40,
+      "bottom": 800,
+      "right": 319
+    },
+    "outsideScroll": null,
+    "color": null,
+    "footerLabel": "Running count: see the line at the bottom of the list"
+  },
+  {
+    "device": "desktop",
+    "viewport": {
+      "width": 1280,
+      "height": 800
+    },
+    "state": "unavailable",
+    "screenshot": "desktop-unavailable.png",
+    "ready": "true",
+    "count": null,
+    "numberCount": 0,
+    "countBox": null,
+    "scrollBox": {
+      "x": 0,
+      "y": 87,
+      "width": 319,
+      "height": 673,
+      "bottom": 760,
+      "right": 319
+    },
+    "footerBox": {
+      "x": 0,
+      "y": 760,
+      "width": 319,
+      "height": 40,
+      "bottom": 800,
+      "right": 319
+    },
+    "outsideScroll": null,
+    "color": null,
+    "footerLabel": "Running count: see the line at the bottom of the list"
+  },
+  {
+    "device": "phone",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "state": "positive",
+    "screenshot": "phone-positive.png",
+    "ready": "true",
+    "count": "2",
+    "numberCount": 1,
+    "countBox": {
+      "x": 0,
+      "y": 775,
+      "width": 390,
+      "height": 29,
+      "bottom": 804,
+      "right": 390
+    },
+    "scrollBox": {
+      "x": 0,
+      "y": 87,
+      "width": 390,
+      "height": 688,
+      "bottom": 775,
+      "right": 390
+    },
+    "footerBox": {
+      "x": 0,
+      "y": 804,
+      "width": 390,
+      "height": 40,
+      "bottom": 844,
+      "right": 390
+    },
+    "outsideScroll": true,
+    "color": "rgb(241, 243, 245)",
+    "footerLabel": "Running count: see the line at the bottom of the list"
+  },
+  {
+    "device": "phone",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "state": "hover",
+    "screenshot": "phone-hover.png",
+    "ready": "true",
+    "count": "2",
+    "numberCount": 1,
+    "countBox": {
+      "x": 0,
+      "y": 775,
+      "width": 390,
+      "height": 29,
+      "bottom": 804,
+      "right": 390
+    },
+    "scrollBox": {
+      "x": 0,
+      "y": 87,
+      "width": 390,
+      "height": 688,
+      "bottom": 775,
+      "right": 390
+    },
+    "footerBox": {
+      "x": 0,
+      "y": 804,
+      "width": 390,
+      "height": 40,
+      "bottom": 844,
+      "right": 390
+    },
+    "outsideScroll": true,
+    "color": "rgb(241, 243, 245)",
+    "footerLabel": "Running count: see the line at the bottom of the list",
+    "tooltip": {
+      "text": "2 running \u00b7 subagents not counted yet \u00b7 some threads may be unseen",
+      "x": 0,
+      "right": 300,
+      "y": 720
+    }
+  },
+  {
+    "device": "phone",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "state": "zero",
+    "screenshot": "phone-zero.png",
+    "ready": "true",
+    "count": "0",
+    "numberCount": 1,
+    "countBox": {
+      "x": 0,
+      "y": 775,
+      "width": 390,
+      "height": 29,
+      "bottom": 804,
+      "right": 390
+    },
+    "scrollBox": {
+      "x": 0,
+      "y": 87,
+      "width": 390,
+      "height": 688,
+      "bottom": 775,
+      "right": 390
+    },
+    "footerBox": {
+      "x": 0,
+      "y": 804,
+      "width": 390,
+      "height": 40,
+      "bottom": 844,
+      "right": 390
+    },
+    "outsideScroll": true,
+    "color": "rgb(146, 152, 161)",
+    "footerLabel": "Running count: see the line at the bottom of the list"
+  },
+  {
+    "device": "phone",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "state": "disabled",
+    "screenshot": "phone-disabled.png",
+    "ready": "true",
+    "count": null,
+    "numberCount": 0,
+    "countBox": null,
+    "scrollBox": {
+      "x": 0,
+      "y": 87,
+      "width": 390,
+      "height": 717,
+      "bottom": 804,
+      "right": 390
+    },
+    "footerBox": {
+      "x": 0,
+      "y": 804,
+      "width": 390,
+      "height": 40,
+      "bottom": 844,
+      "right": 390
+    },
+    "outsideScroll": null,
+    "color": null,
+    "footerLabel": "Running count: see the line at the bottom of the list"
+  },
+  {
+    "device": "phone",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "state": "unavailable",
+    "screenshot": "phone-unavailable.png",
+    "ready": "true",
+    "count": null,
+    "numberCount": 0,
+    "countBox": null,
+    "scrollBox": {
+      "x": 0,
+      "y": 87,
+      "width": 390,
+      "height": 717,
+      "bottom": 804,
+      "right": 390
+    },
+    "footerBox": {
+      "x": 0,
+      "y": 804,
+      "width": 390,
+      "height": 40,
+      "bottom": 844,
+      "right": 390
+    },
+    "outsideScroll": null,
+    "color": null,
+    "footerLabel": "Running count: see the line at the bottom of the list"
+  }
+]

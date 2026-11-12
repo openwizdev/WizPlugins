@@ -107,13 +107,13 @@ describe("W3: synthetic footer artwork through the SDK rendering harness", () =>
 // These proofs fail if the app remains unwired or promotes observable coverage to live.
 describe("N4: approved observable footer route", () => {
   const icon = app.icons.find(({ name }) => name === "wizbar-running-count")!;
-  it("registers numeric artwork in one no-op action, with no disclosure", () => {
+  it("registers one no-op action directing readers to the live list count", () => {
     expect(app.sidebarFooterActions).toEqual([]);
     expect(app.experimentalSidebarFooterItems).toHaveLength(1);
     const action = app.experimentalSidebarFooterItems[0]!;
     expect(action.kind).toBe("action");
     expect(action.icon).toBe("wizbar-running-count");
-    expect(action.label).toBe("Running · subagents not counted yet · some threads may be unseen");
+    expect(action.label).toBe("Running count: see the line at the bottom of the list");
     const openPluginDetails = vi.fn();
     if (action.kind !== "action") throw new Error("Expected approved no-op action");
     action.onActivate({ openPluginDetails });
@@ -159,28 +159,33 @@ describe("N4: approved observable footer route", () => {
     expect(rendered.container.innerHTML).toBe("");
   });
 
-  it("updates from host snapshots and rejects stale reuse after reconnect/error", async () => {
+  it.each(["artwork", "list"])("updates %s from host snapshots and rejects stale reuse after reconnect/error", async (view) => {
+    const View = () => view === "list"
+      ? createElement(app.threadLists[0]!.component, {
+        activeThreadId: null, activeProjectId: null, isCompactViewport: false,
+        searchQuery: "", onNavigate() {},
+      }) : createElement(icon.component);
     fixtureFeed.current = { status: "ready", threads: positiveThreads };
-    const pluginId = "synthetic-updating-footer";
-    const rendered = renderSlot({ component: icon.component }, {}, { pluginId });
+    const pluginId = `synthetic-updating-footer-${view}`;
+    const rendered = renderSlot({ component: View }, {}, { pluginId, rpc: { listLifecycle: () => ({ rows: [] }) } });
     expect(screen.getByRole("status", { name: "2 running" })).toBeDefined();
     await rendered.setRealtimeConnectionState("reconnecting");
-    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.queryByRole("status", { name: /^\d+ running$/ })).toBeNull();
     await rendered.setRealtimeConnectionState("connected");
-    expect(screen.queryByRole("status"), "reconnect alone cannot certify the old cache").toBeNull();
+    expect(screen.queryByRole("status", { name: /^\d+ running$/ }), "reconnect alone cannot certify the old cache").toBeNull();
     expect(getSourceStatuses(pluginId).footer).toBe("unavailable");
     fixtureFeed.current = { status: "ready", threads: [] };
-    rendered.rerender(createElement(icon.component));
+    rendered.rerender(createElement(View));
     expect(screen.getByRole("status", { name: "0 running" })).toBeDefined();
     expect(getSourceStatuses(pluginId).footer).toBe("unverified");
     fixtureFeed.current = { ...fixtureFeed.current, status: "error" };
-    rendered.rerender(createElement(icon.component));
-    expect(screen.queryByRole("status")).toBeNull();
+    rendered.rerender(createElement(View));
+    expect(screen.queryByRole("status", { name: /^\d+ running$/ })).toBeNull();
     fixtureFeed.current = { ...fixtureFeed.current, status: "ready" };
-    rendered.rerender(createElement(icon.component));
-    expect(screen.queryByRole("status"), "error recovery needs a new host snapshot").toBeNull();
+    rendered.rerender(createElement(View));
+    expect(screen.queryByRole("status", { name: /^\d+ running$/ }), "error recovery needs a new host snapshot").toBeNull();
     fixtureFeed.current = { status: "ready", threads: [...positiveThreads] };
-    rendered.rerender(createElement(icon.component));
+    rendered.rerender(createElement(View));
     expect(screen.getByRole("status", { name: "2 running" })).toBeDefined();
     expect(getSourceStatuses(pluginId).footer).toBe("unverified");
   });

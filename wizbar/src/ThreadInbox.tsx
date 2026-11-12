@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "./components/Select";
 import { ThreadCard } from "./ThreadCard";
+import { FooterCounter } from "./FooterCounter";
 import { MachineIcon } from "./MachineIcon";
 import { useFeatureSourceStatus } from "./SettingsPage";
 import { SlimRow } from "./SlimRow";
@@ -228,6 +229,7 @@ export function ThreadInbox({
           </>
         )}
       </div>
+      <FooterCounter className="shrink-0 border-t border-sidebar-border px-3 py-1" />
     </div>
   );
 }

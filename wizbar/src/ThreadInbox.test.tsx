@@ -700,3 +700,95 @@ describe("explicit muted shelf", () => {
     expect(screen.queryByText("Write guide")).toBeNull();
   });
 });
+
+// WZ16: isolated artwork tests cannot prove a number exists in the thread list.
+describe("WZ16: visible list-bottom running count", () => {
+  it("keeps exactly one inert count below the scrolling rows, independent of search and projects", () => {
+    const threads = [
+      thread({ id: "sample-parent", indicator: "runtime" }),
+      thread({ id: "sample-child", parentThreadId: "sample-parent", indicator: "runtime" }),
+      thread({ id: "sample-hidden", projectId: "sample-other", isHidden: true, indicator: "runtime" }),
+    ];
+    const rendered = renderSlot(inbox, { ...listProps, searchQuery: "unmatched" }, {
+      sidebarThreads: { status: "ready", threads },
+      rpc: { listLifecycle: () => ({ rows: [] }) },
+    });
+    const counters = screen.getAllByRole("status", { name: "3 running" });
+    expect(counters).toHaveLength(1);
+    const counter = counters[0]!;
+    expect(counter.textContent).toBe("3");
+    expect(counter.parentElement).toBe(rendered.container.firstElementChild);
+    expect(counter).toBe(counter.parentElement?.lastElementChild);
+    const scrollArea = counter.parentElement?.querySelector(".overflow-y-auto");
+    expect(scrollArea?.contains(counter)).toBe(false);
+    expect(scrollArea!.compareDocumentPosition(counter) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryAllByRole("listitem")).toHaveLength(0);
+    expect(counter.querySelector("svg")?.style.animation).toContain("wizbar-running-spin");
+    fireEvent.mouseEnter(counter);
+    expect(screen.getByRole("tooltip").textContent).toBe("3 running · subagents not counted yet · some threads may be unseen");
+    expect(counter.getAttribute("aria-describedby")).toBe(screen.getByRole("tooltip").id);
+    fireEvent.click(counter);
+    expect(rendered.navigateCalls).toEqual([]);
+    expect(rendered.sidebarActionCalls).toEqual([]);
+    expect(rendered.sdkCalls).toEqual([]);
+    expect(rendered.rpcCalls.filter(({ method }) => method !== "listLifecycle")).toEqual([]);
+    expect(counter.closest("button, a")).toBeNull();
+  });
+
+  it("shows dim zero on an empty list and stops its spinner", () => {
+    render([]);
+    const counter = screen.getByRole("status", { name: "0 running" });
+    expect(counter.textContent).toBe("0");
+    expect(counter.style.color).toBe("var(--muted-foreground)");
+    expect(counter.querySelector("svg")?.style.animation).toBe("");
+    fireEvent.mouseEnter(counter);
+    expect(screen.getByRole("tooltip").textContent).toBe("0 running · subagents not counted yet · some threads may be unseen");
+  });
+
+  it.each(["loading", "error"] as const)("hides the number for %s despite retained rows", (status) => {
+    const rendered = renderSlot(inbox, listProps, {
+      sidebarThreads: { status, threads: [thread({ indicator: "runtime" })] },
+      rpc: { listLifecycle: () => ({ rows: [] }) },
+    });
+    expect(rendered.container.querySelector('[aria-label$=" running"]')).toBeNull();
+    expect(screen.queryByRole("tooltip")).toBeNull();
+  });
+
+  it("updates list and artwork together when the registered settings switch is saved", async () => {
+    const Page = app.settingsSections[0]!.component;
+    const List = inbox.component;
+    const Artwork = app.icons.find(({ name }) => name === "wizbar-running-count")!.component;
+    let settings = { footerCountEnabled: true, machineIconsEnabled: true };
+    renderSlot({ component: () => <><Page /><List {...listProps} /><Artwork /></> }, {}, {
+      pluginId: "synthetic-wz16-settings",
+      settings,
+      sidebarThreads: { status: "ready", threads: [thread({ indicator: "runtime" })] },
+      rpc: { listLifecycle: () => ({ rows: [] }) },
+      sdk: { plugins: { updateSettings: async ({ values }) => {
+        settings = { ...settings, ...values };
+        return { ok: true, schema: {}, values: settings };
+      } } },
+    });
+    expect(screen.getAllByRole("status", { name: "1 running" })).toHaveLength(2);
+    fireEvent.click(screen.getByRole("switch", { name: "Footer count" }));
+    await waitFor(() => expect(screen.queryAllByRole("status", { name: "1 running" })).toHaveLength(0));
+    fireEvent.click(screen.getByRole("switch", { name: "Footer count" }));
+    await waitFor(() => expect(screen.getAllByRole("status", { name: "1 running" })).toHaveLength(2));
+  });
+
+  it("honors the footer switch and hides stale numbers on disconnect", async () => {
+    const hidden = renderSlot(inbox, listProps, {
+      settings: { footerCountEnabled: false },
+      sidebarThreads: { status: "ready", threads: [thread({ indicator: "runtime" })] },
+      rpc: { listLifecycle: () => ({ rows: [] }) },
+    });
+    expect(screen.queryByRole("status", { name: "1 running" })).toBeNull();
+    hidden.unmount();
+    const connected = render([thread({ indicator: "runtime" })]);
+    const counter = screen.getByRole("status", { name: "1 running" });
+    fireEvent.mouseEnter(counter);
+    await connected.setRealtimeConnectionState("reconnecting");
+    expect(screen.queryByRole("status", { name: "1 running" })).toBeNull();
+    expect(screen.queryByRole("tooltip")).toBeNull();
+  });
+});

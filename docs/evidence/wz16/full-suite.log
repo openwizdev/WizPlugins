@@ -1,0 +1,17 @@
+Implementation head: f32872174a34b7a73eb6c962ae887e40bff72883
+Command from wizbar/: npm test -- --maxWorkers=2
+
+> bb-plugin-wizbar@0.1.0 test
+> vitest run --config vitest.config.ts --maxWorkers=2
+
+
+ RUN  v4.1.10 <checkout>/wizbar
+
+
+ Test Files  15 passed (15)
+      Tests  433 passed (433)
+   Start at  05:12:31
+   Duration  8.24s (transform 337ms, setup 0ms, import 2.60s, tests 8.93s, environment 3.35s)
+
+
+Exit: 0

@@ -1,0 +1,15 @@
+Public ticket record: https://github.com/openwizdev/wizplugins/issues/37#issuecomment-6815036331
+Commit: 06a251b285763fbea40f7b8b48969da3c6d2ade6
+Command from wizbar/: npm test -- --maxWorkers=2 src/ThreadInbox.test.tsx
+Exit: 1
+Tests: 3 failed | 48 passed (51)
+Missing accessible status names: 3 running; 0 running; 1 running
+
+Expanded public record: https://github.com/openwizdev/wizplugins/issues/37#issuecomment-6815089123
+Commit: d3749f116230db4d627eb22f6af4b184f1d16ab8
+Command from wizbar/: npm test -- --maxWorkers=2 src/ThreadInbox.test.tsx src/FooterCounter.test.tsx
+Exit: 1
+Test Files: 2 failed (2)
+Tests: 5 failed | 59 passed (64)
+
+These are transcribed public summaries, not recovered full original logs.
