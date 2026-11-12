@@ -364,6 +364,31 @@ describe("WZ18 card metadata at the registered app boundary", () => {
     expect(within(card()).getByRole("group", { name: "Thread details" }).textContent).not.toContain(text);
   });
 
+  // PR #48 R3: Escape hides the revealed location without moving focus or
+  // dropping the description; it shows again on the next focus or hover.
+  it("R3 Escape dismisses the revealed location until the next interaction", () => {
+    renderMeta([thread({ environment: environment("git-worktree", "room/1042-refine-command-palette-a1b2") })]);
+    const link = screen.getByRole("link", { name: "Review parser" });
+    const location = () => document.getElementById(link.getAttribute("aria-describedby")!)!;
+    const reveals = () => location().className.split(/\s+/)
+      .filter((name) => name === "group-focus-within/card:block" || name === "group-hover/card:block");
+    link.focus();
+    expect(reveals()).toEqual(["group-hover/card:block", "group-focus-within/card:block"]);
+    fireEvent.keyDown(link, { key: "Escape" });
+    expect(document.activeElement).toBe(link);
+    expect(location().textContent).toBe("room/1042-refine-command-palette-a1b2");
+    expect(location().className.split(/\s+/)).toContain("hidden");
+    expect(reveals()).toEqual([]);
+    fireEvent.blur(link, { relatedTarget: document.body });
+    link.focus();
+    fireEvent.focus(link);
+    expect(reveals()).toEqual(["group-hover/card:block", "group-focus-within/card:block"]);
+    fireEvent.keyDown(link, { key: "Escape" });
+    expect(reveals()).toEqual([]);
+    fireEvent.mouseEnter(link.closest("li")!.firstElementChild!);
+    expect(reveals()).toEqual(["group-hover/card:block", "group-focus-within/card:block"]);
+  });
+
   it("shows the branch only on hover, never on the card face", () => {
     renderMeta([thread({ environment: environment("git-worktree", "room/1042-refine-command-palette-a1b2") })]);
     const face = within(card()).getByRole("group", { name: "Thread details" });
