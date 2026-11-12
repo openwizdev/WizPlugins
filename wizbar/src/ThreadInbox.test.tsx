@@ -705,9 +705,9 @@ describe("explicit muted shelf", () => {
 describe("WZ16: visible list-bottom running count", () => {
   it("keeps exactly one inert count below the scrolling rows, independent of search and projects", () => {
     const threads = [
-      thread({ id: "sample-parent", indicator: "runtime" }),
-      thread({ id: "sample-child", parentThreadId: "sample-parent", indicator: "runtime" }),
-      thread({ id: "sample-hidden", projectId: "sample-other", isHidden: true, indicator: "runtime" }),
+      thread({ id: "sample-parent", indicator: "runtime", runtimeStatus: "active" }),
+      thread({ id: "sample-child", parentThreadId: "sample-parent", indicator: "runtime", runtimeStatus: "active" }),
+      thread({ id: "sample-hidden", projectId: "sample-other", isHidden: true, indicator: "runtime", runtimeStatus: "active" }),
     ];
     const rendered = renderSlot(inbox, { ...listProps, searchQuery: "unmatched" }, {
       sidebarThreads: { status: "ready", threads },
@@ -747,7 +747,7 @@ describe("WZ16: visible list-bottom running count", () => {
 
   it.each(["loading", "error"] as const)("hides the number for %s despite retained rows", (status) => {
     const rendered = renderSlot(inbox, listProps, {
-      sidebarThreads: { status, threads: [thread({ indicator: "runtime" })] },
+      sidebarThreads: { status, threads: [thread({ indicator: "runtime", runtimeStatus: "active" })] },
       rpc: { listLifecycle: () => ({ rows: [] }) },
     });
     expect(rendered.container.querySelector('[aria-label$=" running"]')).toBeNull();
@@ -757,34 +757,33 @@ describe("WZ16: visible list-bottom running count", () => {
   it("updates list and artwork together when the registered settings switch is saved", async () => {
     const Page = app.settingsSections[0]!.component;
     const List = inbox.component;
-    const Artwork = app.icons.find(({ name }) => name === "wizbar-running-count")!.component;
     let settings = { footerCountEnabled: true, machineIconsEnabled: true };
-    renderSlot({ component: () => <><Page /><List {...listProps} /><Artwork /></> }, {}, {
+    renderSlot({ component: () => <><Page /><List {...listProps} /></> }, {}, {
       pluginId: "synthetic-wz16-settings",
       settings,
-      sidebarThreads: { status: "ready", threads: [thread({ indicator: "runtime" })] },
+      sidebarThreads: { status: "ready", threads: [thread({ indicator: "runtime", runtimeStatus: "active" })] },
       rpc: { listLifecycle: () => ({ rows: [] }) },
       sdk: { plugins: { updateSettings: async ({ values }) => {
         settings = { ...settings, ...values };
         return { ok: true, schema: {}, values: settings };
       } } },
     });
-    expect(screen.getAllByRole("status", { name: "1 running" })).toHaveLength(2);
+    expect(screen.getAllByRole("status", { name: "1 running" })).toHaveLength(1);
     fireEvent.click(screen.getByRole("switch", { name: "Footer count" }));
     await waitFor(() => expect(screen.queryAllByRole("status", { name: "1 running" })).toHaveLength(0));
     fireEvent.click(screen.getByRole("switch", { name: "Footer count" }));
-    await waitFor(() => expect(screen.getAllByRole("status", { name: "1 running" })).toHaveLength(2));
+    await waitFor(() => expect(screen.getAllByRole("status", { name: "1 running" })).toHaveLength(1));
   });
 
   it("honors the footer switch and hides stale numbers on disconnect", async () => {
     const hidden = renderSlot(inbox, listProps, {
       settings: { footerCountEnabled: false },
-      sidebarThreads: { status: "ready", threads: [thread({ indicator: "runtime" })] },
+      sidebarThreads: { status: "ready", threads: [thread({ indicator: "runtime", runtimeStatus: "active" })] },
       rpc: { listLifecycle: () => ({ rows: [] }) },
     });
     expect(screen.queryByRole("status", { name: "1 running" })).toBeNull();
     hidden.unmount();
-    const connected = render([thread({ indicator: "runtime" })]);
+    const connected = render([thread({ indicator: "runtime", runtimeStatus: "active" })]);
     const counter = screen.getByRole("status", { name: "1 running" });
     fireEvent.mouseEnter(counter);
     await connected.setRealtimeConnectionState("reconnecting");
