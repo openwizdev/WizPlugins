@@ -9,7 +9,8 @@ Built against the [sidebar v3 contract](../../../wizbar/contracts/sidebar-v3.v1.
 ## Green
 
 - `affected.log`: `card-meta`, `ThreadCard`, `server` and `ThreadInbox` tests. All new tests pass.
-- Known failure, waiting on the [Builder question on #40](https://github.com/openwizdev/wizplugins/issues/40#issuecomment-6821430160): two existing `ThreadInbox.test.tsx` tests find the PR badge by its old text `#412`; the contract's text is `PR #412`. That file is not an owned path.
+- `full-suite.log`: `npm test -- --maxWorkers=2`, 517 tests in 17 files pass.
+- Supporting edit, by the [orchestrator ruling on #40](https://github.com/openwizdev/wizplugins/issues/40#issuecomment-6822185632): in `wizbar/src/ThreadInbox.test.tsx`, exactly the three accessible-name strings `#412` → `PR #412`, the contract's PR chip text (acceptance criterion: the issue/PR link; supports `ThreadCard.tsx`). Href, title and attention-colour assertions there are unchanged. Nothing else in that file changed.
 - `typecheck.log`: `npm run typecheck` passes.
 
 ## Rendered screenshots (picture A)

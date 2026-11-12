@@ -593,7 +593,7 @@ describe("pull request badge", () => {
 
   it("links the PR number out to the git host", async () => {
     withPr("none");
-    const badge = await screen.findByRole("link", { name: "#412" });
+    const badge = await screen.findByRole("link", { name: "PR #412" });
     expect(badge.getAttribute("href")).toBe("https://github.com/o/r/pull/412");
     expect(badge.getAttribute("title")).toBe("Fix the flake");
   });
@@ -609,13 +609,13 @@ describe("pull request badge", () => {
   it("colors the badge from the attention state", async () => {
     const failing = withPr("checks_failed");
     expect(
-      (await screen.findByRole("link", { name: "#412" })).className,
+      (await screen.findByRole("link", { name: "PR #412" })).className,
     ).toContain("destructive");
     failing.unmount();
 
     withPr("ready_to_merge");
     expect(
-      (await screen.findByRole("link", { name: "#412" })).className,
+      (await screen.findByRole("link", { name: "PR #412" })).className,
     ).toContain("success");
   });
 });
