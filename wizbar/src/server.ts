@@ -8,7 +8,10 @@ import { defineRpcContract, type BbPluginApi } from "@get-bb/plugin-sdk";
 import { z } from "zod";
 import { wizbarSettingDescriptors } from "./settings";
 import { canMute, canPark, hasRuntimeWork, resolveShelf, type ThreadActivitySignals } from "./lifecycle";
-import { createLifecycleCommand, LifecycleError, type LifecycleOperation, type LifecycleSuccess } from "./command";
+import { createLifecycleCommand, LifecycleError, type LifecycleOperation, type LifecycleSuccess, type PinOperations } from "./command";
+import { placePinned } from "./drag";
+import type { MovePositionV3 } from "./v3-types";
+import { sortPinned } from "./inbox";
 
 const migrations = [
   `CREATE TABLE IF NOT EXISTS thread_lifecycle (
@@ -71,6 +74,16 @@ export const t3sidebarRpcContract = defineRpcContract({
   unsnooze: { input: threadIdSchema, output: z.object({ ok: z.boolean() }) },
   mute: { input: threadIdSchema, output: z.object({ ok: z.boolean() }) },
   unmute: { input: threadIdSchema, output: z.object({ ok: z.boolean() }) },
+  pin: { input: threadIdSchema, output: z.object({ ok: z.boolean() }) },
+  unpin: { input: threadIdSchema, output: z.object({ ok: z.boolean() }) },
+  move: {
+    input: z.object({ threadId: z.string().trim().min(1), position: z.union([
+      z.object({ before: z.string() }).strict(), z.object({ after: z.string() }).strict(),
+      z.object({ first: z.literal(true) }).strict(), z.object({ last: z.literal(true) }).strict(),
+    ]) }),
+    output: z.object({ ok: z.boolean() }),
+  },
+  pinnedOrder: { input: z.object({}), output: z.object({ order: z.array(z.string()) }) },
 });
 
 /** Channel the frontend re-reads on. */
@@ -164,6 +177,102 @@ async function readSignals(bb: BbPluginApi, threadId: string, signal?: AbortSign
     }
     throw unavailable();
   }
+}
+
+// ---- WZ21: pins (sidebar-v3.v1.md sections 5 and 7) ------------------------
+// The host owns pins and their order. WizBar only validates, turns a position
+// into reorderPinned's neighbours, and reports what the host calls did.
+const stateUnavailable = () => new LifecycleError("state_unavailable", "Thread state is unavailable.");
+const hostFailure = (error: unknown) => new LifecycleError("operation_failed",
+  error instanceof Error && error.message.trim() ? error.message : "Operation failed.");
+const pinRouteSchema = threadRouteSchema.extend({ pinnedAt: z.number().finite().nullable() });
+const pinListRowSchema = z.object({
+  id: z.string().min(1), createdAt: z.number().finite(),
+  pinnedAt: z.number().finite().nullable(), pinSortKey: z.string().nullable(),
+});
+
+async function readPinRoute(bb: BbPluginApi, threadId: string, signal?: AbortSignal) {
+  let raw: unknown;
+  try { raw = await bb.sdk.threads.get({ threadId, signal }); } catch (error) {
+    if (typeof error === "object" && error !== null && "status" in error && error.status === 404) {
+      throw new LifecycleError("unknown_id", "Unknown thread ID.");
+    }
+    throw stateUnavailable();
+  }
+  const route = pinRouteSchema.safeParse(raw);
+  if (!route.success || route.data.id !== threadId) throw stateUnavailable();
+  if (route.data.deletedAt !== null) throw new LifecycleError("unknown_id", "Unknown thread ID.");
+  return route.data;
+}
+
+/** The host's pinned order over every active thread, every page, no project filter. */
+async function readPinnedOrder(bb: BbPluginApi, signal?: AbortSignal): Promise<string[]> {
+  const rows: z.infer<typeof pinListRowSchema>[] = [];
+  const seen = new Set<string>();
+  try {
+    for (let offset = 0; ; offset += 100) {
+      const page = await bb.sdk.threads.list({ archived: false, includeHidden: true, limit: 100, offset, signal });
+      if (!Array.isArray(page)) throw stateUnavailable();
+      for (const raw of page) {
+        const row = pinListRowSchema.safeParse(raw);
+        if (!row.success || seen.has(row.data.id)) throw stateUnavailable();
+        seen.add(row.data.id);
+        rows.push(row.data);
+      }
+      if (page.length < 100) break;
+    }
+  } catch {
+    throw stateUnavailable();
+  }
+  return sortPinned(rows.filter((row) => row.pinnedAt !== null)).map((row) => row.id);
+}
+
+function validId(rawId: string): string {
+  const parsed = threadIdSchema.safeParse({ threadId: rawId });
+  if (!parsed.success) throw new LifecycleError("invalid_id", "Thread ID must be nonempty.");
+  return parsed.data.threadId;
+}
+
+export function createPinOperations(bb: BbPluginApi): PinOperations & {
+  place(rawId: string, position: MovePositionV3, signal?: AbortSignal): Promise<void>;
+  pinnedOrder(signal?: AbortSignal): Promise<string[]>;
+} {
+  // Validates and makes the one host call. The read after it is separate, so
+  // a failed read never reports a completed reorder as a failed one.
+  const place = async (rawId: string, position: MovePositionV3, signal?: AbortSignal): Promise<string> => {
+    const threadId = validId(rawId);
+    await readPinRoute(bb, threadId, signal);
+    const anchor = "before" in position ? position.before : "after" in position ? position.after : null;
+    if (anchor !== null && !anchor.trim()) throw new LifecycleError("invalid_anchor", "The anchor must be another pinned thread.");
+    const placed = placePinned(await readPinnedOrder(bb, signal), threadId, position);
+    if (!placed.ok) {
+      throw placed.code === "not_pinned"
+        ? new LifecycleError("not_pinned", "Thread is not pinned.")
+        : new LifecycleError("invalid_anchor", "The anchor must be another pinned thread.");
+    }
+    if (placed.changed) {
+      try { await bb.sdk.threads.reorderPinned({ threadId, ...placed.neighbours }); } catch (error) { throw hostFailure(error); }
+    }
+    return threadId;
+  };
+  return {
+    async place(rawId, position, signal) { await place(rawId, position, signal); },
+    pinnedOrder: (signal) => readPinnedOrder(bb, signal),
+    async pin(operation, rawId, signal) {
+      const threadId = validId(rawId);
+      const route = await readPinRoute(bb, threadId, signal);
+      const pinned = operation === "pin";
+      // Pinning a pinned thread, or unpinning an unpinned one, changes nothing.
+      if ((route.pinnedAt !== null) !== pinned) {
+        try { await bb.sdk.threads[operation]({ threadId, signal }); } catch (error) { throw hostFailure(error); }
+      }
+      return { threadId, ok: true, pinned };
+    },
+    async move(rawId, position, signal) {
+      const threadId = await place(rawId, position, signal);
+      return { threadId, ok: true, pinned: true, pinnedOrder: await readPinnedOrder(bb, signal) };
+    },
+  };
 }
 
 export default function plugin(bb: BbPluginApi) {
@@ -350,6 +459,7 @@ export default function plugin(bb: BbPluginApi) {
     }
   };
 
+  const pins = createPinOperations(bb);
   bb.rpc.register(t3sidebarRpcContract, {
     async listLifecycle() {
       await startupReconciliation;
@@ -361,8 +471,12 @@ export default function plugin(bb: BbPluginApi) {
     async unsnooze({ threadId }) { await perform("unsnooze", threadId); return { ok: true }; },
     async mute({ threadId }) { await perform("mute", threadId); return { ok: true }; },
     async unmute({ threadId }) { await perform("unmute", threadId); return { ok: true }; },
+    async pin({ threadId }) { await pins.pin("pin", threadId); return { ok: true }; },
+    async unpin({ threadId }) { await pins.pin("unpin", threadId); return { ok: true }; },
+    async move({ threadId, position }) { await pins.place(threadId, position); return { ok: true }; },
+    async pinnedOrder() { return { order: await pins.pinnedOrder() }; },
   });
-  bb.cli.register(createLifecycleCommand(perform));
+  bb.cli.register(createLifecycleCommand(perform, pins));
 
   bb.events.on("interaction.pending", ({ thread }) => breakMute(thread.id));
   bb.events.on("thread.failed", ({ thread }) => breakMute(thread.id));

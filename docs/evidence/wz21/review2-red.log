@@ -1,0 +1,12 @@
+# WZ21 review round 2 red run (R1 reconnect, R5 stalled read) at 4279601 + new tests, before any fix
+# cd wizbar && npx vitest run --config vitest.config.ts --maxWorkers=2 src/ThreadInbox.test.tsx -t "R1 never|R5 bounds"
+
+     × R1 never reconciles against a read taken before a reconnect 291ms
+     × R5 bounds a never-settling read: unknown result and unavailable shelves 1103ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  |bb-plugin-wizbar| src/ThreadInbox.test.tsx > WZ21: drag to pin, unpin and reorder > R1 never reconciles against a read taken before a reconnect
+AssertionError: expected [ [ 'move', …(1) ], [ 'move', …(1) ] ] to have a length of 1 but got 2
+ FAIL  |bb-plugin-wizbar| src/ThreadInbox.test.tsx > WZ21: drag to pin, unpin and reorder > R5 bounds a never-settling read: unknown result and unavailable shelves
+TestingLibraryElementError: Unable to find role="alert"
+ Test Files  1 failed (1)
+      Tests  2 failed | 78 skipped (80)

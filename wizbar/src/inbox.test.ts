@@ -8,9 +8,11 @@ import {
   partitionPinned,
   searchThreadsByTitle,
   sortByCreatedAtDescending,
+  sortPinned,
   threadDisplayTitle,
   visibleInboxThreads,
 } from "./inbox";
+import { v3PinnedOrder, v3Threads } from "./fixtures/v3";
 
 function thread(
   overrides: Partial<PluginSidebarThread> = {},
@@ -219,5 +221,28 @@ describe("parentOf", () => {
   it("returns null when the parent row is gone", () => {
     const threads = [thread({ id: "child", parentThreadId: "deleted" })];
     expect(parentOf(threads, "child")).toBeNull();
+  });
+});
+
+// V4 (WZ21): Pinned shows the host's pinned order (sidebar-v3.v1.md section 5),
+// not creation order. A creation sort would undo every reorder on the next render.
+describe("sortPinned", () => {
+  it("gives the contract's pinned order for the v0.3 fixtures", () => {
+    expect(sortPinned(v3Threads.filter((t) => t.isPinned)).map((t) => t.id)).toEqual(v3PinnedOrder);
+  });
+  it("puts keyed pins first by key, then unkeyed pins newest pin first", () => {
+    const rows = [
+      thread({ id: "unkeyed_old", isPinned: true, pinnedAt: 10, pinSortKey: null, createdAt: 9 }),
+      thread({ id: "keyed_b", isPinned: true, pinnedAt: 1, pinSortKey: "b", createdAt: 1 }),
+      thread({ id: "unkeyed_new", isPinned: true, pinnedAt: 30, pinSortKey: null, createdAt: 1 }),
+      thread({ id: "keyed_B", isPinned: true, pinnedAt: 2, pinSortKey: "B", createdAt: 2 }),
+      thread({ id: "unkeyed_tie_b", isPinned: true, pinnedAt: 20, pinSortKey: null, createdAt: 5 }),
+      thread({ id: "unkeyed_tie_a", isPinned: true, pinnedAt: 20, pinSortKey: null, createdAt: 5 }),
+      thread({ id: "unkeyed_tie_newer", isPinned: true, pinnedAt: 20, pinSortKey: null, createdAt: 6 }),
+    ];
+    // Plain string comparison: "B" (0x42) sorts before "b" (0x62).
+    expect(sortPinned(rows).map((t) => t.id)).toEqual([
+      "keyed_B", "keyed_b", "unkeyed_new", "unkeyed_tie_newer", "unkeyed_tie_a", "unkeyed_tie_b", "unkeyed_old",
+    ]);
   });
 });
