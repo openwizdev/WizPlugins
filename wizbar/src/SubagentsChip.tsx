@@ -9,6 +9,7 @@ import { cn } from "./lib/utils";
 import { Disc } from "./Disc";
 import { StatusGlyph } from "./StatusGlyph";
 import { childrenOf, threadDisplayTitle } from "./inbox";
+import { useWizBarSettings } from "./SettingsPage";
 
 const MAX_DISCS = 3;
 
@@ -27,9 +28,12 @@ export function SubagentsChip({
   const { threads } = useSidebarThreads();
   const actions = useSidebarThreadActions();
   const [open, setOpen] = useState(false);
+  // WZ19 (#43): off unless `childrenChipEnabled` is on; the card's hover list
+  // is the default home for children.
+  const { childrenChipEnabled } = useWizBarSettings();
 
   const children = childrenOf(threads, threadId);
-  if (children.length === 0) return null;
+  if (!childrenChipEnabled || children.length === 0) return null;
 
   const needsYou = children.some((child) => child.hasPendingInteraction);
   const label = needsYou ? "Needs you" : `${children.length} children`;

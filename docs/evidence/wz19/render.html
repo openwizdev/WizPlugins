@@ -1,0 +1,27 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>WizBar synthetic children on hover</title>
+<link rel="stylesheet" href="../wz14/preview.css">
+<style>
+/* Fixture-only utility subset for the classes the card line and the WZ19 list use. */
+:root { --border:#44464d; --popover:#24262b; --popover-foreground:#f1f3f5; --accent:#34363d; }
+body { display:block; } aside { width:100%; border-right:0; padding:12px 4px; }
+.flex-wrap { flex-wrap:wrap; } .flex-col { flex-direction:column; } .flex-1 { flex:1 1 0%; } .min-w-0 { min-width:0; }
+.items-start { align-items:flex-start; } .gap-1 { gap:4px; } .gap-2 { gap:8px; } .gap-px { gap:1px; } .gap-0\.5 { gap:2px; }
+.mt-1 { margin-top:4px; } .-mt-1 { margin-top:-4px; } .mt-0\.5 { margin-top:2px; }
+.rounded { border-radius:4px; } .rounded-md { border-radius:6px; } .rounded-xl { border-radius:12px; } .rounded-full { border-radius:999px; }
+.border { border:1px solid var(--border); } .border-border { border-color:var(--border); } .border-t { border-top:1px solid var(--border); }
+.px-1 { padding-left:4px; padding-right:4px; } .px-1\.5 { padding-left:6px; padding-right:6px; } .px-2 { padding-left:8px; padding-right:8px; } .px-3 { padding-left:12px; padding-right:12px; }
+.py-0\.5 { padding-top:2px; padding-bottom:2px; } .py-1 { padding-top:4px; padding-bottom:4px; } .py-1\.5 { padding-top:6px; padding-bottom:6px; }
+.p-1\.5 { padding:6px; } .pt-0\.5 { padding-top:2px; } .pt-2\.5 { padding-top:10px; } .pb-1 { padding-bottom:4px; }
+.leading-4 { line-height:16px; } .max-w-full { max-width:100%; } .w-full { width:100%; } .ml-auto { margin-left:auto; } .\[overflow-wrap\:anywhere\] { overflow-wrap:anywhere; }
+.top-full { top:100%; } .left-2\.5 { left:10px; } .right-2\.5 { right:10px; } .z-10 { z-index:10; } .z-50 { z-index:50; }
+.overflow-y-auto { overflow-y:auto; } .text-left { text-align:left; } .text-xs { font-size:12px; line-height:16px; } .font-semibold { font-weight:600; }
+.bg-timeline-accent { background:#6ea8fe; } .size-\[5px\] { width:5px; height:5px; } .size-2 { width:8px; height:8px; } .bg-muted-foreground\/60 { background:#9298a199; } .tabular-nums { font-variant-numeric:tabular-nums; }
+.bg-popover { background:var(--popover); } .text-popover-foreground { color:var(--popover-foreground); } .shadow-sm { box-shadow:0 1px 3px #0008; } .shadow-lg { box-shadow:0 10px 24px #000a; }
+.hover\:bg-accent:hover { background:var(--accent); } button { font:inherit; color:inherit; background:none; border-style:solid; border-width:0; cursor:pointer; }
+button.border { border-width:1px; } [role=dialog] { color:var(--popover-foreground); }
+.group\/card:hover .group-hover\/card\:block { display:block; } .group\/card:hover .group-hover\/card\:flex { display:flex; }
+.group\/card:hover .group-hover\/card\:hidden { display:none; }
+.group\/card:focus-within .group-focus-within\/card\:block { display:block; }
+</style></head><body><aside><h1>WizBar</h1><div id="slot"></div></aside>
+<script type="module" src="/docs/evidence/wz19/render.tsx"></script></body></html>

@@ -613,7 +613,7 @@ describe("WZ19 children", () => {
       if (!found) throw Object.assign(new Error("not found"), { status: 404 });
       return found;
     });
-    const list = vi.fn(async ({ offset }: { offset: number }) => pageOf ? pageOf(offset) : rows.slice(offset, offset + 100));
+    const list = vi.fn(async ({ offset = 0 }: { offset?: number } = {}) => pageOf ? pageOf(offset) : rows.slice(offset, offset + 100));
     const host = createFakePluginHost({ pluginId: "wizbar", sdk: { threads: { get, list } } });
     hosts.push(host);
     plugin(host.bb);
@@ -639,7 +639,7 @@ describe("WZ19 children", () => {
     expect(result.body.children.map((c: { id: string }) => c.id)).toEqual(["thr_late_child", "thr_v3_child_local"]);
     expect(s.list.mock.calls.map(([args]) => args)).toEqual([0, 100, 200].map((offset) =>
       expect.objectContaining({ archived: false, includeHidden: true, limit: 100, offset })));
-    expect(s.list.mock.calls.every(([args]) => !("projectId" in args))).toBe(true);
+    expect(s.list.mock.calls.every(([args]) => !("projectId" in (args ?? {})))).toBe(true);
   });
 
   it("prints one text line per child, or no children", async () => {
@@ -704,7 +704,7 @@ describe("WZ19 children", () => {
   });
 
   it.each([
-    [["children"]], [["children", "--json"]], [["children", "thr_a", "thr_b", "--json"]],
+    [["children", "--json"]], [["children", "thr_a", "thr_b", "--json"]],
     [["children", "thr_a", "--json", "--json"]], [["children", "thr_a", "--first", "--json"]],
   ])("usage error for %j", async (argv) => {
     const result = await json(childrenSetup(), argv);
@@ -713,8 +713,9 @@ describe("WZ19 children", () => {
     expect(result.body.error.message).toContain("children");
   });
 
-  it("registers the children command", async () => {
+  it("prints the usage line on stderr without --json", async () => {
     const result = await childrenSetup().run(["children"]);
+    expect([result.exitCode, result.stdout ?? ""]).toEqual([2, ""]);
     expect(result.stderr).toContain("children <id>");
   });
 });

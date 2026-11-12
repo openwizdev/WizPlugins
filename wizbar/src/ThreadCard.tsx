@@ -12,6 +12,7 @@ import { cn } from "./lib/utils";
 import { RowContextMenu } from "./RowContextMenu";
 import { ProviderGlyph } from "./ProviderGlyph";
 import { MachineIcon } from "./MachineIcon";
+import { ChildrenPopover } from "./ChildrenPopover";
 import { STATUS_SLOT_CLASS, StatusOrTime } from "./StatusSlot";
 import { threadDisplayTitle } from "./inbox";
 import { resolveSnoozePresets } from "./lifecycle";
@@ -176,7 +177,8 @@ export function ThreadCard({
               // No source gives the issue's URL, so it is plain text.
               <Chip>{cardLinkText(meta.link)}</Chip>
             ) : null}
-            {children ? <Chip>{children}</Chip> : null}
+            {/* WZ19: hover or focus the count to list the children. */}
+            {children ? <ChildrenPopover parent={thread} threads={threads} label={children} now={now} /> : null}
             {thread.activity.workflows > 0 ? (
               <ActivityCount
                 label="workflows"

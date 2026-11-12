@@ -159,7 +159,7 @@ describe("header-chip settings", () => {
   const parentShown = () => screen.queryByRole("button", { name: "Back to parent: Parent thread" }) !== null;
   const childrenShown = () => screen.queryByRole("button", { name: "1 child threads" }) !== null;
 
-  it.each([
+  it.each<{ name: string; settings: Record<string, string | boolean> | undefined; parent: boolean; children: boolean }>([
     { name: "no stored values", settings: undefined, parent: true, children: false },
     { name: "an unrelated stored key", settings: { footerCountEnabled: false }, parent: true, children: false },
     { name: "both on", settings: { childrenChipEnabled: true, parentChipEnabled: true }, parent: true, children: true },

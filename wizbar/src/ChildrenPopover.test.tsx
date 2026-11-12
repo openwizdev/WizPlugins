@@ -19,7 +19,7 @@ function render(
   cardModels: (input: { threadIds: string[] }) => CardModelsResultV3 | Promise<CardModelsResultV3> =
     ({ threadIds }) => ({ source: "none", items: threadIds.map((threadId) => ({ threadId, model: null, effort: null })) }),
 ) {
-  const models = vi.fn(cardModels);
+  const models = vi.fn((input: unknown) => cardModels(input as { threadIds: string[] }));
   const rendered = renderSlot(inbox, {
     activeThreadId: null, activeProjectId: null, isCompactViewport: false, onNavigate: vi.fn(), searchQuery: "",
   }, {

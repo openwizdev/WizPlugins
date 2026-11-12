@@ -269,9 +269,9 @@ describe("header-chip switches", () => {
   function mountChips() {
     const Page = app.settingsSections.find(({ id }) => id === "wizbar-settings")!.component;
     const Parent = parentSlot.component, Children = childrenSlot.component;
-    let stored: Record<string, unknown> = {};
+    let stored: Record<string, boolean> = {};
     const updateSettings = vi.fn(async ({ values }: { values: Record<string, unknown> }) => {
-      stored = { ...stored, ...values };
+      stored = { ...stored, ...values } as Record<string, boolean>;
       return { ok: true as const, schema: {}, values: stored };
     });
     renderSlot({ component: () => <>
