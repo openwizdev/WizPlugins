@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dragPinOutcome, dropAction, keyboardAction, placePinned, stepFailureMessage } from "./drag";
+import { dragPinOutcome, dropAction, isReconciled, keyboardAction, placePinned, stepOutcome } from "./drag";
 import { v3DragPinCases } from "./fixtures/v3";
 
 // V4 (WZ21): the contract's drag table (sidebar-v3.v1.md section 5), one row
@@ -89,8 +89,34 @@ describe("dragPinOutcome", () => {
       kind: "unknown", message: "Pin result unknown: Thread rows are unavailable.",
     });
   });
-  it("names the failed unpin or move", () => {
-    expect(stepFailureMessage("unpin", "Sample host refusal.")).toBe("Unpin failed: Sample host refusal.");
-    expect(stepFailureMessage("move", "Sample host refusal.")).toBe("Move failed: Sample host refusal.");
+  it.each([
+    ["unpin", { ok: false, error: "Sample host refusal." }, true, "Unpin failed: Sample host refusal."],
+    ["move", { ok: false, error: "Sample host refusal." }, true, "Move failed: Sample host refusal."],
+    ["unpin", { ok: true }, true, null],
+    ["move", { ok: true }, false, "Move result unknown: Thread rows are unavailable."],
+    ["unpin", { ok: false, error: "Sample host refusal." }, false, "Unpin result unknown: Sample host refusal."],
+  ] as const)("reports a single %s step: %j, rows ready %s", (kind, step, ready, message) => {
+    expect(stepOutcome(kind, step, ready)).toBe(message);
+  });
+});
+
+// R1: rows count as re-read only when the fresh pinned order agrees with the
+// sidebar rows on every thread the sidebar has.
+describe("isReconciled", () => {
+  const row = (id: string, pinSortKey: string | null, pinned = true, isArchived = false) =>
+    ({ id, createdAt: 1, pinnedAt: pinned ? 1 : null, pinSortKey, isPinned: pinned, isArchived });
+  const rows = [row("a", "k1"), row("b", "k2"), row("c", null, false)];
+  it.each([
+    [["a", "b"], true],
+    [["a", "x", "b"], true],
+    [["b", "a"], false],
+    [["a"], false],
+    [["a", "b", "c"], false],
+    [[], false],
+  ] as const)("snapshot %j against rows a, b pinned: %s", (snapshot, expected) => {
+    expect(isReconciled(snapshot, rows)).toBe(expected);
+  });
+  it("ignores archived sidebar rows, which the server read leaves out", () => {
+    expect(isReconciled(["a", "b"], [...rows, row("z", "k0", true, true)])).toBe(true);
   });
 });

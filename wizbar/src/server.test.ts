@@ -518,3 +518,38 @@ describe("WZ21 pin, unpin and move", () => {
     expect(JSON.parse(result.stdout).results[0].error.code).toBe("pinned");
   });
 });
+
+// R2: a completed reorder is a completed host call even when the read after
+// it fails; the sidebar's RPC reports the call, the CLI still needs the read.
+describe("WZ21 R2: host call and the read after it are separate outcomes", () => {
+  const row = (id: string, pinnedAt: number | null, pinSortKey: string | null) =>
+    ({ ...thread(id), createdAt: 1, pinnedAt, pinSortKey });
+  function twoReads() {
+    const rows = [row("thr_a", 7, null), row("thr_b", 5, "a0")];
+    const reorderPinned = vi.fn(async () => rows);
+    const list = vi.fn(async () => rows);
+    const get = vi.fn(async ({ threadId }: { threadId: string }) => rows.find((r) => r.id === threadId));
+    const host = createFakePluginHost({ pluginId: "wizbar", sdk: { threads: { get, list, reorderPinned } } });
+    hosts.push(host);
+    plugin(host.bb);
+    // The read before the call succeeds; every read after it fails.
+    list.mockImplementation(async () => { if (reorderPinned.mock.calls.length) throw new Error("offline"); return rows; });
+    return { host, reorderPinned };
+  }
+  it("RPC move succeeds once reorderPinned did", async () => {
+    const { host, reorderPinned } = twoReads();
+    await expect(host.harness.behavior.callRpc("move", { threadId: "thr_a", position: { first: true } }))
+      .resolves.toEqual({ ok: true });
+    expect(reorderPinned).toHaveBeenCalledTimes(1);
+  });
+  it("CLI move still reports state_unavailable when its pinnedOrder read fails", async () => {
+    const { host, reorderPinned } = twoReads();
+    const result = await host.harness.behavior.runCli(["move", "thr_a", "--first", "--json"]);
+    expect(reorderPinned).toHaveBeenCalledTimes(1);
+    expect([result.exitCode, JSON.parse(result.stdout).results[0].error.code]).toEqual([1, "state_unavailable"]);
+  });
+  it("serves the fresh pinned order the sidebar reconciles against", async () => {
+    const { host } = twoReads();
+    await expect(host.harness.behavior.callRpc("pinnedOrder", {})).resolves.toEqual({ order: ["thr_b", "thr_a"] });
+  });
+});

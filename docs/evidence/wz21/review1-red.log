@@ -1,0 +1,38 @@
+# WZ21 review round 1 red run (R1-R4) at 8c7042f + new tests, before any fix
+# cd wizbar && npx vitest run --config vitest.config.ts --maxWorkers=2 src/drag.test.ts src/server.test.ts src/ThreadInbox.test.tsx
+
+     × RPC move succeeds once reorderPinned did 28ms
+     × serves the fresh pinned order the sidebar reconciles against 19ms
+     × reports a single unpin step: {"ok":false,"error":"Sample host refusal."}, rows ready true 2ms
+     × reports a single move step: {"ok":false,"error":"Sample host refusal."}, rows ready true 0ms
+     × reports a single unpin step: {"ok":true}, rows ready true 0ms
+     × reports a single move step: {"ok":true}, rows ready false 0ms
+     × reports a single unpin step: {"ok":false,"error":"Sample host refusal."}, rows ready false 0ms
+     × snapshot ["a","b"] against rows a, b pinned: true 0ms
+     × snapshot ["a","x","b"] against rows a, b pinned: true 0ms
+     × snapshot ["b","a"] against rows a, b pinned: false 0ms
+     × snapshot ["a"] against rows a, b pinned: false 0ms
+     × snapshot ["a","b","c"] against rows a, b pinned: false 0ms
+     × snapshot [] against rows a, b pinned: false 0ms
+     × ignores archived sidebar rows, which the server read leaves out 0ms
+     × R1 re-reads after the calls and reports placed only when the rows agree 1053ms
+     × R1 reports an unknown result and the unavailable state when the rows never catch up 1042ms
+     × R1 treats rows behind a lost realtime connection as unknown 1051ms
+     × R1 keeps the next move waiting until the post-call read has reconciled 1035ms
+     × R3 pins an expanded Settled row with Alt+Up 1055ms
+     × R3 pins an expanded Snoozed row with Alt+Up 1055ms
+     × R3 pins an expanded Muted row with Alt+Up 1053ms
+     × R4 shows a pinned thread in Pinned despite its stored {"threadId":"parked","settledAt":200,"snoozedUntil":null,"snoozedAt":null} row 52ms
+     × R4 shows a pinned thread in Pinned despite its stored {"threadId":"parked","settledAt":null,"snoozedUntil":1794486783512,"snoozedAt":200} row 48ms
+⎯⎯⎯⎯⎯⎯ Failed Tests 23 ⎯⎯⎯⎯⎯⎯⎯
+AssertionError: expected +0 to be 1 // Object.is equality
+AssertionError: expected +0 to be 1 // Object.is equality
+AssertionError: expected +0 to be 1 // Object.is equality
+AssertionError: expected [] to deeply equal [ …(2) ]
+TypeError: stepOutcome is not a function
+TypeError: isReconciled is not a function
+TypeError: isReconciled is not a function
+AssertionError: promise rejected "Error: Thread state is unavailable. { code: '…' }" instead of resolving
+AssertionError: promise rejected "Error: plugin "wizbar" has no rpc method … { code: '…' }" instead of resolving
+ Test Files  3 failed (3)
+      Tests  23 failed | 229 passed (252)
