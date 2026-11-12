@@ -1,0 +1,9 @@
+# WZ21 review round 3 red run (R6 stale read rejection) at 503c10c + new test, before the fix
+# cd wizbar && npx vitest run --config vitest.config.ts --maxWorkers=2 src/ThreadInbox.test.tsx -t "R6 ignores"
+
+     × R6 ignores a late failure from a read superseded by a reconnect 288ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  |bb-plugin-wizbar| src/ThreadInbox.test.tsx > WZ21: drag to pin, unpin and reorder > R6 ignores a late failure from a read superseded by a reconnect
+AssertionError: expected <p role="alert" …(1)></p> to be null
+ Test Files  1 failed (1)
+      Tests  1 failed | 80 skipped (81)

@@ -1000,6 +1000,28 @@ describe("WZ21: drag to pin, unpin and reorder", () => {
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(pinCalls(rendered)).toHaveLength(1);
   });
+  // R6: a read from before a reconnect that fails late must not end the
+  // current attempt; the read on the restored connection decides.
+  it("R6 ignores a late failure from a read superseded by a reconnect", async () => {
+    let rejectA!: (error: Error) => void, resolveB!: (value: { order: string[] }) => void;
+    let calls = 0;
+    const rendered = renderDrag(rows(), { pinnedOrder: () => (++calls === 1
+      ? new Promise((_, reject) => { rejectA = reject; })
+      : new Promise((resolve) => { resolveB = resolve; })) });
+    fireEvent.keyDown(card("Pinned second"), { key: "ArrowUp", altKey: true });
+    await waitFor(() => expect(reads(rendered)).toBe(1));
+    await rendered.setRealtimeConnectionState("reconnecting");
+    await rendered.setRealtimeConnectionState("connected");
+    await waitFor(() => expect(reads(rendered)).toBe(2));
+    await act(async () => { rejectA(new Error("Sample stale read failure.")); });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(screen.queryByRole("alert")).toBeNull();
+    await act(async () => { resolveB({ order: ["pin_a", "pin_b"] }); });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.getByRole("region", { name: "Pinned" })).toBeDefined();
+  });
+
   // R5: a read that never answers still ends in the unknown state on time.
   it("R5 bounds a never-settling read: unknown result and unavailable shelves", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
