@@ -1,0 +1,277 @@
+
+ RUN  v4.1.10 <repo>/wizbar
+
+ ❯ |bb-plugin-wizbar| src/ChildrenPopover.test.tsx (15 tests | 4 failed) 1644ms
+     × calls onNavigate after opening /^Open child: Sample check focus order/ 74ms
+     × calls onNavigate after opening Open parent 68ms
+     × stays open through a complete tap, and a second tap 46ms
+     × shows unavailable during and after a connection gap until fresh rows arrive 83ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/ChildrenPopover.test.tsx > children on hover (picture B) > calls onNavigate after opening /^Open child: Sample check focus order/
+ FAIL  |bb-plugin-wizbar| src/ChildrenPopover.test.tsx > children on hover (picture B) > calls onNavigate after opening Open parent
+AssertionError: expected "vi.fn()" to be called 1 times, but got 0 times
+ ❯ src/ChildrenPopover.test.tsx:133:33
+    131|     fireEvent.click(await screen.findByRole("button", { name }));
+    132|     expect(rendered.sidebarActionCalls.filter((call) => call.method ==…
+    133|     expect(rendered.onNavigate).toHaveBeenCalledTimes(1);
+       |                                 ^
+    134|   });
+    135|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  |bb-plugin-wizbar| src/ChildrenPopover.test.tsx > children on hover (picture B) > stays open through a complete tap, and a second tap
+AssertionError: tap 1: expected null not to be null
+ ❯ src/ChildrenPopover.test.tsx:147:45
+    145|       fireEvent.pointerUp(count, { pointerType: "touch" });
+    146|       fireEvent.click(count);
+    147|       expect(panel(), `tap ${tap + 1}`).not.toBeNull();
+       |                                             ^
+    148|       expect(count.getAttribute("aria-expanded")).toBe("true");
+    149|     }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  |bb-plugin-wizbar| src/ChildrenPopover.test.tsx > children on hover (picture B) > shows unavailable during and after a connection gap until fresh rows arrive
+TestingLibraryElementError: Unable to find an element with the text: Children are unavailable right now.. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<div
+  aria-label="3 children"
+  class="z-50 overflow-y-auto rounded-xl border border-border bg-popover text-popover-foreground shadow-lg"
+  id="_r_42_"
+  role="dialog"
+  style="position: fixed; left: 8px; width: 288px; top: 4px; max-height: 756px;"
+>
+  <div
+    class="px-3 pb-1 pt-2.5 text-xs font-semibold"
+  >
+    3 children
+  </div>
+  <ul
+    class="flex flex-col gap-px p-1.5 pt-0.5"
+  >
+    <li
+      class="list-none"
+    >
+      <button
+        aria-label="Open child: Sample audit shortcuts, working, now"
+        class="flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left hover:bg-accent"
+        type="button"
+      >
+        <span
+          aria-label="working"
+          class="flex size-3.5 shrink-0 items-center justify-center mt-0.5"
+          role="img"
+        >
+          <svg
+            class="size-3.5 shrink-0 animate-spin text-muted-foreground/50"
+            color="currentColor"
+            data-icon="Loading"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M12 3V6"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-width="1.5"
+            />
+            <path
+              d="M12 18V21"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-width="1.5"
+            />
+            <path
+              d="M21 12L18 12"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-width="1.5"
+            />
+            <path
+              d="M6 12L3 12"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-width="1.5"
+            />
+            <path
+              d="M18.3635 5.63672L16.2422 7.75804"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-width="1.5"
+            />
+            <path
+              d="M7.75804 16.2422L5.63672 18.3635"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-width="1.5"
+            />
+            <path
+              d="M18.3635 18.3635L16.2422 16.2422"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-width="1.5"
+            />
+            <path
+              d="M7.75804 7.75804L5.63672 5.63672"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </span>
+        <span
+          class="flex min-w-0 flex-1 flex-col items-start gap-0.5"
+        >
+          <span
+            class="w-full truncate text-xs"
+          >
+            Sample audit shortcuts
+          </span>
+        </span>
+        <span
+          class="shrink-0 tabular-nums text-2xs text-muted-foreground"
+        >
+          now
+        </span>
+      </button>
+    </li>
+    <li
+      class="list-none"
+    >
+      <button
+        aria-label="Open child: Sample check focus order, waiting, 2m"
+        class="flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left hover:bg-accent"
+        type="button"
+      >
+        <span
+          aria-label="waiting"
+          class="flex size-3.5 shrink-0 items-center justify-center mt-0.5"
+          role="img"
+        >
+          <svg
+            class="size-3.5 shrink-0 text-muted-foreground/75"
+            color="currentColor"
+            data-icon="CircleQuestion"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <circle
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+            <path
+              d="M9.5 9.5C9.5 8.11929 10.6193 7 12 7C13.3807 7 14.5 8.11929 14.5 9.5C14.5 10.3569 14.0689 11.1131 13.4117 11.5636C12.7283 12.0319 12 12.6716 12 13.5"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+            <path
+              d="M12.125 16.75H12M12.25 16.75C12.25 16.8881 12.1381 17 12 17C11.8619 17 11.75 16.8881 11.75 16.75C11.75 16.6119 11.8619 16.5 12 16.5C12.1381 16.5 12.25 16.6119 12.25 16.75Z"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </span>
+        <span
+          class="flex min-w-0 flex-1 flex-col items-start gap-0.5"
+        >
+          <span
+            class="w-full truncate text-xs"
+          >
+            Sample check focus order
+          </span>
+        </span>
+        <span
+          class="shrink-0 tabular-nums text-2xs text-muted-foreground"
+        >
+          2m
+        </span>
+      </button>
+    </li>
+    <li
+      class="list-none"
+    >
+      <button
+        aria-label="Open child: Sample test search states, unread, 8m"
+        class="flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left hover:bg-accent"
+        type="button"
+      >
+        <span
+          aria-label="unread"
+          class="flex size-3.5 shrink-0 items-center justify-center mt-0.5"
+          role="img"
+        >
+          <span
+            class="flex items-center justify-center size-3.5 shrink-0"
+          >
+            <span
+              class="size-[5px] rounded-full bg-timeline-accent"
+            />
+          </span>
+        </span>
+        <span
+          class="flex min-w-0 flex-1 flex-col items-start gap-0.5"
+        >
+          <span
+            class="w-full truncate text-xs"
+          >
+            Sample test search states
+          </span>
+        </span>
+        <span
+          class="shrink-0 tabular-nums text-2xs text-muted-foreground"
+        >
+          8m
+        </span>
+      </button>
+    </li>
+  </ul>
+  <div
+    class="border-t border-border p-1.5"
+  >
+    <button
+      class="w-full rounded-md px-2 py-1 text-left text-2xs hover:bg-accent"
+      type="button"
+    >
+      Open parent
+    </button>
+  </div>
+</div>
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/ChildrenPopover.test.tsx:161:25
+    159|     expect(within(list).getAllByRole("button", { name: /^Open child/ }…
+    160|     await rendered.setRealtimeConnectionState("reconnecting");
+    161|     expect(within(list).getByText("Children are unavailable right now.…
+       |                         ^
+    162|     expect(within(list).queryAllByRole("button", { name: /^Open child/…
+    163|     await rendered.setRealtimeConnectionState("connected");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed | 11 passed (15)
+   Start at  21:03:06
+   Duration  3.88s (transform 177ms, setup 0ms, import 788ms, tests 1.64s, environment 1.32s)
+

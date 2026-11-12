@@ -4,9 +4,20 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { loadPluginApp, renderSlot } from "@get-bb/plugin-sdk/testing/app";
-import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
+import type { PluginSidebarThread, PluginSidebarThreadsState } from "@get-bb/plugin-sdk/app";
 import { v3Now, v3Threads } from "./fixtures/v3";
 import type { CardModelsResultV3 } from "./v3-types";
+
+// R4 (PR #55): a feed the test can swap, so retained rows and fresh rows can be
+// told apart after a connection gap. Null uses the harness rows unchanged.
+const fixtureFeed = vi.hoisted(() => ({ current: null as Pick<PluginSidebarThreadsState, "status" | "threads"> | null }));
+vi.mock("@get-bb/plugin-sdk/app", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@get-bb/plugin-sdk/app")>();
+  return { ...actual, experimental_useSidebarThreads: (...args: Parameters<typeof actual.experimental_useSidebarThreads>) => {
+    const real = actual.experimental_useSidebarThreads(...args);
+    return fixtureFeed.current ? { ...real, ...fixtureFeed.current, threads: fixtureFeed.current.threads.map((t) => ({ ...t })) } : real;
+  } };
+});
 
 const app = await loadPluginApp(() => import("../app"));
 const inbox = app.threadLists[0]!;
@@ -14,19 +25,22 @@ const projects = ["prj_v3_atlas", "prj_v3_studio", "prj_v3_forge"].map((id) => (
   id, name: `Sample ${id.slice(7)}`, isPersonal: false, href: `/projects/${id}`, settingsHref: `/projects/${id}/settings`,
 }));
 
+let fixtureNumber = 0;
 function render(
   threads: readonly PluginSidebarThread[] = v3Threads,
   cardModels: (input: { threadIds: string[] }) => CardModelsResultV3 | Promise<CardModelsResultV3> =
     ({ threadIds }) => ({ source: "none", items: threadIds.map((threadId) => ({ threadId, model: null, effort: null })) }),
 ) {
   const models = vi.fn((input: unknown) => cardModels(input as { threadIds: string[] }));
+  const onNavigate = vi.fn();
   const rendered = renderSlot(inbox, {
-    activeThreadId: null, activeProjectId: null, isCompactViewport: false, onNavigate: vi.fn(), searchQuery: "",
+    activeThreadId: null, activeProjectId: null, isCompactViewport: true, onNavigate, searchQuery: "",
   }, {
+    pluginId: `synthetic-wz19-popover-${++fixtureNumber}`,
     sidebarThreads: { status: "ready", threads: [...threads], projects },
     rpc: { listLifecycle: () => ({ rows: [] }), cardModels: models },
   });
-  return { ...rendered, models };
+  return { ...rendered, models, onNavigate };
 }
 
 const chip = (name: string) => screen.getByRole("button", { name });
@@ -37,7 +51,7 @@ beforeEach(() => {
   vi.setSystemTime(v3Now);
   Object.assign(window, { innerWidth: 1024, innerHeight: 768 });
 });
-afterEach(() => { cleanup(); vi.useRealTimers(); });
+afterEach(() => { cleanup(); vi.useRealTimers(); fixtureFeed.current = null; });
 
 describe("children on hover (picture B)", () => {
   it("hovering the child count lists each child with status, title and age, in spawn order", async () => {
@@ -104,6 +118,55 @@ describe("children on hover (picture B)", () => {
     expect(rendered.sidebarActionCalls).toContainEqual({ method: "open", threadId: "thr_v3_parent_many", options: undefined });
     // Neither click also opens the card itself through its full-bleed link.
     expect(rendered.sidebarActionCalls.filter((call) => call.method === "open")).toHaveLength(2);
+  });
+
+  // R3: a host open is followed by onNavigate, so a compact drawer closes over
+  // the destination, as ordinary card navigation already does.
+  it.each([
+    [/^Open child: Sample check focus order/, "thr_v3_child_waiting"],
+    ["Open parent", "thr_v3_parent_many"],
+  ] as const)("calls onNavigate after opening %s", async (name, threadId) => {
+    const rendered = render();
+    fireEvent.mouseEnter(chip("3 children"));
+    fireEvent.click(await screen.findByRole("button", { name }));
+    expect(rendered.sidebarActionCalls.filter((call) => call.method === "open")).toEqual([{ method: "open", threadId, options: undefined }]);
+    expect(rendered.onNavigate).toHaveBeenCalledTimes(1);
+  });
+
+  // R1: a phone tap fires compatibility hover and focus, then click. The click
+  // must not undo the opening the same gesture caused; a second tap keeps it open.
+  it("stays open through a complete tap, and a second tap", async () => {
+    render();
+    const count = chip("3 children");
+    for (let tap = 0; tap < 2; tap++) {
+      fireEvent.pointerDown(count, { pointerType: "touch" });
+      fireEvent.mouseEnter(count);
+      fireEvent.focus(count);
+      fireEvent.pointerUp(count, { pointerType: "touch" });
+      fireEvent.click(count);
+      expect(panel(), `tap ${tap + 1}`).not.toBeNull();
+      expect(count.getAttribute("aria-expanded")).toBe("true");
+    }
+  });
+
+  // R4: sidebar-v3 section 1. A connection gap makes retained rows unavailable;
+  // only a fresh snapshot restores the list.
+  it("shows unavailable during and after a connection gap until fresh rows arrive", async () => {
+    fixtureFeed.current = { status: "ready", threads: [...v3Threads] };
+    const rendered = render();
+    fireEvent.focus(chip("3 children"));
+    const list = await screen.findByRole("dialog");
+    expect(within(list).getAllByRole("button", { name: /^Open child/ })).toHaveLength(3);
+    await rendered.setRealtimeConnectionState("reconnecting");
+    expect(within(list).getByText("Children are unavailable right now.")).toBeDefined();
+    expect(within(list).queryAllByRole("button", { name: /^Open child/ })).toHaveLength(0);
+    await rendered.setRealtimeConnectionState("connected");
+    expect(within(list).getByText("Children are unavailable right now."), "a reconnect alone cannot certify retained rows").toBeDefined();
+    fixtureFeed.current = { status: "ready", threads: v3Threads.map((t) =>
+      t.id === "thr_v3_child_waiting" ? { ...t, updatedAt: t.updatedAt + 1, hasPendingInteraction: false } : t) };
+    await rendered.setRealtimeConnectionState("connected");
+    fireEvent.mouseEnter(chip("3 children"));
+    await waitFor(() => expect(screen.getByRole("button", { name: /^Open child: Sample check focus order, idle/ })).toBeDefined());
   });
 
   it("shows each child's model and effort once the host serves them", async () => {
