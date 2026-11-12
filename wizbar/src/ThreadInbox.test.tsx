@@ -982,6 +982,36 @@ describe("WZ21: drag to pin, unpin and reorder", () => {
     await waitFor(() => expect(pinCalls(rendered)).toHaveLength(2));
   });
 
+  // R1 round 2: a read taken before a reconnect is stale; the move gate must
+  // wait for a read made on the restored connection and rows that agree.
+  it("R1 never reconciles against a read taken before a reconnect", async () => {
+    let hostChanged = false;
+    const rendered = renderDrag(rows(), {
+      pinnedOrder: () => ({ order: hostChanged ? ["pin_b", "pin_a"] : ["pin_a", "pin_b"] }),
+    });
+    await rendered.setRealtimeConnectionState("reconnecting");
+    fireEvent.keyDown(card("Pinned second"), { key: "ArrowUp", altKey: true });
+    await waitFor(() => expect(pinCalls(rendered)).toHaveLength(1));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    hostChanged = true;
+    await rendered.setRealtimeConnectionState("connected");
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    fireEvent.keyDown(card("Pinned first"), { key: "ArrowDown", altKey: true });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(pinCalls(rendered)).toHaveLength(1);
+  });
+  // R5: a read that never answers still ends in the unknown state on time.
+  it("R5 bounds a never-settling read: unknown result and unavailable shelves", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      renderDrag(rows(), { pinnedOrder: () => new Promise(() => {}) });
+      drag(card("Pinned first"), row("Pinned second"), 10);
+      await act(async () => { await vi.advanceTimersByTimeAsync(6000); });
+      expect((await screen.findByRole("alert")).textContent).toBe("Move result unknown: Thread rows are unavailable.");
+      expect(screen.getByText("Could not load threads.")).toBeDefined();
+    } finally { vi.useRealTimers(); }
+  });
+
   // R3: the drag table pins from any shelf; the keyboard must too.
   it.each([
     ["Settled", { threadId: "parked", settledAt: 200, snoozedUntil: null, snoozedAt: null }, {}],
