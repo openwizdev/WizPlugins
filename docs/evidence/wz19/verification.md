@@ -13,6 +13,13 @@ Two test-only corrections came after that red run and before green:
 
 Neither change weakens an assertion.
 
+## Review round 1 (R1, R3 and R4 on `772e93c`)
+
+- **R1 (a tap closed what it opened):** the count's click now only opens the panel, so it cannot undo an opening that the same tap's focus caused. Hover now uses pointer events, and touch pointers are ignored, so the compatibility leave Chromium sends after a tap no longer closes the panel. Tapping elsewhere still closes it through blur, and Escape still closes it. Red: `review1-red.log` (commit `4b88974`). That proof missed the compatibility leave, which a real-browser tap showed, so `review1-red-tap.log` records the extended proof failing against the first fix. Proof: rendered "stays open through a complete tap, and a second tap", and the browser `tap-host` state (two real touch taps at 320 px and 390 px, open after each).
+- **R3 (no `onNavigate`):** opening a child and "Open parent" now call the host's `onNavigate` after `open`, as card navigation does, so a compact drawer closes. Proof: rendered "calls onNavigate after opening …" for both buttons (compact viewport, exactly one `open` and one `onNavigate`).
+- **R4 (stale rows):** the panel reads its rows through the shared freshness-aware reader, `useObservableRows`, which the list line and the stats panel also use. During a connection gap it shows "Children are unavailable right now.". After a reconnect it stays unavailable until a fresh snapshot arrives. Proof: rendered "shows unavailable during and after a connection gap until fresh rows arrive". One test-only change came after that red run: the test closes and reopens the panel so it renders again with the fresh feed. No assertion was weakened.
+- **R2:** tracked in #56. It is not part of this round.
+
 ## Claims and their proof
 
 | Claim (acceptance criterion) | Proof |
@@ -26,7 +33,7 @@ Neither change weakens an assertion.
 
 ## Rendered screenshots (synthetic)
 
-`render.html`, `render.tsx` and `serve.mjs` serve the real registered list with the v0.3 fixture rows and a fake WizBar server. `capture.py` (run with `browser-harness`) drives headless Chromium with real pointer, focus and key events and fails on any mismatch. The results are in `screenshots/capture.json`.
+`render.html`, `render.tsx` and `serve.mjs` serve the real registered list with the v0.3 fixture rows and a fake WizBar server. `capture.py` (run with `browser-harness`) drives headless Chromium with real pointer, touch, focus and key events and fails on any mismatch. The results are in `screenshots/capture.json`.
 
 | File | Shows |
 | --- | --- |
@@ -45,7 +52,7 @@ Deliberate differences from picture B:
 
 ## Checks at the hand-back commit
 
-From `wizbar/`: `npm ci`, `npm run typecheck` (`typecheck.log`, clean) and `npm test -- --maxWorkers=2` (`full-suite.log`: 22 files, 730 tests passed, after merging main with WZ20 stats; the `stats` and `children` commands sit side by side in the shared `command.ts` and `server.ts`).
+From `wizbar/`: `npm ci`, `npm run typecheck` (`typecheck.log`, clean) and `npm test -- --maxWorkers=2` (`full-suite.log`: 22 files, 734 tests passed). Main (WZ20 stats) was merged earlier; the `stats` and `children` commands sit side by side in the shared `command.ts` and `server.ts`.
 
 ## Helpers
 

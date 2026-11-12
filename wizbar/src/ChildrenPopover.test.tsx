@@ -57,7 +57,7 @@ describe("children on hover (picture B)", () => {
   it("hovering the child count lists each child with status, title and age, in spawn order", async () => {
     render();
     expect(panel()).toBeNull();
-    fireEvent.mouseEnter(chip("3 children"));
+    fireEvent.pointerEnter(chip("3 children"));
     const list = await screen.findByRole("dialog", { name: "3 children" });
     const rows = within(list).getAllByRole("button", { name: /^Open child/ });
     expect(rows.map((row) => row.getAttribute("aria-label"))).toEqual([
@@ -88,13 +88,13 @@ describe("children on hover (picture B)", () => {
   it("closes when the pointer leaves, but not on the way from the count into the list", async () => {
     render();
     const count = chip("3 children");
-    fireEvent.mouseEnter(count);
+    fireEvent.pointerEnter(count);
     const list = await screen.findByRole("dialog");
-    fireEvent.mouseLeave(count);
-    fireEvent.mouseEnter(list);
+    fireEvent.pointerLeave(count);
+    fireEvent.pointerEnter(list);
     await new Promise((resolve) => setTimeout(resolve, 300));
     expect(panel()).not.toBeNull();
-    fireEvent.mouseLeave(list);
+    fireEvent.pointerLeave(list);
     await waitFor(() => expect(panel()).toBeNull());
   });
 
@@ -109,11 +109,11 @@ describe("children on hover (picture B)", () => {
 
   it("clicking a child opens that child; Open parent opens the parent", async () => {
     const rendered = render();
-    fireEvent.mouseEnter(chip("3 children"));
+    fireEvent.pointerEnter(chip("3 children"));
     fireEvent.click(await screen.findByRole("button", { name: /^Open child: Sample check focus order/ }));
     expect(rendered.sidebarActionCalls).toContainEqual({ method: "open", threadId: "thr_v3_child_waiting", options: undefined });
     expect(panel()).toBeNull();
-    fireEvent.mouseEnter(chip("3 children"));
+    fireEvent.pointerEnter(chip("3 children"));
     fireEvent.click(await screen.findByRole("button", { name: "Open parent" }));
     expect(rendered.sidebarActionCalls).toContainEqual({ method: "open", threadId: "thr_v3_parent_many", options: undefined });
     // Neither click also opens the card itself through its full-bleed link.
@@ -127,7 +127,7 @@ describe("children on hover (picture B)", () => {
     ["Open parent", "thr_v3_parent_many"],
   ] as const)("calls onNavigate after opening %s", async (name, threadId) => {
     const rendered = render();
-    fireEvent.mouseEnter(chip("3 children"));
+    fireEvent.pointerEnter(chip("3 children"));
     fireEvent.click(await screen.findByRole("button", { name }));
     expect(rendered.sidebarActionCalls.filter((call) => call.method === "open")).toEqual([{ method: "open", threadId, options: undefined }]);
     expect(rendered.onNavigate).toHaveBeenCalledTimes(1);
@@ -171,7 +171,7 @@ describe("children on hover (picture B)", () => {
       t.id === "thr_v3_child_waiting" ? { ...t, updatedAt: t.updatedAt + 1, hasPendingInteraction: false } : t) };
     // Close and reopen, so the panel renders again with the fresh snapshot.
     fireEvent.keyDown(chip("3 children"), { key: "Escape" });
-    fireEvent.mouseEnter(chip("3 children"));
+    fireEvent.pointerEnter(chip("3 children"));
     await waitFor(() => expect(screen.getByRole("button", { name: /^Open child: Sample check focus order, idle/ })).toBeDefined());
   });
 
@@ -183,7 +183,7 @@ describe("children on hover (picture B)", () => {
         effort: threadId === "thr_v3_child_waiting" ? "medium" : null,
       })),
     }));
-    fireEvent.mouseEnter(chip("3 children"));
+    fireEvent.pointerEnter(chip("3 children"));
     const list = await screen.findByRole("dialog");
     expect(await within(list).findByText("Sample model · Medium")).toBeDefined();
     expect(within(list).queryAllByText(/·/)).toHaveLength(1);
@@ -191,7 +191,7 @@ describe("children on hover (picture B)", () => {
 
   it("omits models while the source is none or the call fails", async () => {
     render(v3Threads, () => Promise.reject(new Error("offline")));
-    fireEvent.mouseEnter(chip("3 children"));
+    fireEvent.pointerEnter(chip("3 children"));
     const list = await screen.findByRole("dialog");
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(within(list).queryByText(/·/)).toBeNull();
@@ -200,7 +200,7 @@ describe("children on hover (picture B)", () => {
 
   it("says the list is unavailable rather than guessing a status", async () => {
     render(v3Threads.map((t) => t.id === "thr_v3_child_waiting" ? { ...t, runtimeStatus: "future-state" as never } : t));
-    fireEvent.mouseEnter(chip("3 children"));
+    fireEvent.pointerEnter(chip("3 children"));
     const list = await screen.findByRole("dialog");
     expect(within(list).getByText("Children are unavailable right now.")).toBeDefined();
     expect(within(list).queryAllByRole("button", { name: /^Open child/ })).toHaveLength(0);
@@ -213,7 +213,7 @@ describe("children on hover (picture B)", () => {
     render();
     const count = chip("3 children");
     count.getBoundingClientRect = () => DOMRect.fromRect({ x: width - 70, y: 600, width: 64, height: 18 });
-    fireEvent.mouseEnter(count);
+    fireEvent.pointerEnter(count);
     const list = await screen.findByRole("dialog");
     Object.defineProperty(list, "scrollHeight", { configurable: true, value: 220 });
     fireEvent(window, new Event("resize"));
@@ -232,7 +232,7 @@ describe("children on hover (picture B)", () => {
     render();
     const count = chip("3 children");
     count.getBoundingClientRect = () => DOMRect.fromRect({ x: 20, y: 80, width: 64, height: 18 });
-    fireEvent.mouseEnter(count);
+    fireEvent.pointerEnter(count);
     const list = await screen.findByRole("dialog");
     expect(parseFloat(list.style.top)).toBeGreaterThanOrEqual(98);
     expect(list.style.bottom).toBe("");

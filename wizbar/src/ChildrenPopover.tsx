@@ -111,8 +111,12 @@ export function ChildrenPopover({
     <span
       ref={wrapper}
       className="pointer-events-auto relative max-w-full"
-      onMouseEnter={show}
-      onMouseLeave={() => {
+      // Hover is a mouse or pen gesture. A touch tap opens through focus and
+      // click; its pointer, and the compatibility mouse after it, then "leave",
+      // which must not close what the tap opened. Tapping elsewhere blurs it.
+      onPointerEnter={(event) => { if (event.pointerType !== "touch") show(); }}
+      onPointerLeave={(event) => {
+        if (event.pointerType === "touch") return;
         cancelClose();
         closeTimer.current = setTimeout(() => setOpen(false), CLOSE_DELAY);
       }}

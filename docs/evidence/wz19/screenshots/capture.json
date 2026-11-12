@@ -95,6 +95,27 @@
   ]
  },
  {
+  "width": 320,
+  "state": "tap-host",
+  "open": true,
+  "label": "3 children",
+  "rows": [
+   "Open child: Sample audit shortcuts, working, now",
+   "Open child: Sample check focus order, waiting, 2m",
+   "Open child: Sample test search states, unread, 8m",
+   "Open parent"
+  ],
+  "text": "3 children\nSample audit shortcuts\nSol 6.1 \u00b7 High\nnow\nSample check focus order\nOpus 5.5 \u00b7 Medium\n2m\nSample test search states\nSol 6.1 \u00b7 High\n8m\nOpen parent",
+  "box": {
+   "left": 9,
+   "right": 297,
+   "top": 349.75,
+   "bottom": 570.75
+  },
+  "inside": true,
+  "pageOverflow": false
+ },
+ {
   "width": 390,
   "state": "hover-none",
   "open": true,
@@ -188,5 +209,26 @@
   "openCalls": [
    "thr_v3_child_waiting"
   ]
+ },
+ {
+  "width": 390,
+  "state": "tap-host",
+  "open": true,
+  "label": "3 children",
+  "rows": [
+   "Open child: Sample audit shortcuts, working, now",
+   "Open child: Sample check focus order, waiting, 2m",
+   "Open child: Sample test search states, unread, 8m",
+   "Open parent"
+  ],
+  "text": "3 children\nSample audit shortcuts\nSol 6.1 \u00b7 High\nnow\nSample check focus order\nOpus 5.5 \u00b7 Medium\n2m\nSample test search states\nSol 6.1 \u00b7 High\n8m\nOpen parent",
+  "box": {
+   "left": 79,
+   "right": 367,
+   "top": 305.359375,
+   "bottom": 526.359375
+  },
+  "inside": true,
+  "pageOverflow": false
  }
 ]
