@@ -41,7 +41,8 @@ The nested raw `activity` object is the one `server.ts` already validates (`live
 **Working: one shared fact.** Every v0.3 computation (children status, stats) calls a row working when `hasRuntimeWork(runtimeStatus, [workflows, backgroundAgents, backgroundCommands, planMode, goals])` is true: the existing shared rule mute already uses on both the server and the sidebar (mute.v1.md). Both readers have exactly these inputs, so the UI and the CLI compute the same answer for the same rows. `indicator` is not an input: the host resolves it "attention before work", so a thread waiting for input while its runtime is active shows `waiting-for-input`, not `runtime`.
 
 - **Unavailable:** a `runtimeStatus` outside SDK 0.6.33's `ThreadRuntimeDisplayStatus` (`idle`, `error`, `active`, `pending`, `starting`, `stopping`, `provisioning`, `waiting-for-host`) cannot mean idle, so that reader's children and stats results are unavailable (section 4), never a guess. The CLI reader rejects such a row as malformed.
-- **The footer rule is unchanged.** The list-bottom "N running" line (#37) keeps the exported `isWorking`. It can therefore be lower than the stats panel's `running.total` for the same rows: by the rows whose runtime work hides behind an attention indicator. `thr_v3_active_waiting` is that case in the fixtures (total 5, list-bottom 4). Whether a real row can be working by `isWorking` but not by the shared rule is Unverified until #9.
+- **One running number everywhere** ([orchestrator ruling on #39](https://github.com/openwizdev/wizplugins/issues/39#issuecomment-6818255945)). A row is **running** when it is working by the shared fact and `hasPendingInteraction` is false. A busy thread that waits on you counts under "waiting on you", never under running. The list-bottom "N running" line, the stats panel's `running.total` and `wizbar stats` all use this one rule and so show the same number for the same rows. `thr_v3_active_waiting` is the busy-but-waiting case in the fixtures.
+- **The list-bottom line moves to this rule in #41.** Until #41 lands, the shipped line (#37) still counts the exported `isWorking`, which reads `indicator`; #41 changes the line's code and its tests to the running rule above. The `isWorking` export itself, and the settle/snooze rules that use it, are unchanged.
 
 Parity in tests means: for the same rows (as `PluginSidebarThread`), the UI and the CLI computation return equal JSON. The live check (#9) compares `wizbar stats --json` with the panel at one moment and reports any difference.
 
@@ -112,11 +113,11 @@ One computation over the reader's rows (section 1), at a given `now` and IANA `t
 
 | Number | Exact definition |
 | --- | --- |
-| `running.total` | Rows that are working by the shared fact (section 1). Can exceed the list-bottom number, as section 1 says |
+| `running.total` | Running rows (section 1: working and not waiting on you). The same number as the list-bottom line once #41 applies the rule |
 | `running.topLevel` | Running rows with `parentThreadId === null` |
 | `running.children` | Running rows with `parentThreadId !== null`, whether or not the parent is in the input |
 | `running.cloud`, `running.local`, `running.unknown` | Running rows by the shared `classifyMachine` (approved #29 rule): `"Cloud"`, `"Local"`, `null`. The three add up to `total` |
-| `waitingOnYou` | Rows with `hasPendingInteraction`, working or not |
+| `waitingOnYou` | Rows with `hasPendingInteraction`, busy or not. A busy row here is not in `running` |
 | `finishedToday` | `{ source: "none", count: null }`: unavailable, because SDK 0.6.33 declares no finish time (below). Once a host finish-time field is adopted (a plan change and a keeper observation): `{ source: "host", count }`, the rows that are not working, not waiting and not failed whose finish time is inside today's window |
 
 **"Today"** is the reader's local calendar day: from local midnight today (inclusive) to local midnight tomorrow (exclusive), in the reader's IANA time zone (`Intl.DateTimeFormat().resolvedOptions().timeZone`), computed with calendar arithmetic like `resolveSnoozePresets`, so a 23- or 25-hour day is handled. The result reports `window: { timeZone, start, end }`. The panel uses the browser's zone and the CLI the server process's zone; when they differ, the window shows it.
@@ -252,5 +253,5 @@ Read with the existing rule: a missing key reads its default; exactly `true` is 
 
 ## Evidence limits
 
-- Fixtures and these shapes prove no host behaviour. Model/effort availability, the Cloud projection's missing branch and PR, the real pinned order, any host finish time, the server reader's equivalence to the sidebar hook, how often the list-bottom line and `running.total` differ on real rows, footer placement and the disclosure's real look stay Unverified until #9.
+- Fixtures and these shapes prove no host behaviour. Model/effort availability, the Cloud projection's missing branch and PR, the real pinned order, any host finish time, the server reader's equivalence to the sidebar hook, whether real rows ever differ between `isWorking` and the running rule before #41, footer placement and the disclosure's real look stay Unverified until #9.
 - The JSON timestamps in this document are examples; tests use the fixtures.

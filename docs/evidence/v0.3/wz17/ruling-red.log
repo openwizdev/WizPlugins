@@ -1,0 +1,33 @@
+
+ RUN  v4.1.10 <repo>/wizbar
+
+ ❯ |bb-plugin-wizbar| src/fixtures/v3-fixtures.test.ts (10 tests | 1 failed) 13ms
+     × states expected stats from the one running rule, with finished today unavailable 4ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/fixtures/v3-fixtures.test.ts > V0: synthetic v0.3 fixtures cover the contract's cases > states expected stats from the one running rule, with finished today unavailable
+AssertionError: expected 5 to be 4 // Object.is equality
+
+- Expected
++ Received
+
+- 4
++ 5
+
+ ❯ src/fixtures/v3-fixtures.test.ts:76:35
+     74|     if (v3Stats.status !== "ready") throw new Error("fixture stats mus…
+     75|     const running = v3Threads.filter(runningRow);
+     76|     expect(v3Stats.running.total).toBe(running.length);
+       |                                   ^
+     77|     // Busy but waiting on you: under waitingOnYou, never under runnin…
+     78|     expect(running.map((t) => t.id)).not.toContain("thr_v3_active_wait…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 9 passed (10)
+   Start at  08:07:32
+   Duration  250ms (transform 101ms, setup 0ms, import 124ms, tests 13ms, environment 0ms)
+

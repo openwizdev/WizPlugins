@@ -19,6 +19,8 @@ import {
 const byId = new Map(v3Threads.map((thread) => [thread.id, thread]));
 // The contract's shared working fact: the same inputs on both readers.
 const working = (t: (typeof v3Threads)[number]) => hasRuntimeWork(t.runtimeStatus, Object.values(t.activity));
+// One running number everywhere (ruling on #39): working and not waiting on you.
+const runningRow = (t: (typeof v3Threads)[number]) => working(t) && !t.hasPendingInteraction;
 
 describe("V0: synthetic v0.3 fixtures cover the contract's cases", () => {
   it("uses only made-up ids, titles and hosts, with no paths", () => {
@@ -43,7 +45,7 @@ describe("V0: synthetic v0.3 fixtures cover the contract's cases", () => {
   it("has Cloud, Local and unknown rows by the shipped machine rule, running and not", () => {
     const kinds = (rows: typeof v3Threads) => new Set(rows.map((t) => classifyMachine(t)));
     expect(kinds(v3Threads)).toEqual(new Set(["Cloud", "Local", null]));
-    expect(kinds(v3Threads.filter(working))).toEqual(new Set(["Cloud", "Local", null]));
+    expect(kinds(v3Threads.filter(runningRow))).toEqual(new Set(["Cloud", "Local", null]));
   });
 
   it("has waiting, failed, pinned (keyed and unkeyed) and finished-today rows", () => {
@@ -68,13 +70,16 @@ describe("V0: synthetic v0.3 fixtures cover the contract's cases", () => {
     expect(Object.values(row?.activity ?? {}).every((count) => count === 0)).toBe(true);
   });
 
-  it("states expected stats from the shared runtime rule, with finished today unavailable", () => {
+  it("states expected stats from the one running rule, with finished today unavailable", () => {
     if (v3Stats.status !== "ready") throw new Error("fixture stats must be ready");
-    const running = v3Threads.filter(working);
+    const running = v3Threads.filter(runningRow);
     expect(v3Stats.running.total).toBe(running.length);
-    // The list-bottom line keeps isWorking; here it is one lower, the masked row.
+    // Busy but waiting on you: under waitingOnYou, never under running.
+    expect(running.map((t) => t.id)).not.toContain("thr_v3_active_waiting");
+    expect(v3Threads.filter((t) => t.hasPendingInteraction).map((t) => t.id)).toContain("thr_v3_active_waiting");
+    // On these rows the shipped list-bottom count (isWorking, until #41) gives the same number.
     const shipped = countRunning(readRunningSource({ status: "ready", threads: v3Threads }, "connected"));
-    expect(v3Stats.running.total - (shipped?.threads ?? NaN)).toBe(1);
+    expect(v3Stats.running.total).toBe(shipped?.threads);
     expect(v3Stats.running.topLevel).toBe(running.filter((t) => t.parentThreadId === null).length);
     expect(v3Stats.running.children).toBe(running.filter((t) => t.parentThreadId !== null).length);
     expect([v3Stats.running.cloud, v3Stats.running.local, v3Stats.running.unknown]).toEqual(

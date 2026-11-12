@@ -71,9 +71,11 @@ const waiting = {
 
 /**
  * Twelve sidebar rows, as `experimental_useSidebarThreads()` would return them.
- * Running (shared runtime rule): parent_many, child_working, child_local,
- * starting, active_waiting. The footer's `isWorking` misses active_waiting:
- * its indicator shows the attention, not the runtime work behind it.
+ * Working (shared runtime rule): parent_many, child_working, child_local,
+ * starting, active_waiting. Running (working and not waiting on you): the
+ * first four. active_waiting is busy but waiting, so it counts under
+ * "waiting on you" only; the footer's `isWorking` also misses it, because its
+ * indicator shows the attention, not the runtime work behind it.
  */
 export const v3Threads: readonly PluginSidebarThread[] = [
   thread({
@@ -254,7 +256,7 @@ export const v3Children: Readonly<Record<string, ChildrenResultV3>> = {
 export const v3Stats: StatsV3 = {
   version: 1,
   status: "ready",
-  running: { total: 5, topLevel: 3, children: 2, cloud: 2, local: 2, unknown: 1 },
+  running: { total: 4, topLevel: 2, children: 2, cloud: 1, local: 2, unknown: 1 },
   waitingOnYou: 3,
   // No host finish time yet. Once one exists, finished_today and child_finished count here.
   finishedToday: { source: "none", count: null },

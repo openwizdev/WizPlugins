@@ -34,6 +34,10 @@ From `wizbar/`: `npm ci`, `npm run typecheck`, `npm test -- --maxWorkers=2`. The
 | R3 working parity | One shared fact, `hasRuntimeWork` over `runtimeStatus` and the five counters, for children and stats on both readers; unknown `runtimeStatus` is unavailable; the list-bottom line keeps `isWorking`; counterexample row added | Same test and log |
 | R4 finished today | `finishedToday` is `{ source: "none", count: null }` until a host finish time is adopted; other numbers stay ready | Same test and log |
 
+## Ruling after round 1
+
+The orchestrator ruled on #39 that there is one running number everywhere: working (`hasRuntimeWork`) and not waiting on you. It applies to the list-bottom line, `running.total` and `wizbar stats`. Busy-but-waiting threads count only under "waiting on you". "Finished today: not available yet" is accepted. The contract records the rule (section 1). The list line's code and tests change in #41. Fixture `running` is back to 4. Red first: `ruling-red.log` (one assertion failure, 5 expected to be 4).
+
 ## Supporting edit outside the listed owned paths
 
 `wizbar/src/SettingsPage.test.tsx`: exactly one assertion, `toHaveLength(2)` → `toHaveLength(4)`. The settings section draws one switch per descriptor, so the two new settings (acceptance criterion 4, owned path `wizbar/src/settings.ts`) make it 4; without this line the full suite fails `wizbar-checks`. Allowed by the [orchestrator ruling on #39](https://github.com/openwizdev/wizplugins/issues/39#issuecomment-6817197383) (option 1), which also accepts the `readWizBarSettings`/`WizBarSettings` reads of the two keys under the existing rule. #43 keeps the rest of that file.
