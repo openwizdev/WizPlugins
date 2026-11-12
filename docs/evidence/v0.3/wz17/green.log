@@ -1,13 +1,8 @@
 
-> bb-plugin-wizbar@0.1.0 test
-> vitest run --config vitest.config.ts --maxWorkers=2 src/settings.test.ts src/fixtures/v3-fixtures.test.ts src/SettingsPage.test.tsx
-
-
  RUN  v4.1.10 <repo>/wizbar
 
 
  Test Files  3 passed (3)
       Tests  34 passed (34)
-   Start at  08:08:05
-   Duration  1.55s (transform 328ms, setup 0ms, import 709ms, tests 574ms, environment 483ms)
-
+   Start at  08:41:34
+   Duration  2.61s (transform 241ms, setup 0ms, import 991ms, tests 685ms, environment 1.31s)

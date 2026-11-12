@@ -132,4 +132,3 @@ AssertionError: expected { footerCountEnabled: true, …(1) } to deeply equal { 
       Tests  6 failed | 5 passed (11)
    Start at  06:17:43
    Duration  372ms (transform 90ms, setup 0ms, import 184ms, tests 82ms, environment 0ms)
-

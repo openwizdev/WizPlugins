@@ -269,17 +269,23 @@ export const v3PinnedOrder: readonly string[] = ["thr_v3_parent_many", "thr_v3_p
 
 /** Drag into Pinned: `pin`, then `reorderPinned`, two host calls with no atomic pair. */
 export const v3DragPinCases: readonly DragPinCaseV3[] = [
-  { pin: "ok", reorder: "ok", rowsAfter: "ready", outcome: { kind: "pinned-placed" } },
+  { pin: "ok", reorder: "ok", rowsAfter: "ready", refreshedIsPinned: true, outcome: { kind: "pinned-placed" } },
   {
-    pin: "failed", reorder: "skipped", rowsAfter: "ready",
-    outcome: { kind: "pin-failed", message: "Could not pin: Sample host refusal." },
+    pin: "failed", reorder: "skipped", rowsAfter: "ready", refreshedIsPinned: false,
+    outcome: { kind: "pin-failed", message: "Pin failed: Sample host refusal." },
   },
   {
-    pin: "ok", reorder: "failed", rowsAfter: "ready",
-    outcome: { kind: "pinned-not-placed", message: "Pinned, but could not place it: Sample host refusal." },
+    pin: "ok", reorder: "failed", rowsAfter: "ready", refreshedIsPinned: true,
+    outcome: { kind: "pinned-not-placed", message: "Pin succeeded, but placement failed: Sample host refusal." },
   },
   {
-    pin: "ok", reorder: "failed", rowsAfter: "unavailable",
-    outcome: { kind: "unknown", message: "Pin state unknown: Sample host refusal." },
+    // Someone else unpinned it between the calls and the refresh: the rows
+    // show it unpinned, and the message still only reports the calls.
+    pin: "ok", reorder: "failed", rowsAfter: "ready", refreshedIsPinned: false,
+    outcome: { kind: "pinned-not-placed", message: "Pin succeeded, but placement failed: Sample host refusal." },
+  },
+  {
+    pin: "ok", reorder: "failed", rowsAfter: "unavailable", refreshedIsPinned: null,
+    outcome: { kind: "unknown", message: "Pin result unknown: Sample host refusal." },
   },
 ];

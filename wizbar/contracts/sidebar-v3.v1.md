@@ -141,14 +141,16 @@ One computation over the reader's rows (section 1), at a given `now` and IANA `t
 
 - The Inbox stays newest-first and is never re-ordered by any drop. An unpinned card lands at its own creation-time place.
 - Drag and the CLI call the same WizBar server operations (#42), which call the host operations above. The UI always draws the host's sidebar rows, never its own guess, and keeps no optimistic position to restore.
-- **Drag into Pinned is two host calls.** The SDK declares no atomic pin-and-place: `pin` can succeed and `reorderPinned` then fail. WizBar never undoes a step (no automatic unpin, no writing back an older order over changes made meanwhile). After the drop it re-reads the rows and reports one outcome (`DragPinCaseV3`, fixtures `v3DragPinCases`):
+- **Drag into Pinned is two host calls.** The SDK declares no atomic pin-and-place: `pin` can succeed and `reorderPinned` then fail. WizBar never undoes a step (no automatic unpin, no writing back an older order over changes made meanwhile). After the drop it re-reads the rows, draws them exactly as returned, and reports one outcome (`DragPinCaseV3`, fixtures `v3DragPinCases`). The outcome and its message describe only what the host calls did. They never state the thread's current pin state or place, because another person or agent may change it between the calls and the re-read; the rows alone show that.
 
-| Pin | Reorder | Rows after | Outcome | Shown |
+| Pin call | Reorder call | Rows re-read | Outcome | Message |
 | --- | --- | --- | --- | --- |
-| ok | ok | ready | `pinned-placed` | The host's rows |
-| failed | skipped | ready | `pin-failed` | The host's rows (unchanged) and `Could not pin: <error>` |
-| ok | failed | ready | `pinned-not-placed` | The host's rows (pinned, at the host's own place) and `Pinned, but could not place it: <error>` |
-| any | any | unavailable | `unknown` | `Pin state unknown: <error>`; the shelves show the existing unavailable state until the rows return |
+| ok | ok | yes | `pinned-placed` | None |
+| failed | not made | yes | `pin-failed` | `Pin failed: <error>` |
+| ok | failed | yes | `pinned-not-placed` | `Pin succeeded, but placement failed: <error>` |
+| any | any | no | `unknown` | `Pin result unknown: <error>`; the shelves show the existing unavailable state until the rows return |
+
+`v3DragPinCases` includes a `pinned-not-placed` drop whose re-read rows show the thread unpinned (someone unpinned it in between): the card is drawn unpinned and the message is unchanged.
 
 The CLI has no combined command: `wizbar pin` and `wizbar move` are separate, so each reports its own result.
 - Pinning does not change mute, settle or snooze rules: a pinned thread still cannot be muted (mute.v1.md), and pinned rows stay visible.

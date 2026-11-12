@@ -121,10 +121,16 @@ export type MovePositionV3 =
  * One drag into Pinned. The host has no atomic pin-and-place, so each step can
  * fail on its own. `rowsAfter` is whether the sidebar rows could be re-read.
  */
+/**
+ * One drag into Pinned. `outcome` reports what the host calls did, never the
+ * current pin state; the UI draws the refreshed rows exactly as returned.
+ */
 export interface DragPinCaseV3 {
   pin: "ok" | "failed";
   reorder: "ok" | "failed" | "skipped";
   rowsAfter: "ready" | "unavailable";
+  /** What the refreshed rows say about the dragged thread; null when they did not return. */
+  refreshedIsPinned: boolean | null;
   outcome:
     | { kind: "pinned-placed" }
     | { kind: "pin-failed"; message: string }

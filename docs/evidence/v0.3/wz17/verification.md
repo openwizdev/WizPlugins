@@ -22,6 +22,7 @@ From `wizbar/`: `npm ci`, `npm run typecheck`, `npm test -- --maxWorkers=2`. The
 - `red.log`: the proof subset before the descriptors and fixtures existed: four settings failures (two keys missing) and the fixture module missing. Committed before the fix.
 - `read-red.log`: the settings reader before it read the two new keys: six failures. Committed before the fix.
 - `review-red.log`: the fixture test after the round-1 test changes, before the fixtures and types: three assertion failures (no counterexample row, total not above the list-bottom count, no drag cases).
+- `r2-red.log`: the fixture test after the R2 re-check change, before the types and fixtures: one assertion failure (messages still stated current pin state; no case where the re-read rows disagree with the call results).
 - `settings-count-red.log`: `src/SettingsPage.test.tsx` with the old switch count, against this branch: the section now draws 4 switches, so `toHaveLength(2)` fails.
 - `green.log`, `typecheck.log`, `full-suite.log`: the same subset passing, typecheck and the full suite at the hand-back commit. Local paths are replaced with `<repo>`.
 
@@ -37,6 +38,10 @@ From `wizbar/`: `npm ci`, `npm run typecheck`, `npm test -- --maxWorkers=2`. The
 ## Ruling after round 1
 
 The orchestrator ruled on #39 that there is one running number everywhere: working (`hasRuntimeWork`) and not waiting on you. It applies to the list-bottom line, `running.total` and `wizbar stats`. Busy-but-waiting threads count only under "waiting on you". "Finished today: not available yet" is accepted. The contract records the rule (section 1). The list line's code and tests change in #41. Fixture `running` is back to 4. Red first: `ruling-red.log` (one assertion failure, 5 expected to be 4).
+
+## Re-check 1 (R2 at `24d1165`)
+
+Outcomes and messages now report only the host calls' results (`Pin failed`, `Pin succeeded, but placement failed`, `Pin result unknown`); the UI draws the re-read rows exactly as returned. `DragPinCaseV3.refreshedIsPinned` records what the rows say, and `v3DragPinCases` adds a case where someone unpinned the thread in between. No-undo rule kept. Proof: `v3-fixtures.test.ts`, red first (`r2-red.log`).
 
 ## Supporting edit outside the listed owned paths
 
