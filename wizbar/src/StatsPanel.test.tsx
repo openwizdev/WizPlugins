@@ -10,18 +10,29 @@ import type { PluginSidebarThread, PluginSidebarThreadsState } from "@get-bb/plu
 import { v3Threads } from "./fixtures/v3";
 
 // Lets a test hand the hook the same or a new host snapshot across rerenders.
-// Like the host's per-hook projection, every call returns its own array over
-// the same row objects, so no two consumers ever share an array.
+// Like the host's per-hook projection, each hook instance builds its own array
+// and its own row objects (kept per instance while a source row is unchanged),
+// so no two consumers ever share an array or a row object.
 const fixtureFeed = vi.hoisted(() => ({ current: null as Pick<PluginSidebarThreadsState, "status" | "threads"> | null }));
 vi.mock("@get-bb/plugin-sdk/app", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@get-bb/plugin-sdk/app")>();
-  return { ...actual, experimental_useSidebarThreads: (...args: Parameters<typeof actual.experimental_useSidebarThreads>) =>
-    fixtureFeed.current ? { ...fixtureFeed.current, threads: [...fixtureFeed.current.threads],
-      projects: [], sections: [], experimental_archived: null }
-      : actual.experimental_useSidebarThreads(...args) };
+  const { useRef } = await import("react");
+  return { ...actual, experimental_useSidebarThreads: (...args: Parameters<typeof actual.experimental_useSidebarThreads>) => {
+    const projections = useRef(new WeakMap<PluginSidebarThread, PluginSidebarThread>());
+    const real = actual.experimental_useSidebarThreads(...args);
+    if (!fixtureFeed.current) return real;
+    const threads = fixtureFeed.current.threads.map((row) => {
+      let projected = projections.current.get(row);
+      if (!projected) projections.current.set(row, projected = { ...row });
+      return projected;
+    });
+    return { ...fixtureFeed.current, threads, projects: [], sections: [], experimental_archived: null };
+  } };
 });
-/** A new host snapshot: new row objects with the fixture's values. */
+/** New row objects with the fixture's values (the same data, re-projected). */
 const fresh = () => v3Threads.map((thread) => ({ ...thread }));
+/** A new host snapshot: one row's revision moved on. */
+const changed = () => v3Threads.map((thread, i) => ({ ...thread, updatedAt: thread.updatedAt + (i === 0 ? 1 : 0) }));
 
 const app = await loadPluginApp(() => import("../app"));
 const { FooterCounter } = await import("./FooterCounter");
@@ -90,11 +101,17 @@ describe("V3: footer stats panel", () => {
     rendered.rerender(createElement(View, { open: true }));
     expect(screen.queryByRole("status", { name: /running$/ })).toBeNull();
     expect(lines()[0]).toBe("Stats unavailable");
-    // The same retained rows in another array still do not clear the gap.
-    fixtureFeed.current = { status: "ready", threads: [...fixtureFeed.current.threads] };
+    // The same retained data in new arrays and new row objects (any consumer's
+    // own projection) still does not clear the gap.
+    fixtureFeed.current = { status: "ready", threads: fresh() };
     rendered.rerender(createElement(View, { open: true }));
     expect(lines()[0]).toBe("Stats unavailable");
-    fixtureFeed.current = { status: "ready", threads: fresh() };
+    expect(screen.queryByRole("status", { name: /running$/ })).toBeNull();
+    // Closed and reopened: a newly mounted panel's projection cannot clear it.
+    rendered.rerender(createElement(View, { open: false }));
+    rendered.rerender(createElement(View, { open: true }));
+    expect(lines()[0]).toBe("Stats unavailable");
+    fixtureFeed.current = { status: "ready", threads: changed() };
     rendered.rerender(createElement(View, { open: true }));
     expect(lines()[0]).toBe("4 running · 2 top-level, 2 children");
     expect(screen.getByRole("status", { name: "4 running" })).toBeDefined();

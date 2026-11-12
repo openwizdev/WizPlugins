@@ -1,0 +1,20 @@
+# R1 re-check 2 red (independent arrays and row objects per hook instance), before the value-keyed gap store
+$ npx vitest run --maxWorkers=2 src/StatsPanel.test.tsx
+ RUN  v4.1.10 wizbar
+ ❯ |bb-plugin-wizbar| src/StatsPanel.test.tsx (11 tests | 1 failed) 189ms
+     × opens unavailable after a gap the list line saw, until a new snapshot arrives 23ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  |bb-plugin-wizbar| src/StatsPanel.test.tsx > V3: footer stats panel > opens unavailable after a gap the list line saw, until a new snapshot arrives
+AssertionError: expected '4 running · 2 top-level, 2 children' to be 'Stats unavailable' // Object.is equality
+Expected: "Stats unavailable"
+Received: "4 running · 2 top-level, 2 children"
+ ❯ src/StatsPanel.test.tsx:103:24
+    101|     rendered.rerender(createElement(View, { open: true }));
+    102|     expect(screen.queryByRole("status", { name: /running$/ })).toBeNul…
+    103|     expect(lines()[0]).toBe("Stats unavailable");
+       |                        ^
+    104|     // The same retained data in new arrays and new row objects (any c…
+    105|     // own projection) still does not clear the gap.
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+ Test Files  1 failed (1)
+      Tests  1 failed | 10 passed (11)
