@@ -161,7 +161,7 @@ export function ThreadInbox({
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2" ref={drag.containerRef} {...drag.handlers}>
-        <p id="wizbar-drag-hint" className="sr-only">
+        <p className="sr-only">
           Drag a card into Pinned to pin it, out to unpin it, or inside Pinned to reorder it.
           With a card focused, Alt+Up and Alt+Down do the same.
         </p>
@@ -436,6 +436,9 @@ function useDragPins(
   const [dropAt, setDropAt] = useState<MovePositionV3 | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [focusId, setFocusId] = useState<string | null>(null);
+  // One action, one effect: a held key or a second drop while a move is out
+  // would compute from rows the host has not redrawn yet, so it is ignored.
+  const inFlight = useRef(false);
   const pinnedIds = pinned.map((thread) => thread.id);
   const inboxIds = new Set(inbox.map((thread) => thread.id));
 
@@ -456,7 +459,12 @@ function useDragPins(
     error instanceof Error && error.message.trim() ? error.message : "Unknown error.";
 
   const run = async (threadId: string, action: DragAction) => {
-    if (action.kind === "none") return;
+    if (action.kind === "none" || inFlight.current) return;
+    inFlight.current = true;
+    try { await perform(threadId, action); } finally { inFlight.current = false; }
+  };
+
+  const perform = async (threadId: string, action: Exclude<DragAction, { kind: "none" }>) => {
     setMessage(null);
     if (action.kind === "pin") {
       // Two host calls with no atomic pair: never undo a step, just report.
