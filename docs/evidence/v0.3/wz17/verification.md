@@ -15,12 +15,18 @@ Ticket #39: the v0.3 sidebar contract, header-chip settings, types, synthetic fi
 
 ## Reproduce
 
-From `wizbar/`: `npm ci`, `npm run typecheck`, `npm test -- --maxWorkers=2`. The proof subset is `npm test -- --maxWorkers=2 src/settings.test.ts src/fixtures/v3-fixtures.test.ts`.
+From `wizbar/`: `npm ci`, `npm run typecheck`, `npm test -- --maxWorkers=2`. The proof subset is `npm test -- --maxWorkers=2 src/settings.test.ts src/fixtures/v3-fixtures.test.ts src/SettingsPage.test.tsx`.
 
 ## Logs
 
 - `red.log`: the proof subset before the descriptors and fixtures existed: four settings failures (two keys missing) and the fixture module missing. Committed before the fix.
+- `read-red.log`: the settings reader before it read the two new keys: six failures. Committed before the fix.
+- `settings-count-red.log`: `src/SettingsPage.test.tsx` with the old switch count, against this branch: the section now draws 4 switches, so `toHaveLength(2)` fails.
 - `green.log`, `typecheck.log`, `full-suite.log`: the same subset passing, typecheck and the full suite at the hand-back commit. Local paths are replaced with `<repo>`.
+
+## Supporting edit outside the listed owned paths
+
+`wizbar/src/SettingsPage.test.tsx`: exactly one assertion, `toHaveLength(2)` → `toHaveLength(4)`. The settings section draws one switch per descriptor, so the two new settings (acceptance criterion 4, owned path `wizbar/src/settings.ts`) make it 4; without this line the full suite fails `wizbar-checks`. Allowed by the [orchestrator ruling on #39](https://github.com/openwizdev/wizplugins/issues/39#issuecomment-6817197383) (option 1), which also accepts the `readWizBarSettings`/`WizBarSettings` reads of the two keys under the existing rule. #43 keeps the rest of that file.
 
 ## Limits
 

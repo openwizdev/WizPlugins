@@ -103,7 +103,7 @@ describe("N1: settings through the registered app", () => {
     expect(app.settingsSections.map(({ id }) => id)).toEqual(["wizbar-settings"]);
     expect(screen.getByRole("heading", { name: "WizBar" })).toBeDefined();
     expect(screen.getByText(`Version ${manifest.version}`)).toBeDefined();
-    expect(screen.getAllByRole("switch")).toHaveLength(2);
+    expect(screen.getAllByRole("switch")).toHaveLength(4);
     expect(screen.getByText("Footer: Enabled · Not connected yet")).toBeDefined();
     expect(screen.getByText("Icons: Enabled · Not connected yet")).toBeDefined();
     expect(screen.queryByText(/· Live/)).toBeNull();
