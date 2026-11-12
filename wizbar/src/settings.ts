@@ -9,6 +9,14 @@ export const wizbarSettingDescriptors = {
     type: "boolean", label: "Cloud/Local row icons", default: true,
     description: "Show machine icons when classification is available.",
   },
+  childrenChipEnabled: {
+    type: "boolean", label: "Children chip in thread header", default: false,
+    description: "Show a parent thread's children chip in its header.",
+  },
+  parentChipEnabled: {
+    type: "boolean", label: "Parent chip in thread header", default: true,
+    description: "Show a child thread's chip back to its parent in its header.",
+  },
 } satisfies PluginSettingDescriptors;
 
 export type WizBarSettings = { footerCountEnabled: boolean; machineIconsEnabled: boolean };

@@ -83,10 +83,12 @@ describe("N1: actual WizBar settings declarations and persistent reload", () => 
 // These pure boundary cases complement the rendered controls, not storage.
 describe("N1: boolean settings and source status boundary", () => {
   it.each([
-    [undefined, { footerCountEnabled: true, machineIconsEnabled: true }],
-    [{}, { footerCountEnabled: true, machineIconsEnabled: true }],
-    [{ footerCountEnabled: false }, { footerCountEnabled: false, machineIconsEnabled: true }],
-    [{ footerCountEnabled: "true", machineIconsEnabled: 1 }, { footerCountEnabled: false, machineIconsEnabled: false }],
+    [undefined, { footerCountEnabled: true, machineIconsEnabled: true, childrenChipEnabled: false, parentChipEnabled: true }],
+    [{}, { footerCountEnabled: true, machineIconsEnabled: true, childrenChipEnabled: false, parentChipEnabled: true }],
+    [{ footerCountEnabled: false }, { footerCountEnabled: false, machineIconsEnabled: true, childrenChipEnabled: false, parentChipEnabled: true }],
+    [{ footerCountEnabled: "true", machineIconsEnabled: 1 }, { footerCountEnabled: false, machineIconsEnabled: false, childrenChipEnabled: false, parentChipEnabled: true }],
+    [{ childrenChipEnabled: true, parentChipEnabled: false }, { footerCountEnabled: true, machineIconsEnabled: true, childrenChipEnabled: true, parentChipEnabled: false }],
+    [{ childrenChipEnabled: "true", parentChipEnabled: 1 }, { footerCountEnabled: true, machineIconsEnabled: true, childrenChipEnabled: false, parentChipEnabled: false }],
   ] as const)("reads exact booleans from %j", async (values, expected) => {
     const { readWizBarSettings } = await import("./settings");
     expect(readWizBarSettings(values)).toEqual(expected);

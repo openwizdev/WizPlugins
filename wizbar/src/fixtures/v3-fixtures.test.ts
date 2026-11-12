@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { childrenOf } from "../inbox";
+import { hasRuntimeWork } from "../lifecycle";
 import { classifyMachine } from "../machine-source";
 import { countRunning } from "../running-count";
 import { readRunningSource } from "../running-source";
 import { isWorking } from "../useLifecycle";
 import {
-  v3BranchCases, v3CardModelsNone, v3Children, v3IssueNumbers, v3Now, v3PinnedOrder,
+  v3BranchCases, v3CardMeta, v3CardModelsNone, v3Children, v3IssueNumbers, v3Now, v3PinnedOrder,
   v3PullRequests, v3Stats, v3Threads, v3TimeZone,
 } from "./v3";
 
@@ -56,6 +57,12 @@ describe("V0: synthetic v0.3 fixtures cover the contract's cases", () => {
     expect(finished.some((t) => t.latestAttentionAt < startOfToday)).toBe(true);
   });
 
+  it("gives the same working answer to the UI rule and the server rule on every row", () => {
+    for (const t of v3Threads) {
+      expect(hasRuntimeWork(t.runtimeStatus, Object.values(t.activity)), t.id).toBe(isWorking(t));
+    }
+  });
+
   it("states expected stats that agree with the shipped running count and machine rule", () => {
     if (v3Stats.status !== "ready") throw new Error("fixture stats must be ready");
     const shipped = countRunning(readRunningSource({ status: "ready", threads: v3Threads }, "connected"));
@@ -89,13 +96,25 @@ describe("V0: synthetic v0.3 fixtures cover the contract's cases", () => {
 
   it("covers pinned order, pull requests, branch parsing and the model source", () => {
     expect(new Set(v3PinnedOrder)).toEqual(new Set(v3Threads.filter((t) => t.isPinned).map((t) => t.id)));
-    for (const [id, state] of Object.entries(v3PullRequests)) expect(byId.has(id)).toBe(true), expect(state.isLoading).toBe(false);
+    for (const [id, state] of Object.entries(v3PullRequests)) {
+      expect(byId.has(id)).toBe(true);
+      expect(state.isLoading).toBe(false);
+    }
     expect(Object.values(v3PullRequests).some((s) => s.pullRequest === null)).toBe(true);
     expect(Object.values(v3PullRequests).some((s) => s.pullRequest !== null)).toBe(true);
     expect(v3BranchCases.some(([, n]) => n === null)).toBe(true);
     expect(v3BranchCases.some(([, n]) => n !== null)).toBe(true);
     for (const [id, issue] of Object.entries(v3IssueNumbers)) {
       expect(v3BranchCases).toContainEqual([byId.get(id)?.environment?.branchName ?? null, issue]);
+    }
+    expect(Object.keys(v3CardMeta).sort()).toEqual([...byId.keys()].sort());
+    for (const [id, meta] of Object.entries(v3CardMeta)) {
+      const pr = v3PullRequests[id]?.pullRequest ?? null;
+      expect(meta.childCount).toBe(childrenOf(v3Threads, id).length);
+      expect(meta.branch).toBe(byId.get(id)?.environment?.branchName ?? null);
+      expect(meta.link?.pullRequest ?? null).toEqual(pr && { number: pr.number, url: pr.url });
+      expect(meta.link?.issueNumber ?? null).toBe(v3IssueNumbers[id] ?? null);
+      expect([meta.model, meta.effort]).toEqual([null, null]);
     }
     expect(v3CardModelsNone.source).toBe("none");
     expect(v3CardModelsNone.items.every((item) => item.model === null && item.effort === null)).toBe(true);
