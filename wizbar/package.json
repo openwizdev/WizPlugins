@@ -6,10 +6,10 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/openwizdev/wizplugins.git",
+    "url": "git+https://github.com/openwizdev/WizPlugins.git",
     "directory": "wizbar"
   },
-  "homepage": "https://github.com/openwizdev/wizplugins/tree/main/wizbar",
+  "homepage": "https://github.com/openwizdev/WizPlugins/tree/main/wizbar",
   "engines": {
     "bb": ">=0.37.0",
     "bbPluginSdk": ">=0.4.3"

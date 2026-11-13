@@ -137,7 +137,7 @@ Source: [`.github/workflows/wizbar.yml`](../../.github/workflows/wizbar.yml), [`
 | Any other pull request | None for docs-only changes by the orchestrator; otherwise the reviewer above | The orchestrator for docs-only changes, once every required CI check is green on its head; otherwise Jake only |
 | Anything to a release, and every release or publication | None by rule | Jake only |
 
-- **How a merge is done:** `gh pr merge <N> -R openwizdev/wizplugins --merge --match-head-commit <approved head>`, then read back: only `merged`, at the approved head, is a verified merge.
-- **A pull request is never retargeted.** Pull requests are only ever opened against `openwizdev/wizplugins`, never against the upstream repository or the previous fork. Nothing is ever force-pushed.
+- **How a merge is done:** `gh pr merge <N> -R openwizdev/WizPlugins --merge --match-head-commit <approved head>`, then read back: only `merged`, at the approved head, is a verified merge.
+- **A pull request is never retargeted.** Pull requests are only ever opened against `openwizdev/WizPlugins`, never against the upstream repository or the previous fork. Nothing is ever force-pushed.
 
 Source: the WizBar spec, confirmed by Jake on 2026-11-10: tickets, reviews, CI and merges follow the normal Wiz rules ([private record](https://github.com/jparker2006/ClosedWiz/issues/325#issuecomment-6759599541)); Jake, 2026-10-30: plans authorize ticket merges after exact-head review and green CI, and the loop performs the merge; Jake, 2026-11-01: the base rule without a merge queue ([private record](https://github.com/jparker2006/ClosedWiz/issues/1275#issuecomment-6704671951)). The second row is the setup default for a rule whose CI precondition does not exist yet.

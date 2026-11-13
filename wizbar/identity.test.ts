@@ -12,7 +12,7 @@ describe("WizBar identity", () => {
     expect(manifest.bb.branding.icon).toBe("Zap");
     expect(manifest.repository).toEqual({
       type: "git",
-      url: "git+https://github.com/openwizdev/wizplugins.git",
+      url: "git+https://github.com/openwizdev/WizPlugins.git",
       directory: "wizbar",
     });
   });

@@ -1,8 +1,8 @@
 # Issue tracker: GitHub
 
-WizBar's tickets live in this GitHub repository, `openwizdev/wizplugins`. Use the `gh` CLI (2.94 or later, for sub-issues and "blocked by" links) for everything.
+WizBar's tickets live in this GitHub repository, `openwizdev/WizPlugins`. Use the `gh` CLI (2.94 or later, for sub-issues and "blocked by" links) for everything.
 
-**This is a standalone repository with a fresh history.** Its first commit copies only the T3 Sidebar plugin folder from `SawyerHood/sawyer-plugins` at commit `d3424f24e2cebe91da4e72cb38feb023da808922` into `wizbar/`, retains the upstream MIT notices, and credits the source. Upstream history is not imported or merged. Pull requests are only ever opened against `openwizdev/wizplugins`. WizBar is the first plugin, in `wizbar/`; WZ2 performs identity, SDK and contract preparation within that folder. Pass `--repo openwizdev/wizplugins` (or `-R openwizdev/wizplugins`) on every `gh issue` and `gh pr` command, and check the target with `gh repo view openwizdev/wizplugins --json nameWithOwner` before the first write of a session. Never open an issue or pull request on the upstream repository.
+**This is a standalone repository with a fresh history.** Its first commit copies only the T3 Sidebar plugin folder from `SawyerHood/sawyer-plugins` at commit `d3424f24e2cebe91da4e72cb38feb023da808922` into `wizbar/`, retains the upstream MIT notices, and credits the source. Upstream history is not imported or merged. Pull requests are only ever opened against `openwizdev/WizPlugins`. WizBar is the first plugin, in `wizbar/`; WZ2 performs identity, SDK and contract preparation within that folder. Pass `--repo openwizdev/WizPlugins` (or `-R openwizdev/WizPlugins`) on every `gh issue` and `gh pr` command, and check the target with `gh repo view openwizdev/WizPlugins --json nameWithOwner` before the first write of a session. Never open an issue or pull request on the upstream repository.
 
 ## Where things live
 
@@ -18,7 +18,7 @@ A ticket is ready when it has the `ready-for-agent` label and every ticket block
 
 ## Repositories
 
-- **Development tracker:** `openwizdev/wizplugins` (final name; private until the orchestrator verifies the migration and makes it public).
+- **Development tracker:** `openwizdev/WizPlugins` (final name; private until the orchestrator verifies the migration and makes it public).
 - **Private records:** `jparker2006/ClosedWiz` (private): the spec, grills, exact replies and orchestration state.
 
 ## Private records and approval forms
@@ -27,13 +27,13 @@ Nothing private goes in this repository: no thread ids, no exact words of a deci
 
 ## Commands
 
-- **Create an issue:** `gh issue create -R openwizdev/wizplugins --title "..." --body-file body.md`.
-- **Blocking:** GitHub's own "blocked by" links: `gh issue create -R openwizdev/wizplugins --blocked-by <n>,<n> ...`, or afterwards `gh issue edit <ticket> -R openwizdev/wizplugins --add-blocked-by <blocker>`.
-- **List a ticket's blockers:** `gh issue view <n> -R openwizdev/wizplugins --json blockedBy --jq '.blockedBy.nodes[] | {number, state}'`. A closed blocker still needs its verified merge.
-- **Read an issue:** `gh issue view <n> -R openwizdev/wizplugins --json number,title,body,labels,comments,blockedBy`.
-- **Comment:** `gh issue comment <n> -R openwizdev/wizplugins --body-file comment.md`.
-- **Labels:** `gh issue edit <n> -R openwizdev/wizplugins --add-label "..."` and `--remove-label "..."`.
-- **Close:** post the reason with `gh issue comment`, then `gh issue close <n> -R openwizdev/wizplugins`.
+- **Create an issue:** `gh issue create -R openwizdev/WizPlugins --title "..." --body-file body.md`.
+- **Blocking:** GitHub's own "blocked by" links: `gh issue create -R openwizdev/WizPlugins --blocked-by <n>,<n> ...`, or afterwards `gh issue edit <ticket> -R openwizdev/WizPlugins --add-blocked-by <blocker>`.
+- **List a ticket's blockers:** `gh issue view <n> -R openwizdev/WizPlugins --json blockedBy --jq '.blockedBy.nodes[] | {number, state}'`. A closed blocker still needs its verified merge.
+- **Read an issue:** `gh issue view <n> -R openwizdev/WizPlugins --json number,title,body,labels,comments,blockedBy`.
+- **Comment:** `gh issue comment <n> -R openwizdev/WizPlugins --body-file comment.md`.
+- **Labels:** `gh issue edit <n> -R openwizdev/WizPlugins --add-label "..."` and `--remove-label "..."`.
+- **Close:** post the reason with `gh issue comment`, then `gh issue close <n> -R openwizdev/WizPlugins`.
 
 ## Pull requests as triage input
 

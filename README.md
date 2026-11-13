@@ -12,17 +12,17 @@ unpins and reorders through the host's pins; and every WizBar action is a
 Actual React UI rendered through the SDK fixture harness, with synthetic data and
 styling; this is not an installed-app screenshot. v0.3's behaviour is proved by
 fixture tests in CI; on a real host it awaits the live check in
-[#9](https://github.com/openwizdev/wizplugins/issues/9).
+[#9](https://github.com/openwizdev/WizPlugins/issues/9).
 
 ## Install
 
 **BB Marketplace (BB app and Cloudroom): not listed yet.** Publication waits for
-Jake's go-ahead in [#45](https://github.com/openwizdev/wizplugins/issues/45).
+Jake's go-ahead in [#45](https://github.com/openwizdev/WizPlugins/issues/45).
 Once listed, install **WizBar** from the marketplace. Until then, from source
-(Unverified; read the [install and rollback kit](https://github.com/openwizdev/wizplugins/issues/9#issuecomment-6768833446) first):
+(Unverified; read the [install and rollback kit](https://github.com/openwizdev/WizPlugins/issues/9#issuecomment-6768833446) first):
 
 ```sh
-git clone https://github.com/openwizdev/wizplugins.git && cd wizplugins/wizbar && npm ci && room-cli plugin build . && room-cli plugin install .
+git clone https://github.com/openwizdev/WizPlugins.git && cd WizPlugins/wizbar && npm ci && room-cli plugin build . && room-cli plugin install .
 ```
 
 Then select WizBar in **Settings → Appearance → Sidebar**. The
