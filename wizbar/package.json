@@ -1,8 +1,8 @@
 {
   "name": "bb-plugin-wizbar",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "type": "module",
-  "description": "OpenWiz inbox-style sidebar: one flat list of cards that never re-orders.",
+  "description": "An agent-first sidebar for fleets of agent threads: cards with the issue or pull request link and child count, children on hover, a live running count with a stats panel, drag to pin, and a wizbar CLI with JSON for every WizBar action.",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -24,7 +24,13 @@
     "server": "./src/server.ts"
   },
   "keywords": [
-    "bb-plugin"
+    "bb-plugin",
+    "sidebar",
+    "threads",
+    "inbox",
+    "agents",
+    "fleet",
+    "cli"
   ],
   "scripts": {
     "build": "room-cli plugin build .",
