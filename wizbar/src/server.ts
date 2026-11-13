@@ -14,6 +14,7 @@ import { placePinned } from "./drag";
 import type { MovePositionV3 } from "./v3-types";
 import { sortPinned } from "./inbox";
 import { computeStats, runtimeDisplayStatuses, type StatsRow } from "./stats";
+import { childrenList, runtimeStatusesV3, type ChildrenRow } from "./children";
 
 const migrations = [
   `CREATE TABLE IF NOT EXISTS thread_lifecycle (
@@ -337,6 +338,70 @@ export function createPinOperations(bb: BbPluginApi): PinOperations & {
   };
 }
 
+// ---- WZ19: children (sidebar-v3.v1.md sections 1, 3 and 7) ----------------
+// The CLI reader: every non-archived page, hidden rows included, no project
+// filter, mapped to the row fields the shared children computation reads.
+const childrenRowSchema = z.object({
+  id: z.string().min(1),
+  parentThreadId: z.string().nullable(),
+  title: z.string().nullable().optional(),
+  titleFallback: z.string().nullable().optional(),
+  createdAt: z.number().finite(),
+  updatedAt: z.number().finite(),
+  latestAttentionAt: z.number().finite(),
+  lastReadAt: z.number().finite().nullable(),
+  hasPendingInteraction: z.boolean(),
+  status: z.string(),
+  queuedWork: z.enum(["none", "waiting", "failed"]),
+  runtime: z.object({ displayStatus: z.enum(runtimeStatusesV3) }),
+  activity: liveThreadSchema.shape.activity,
+}).transform((raw): ChildrenRow => ({
+  id: raw.id, parentThreadId: raw.parentThreadId,
+  displayTitle: raw.title || raw.titleFallback || raw.id,
+  createdAt: raw.createdAt, updatedAt: raw.updatedAt,
+  status: raw.status as ChildrenRow["status"], runtimeStatus: raw.runtime.displayStatus,
+  queuedWork: raw.queuedWork, hasPendingInteraction: raw.hasPendingInteraction,
+  isUnread: (raw.lastReadAt ?? 0) < raw.latestAttentionAt,
+  activity: {
+    workflows: raw.activity.activeWorkflowCount, backgroundAgents: raw.activity.activeBackgroundAgentCount,
+    backgroundCommands: raw.activity.activeBackgroundCommandCount, planMode: raw.activity.activePlanModeCount,
+    goals: raw.activity.activeGoalCount,
+  },
+}));
+
+export async function readChildren(bb: BbPluginApi, rawId: string, signal?: AbortSignal) {
+  const threadId = validId(rawId);
+  let route: unknown;
+  try { route = await bb.sdk.threads.get({ threadId, signal }); } catch (error) {
+    if (typeof error === "object" && error !== null && "status" in error && error.status === 404) {
+      throw new LifecycleError("unknown_id", "Unknown thread ID.");
+    }
+    throw stateUnavailable();
+  }
+  const parsed = threadRouteSchema.safeParse(route);
+  if (!parsed.success || parsed.data.id !== threadId) throw stateUnavailable();
+  if (parsed.data.deletedAt !== null) throw new LifecycleError("unknown_id", "Unknown thread ID.");
+  const rows: ChildrenRow[] = [];
+  try {
+    for (let offset = 0; ; offset += 100) {
+      const page = await bb.sdk.threads.list({ archived: false, includeHidden: true, limit: 100, offset, signal });
+      if (!Array.isArray(page)) throw stateUnavailable();
+      for (const raw of page) {
+        const row = childrenRowSchema.safeParse(raw);
+        if (!row.success) throw stateUnavailable();
+        rows.push(row.data);
+      }
+      if (page.length < 100) break;
+    }
+  } catch {
+    throw stateUnavailable();
+  }
+  // Model and effort: the same source the cardModels RPC serves.
+  const result = childrenList(rows, threadId, cardModelsNone(rows.map((row) => row.id)));
+  if (!result) throw stateUnavailable();
+  return result;
+}
+
 export default function plugin(bb: BbPluginApi) {
   bb.settings.define(wizbarSettingDescriptors);
   const db = bb.storage.database();
@@ -542,7 +607,8 @@ export default function plugin(bb: BbPluginApi) {
     async pinnedOrder() { return { order: await pins.pinnedOrder() }; },
   });
   bb.cli.register(createLifecycleCommand(perform, async (signal) =>
-    computeStats(await readStatsRows(bb, signal), Date.now(), Intl.DateTimeFormat().resolvedOptions().timeZone), pins));
+    computeStats(await readStatsRows(bb, signal), Date.now(), Intl.DateTimeFormat().resolvedOptions().timeZone), pins,
+    (threadId, signal) => readChildren(bb, threadId, signal)));
 
   bb.events.on("interaction.pending", ({ thread }) => breakMute(thread.id));
   bb.events.on("thread.failed", ({ thread }) => breakMute(thread.id));

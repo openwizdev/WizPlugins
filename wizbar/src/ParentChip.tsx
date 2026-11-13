@@ -7,6 +7,7 @@ import { Icon } from "./components/Icon";
 import { cn } from "./lib/utils";
 import { Disc } from "./Disc";
 import { parentOf, threadDisplayTitle } from "./inbox";
+import { useWizBarSettings } from "./SettingsPage";
 
 /**
  * The way back out of a child thread.
@@ -22,9 +23,11 @@ export function ParentChip({
 }: PluginThreadHeaderActionProps) {
   const { threads } = useSidebarThreads();
   const actions = useSidebarThreadActions();
+  // WZ19 (#43): on unless `parentChipEnabled` is turned off.
+  const { parentChipEnabled } = useWizBarSettings();
 
   const parent = parentOf(threads, threadId);
-  if (parent === null) return null;
+  if (!parentChipEnabled || parent === null) return null;
 
   const title = threadDisplayTitle(parent);
 

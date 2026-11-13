@@ -2,7 +2,8 @@ import { createFakePluginHost, makeThreadResponse, type FakePluginHost } from "@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import plugin from "./server";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk";
-import { v3Now, v3Stats, v3Threads } from "./fixtures/v3";
+import { childrenList } from "./children";
+import { v3Children, v3Now, v3Stats, v3Threads } from "./fixtures/v3";
 
 const NOW = Date.parse("2030-05-06T10:00:00Z");
 function thread(id = "example-a") {
@@ -664,5 +665,138 @@ describe("WZ21 R2: host call and the read after it are separate outcomes", () =>
   it("serves the fresh pinned order the sidebar reconciles against", async () => {
     const { host } = twoReads();
     await expect(host.harness.behavior.callRpc("pinnedOrder", {})).resolves.toEqual({ order: ["thr_b", "thr_a"] });
+  });
+});
+
+// V5 (WZ19, #43): `wizbar children <id>`, the CLI reader of sidebar-v3.v1.md
+// sections 1, 3 and 7. Raw `threads.list` rows are made from the v0.3 fixture
+// rows by the contract's mapping table, so the CLI and the panel see the same rows.
+describe("WZ19 children", () => {
+  type Raw = Record<string, unknown> & { id: string };
+  const raw = (t: (typeof v3Threads)[number]): Raw => ({
+    id: t.id, projectId: t.projectId, parentThreadId: t.parentThreadId, title: t.displayTitle, titleFallback: null,
+    archivedAt: null, deletedAt: null, createdAt: t.createdAt, updatedAt: t.updatedAt,
+    latestAttentionAt: t.latestAttentionAt, lastReadAt: t.lastReadAt, hasPendingInteraction: t.hasPendingInteraction,
+    queuedWork: t.queuedWork, status: t.status, pinnedAt: t.pinnedAt, pinSortKey: t.pinSortKey,
+    runtime: { displayStatus: t.runtimeStatus, hostReconnectGraceExpiresAt: null },
+    activity: {
+      activeWorkflowCount: t.activity.workflows, activeBackgroundAgentCount: t.activity.backgroundAgents,
+      activeBackgroundCommandCount: t.activity.backgroundCommands, activePlanModeCount: t.activity.planMode,
+      activeGoalCount: t.activity.goals,
+    },
+    environmentId: t.environment?.id ?? null, environmentBranchName: t.environment?.branchName ?? null,
+    environmentProviderId: t.environment?.providerId ?? null, environmentHostId: t.host?.id ?? null,
+  });
+  const fixtureRows = () => v3Threads.map(raw);
+  function childrenSetup(rows: Raw[] = fixtureRows(), pageOf?: (offset: number) => unknown) {
+    const get = vi.fn(async ({ threadId }: { threadId: string }) => {
+      const found = rows.find((r) => r.id === threadId);
+      if (!found) throw Object.assign(new Error("not found"), { status: 404 });
+      return found;
+    });
+    const list = vi.fn(async ({ offset = 0 }: { offset?: number } = {}) => pageOf ? pageOf(offset) : rows.slice(offset, offset + 100));
+    const host = createFakePluginHost({ pluginId: "wizbar", sdk: { threads: { get, list } } });
+    hosts.push(host);
+    plugin(host.bb);
+    return { get, list, run: (argv: string[]) => host.harness.behavior.runCli(argv) };
+  }
+  const json = async (s: ReturnType<typeof childrenSetup>, argv: string[]) => {
+    const result = await s.run(argv);
+    return { exitCode: result.exitCode, body: JSON.parse(result.stdout) };
+  };
+
+  it.each(Object.keys(v3Children))("prints the contract's JSON, equal to the panel's list, for %s", async (id) => {
+    const s = childrenSetup();
+    const result = await json(s, ["children", id, "--json"]);
+    expect(result).toEqual({ exitCode: 0, body: v3Children[id] });
+    expect(result.body).toEqual(childrenList(v3Threads, id));
+  });
+
+  it("reads every page with no project filter, hidden rows included", async () => {
+    const filler = Array.from({ length: 188 }, (_, i) => raw({ ...v3Threads[7]!, id: `thr_fill_${String(i).padStart(3, "0")}` }));
+    const late = raw({ ...v3Threads[1]!, id: "thr_late_child", parentThreadId: "thr_v3_parent_one", createdAt: 1 });
+    const s = childrenSetup([...filler, ...fixtureRows(), late]);
+    const result = await json(s, ["children", "thr_v3_parent_one", "--json"]);
+    expect(result.body.children.map((c: { id: string }) => c.id)).toEqual(["thr_late_child", "thr_v3_child_local"]);
+    expect(s.list.mock.calls.map(([args]) => args)).toEqual([0, 100, 200].map((offset) =>
+      expect.objectContaining({ archived: false, includeHidden: true, limit: 100, offset })));
+    expect(s.list.mock.calls.every(([args]) => !("projectId" in (args ?? {})))).toBe(true);
+  });
+
+  it("prints one text line per child, or no children", async () => {
+    const s = childrenSetup();
+    expect(await s.run(["children", "thr_v3_parent_many"])).toMatchObject({ exitCode: 0, stdout:
+      '"thr_v3_child_working": working Sample audit shortcuts\n' +
+      '"thr_v3_child_waiting": waiting Sample check focus order\n' +
+      '"thr_v3_child_finished": unread Sample test search states\n' });
+    expect(await s.run(["children", "thr_v3_pinned_idle"])).toMatchObject({ exitCode: 0, stdout: "no children\n" });
+  });
+
+  it("uses the contract's title fallback and the server's unread rule", async () => {
+    const rows = [
+      { ...raw(v3Threads[4]!), id: "thr_p" },
+      { ...raw(v3Threads[7]!), id: "thr_a", parentThreadId: "thr_p", title: null, titleFallback: "Sample fallback", createdAt: 1, lastReadAt: 5, latestAttentionAt: 9 },
+      { ...raw(v3Threads[7]!), id: "thr_b", parentThreadId: "thr_p", title: null, titleFallback: null, createdAt: 2, lastReadAt: 9, latestAttentionAt: 9 },
+    ];
+    const result = await json(childrenSetup(rows), ["children", "thr_p", "--json"]);
+    expect(result.body.children.map((c: { title: string; status: string }) => [c.title, c.status]))
+      .toEqual([["Sample fallback", "unread"], ["thr_b", "idle"]]);
+  });
+
+  it("accepts a literal ID after --", async () => {
+    const rows = [{ ...raw(v3Threads[7]!), id: "--odd" }];
+    expect(await json(childrenSetup(rows), ["children", "--json", "--", "--odd"]))
+      .toEqual({ exitCode: 0, body: { parentThreadId: "--odd", children: [] } });
+  });
+
+  it.each([
+    ["an unknown ID", ["children", "thr_missing", "--json"], "unknown_id", "Unknown thread ID."],
+    ["an empty ID", ["children", "  ", "--json"], "invalid_id", "Thread ID must be nonempty."],
+  ])("fails %s with the contract's error and exit 1", async (_name, argv, code, message) => {
+    expect(await json(childrenSetup(), argv)).toEqual({ exitCode: 1, body: { error: { code, message } } });
+  });
+
+  it("reports a deleted thread as unknown and prints the error line as text", async () => {
+    const s = childrenSetup([{ ...raw(v3Threads[0]!), deletedAt: 5 }]);
+    expect(await s.run(["children", "thr_v3_parent_many"]))
+      .toMatchObject({ exitCode: 1, stdout: "ERROR unknown_id: Unknown thread ID.\n" });
+  });
+
+  it.each([
+    ["a failed list read", (rows: Raw[]) => childrenSetup(rows, () => { throw new Error("offline"); })],
+    ["a non-array page", (rows: Raw[]) => childrenSetup(rows, () => ({ rows }))],
+    ["an unrecognised runtime status", (rows: Raw[]) => childrenSetup(rows.map((r) =>
+      r.id === "thr_v3_finished_today" ? { ...r, runtime: { displayStatus: "host-reconnecting" } } : r))],
+    ["a malformed row", (rows: Raw[]) => childrenSetup(rows.map((r) =>
+      r.id === "thr_v3_child_working" ? { ...r, hasPendingInteraction: "no" } : r))],
+    ["an ID repeated across pages", (rows: Raw[]) => {
+      const filler = Array.from({ length: 100 }, (_, i) => ({ ...rows[7]!, id: `thr_fill_${i}` }));
+      return childrenSetup([...filler, ...rows, filler[3]!]);
+    }],
+    ["a failed thread lookup", (rows: Raw[]) => {
+      const s = childrenSetup(rows);
+      s.get.mockRejectedValue(new Error("offline"));
+      return s;
+    }],
+  ])("reports state_unavailable for %s", async (_name, make) => {
+    expect(await json(make(fixtureRows()), ["children", "thr_v3_parent_many", "--json"])).toEqual({
+      exitCode: 1, body: { error: { code: "state_unavailable", message: "Thread state is unavailable." } },
+    });
+  });
+
+  it.each([
+    [["children", "--json"]], [["children", "thr_a", "thr_b", "--json"]],
+    [["children", "thr_a", "--json", "--json"]], [["children", "thr_a", "--first", "--json"]],
+  ])("usage error for %j", async (argv) => {
+    const result = await json(childrenSetup(), argv);
+    expect(result.exitCode).toBe(2);
+    expect(result.body.error.code).toBe("usage");
+    expect(result.body.error.message).toContain("children");
+  });
+
+  it("prints the usage line on stderr without --json", async () => {
+    const result = await childrenSetup().run(["children"]);
+    expect([result.exitCode, result.stdout ?? ""]).toEqual([2, ""]);
+    expect(result.stderr).toContain("children <id>");
   });
 });
