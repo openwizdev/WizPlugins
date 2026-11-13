@@ -1,29 +1,56 @@
 # WizBar
 
-WizBar is a Cloudroom sidebar plugin. It keeps T3 Sidebar's Inbox, Snoozed and
-Settled shelves, manual parking and parent/child header chips, and adds batch
-lifecycle commands, a persistent Muted shelf and Cloud/Local row markers.
-Ordinary settle and snooze refuse working or waiting threads. Unreadable
-activity fails closed. Ordinary parked threads return when work or new
-attention requires it. The project lives in
+WizBar is an agent-first Cloudroom sidebar plugin for fleets of agent threads,
+version 0.3.0. It keeps T3 Sidebar's flat list of cards, newest first, that
+never re-orders itself, with Inbox, Snoozed, Settled, Muted and Pinned shelves.
+v0.3 adds richer cards, children on hover, a live running count with a stats
+panel, drag to pin, and a `wizbar` CLI command with JSON for every sidebar
+action. The project lives in
 [openwizdev/wizplugins](https://github.com/openwizdev/wizplugins).
 
 ![WizBar rendered with synthetic example rows](../docs/images/wizbar.png)
 
-The image shows the React UI rendered with synthetic fixture data and styling.
-The production footer counter is blank. Current row markers use an observed
-`environment.providerId` mapping with unknown data left unmarked. Correct live
-Cloud classification remains pending. Settings switches and a real
-running-thread footer count are planned in
-[#25](https://github.com/openwizdev/wizplugins/issues/25),
-[#28](https://github.com/openwizdev/wizplugins/issues/28) and
-[#29](https://github.com/openwizdev/wizplugins/issues/29).
+The image shows the React UI rendered with synthetic fixture data and styling,
+not an installed app. Everything below is proved by fixture tests in CI unless
+it says otherwise. **Behaviour on a real host awaits the live check in
+[#9](https://github.com/openwizdev/wizplugins/issues/9).** The rules and sources
+are in the [v0.3 sidebar contract](contracts/sidebar-v3.v1.md).
 
-## Install and activate — Unverified
+## What v0.3 shows
 
-Build, installation beside T3 Sidebar, activation and live command execution
-remain **Unverified** pending [#9](https://github.com/openwizdev/wizplugins/issues/9).
-The desktop CLI's help supplies these preparation commands. Read the
+- **Cards.** The third line shows the issue or pull request as a link and a
+  child count, hidden at zero. The pull request comes from the host's sidebar
+  state. With no host issue field, the issue number is parsed from a
+  `room/<N>-…` branch name and shown only when it parses. The branch shows on
+  hover only. Model and effort are omitted until the host exposes them; nothing
+  is shown in their place. Cloud rows currently carry no branch or pull request
+  in the observed host data, so they show no link.
+- **Children.** Hover or focus the child count to list the children with
+  status, title and age, in spawn order; click one to open it, or open the
+  parent. In the thread header, the parent's children chip is off by default
+  and a child's chip back to its parent is on by default; each has a setting.
+- **Running count and stats.** A slim "N running" line stays below the list. A
+  thread is running when it has runtime work and is not waiting on you. The
+  footer bolt opens a stats panel: running threads split into top-level and
+  children, Cloud, Local and unknown, plus threads waiting on you. It discloses
+  that subagents are not counted and some threads may be unseen. "Finished
+  today" says "not available yet": the host gives no finish time.
+- **Drag to pin.** Drag a card into Pinned to pin it, out to unpin it, or
+  inside Pinned to reorder it; Alt+Up and Alt+Down do the same from the
+  keyboard. WizBar uses the host's own pins and pinned order. The Inbox stays
+  newest-first.
+- **Settings.** Switches for the list-bottom count, Cloud/Local row icons and
+  the two header chips.
+
+## Install
+
+**From the BB Marketplace: not listed yet.** Publication waits for Jake's
+go-ahead in [#45](https://github.com/openwizdev/wizplugins/issues/45); once
+listed, install WizBar from the marketplace in the BB app or in Cloudroom.
+
+**From source: Unverified.** Build, installation beside T3 Sidebar,
+activation and live command execution remain unverified pending #9. The
+desktop CLI's help supplies these preparation commands. Read the
 [install and rollback kit](https://github.com/openwizdev/wizplugins/issues/9#issuecomment-6768833446)
 and current desktop help before running them.
 
@@ -44,10 +71,13 @@ T3 Sidebar is selected there. Keep T3 Sidebar installed until replacement is
 accepted. Follow #9 for disabling it and rollback. WizBar imports no T3 parked
 rows. Separate runtime IDs and data still need live verification.
 
-## Commands
+## CLI
 
-The registered namespace is `wizbar`. Each operation accepts one or many IDs.
-Use `--` to end options before literal IDs.
+The registered namespace is `wizbar` (`room-cli wizbar …`). Every action in the
+sidebar has a command, and every command takes `--json`; the
+[parity test](src/cli-parity.test.ts) checks both, and that `children` and
+`stats` JSON equal what the hover list and the stats panel show for the same
+threads. Use `--` to end options before literal IDs.
 
 ```text
 wizbar settle <id>... [--json]
@@ -57,23 +87,71 @@ wizbar unsnooze <id>... [--json]
 wizbar mute <id>... [--json]
 wizbar unmute <id>... [--json]
 wizbar list <id>... [--json]
+wizbar pin <id>... [--json]
+wizbar unpin <id>... [--json]
+wizbar move <id> (--before <id> | --after <id> | --first | --last) [--json]
+wizbar children <id> [--json]
+wizbar stats [--json]
 ```
 
-Only `snooze` takes `--until`, which requires a future ISO timestamp with a
-timezone or an available sidebar preset from `hour`, `evening`, `tomorrow` and
-`next-week`. Results are per ID. Any failed ID produces a nonzero exit status
-while other IDs are still processed.
-`list` reports the resolved shelf and snooze wake time. Commands and sidebar
-share the plugin store and refresh channel. Live dispatch and visible refresh
-remain unverified in #9.
+**Exit codes**, every command: `0` success; `1` any thread or the whole command
+failed; `2` usage error. A usage error with `--json` prints
+`{"error":{"code":"usage","message":"<usage>"}}`.
 
-Explicit `mute` is the running-thread exception for keeper-selected fleet work.
-It requires a verified running, unpinned thread without pending input or failure.
-The Muted shelf uses the plugin's persistent store and keeps the selection
-through reloads and ordinary working updates. A question, failure or stopped
-work with newer unread attention returns the thread to Inbox. `unmute` provides
-manual undo. The keeper's live breakthrough mapping and acceptance remain
-unverified. See the [mute contract](contracts/mute.v1.md).
+**Per-ID commands** (`settle` to `unpin`) handle each ID on its own: one
+failure never hides the others, and gives exit 1.
+
+- `settle`, `unsettle`, `snooze`, `unsnooze`, `mute`, `unmute` and `list`
+  print `{"results":[{"threadId","ok":true,"shelf","snoozedUntil"}]}`; a
+  failed ID is `{"threadId","ok":false,"error":{"code","message"}}`. `list`
+  reports the resolved shelf and snooze wake time.
+- Only `snooze` takes `--until`: a future ISO timestamp with a timezone, or a
+  sidebar preset `hour`, `evening`, `tomorrow` or `next-week`.
+- `mute` is the running-thread exception for keeper-selected fleet work: it
+  needs a running, unpinned thread with no pending input or failure. A
+  question, failure or stopped work with newer unread attention returns the
+  thread to the Inbox; `unmute` undoes it. See the
+  [mute contract](contracts/mute.v1.md).
+- `pin` and `unpin` print `{"results":[{"threadId","ok":true,"pinned":true}]}`.
+  Pinning a pinned thread, or unpinning an unpinned one, succeeds and changes
+  nothing.
+
+**`move`** takes one pinned thread and one position and prints
+`{"results":[{"threadId","ok":true,"pinned":true,"pinnedOrder":[…]}]}`, the
+pinned order read after the move. Its errors include `not_pinned` and
+`invalid_anchor`.
+
+**`children <id>`** prints the thread's children, oldest first:
+
+```json
+{"parentThreadId":"thr_example_p","children":[{"id":"thr_example_c","status":"working","title":"Example child","model":null,"effort":null,"updatedAt":1794484800000}]}
+```
+
+Status is the first of `waiting`, `failed`, `working`, `unread`, `idle` that
+holds. An unknown ID prints `{"error":{"code":"unknown_id",…}}` with exit 1.
+
+**`stats`** prints the stats panel's numbers:
+
+```json
+{"version":1,"status":"ready","running":{"total":7,"topLevel":4,"children":3,"cloud":6,"local":1,"unknown":0},"waitingOnYou":2,"finishedToday":{"source":"none","count":null},"window":{"timeZone":"UTC","start":1794441600000,"end":1794528000000},"coverage":{"scope":"observable-sidebar","subagents":"not-counted","unseen":"possible"}}
+```
+
+`window` is today in the server's time zone. Unreadable thread state prints
+`{"error":{"code":"state_unavailable",…}}` with exit 1, never a guessed number.
+
+The values above are examples. The full JSON shapes and error codes are in
+[section 7 of the contract](contracts/sidebar-v3.v1.md#7-cli). Live dispatch,
+and the CLI matching the panel on a real host, await #9.
+
+## Known limits
+
+- Model and effort, a finish time and an issue field are not exposed by the
+  host yet; WizBar omits or discloses them.
+- Subagents are not counted; threads the sidebar does not see may be missing.
+- Cloud rows carry no branch or pull request in observed host data.
+- The real pinned order, footer placement and the stats panel's real look are
+  unverified until #9. PR badges have appeared inconsistently on real hosts; a
+  missing badge alone is not a WizBar regression.
 
 ## Credit and licence
 

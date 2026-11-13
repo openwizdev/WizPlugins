@@ -152,7 +152,8 @@ describe("V5: children and stats JSON equal the UI for the same fixtures", () =>
       pluginId: `synthetic-wz22-parity-${parentId}`,
       sidebarThreads: { status: "ready", threads: [...v3Threads] },
       rpc: { listLifecycle: () => ({ rows: [] }),
-        cardModels: ({ threadIds }: { threadIds: string[] }) => ({ source: "none", items: threadIds.map((threadId) => ({ threadId, model: null, effort: null })) }) },
+        cardModels: (input: unknown) => ({ source: "none",
+          items: (input as { threadIds: string[] }).threadIds.map((threadId) => ({ threadId, model: null, effort: null })) }) },
     });
     const card = document.querySelector(`[data-sidebar-thread-id="${parentId}"]`)?.parentElement;
     expect(card, `${parentId} card`).toBeInstanceOf(HTMLElement);
