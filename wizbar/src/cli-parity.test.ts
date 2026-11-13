@@ -36,6 +36,18 @@ const actionInputs = {
  * items that are WizBar actions name their `wizbar` command.
  */
 const menuWizbarCommands: Record<string, string> = { Pin: "pin", Unpin: "unpin" };
+/**
+ * Host-owned row-menu items, outside parity by the scope ruling on #44
+ * (issuecomment-6840830960), each with its existing agent route or its gap.
+ * The README's "Host-owned row-menu items" lists the same.
+ */
+const hostOwnedMenuItems: Record<string, string> = {
+  "Open in split": "UI-only: host navigation",
+  "Mark read": "gap, #60: no read-state route; `wizbar settle` / `mute` handle attention on WizBar's shelves",
+  "Mark unread": "gap, #60: no read-state route; `wizbar settle` / `mute` handle attention on WizBar's shelves",
+  Archive: "`room-cli thread archive`",
+  Delete: "UI-only: opens the host's confirmation, never a silent delete",
+};
 
 /** `threads.list` rows for the fixture, by the contract's raw-to-row table. */
 const raw = (t: PluginSidebarThread) => ({
@@ -172,8 +184,9 @@ describe("V5: the row menu's items are WizBar commands or named host-owned exclu
   it.each(["thr_v3_failed", "thr_v3_pinned_idle"])("classifies every menu item on %s", (id) => {
     const items = menuItems(id);
     expect(items.length).toBe(5);
-    const unclassified = items.filter((name) => !(name in menuWizbarCommands));
+    const unclassified = items.filter((name) => !(name in menuWizbarCommands) && !(name in hostOwnedMenuItems));
     expect(unclassified).toEqual([]);
+    expect(items.filter((name) => name in menuWizbarCommands && name in hostOwnedMenuItems)).toEqual([]);
     for (const name of items) {
       if (name in menuWizbarCommands) expect(wizbarOperationsV3).toContain(menuWizbarCommands[name]);
     }

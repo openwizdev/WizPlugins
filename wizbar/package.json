@@ -2,7 +2,7 @@
   "name": "bb-plugin-wizbar",
   "version": "0.3.0",
   "type": "module",
-  "description": "An agent-first sidebar for fleets of agent threads: cards with the issue or pull request link and child count, children on hover, a live running count with a stats panel, drag to pin, and a wizbar CLI with JSON for every action.",
+  "description": "An agent-first sidebar for fleets of agent threads: cards with the issue or pull request link and child count, children on hover, a live running count with a stats panel, drag to pin, and a wizbar CLI with JSON for every WizBar action.",
   "license": "MIT",
   "repository": {
     "type": "git",

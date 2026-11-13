@@ -4,7 +4,7 @@ WizBar is the first plugin in WizPlugins: an agent-first OpenWiz sidebar for
 Cloudroom, in `wizbar/`, now at version 0.3.0. Its cards show the issue or
 pull request link and child count, with children on hover; a live "N running"
 line sits below the list, with a stats panel on the footer bolt; drag pins,
-unpins and reorders through the host's pins; and every sidebar action is a
+unpins and reorders through the host's pins; and every WizBar action is a
 `room-cli wizbar` command with JSON. See the [WizBar README](wizbar/README.md).
 
 ![WizBar rendered with synthetic example rows](docs/images/wizbar.png)

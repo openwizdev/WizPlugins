@@ -73,11 +73,12 @@ rows. Separate runtime IDs and data still need live verification.
 
 ## CLI
 
-The registered namespace is `wizbar` (`room-cli wizbar …`). Every action in the
-sidebar has a command, and every command takes `--json`; the
+The registered namespace is `wizbar` (`room-cli wizbar …`). Every WizBar
+action in the sidebar has a command, and every command takes `--json`; the
 [parity test](src/cli-parity.test.ts) checks both, and that `children` and
 `stats` JSON equal what the hover list and the stats panel show for the same
-threads. Use `--` to end options before literal IDs.
+threads. The row menu's host-owned items are excluded by name (below). Use `--`
+to end options before literal IDs.
 
 ```text
 wizbar settle <id>... [--json]
@@ -142,6 +143,20 @@ holds. An unknown ID prints `{"error":{"code":"unknown_id",…}}` with exit 1.
 The values above are examples. The full JSON shapes and error codes are in
 [section 7 of the contract](contracts/sidebar-v3.v1.md#7-cli). Live dispatch,
 and the CLI matching the panel on a real host, await #9.
+
+### Host-owned row-menu items
+
+The right-click menu's Pin and Unpin are `wizbar pin` and `wizbar unpin`. Its
+other items call the host's own thread actions, not WizBar's, so they have no
+`wizbar` command. The parity test lists each by name, and fails on any menu
+item that is neither a command nor listed here.
+
+| Menu item | Agent route |
+| --- | --- |
+| Archive | `room-cli thread archive`, the host's own command. The help read for this change shows only `--self`; archiving another thread by ID is unverified |
+| Mark read / Mark unread | **Gap:** no read-state route ([#60](https://github.com/openwizdev/wizplugins/issues/60), v0.4). For attention, `wizbar settle` and `wizbar mute` move a thread off the Inbox; neither changes the host's read state |
+| Open in split | None: UI-only host navigation |
+| Delete | None: UI-only, and it keeps the host's confirmation |
 
 ## Known limits
 

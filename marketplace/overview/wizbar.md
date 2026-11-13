@@ -19,7 +19,7 @@ Drag a card into Pinned to pin it, out of Pinned to unpin it, or inside Pinned t
 
 ## Agent-first
 
-Every action in the sidebar is also a `room-cli wizbar` command, and each takes `--json`:
+Every WizBar action in the sidebar is also a `room-cli wizbar` command, and each takes `--json`. The row menu's host items (open in split, mark read or unread, archive, delete) are the host's own; the README lists their agent routes.
 
 ```text
 wizbar settle | unsettle | snooze | unsnooze | mute | unmute | list <id>... [--json]
