@@ -31,6 +31,12 @@ const actionInputs = {
   pinnedOrder: "the pinned order a drag places against; `move` JSON carries it",
 } as const;
 
+/**
+ * The row menu (`RowContextMenu`) calls the host's own thread actions. Its
+ * items that are WizBar actions name their `wizbar` command.
+ */
+const menuWizbarCommands: Record<string, string> = { Pin: "pin", Unpin: "unpin" };
+
 /** `threads.list` rows for the fixture, by the contract's raw-to-row table. */
 const raw = (t: PluginSidebarThread) => ({
   id: t.id, projectId: t.projectId, parentThreadId: t.parentThreadId, archivedAt: null, deletedAt: null,
@@ -142,6 +148,37 @@ describe("V5: every UI action has a wizbar command with --json", () => {
 });
 
 const app = await loadPluginApp(() => import("../app"));
+
+describe("V5: the row menu's items are WizBar commands or named host-owned exclusions", () => {
+  /** Every item the row menu offers for one card, by its visible name. */
+  function menuItems(threadId: string): string[] {
+    renderSlot(app.threadLists[0]!, {
+      activeThreadId: null, activeProjectId: null, isCompactViewport: true, onNavigate() {}, searchQuery: "",
+    }, {
+      pluginId: `synthetic-wz22-menu-${threadId}`,
+      sidebarThreads: { status: "ready", threads: [...v3Threads] },
+      rpc: { listLifecycle: () => ({ rows: [] }),
+        cardModels: (input: unknown) => ({ source: "none",
+          items: (input as { threadIds: string[] }).threadIds.map((id) => ({ threadId: id, model: null, effort: null })) }) },
+    });
+    fireEvent.contextMenu(document.querySelector(`[data-sidebar-thread-id="${threadId}"]`)!);
+    const items = within(screen.getByRole("menu", { name: "Thread actions" })).getAllByRole("menuitem")
+      .map((item) => item.textContent ?? "");
+    cleanup();
+    return items;
+  }
+
+  // An unread unpinned card and a read pinned card show both labels of each toggle.
+  it.each(["thr_v3_failed", "thr_v3_pinned_idle"])("classifies every menu item on %s", (id) => {
+    const items = menuItems(id);
+    expect(items.length).toBe(5);
+    const unclassified = items.filter((name) => !(name in menuWizbarCommands));
+    expect(unclassified).toEqual([]);
+    for (const name of items) {
+      if (name in menuWizbarCommands) expect(wizbarOperationsV3).toContain(menuWizbarCommands[name]);
+    }
+  });
+});
 
 describe("V5: children and stats JSON equal the UI for the same fixtures", () => {
   /** What the hover panel lists for one parent: each child's id (by opening it), status, title and age. */
