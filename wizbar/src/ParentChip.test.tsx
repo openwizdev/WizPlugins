@@ -174,3 +174,17 @@ describe("header-chip settings", () => {
     expect(childrenShown()).toBe(children);
   });
 });
+
+// #64: the children chip's label agrees in number, like the card's count.
+describe("children chip label", () => {
+  it.each([
+    { count: 1, label: "1 child" },
+    { count: 2, label: "2 children" },
+  ])("$count child thread(s) read $label", ({ count, label }) => {
+    const kids = Array.from({ length: count }, (_, index) =>
+      thread({ id: `child_${index}`, parentThreadId: "parent" }),
+    );
+    render([thread({ id: "parent" }), ...kids], "parent", false, { childrenChipEnabled: true }, childrenChip);
+    expect(screen.getByText(label)).toBeTruthy();
+  });
+});
