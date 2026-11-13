@@ -36,7 +36,8 @@ export function SubagentsChip({
   if (!childrenChipEnabled || children.length === 0) return null;
 
   const needsYou = children.some((child) => child.hasPendingInteraction);
-  const label = needsYou ? "Needs you" : `${children.length} children`;
+  const count = children.length === 1 ? "1 child" : `${children.length} children`;
+  const label = needsYou ? "Needs you" : count;
 
   return (
     <span className="relative">
