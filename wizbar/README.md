@@ -6,14 +6,14 @@ never re-orders itself, with Inbox, Snoozed, Settled, Muted and Pinned shelves.
 v0.3 adds richer cards, children on hover, a live running count with a stats
 panel, drag to pin, and a `wizbar` CLI command with JSON for every sidebar
 action. The project lives in
-[openwizdev/wizplugins](https://github.com/openwizdev/wizplugins).
+[openwizdev/WizPlugins](https://github.com/openwizdev/WizPlugins).
 
 ![WizBar rendered with synthetic example rows](../docs/images/wizbar.png)
 
 The image shows the React UI rendered with synthetic fixture data and styling,
 not an installed app. Everything below is proved by fixture tests in CI unless
 it says otherwise. **Behaviour on a real host awaits the live check in
-[#9](https://github.com/openwizdev/wizplugins/issues/9).** The rules and sources
+[#9](https://github.com/openwizdev/WizPlugins/issues/9).** The rules and sources
 are in the [v0.3 sidebar contract](contracts/sidebar-v3.v1.md).
 
 ## What v0.3 shows
@@ -45,18 +45,18 @@ are in the [v0.3 sidebar contract](contracts/sidebar-v3.v1.md).
 ## Install
 
 **From the BB Marketplace: not listed yet.** Publication waits for Jake's
-go-ahead in [#45](https://github.com/openwizdev/wizplugins/issues/45); once
+go-ahead in [#45](https://github.com/openwizdev/WizPlugins/issues/45); once
 listed, install WizBar from the marketplace in the BB app or in Cloudroom.
 
 **From source: Unverified.** Build, installation beside T3 Sidebar,
 activation and live command execution remain unverified pending #9. The
 desktop CLI's help supplies these preparation commands. Read the
-[install and rollback kit](https://github.com/openwizdev/wizplugins/issues/9#issuecomment-6768833446)
+[install and rollback kit](https://github.com/openwizdev/WizPlugins/issues/9#issuecomment-6768833446)
 and current desktop help before running them.
 
 ```sh
-git clone https://github.com/openwizdev/wizplugins.git
-cd wizplugins/wizbar
+git clone https://github.com/openwizdev/WizPlugins.git
+cd WizPlugins/wizbar
 npm ci
 room-cli plugin build .
 room-cli plugin install .
@@ -154,7 +154,7 @@ item that is neither a command nor listed here.
 | Menu item | Agent route |
 | --- | --- |
 | Archive | `room-cli thread archive`, the host's own command. The help read for this change shows only `--self`; archiving another thread by ID is unverified |
-| Mark read / Mark unread | **Gap:** no read-state route ([#60](https://github.com/openwizdev/wizplugins/issues/60), v0.4). For attention, `wizbar settle` and `wizbar mute` move a thread off the Inbox; neither changes the host's read state |
+| Mark read / Mark unread | **Gap:** no read-state route ([#60](https://github.com/openwizdev/WizPlugins/issues/60), v0.4). For attention, `wizbar settle` and `wizbar mute` move a thread off the Inbox; neither changes the host's read state |
 | Open in split | None: UI-only host navigation |
 | Delete | None: UI-only, and it keeps the host's confirmation |
 
