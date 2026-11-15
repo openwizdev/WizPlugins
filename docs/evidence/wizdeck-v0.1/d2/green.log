@@ -1,0 +1,11 @@
+# D2 (#74) green: typecheck clean and the full plugin suite (final-check correction)
+# cmd: (cd wizbar && npx tsc --noEmit -p . && npx vitest run --maxWorkers=2)
+
+ RUN  v4.1.10 wizbar
+
+
+ Test Files  29 passed (29)
+      Tests  899 passed (899)
+   Start at  20:28:14
+   Duration  18.82s (transform 680ms, setup 0ms, import 4.94s, tests 22.92s, environment 6.17s)
+

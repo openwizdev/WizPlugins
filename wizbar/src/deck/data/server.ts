@@ -59,7 +59,7 @@ export function boardSourceFor(_factory: DeckFactoryV1): "github-bridge" {
   return "github-bridge";
 }
 
-export function registerDeckReaders(bb: BbPluginApi, options: { fetch?: Fetch; now?: () => number } = {}): void {
+export function registerDeckReaders(bb: BbPluginApi, options: { fetch?: Fetch; now?: () => number } = {}) {
   const now = options.now ?? Date.now;
   const fetch = options.fetch ?? (globalThis.fetch as unknown as Fetch);
   const settings = bb.settings.define(deckSettingDescriptors);
@@ -147,4 +147,5 @@ export function registerDeckReaders(bb: BbPluginApi, options: { fetch?: Fetch; n
       return { ok: true };
     },
   });
+  return { settings };
 }

@@ -11,6 +11,7 @@ import { useLiveFleet } from "../live/useLiveFleet";
 import { FleetSection, LiveHealthRow, SpecFleet, type FleetActions } from "../fleet/FleetViews";
 import { useDeckHome } from "./useDeckHome";
 import { HealthRow, NeedsYou, Versions, homeCss, tapTarget } from "./sections";
+import { DeckActions } from "../actions/Actions";
 
 const INTRO_KEY = "wizdeck.intro.v1";
 
@@ -94,7 +95,7 @@ export function Home({ focus }: { focus: FocusRequestV1 | null }) {
       {showIntro && (
         <div role="note" style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--muted-foreground)", flexWrap: "wrap" }}>
           <p style={{ margin: 0, flex: 1, minWidth: 200 }}>
-            WizDeck reads your factory's GitHub plan and its Needs-you file. Read-only in this version: it sends nothing and changes nothing.
+            WizDeck reads your factory's GitHub plan and its Needs-you file. Its actions only message your orchestrator; it changes nothing on GitHub itself.
           </p>
           <button type="button" style={tapTarget} onClick={dismissIntro}>Got it</button>
         </div>
@@ -120,6 +121,7 @@ export function Home({ focus }: { focus: FocusRequestV1 | null }) {
         <>
           <NeedsYou needsYou={view.needsYou} open={open} focusedItemId={focusedItemId} />
           {/* D2 slot: answer and Tell-the-factory actions. */}
+          <DeckActions projectKey={view.projectKey} view={view} open={open} />
           {fleet
             ? <LiveHealthRow model={fleet} mergesToday={view.health.mergesToday} mergesTodayDetail={view.health.mergesTodayDetail} />
             : <HealthRow health={view.health} />}
