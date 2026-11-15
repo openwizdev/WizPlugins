@@ -1,0 +1,2428 @@
+
+ RUN  v4.1.10 /code/work/WizPlugins/wizbar
+
+ ❯ |bb-plugin-wizbar| src/sidebar-v4/linked.test.tsx (13 tests | 9 failed) 10021ms
+     × opens the verified owning thread exactly once, with no panel open, send or answer 1281ms
+     × opens it again on a repeat click through the same native route 1078ms
+     × keeps no action-log source on this backend visibly unavailable and never navigates 1073ms
+     × keeps an unverified orchestrator visibly unavailable and never navigates 1096ms
+     × keeps another factory's answer visibly unavailable and never navigates 1064ms
+     × keeps an empty thread id visibly unavailable and never navigates 1063ms
+     × keeps an unexpected shape visibly unavailable and never navigates 1063ms
+     × keeps a failed read visibly unavailable and never navigates 1061ms
+     × opens nothing when ownership turns stale or the factory changes while the click verifies it 1059ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 9 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/sidebar-v4/linked.test.tsx > B1 (J88): a Needs-you click opens the verified owning thread > opens the verified owning thread exactly once, with no panel open, send or answer
+TestingLibraryElementError: Unable to find role="button" and name "Open N-12 in its owning thread: Which changelog headline ships?"
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="flex min-h-0 flex-1 flex-col"
+    >
+      <div
+        class="flex shrink-0 items-center gap-1 px-2 pb-1"
+      >
+        <button
+          aria-autocomplete="none"
+          aria-expanded="false"
+          aria-label="Project scope: All projects"
+          class="flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"
+          data-state="closed"
+          dir="ltr"
+          role="combobox"
+          type="button"
+        >
+          <span
+            style="pointer-events: none;"
+          >
+            All projects
+          </span>
+          <svg
+            aria-hidden="true"
+            class="size-4 opacity-50"
+            color="currentColor"
+            data-icon="ChevronDown"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+      </div>
+      <div
+        class="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2"
+      >
+        <p
+          class="sr-only"
+        >
+          Drag a card into Pinned to pin it, out to unpin it, or inside Pinned to reorder it. With a card focused, Alt+Up and Alt+Down do the same.
+        </p>
+        <section>
+          <ul
+            class="flex flex-col gap-px"
+          >
+            <li
+              class="list-none"
+              data-state="closed"
+            >
+              <div
+                class="group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"
+              >
+                <a
+                  aria-describedby="_r_1_"
+                  aria-label="Spec 41 manager"
+                  class="absolute inset-0 cursor-pointer rounded-md"
+                  data-sidebar-thread-id="thr_b1_spec"
+                  data-sidebar-thread-shortcut-target=""
+                  href="#"
+                />
+                <div
+                  class="pointer-events-none relative flex h-5 items-center gap-1.5"
+                >
+                  <span
+                    class="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"
+                  >
+                     
+                  </span>
+                  <span
+                    aria-label="Local"
+                    class="pointer-events-none relative flex size-3.5 shrink-0 items-center justify-center text-muted-foreground"
+                    role="img"
+                    title="Local"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      class="size-3.5"
+                      color="currentColor"
+                      data-icon="Laptop"
+                      fill="none"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      width="24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M20.4999 16.5V8.5C20.4999 6.14298 20.4999 4.96447 19.7676 4.23223C19.0354 3.5 17.8569 3.5 15.4999 3.5H8.49988C6.14286 3.5 4.96434 3.5 4.23211 4.23223C3.49988 4.96447 3.49988 6.14298 3.49988 8.5V16.5"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="1.5"
+                      />
+                      <path
+                        d="M21.9841 20.5H2.01567C1.63273 20.5 1.38367 20.1088 1.55493 19.7764L3.49988 16.5H20.4999L22.4448 19.7764C22.6161 20.1088 22.367 20.5 21.9841 20.5Z"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="1.5"
+                      />
+                    </svg>
+                  </span>
+                  <span
+                    class="pointer-events-auto hidden items-center gap-0.5 group-hover/card:flex"
+                  >
+                    <button
+                      aria-label="Snooze until tomorrow"
+                      class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+                      type="button"
+                    >
+                      <svg
+                        class="size-3.5"
+                        color="currentColor"
+                        data-icon="Clock"
+                        fill="none"
+                        height="24"...
+
+Ignored nodes: comments, script, style
+<html>
+  <head />
+  <body>
+    <div>
+      <div
+        class="flex min-h-0 flex-1 flex-col"
+      >
+        <div
+          class="flex shrink-0 items-center gap-1 px-2 pb-1"
+        >
+          <button
+            aria-autocomplete="none"
+            aria-expanded="false"
+            aria-label="Project scope: All projects"
+            class="flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"
+            data-state="closed"
+            dir="ltr"
+            role="combobox"
+            type="button"
+          >
+            <span
+              style="pointer-events: none;"
+            >
+              All projects
+            </span>
+            <svg
+              aria-hidden="true"
+              class="size-4 opacity-50"
+              color="currentColor"
+              data-icon="ChevronDown"
+              fill="none"
+              height="24"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="1.5"
+              />
+            </svg>
+          </button>
+        </div>
+        <div
+          class="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2"
+        >
+          <p
+            class="sr-only"
+          >
+            Drag a card into Pinned to pin it, out to unpin it, or inside Pinned to reorder it. With a card focused, Alt+Up and Alt+Down do the same.
+          </p>
+          <section>
+            <ul
+              class="flex flex-col gap-px"
+            >
+              <li
+                class="list-none"
+                data-state="closed"
+              >
+                <div
+                  class="group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"
+                >
+                  <a
+                    aria-describedby="_r_1_"
+                    aria-label="Spec 41 manager"
+                    class="absolute inset-0 cursor-pointer rounded-md"
+                    data-sidebar-thread-id="thr_b1_spec"
+                    data-sidebar-thread-shortcut-target=""
+                    href="#"
+                  />
+                  <div
+                    class="pointer-events-none relative flex h-5 items-center gap-1.5"
+                  >
+                    <span
+                      class="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"
+                    >
+                       
+                    </span>
+                    <span
+                      aria-label="Local"
+                      class="pointer-events-none relative flex size-3.5 shrink-0 items-center justify-center text-muted-foreground"
+                      role="img"
+                      title="Local"
+                    >
+                      <svg
+                        aria-hidden="true"
+                        class="size-3.5"
+                        color="currentColor"
+                        data-icon="Laptop"
+                        fill="none"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        width="24"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M20.4999 16.5V8.5C20.4999 6.14298 20.4999 4.96447 19.7676 4.23223C19.0354 3.5 17.8569 3.5 15.4999 3.5H8.49988C6.14286 3.5 4.96434 3.5 4.23211 4.23223C3.49988 4.96447 3.49988 6.14298 3.49988 8.5V16.5"
+                          stroke="currentColor"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="1.5"
+                        />
+                        <path
+                          d="M21.9841 20.5H2.01567C1.63273 20.5 1.38367 20.1088 1.55493 19.7764L3.49988 16.5H20.4999L22.4448 19.7764C22.6161 20.1088 22.367 20.5 21.9841 20.5Z"
+                          stroke="currentColor"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="1.5"
+                        />
+                      </svg>
+                    </span>
+                    <span
+                      class="pointer-events-auto hidden items-center gap-0.5 group-hover/card:flex"
+                    >
+                      <button
+                        aria-label="Snooze until tomorrow"
+                        class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+                        type="button"
+                      >
+                        <svg
+                   ...
+ ❯ src/sidebar-v4/linked.test.tsx:114:11
+    112|     expect(entry.getAttribute("aria-expanded")).toBe("false");
+    113|     fireEvent.click(entry);
+    114|     await waitFor(() => expect((openItem() as HTMLButtonElement).disab…
+       |           ^
+    115|     fireEvent.click(openItem());
+    116|     await waitFor(() => expect(rendered.sidebarActionCalls).toHaveLeng…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/9]⎯
+
+ FAIL  |bb-plugin-wizbar| src/sidebar-v4/linked.test.tsx > B1 (J88): a Needs-you click opens the verified owning thread > opens it again on a repeat click through the same native route
+TestingLibraryElementError: Unable to find role="button" and name "Open N-12 in its owning thread: Which changelog headline ships?"
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="flex min-h-0 flex-1 flex-col"
+    >
+      <div
+        class="flex shrink-0 items-center gap-1 px-2 pb-1"
+      >
+        <button
+          aria-autocomplete="none"
+          aria-expanded="false"
+          aria-label="Project scope: All projects"
+          class="flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"
+          data-state="closed"
+          dir="ltr"
+          role="combobox"
+          type="button"
+        >
+          <span
+            style="pointer-events: none;"
+          >
+            All projects
+          </span>
+          <svg
+            aria-hidden="true"
+            class="size-4 opacity-50"
+            color="currentColor"
+            data-icon="ChevronDown"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+      </div>
+      <div
+        class="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2"
+      >
+        <p
+          class="sr-only"
+        >
+          Drag a card into Pinned to pin it, out to unpin it, or inside Pinned to reorder it. With a card focused, Alt+Up and Alt+Down do the same.
+        </p>
+        <section>
+          <ul
+            class="flex flex-col gap-px"
+          >
+            <li
+              class="list-none"
+              data-state="closed"
+            >
+              <div
+                class="group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"
+              >
+                <a
+                  aria-describedby="_r_8_"
+                  aria-label="Spec 41 manager"
+                  class="absolute inset-0 cursor-pointer rounded-md"
+                  data-sidebar-thread-id="thr_b1_spec"
+                  data-sidebar-thread-shortcut-target=""
+                  href="#"
+                />
+                <div
+                  class="pointer-events-none relative flex h-5 items-center gap-1.5"
+                >
+                  <span
+                    class="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"
+                  >
+                     
+                  </span>
+                  <span
+                    aria-label="Local"
+                    class="pointer-events-none relative flex size-3.5 shrink-0 items-center justify-center text-muted-foreground"
+                    role="img"
+                    title="Local"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      class="size-3.5"
+                      color="currentColor"
+                      data-icon="Laptop"
+                      fill="none"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      width="24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M20.4999 16.5V8.5C20.4999 6.14298 20.4999 4.96447 19.7676 4.23223C19.0354 3.5 17.8569 3.5 15.4999 3.5H8.49988C6.14286 3.5 4.96434 3.5 4.23211 4.23223C3.49988 4.96447 3.49988 6.14298 3.49988 8.5V16.5"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="1.5"
+                      />
+                      <path
+                        d="M21.9841 20.5H2.01567C1.63273 20.5 1.38367 20.1088 1.55493 19.7764L3.49988 16.5H20.4999L22.4448 19.7764C22.6161 20.1088 22.367 20.5 21.9841 20.5Z"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="1.5"
+                      />
+                    </svg>
+                  </span>
+                  <span
+                    class="pointer-events-auto hidden items-center gap-0.5 group-hover/card:flex"
+                  >
+                    <button
+                      aria-label="Snooze until tomorrow"
+                      class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+                      type="button"
+                    >
+                      <svg
+                        class="size-3.5"
+                        color="currentColor"
+                        data-icon="Clock"
+                        fill="none"
+                        height="24"...
+
+Ignored nodes: comments, script, style
+<html>
+  <head />
+  <body>
+    <div>
+      <div
+        class="flex min-h-0 flex-1 flex-col"
+      >
+        <div
+          class="flex shrink-0 items-center gap-1 px-2 pb-1"
+        >
+          <button
+            aria-autocomplete="none"
+            aria-expanded="false"
+            aria-label="Project scope: All projects"
+            class="flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"
+            data-state="closed"
+            dir="ltr"
+            role="combobox"
+            type="button"
+          >
+            <span
+              style="pointer-events: none;"
+            >
+              All projects
+            </span>
+            <svg
+              aria-hidden="true"
+              class="size-4 opacity-50"
+              color="currentColor"
+              data-icon="ChevronDown"
+              fill="none"
+              height="24"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="1.5"
+              />
+            </svg>
+          </button>
+        </div>
+        <div
+          class="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2"
+        >
+          <p
+            class="sr-only"
+          >
+            Drag a card into Pinned to pin it, out to unpin it, or inside Pinned to reorder it. With a card focused, Alt+Up and Alt+Down do the same.
+          </p>
+          <section>
+            <ul
+              class="flex flex-col gap-px"
+            >
+              <li
+                class="list-none"
+                data-state="closed"
+              >
+                <div
+                  class="group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"
+                >
+                  <a
+                    aria-describedby="_r_8_"
+                    aria-label="Spec 41 manager"
+                    class="absolute inset-0 cursor-pointer rounded-md"
+                    data-sidebar-thread-id="thr_b1_spec"
+                    data-sidebar-thread-shortcut-target=""
+                    href="#"
+                  />
+                  <div
+                    class="pointer-events-none relative flex h-5 items-center gap-1.5"
+                  >
+                    <span
+                      class="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"
+                    >
+                       
+                    </span>
+                    <span
+                      aria-label="Local"
+                      class="pointer-events-none relative flex size-3.5 shrink-0 items-center justify-center text-muted-foreground"
+                      role="img"
+                      title="Local"
+                    >
+                      <svg
+                        aria-hidden="true"
+                        class="size-3.5"
+                        color="currentColor"
+                        data-icon="Laptop"
+                        fill="none"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        width="24"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M20.4999 16.5V8.5C20.4999 6.14298 20.4999 4.96447 19.7676 4.23223C19.0354 3.5 17.8569 3.5 15.4999 3.5H8.49988C6.14286 3.5 4.96434 3.5 4.23211 4.23223C3.49988 4.96447 3.49988 6.14298 3.49988 8.5V16.5"
+                          stroke="currentColor"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="1.5"
+                        />
+                        <path
+                          d="M21.9841 20.5H2.01567C1.63273 20.5 1.38367 20.1088 1.55493 19.7764L3.49988 16.5H20.4999L22.4448 19.7764C22.6161 20.1088 22.367 20.5 21.9841 20.5Z"
+                          stroke="currentColor"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="1.5"
+                        />
+                      </svg>
+                    </span>
+                    <span
+                      class="pointer-events-auto hidden items-center gap-0.5 group-hover/card:flex"
+                    >
+                      <button
+                        aria-label="Snooze until tomorrow"
+                        class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+                        type="button"
+                      >
+                        <svg
+                   ...
+ ❯ src/sidebar-v4/linked.test.tsx:129:11
+    127|     const { rendered } = mount();
+    128|     fireEvent.click(await screen.findByRole("button", { name: "Needs y…
+    129|     await waitFor(() => expect((openItem() as HTMLButtonElement).disab…
+       |           ^
+    130|     fireEvent.click(openItem());
+    131|     await waitFor(() => expect(rendered.sidebarActionCalls).toHaveLeng…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/9]⎯
+
+ FAIL  |bb-plugin-wizbar| src/sidebar-v4/linked.test.tsx > B1 (J88): a Needs-you click opens the verified owning thread > keeps no action-log source on this backend visibly unavailable and never navigates
+TestingLibraryElementError: Unable to find an element with the text: Owning thread unavailable: nothing opens until it is verified.. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="flex min-h-0 flex-1 flex-col"
+    >
+      <div
+        class="flex shrink-0 items-center gap-1 px-2 pb-1"
+      >
+        <button
+          aria-autocomplete="none"
+          aria-expanded="false"
+          aria-label="Project scope: All projects"
+          class="flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"
+          data-state="closed"
+          dir="ltr"
+          role="combobox"
+          type="button"
+        >
+          <span
+            style="pointer-events: none;"
+          >
+            All projects
+          </span>
+          <svg
+            aria-hidden="true"
+            class="size-4 opacity-50"
+            color="currentColor"
+            data-icon="ChevronDown"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+      </div>
+      <div
+        class="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2"
+      >
+        <p
+          class="sr-only"
+        >
+          Drag a card into Pinned to pin it, out to unpin it, or inside Pinned to reorder it. With a card focused, Alt+Up and Alt+Down do the same.
+        </p>
+        <section>
+          <ul
+            class="flex flex-col gap-px"
+          >
+            <li
+              class="list-none"
+              data-state="closed"
+            >
+              <div
+                class="group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"
+              >
+                <a
+                  aria-describedby="_r_f_"
+                  aria-label="Spec 41 manager"
+                  class="absolute inset-0 cursor-pointer rounded-md"
+                  data-sidebar-thread-id="thr_b1_spec"
+                  data-sidebar-thread-shortcut-target=""
+                  href="#"
+                />
+                <div
+                  class="pointer-events-none relative flex h-5 items-center gap-1.5"
+                >
+                  <span
+                    class="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"
+                  >
+                     
+                  </span>
+                  <span
+                    aria-label="Local"
+                    class="pointer-events-none relative flex size-3.5 shrink-0 items-center justify-center text-muted-foreground"
+                    role="img"
+                    title="Local"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      class="size-3.5"
+                      color="currentColor"
+                      data-icon="Laptop"
+                      fill="none"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      width="24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M20.4999 16.5V8.5C20.4999 6.14298 20.4999 4.96447 19.7676 4.23223C19.0354 3.5 17.8569 3.5 15.4999 3.5H8.49988C6.14286 3.5 4.96434 3.5 4.23211 4.23223C3.49988 4.96447 3.49988 6.14298 3.49988 8.5V16.5"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="1.5"
+                      />
+                      <path
+                        d="M21.9841 20.5H2.01567C1.63273 20.5 1.38367 20.1088 1.55493 19.7764L3.49988 16.5H20.4999L22.4448 19.7764C22.6161 20.1088 22.367 20.5 21.9841 20.5Z"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="1.5"
+                      />
+                    </svg>
+                  </span>
+                  <span
+                    class="pointer-events-auto hidden items-center gap-0.5 group-hover/card:flex"
+                  >
+                    <button
+                      aria-label="Snooze until tomorrow"
+                      class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+                      type="button"
+                    >
+                      <svg
+                        class="size-3.5"
+                        color="currentColor"
+                        data-icon="Clock"
+                        fill="none"
+                        height="24"...
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="flex min-h-0 flex-1 flex-col"
+    >
+      <div
+        class="flex shrink-0 items-center gap-1 px-2 pb-1"
+      >
+        <button
+          aria-autocomplete="none"
+          aria-expanded="false"
+          aria-label="Project scope: All projects"
+          class="flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"
+          data-state="closed"
+          dir="ltr"
+          role="combobox"
+          type="button"
+        >
+          <span
+            style="pointer-events: none;"
+          >
+            All projects
+          </span>
+          <svg
+            aria-hidden="true"
+            class="size-4 opacity-50"
+            color="currentColor"
+            data-icon="ChevronDown"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+      </div>
+      <div
+        class="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2"
+      >
+        <p
+          class="sr-only"
+        >
+          Drag a card into Pinned to pin it, out to unpin it, or inside Pinned to reorder it. With a card focused, Alt+Up and Alt+Down do the same.
+        </p>
+        <section>
+          <ul
+            class="flex flex-col gap-px"
+          >
+            <li
+              class="list-none"
+              data-state="closed"
+            >
+              <div
+                class="group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"
+              >
+                <a
+                  aria-describedby="_r_f_"
+                  aria-label="Spec 41 manager"
+                  class="absolute inset-0 cursor-pointer rounded-md"
+                  data-sidebar-thread-id="thr_b1_spec"
+                  data-sidebar-thread-shortcut-target=""
+                  href="#"
+                />
+                <div
+                  class="pointer-events-none relative flex h-5 items-center gap-1.5"
+                >
+                  <span
+                    class="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"
+                  >
+                     
+                  </span>
+                  <span
+                    aria-label="Local"
+                    class="pointer-events-none relative flex size-3.5 shrink-0 items-center justify-center text-muted-foreground"
+                    role="img"
+                    title="Local"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      class="size-3.5"
+                      color="currentColor"
+                      data-icon="Laptop"
+                      fill="none"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      width="24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M20.4999 16.5V8.5C20.4999 6.14298 20.4999 4.96447 19.7676 4.23223C19.0354 3.5 17.8569 3.5 15.4999 3.5H8.49988C6.14286 3.5 4.96434 3.5 4.23211 4.23223C3.49988 4.96447 3.49988 6.14298 3.49988 8.5V16.5"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="1.5"
+                      />
+                      <path
+                        d="M21.9841 20.5H2.01567C1.63273 20.5 1.38367 20.1088 1.55493 19.7764L3.49988 16.5H20.4999L22.4448 19.7764C22.6161 20.1088 22.367 20.5 21.9841 20.5Z"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="1.5"
+                      />
+                    </svg>
+                  </span>
+                  <span
+                    class="pointer-events-auto hidden items-center gap-0.5 group-hover/card:flex"
+                  >
+                    <button
+                      aria-label="Snooze until tomorrow"
+                      class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+                      type="button"
+                    >
+                      <svg
+                        class="size-3.5"
+                        color="currentColor"
+                        data-icon="Clock"
+                        fill="none"
+                        height="24"...
+ ❯ src/sidebar-v4/linked.test.tsx:151:25
+    149|     const { rendered } = mount("ready", log as never);
+    150|     fireEvent.click(await screen.findByRole("button", { name: "Needs y…
+    151|     expect(await screen.findByText("Owning thread unavailable: nothing…
+       |                         ^
+    152|     expect((openItem() as HTMLButtonElement).disabled).toBe(true);
+    153|     fireEvent.click(openItem());
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/9]⎯
+
+ FAIL  |bb-plugin-wizbar| src/sidebar-v4/linked.test.tsx > B1 (J88): a Needs-you click opens the verified owning thread > keeps an unverified orchestrator visibly unavailable and never navigates
+TestingLibraryElementError: Unable to find an element with the text: Owning thread unavailable: nothing opens until it is verified.. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="flex min-h-0 flex-1 flex-col"
+    >
+      <div
+        class="flex shrink-0 items-center gap-1 px-2 pb-1"
+      >
+        <button
+          aria-autocomplete="none"
+          aria-expanded="false"
+          aria-label="Project scope: All projects"
+          class="flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"
+          data-state="closed"
+          dir="ltr"
+          role="combobox"
+          type="button"
+        >
+          <span
+            style="pointer-events: none;"
+          >
+            All projects
+          </span>
+          <svg
+            aria-hidden="true"
+            class="size-4 opacity-50"
+            color="currentColor"
+            data-icon="ChevronDown"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+      </div>
+      <div
+        class="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2"
+      >
+        <p
+          class="sr-only"
+        >
+          Drag a card into Pinned to pin it, out to unpin it, or inside Pinned to reorder it. With a card focused, Alt+Up and Alt+Down do the same.
+        </p>
+        <section>
+          <ul
+            class="flex flex-col gap-px"
+          >
+            <li
+              class="list-none"
+              data-state="closed"
+            >
+              <div
+                class="group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"
+              >
+                <a
+                  aria-describedby="_r_m_"
+                  aria-label="Spec 41 manager"
+                  class="absolute inset-0 cursor-pointer rounded-md"
+                  data-sidebar-thread-id="thr_b1_spec"
+                  data-sidebar-thread-shortcut-target=""
+                  href="#"
+                />
+                <div
+                  class="pointer-events-none relative flex h-5 items-center gap-1.5"
+                >
+                  <span
+                    class="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"
+                  >
+                     
+                  </span>
+                  <span
+                    aria-label="Local"
+                    class="pointer-events-none relative flex size-3.5 shrink-0 items-center justify-center text-muted-foreground"
+                    role="img"
+                    title="Local"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      class="size-3.5"
+                      color="currentColor"
+                      data-icon="Laptop"
+                      fill="none"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      width="24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M20.4999 16.5V8.5C20.4999 6.14298 20.4999 4.96447 19.7676 4.23223C19.0354 3.5 17.8569 3.5 15.4999 3.5H8.49988C6.14286 3.5 4.96434 3.5 4.23211 4.23223C3.49988 4.96447 3.49988 6.14298 3.49988 8.5V16.5"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="1.5"
+                      />
+                      <path
+                        d="M21.9841 20.5H2.01567C1.63273 20.5 1.38367 20.1088 1.55493 19.7764L3.49988 16.5H20.4999L22.4448 19.7764C22.6161 20.1088 22.367 20.5 21.9841 20.5Z"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="1.5"
+                      />
+                    </svg>
+                  </span>
+                  <span
+                    class="pointer-events-auto hidden items-center gap-0.5 group-hover/card:flex"
+                  >
+                    <button
+                      aria-label="Snooze until tomorrow"
+                      class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+                      type="button"
+                    >
+                      <svg
+                        class="size-3.5"
+                        color="currentColor"
+                        data-icon="Clock"
+                        fill="none"
+                        height="24"...
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="flex min-h-0 flex-1 flex-col"
+    >
+      <div
+        class="flex shrink-0 items-center gap-1 px-2 pb-1"
+      >
+        <button
+          aria-autocomplete="none"
+          aria-expanded="false"
+          aria-label="Project scope: All projects"
+          class="flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"
+          data-state="closed"
+          dir="ltr"
+          role="combobox"
+          type="button"
+        >
+          <span
+            style="pointer-events: none;"
+          >
+            All projects
+          </span>
+          <svg
+            aria-hidden="true"
+            class="size-4 opacity-50"
+            color="currentColor"
+            data-icon="ChevronDown"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+      </div>
+      <div
+        class="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2"
+      >
+        <p
+          class="sr-only"
+        >
+          Drag a card into Pinned to pin it, out to unpin it, or inside Pinned to reorder it. With a card focused, Alt+Up and Alt+Down do the same.
+        </p>
+        <section>
+          <ul
+            class="flex flex-col gap-px"
+          >
+            <li
+              class="list-none"
+              data-state="closed"
+            >
+              <div
+                class="group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"
+              >
+                <a
+                  aria-describedby="_r_m_"
+                  aria-label="Spec 41 manager"
+                  class="absolute inset-0 cursor-pointer rounded-md"
+                  data-sidebar-thread-id="thr_b1_spec"
+                  data-sidebar-thread-shortcut-target=""
+                  href="#"
+                />
+                <div
+                  class="pointer-events-none relative flex h-5 items-center gap-1.5"
+                >
+                  <span
+                    class="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"
+                  >
+                     
+                  </span>
+                  <span
+                    aria-label="Local"
+                    class="pointer-events-none relative flex size-3.5 shrink-0 items-center justify-center text-muted-foreground"
+                    role="img"
+                    title="Local"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      class="size-3.5"
+                      color="currentColor"
+                      data-icon="Laptop"
+                      fill="none"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      width="24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M20.4999 16.5V8.5C20.4999 6.14298 20.4999 4.96447 19.7676 4.23223C19.0354 3.5 17.8569 3.5 15.4999 3.5H8.49988C6.14286 3.5 4.96434 3.5 4.23211 4.23223C3.49988 4.96447 3.49988 6.14298 3.49988 8.5V16.5"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="1.5"
+                      />
+                      <path
+                        d="M21.9841 20.5H2.01567C1.63273 20.5 1.38367 20.1088 1.55493 19.7764L3.49988 16.5H20.4999L22.4448 19.7764C22.6161 20.1088 22.367 20.5 21.9841 20.5Z"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="1.5"
+                      />
+                    </svg>
+                  </span>
+                  <span
+                    class="pointer-events-auto hidden items-center gap-0.5 group-hover/card:flex"
+                  >
+                    <button
+                      aria-label="Snooze until tomorrow"
+                      class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+                      type="button"
+                    >
+                      <svg
+                        class="size-3.5"
+                        color="currentColor"
+                        data-icon="Clock"
+                        fill="none"
+                        height="24"...
+ ❯ src/sidebar-v4/linked.test.tsx:151:25
+    149|     const { rendered } = mount("ready", log as never);
+    150|     fireEvent.click(await screen.findByRole("button", { name: "Needs y…
+    151|     expect(await screen.findByText("Owning thread unavailable: nothing…
+       |                         ^
+    152|     expect((openItem() as HTMLButtonElement).disabled).toBe(true);
+    153|     fireEvent.click(openItem());
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/9]⎯
+
+ FAIL  |bb-plugin-wizbar| src/sidebar-v4/linked.test.tsx > B1 (J88): a Needs-you click opens the verified owning thread > keeps another factory's answer visibly unavailable and never navigates
+TestingLibraryElementError: Unable to find an element with the text: Owning thread unavailable: nothing opens until it is verified.. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="flex min-h-0 flex-1 flex-col"
+    >
+      <div
+        class="flex shrink-0 items-center gap-1 px-2 pb-1"
+      >
+        <button
+          aria-autocomplete="none"
+          aria-expanded="false"
+          aria-label="Project scope: All projects"
+          class="flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"
+          data-state="closed"
+          dir="ltr"
+          role="combobox"
+          type="button"
+        >
+          <span
+            style="pointer-events: none;"
+          >
+            All projects
+          </span>
+          <svg
+            aria-hidden="true"
+            class="size-4 opacity-50"
+            color="currentColor"
+            data-icon="ChevronDown"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+      </div>
+      <div
+        class="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2"
+      >
+        <p
+          class="sr-only"
+        >
+          Drag a card into Pinned to pin it, out to unpin it, or inside Pinned to reorder it. With a card focused, Alt+Up and Alt+Down do the same.
+        </p>
+        <section>
+          <ul
+            class="flex flex-col gap-px"
+          >
+            <li
+              class="list-none"
+              data-state="closed"
+            >
+              <div
+                class="group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"
+              >
+                <a
+                  aria-describedby="_r_t_"
+                  aria-label="Spec 41 manager"
+                  class="absolute inset-0 cursor-pointer rounded-md"
+                  data-sidebar-thread-id="thr_b1_spec"
+                  data-sidebar-thread-shortcut-target=""
+                  href="#"
+                />
+                <div
+                  class="pointer-events-none relative flex h-5 items-center gap-1.5"
+                >
+                  <span
+                    class="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"
+                  >
+                     
+                  </span>
+                  <span
+                    aria-label="Local"
+                    class="pointer-events-none relative flex size-3.5 shrink-0 items-center justify-center text-muted-foreground"
+                    role="img"
+                    title="Local"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      class="size-3.5"
+                      color="currentColor"
+                      data-icon="Laptop"
+                      fill="none"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      width="24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M20.4999 16.5V8.5C20.4999 6.14298 20.4999 4.96447 19.7676 4.23223C19.0354 3.5 17.8569 3.5 15.4999 3.5H8.49988C6.14286 3.5 4.96434 3.5 4.23211 4.23223C3.49988 4.96447 3.49988 6.14298 3.49988 8.5V16.5"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="1.5"
+                      />
+                      <path
+                        d="M21.9841 20.5H2.01567C1.63273 20.5 1.38367 20.1088 1.55493 19.7764L3.49988 16.5H20.4999L22.4448 19.7764C22.6161 20.1088 22.367 20.5 21.9841 20.5Z"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="1.5"
+                      />
+                    </svg>
+                  </span>
+                  <span
+                    class="pointer-events-auto hidden items-center gap-0.5 group-hover/card:flex"
+                  >
+                    <button
+                      aria-label="Snooze until tomorrow"
+                      class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+                      type="button"
+                    >
+                      <svg
+                        class="size-3.5"
+                        color="currentColor"
+                        data-icon="Clock"
+                        fill="none"
+                        height="24"...
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="flex min-h-0 flex-1 flex-col"
+    >
+      <div
+        class="flex shrink-0 items-center gap-1 px-2 pb-1"
+      >
+        <button
+          aria-autocomplete="none"
+          aria-expanded="false"
+          aria-label="Project scope: All projects"
+          class="flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"
+          data-state="closed"
+          dir="ltr"
+          role="combobox"
+          type="button"
+        >
+          <span
+            style="pointer-events: none;"
+          >
+            All projects
+          </span>
+          <svg
+            aria-hidden="true"
+            class="size-4 opacity-50"
+            color="currentColor"
+            data-icon="ChevronDown"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+      </div>
+      <div
+        class="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2"
+      >
+        <p
+          class="sr-only"
+        >
+          Drag a card into Pinned to pin it, out to unpin it, or inside Pinned to reorder it. With a card focused, Alt+Up and Alt+Down do the same.
+        </p>
+        <section>
+          <ul
+            class="flex flex-col gap-px"
+          >
+            <li
+              class="list-none"
+              data-state="closed"
+            >
+              <div
+                class="group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"
+              >
+                <a
+                  aria-describedby="_r_t_"
+                  aria-label="Spec 41 manager"
+                  class="absolute inset-0 cursor-pointer rounded-md"
+                  data-sidebar-thread-id="thr_b1_spec"
+                  data-sidebar-thread-shortcut-target=""
+                  href="#"
+                />
+                <div
+                  class="pointer-events-none relative flex h-5 items-center gap-1.5"
+                >
+                  <span
+                    class="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"
+                  >
+                     
+                  </span>
+                  <span
+                    aria-label="Local"
+                    class="pointer-events-none relative flex size-3.5 shrink-0 items-center justify-center text-muted-foreground"
+                    role="img"
+                    title="Local"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      class="size-3.5"
+                      color="currentColor"
+                      data-icon="Laptop"
+                      fill="none"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      width="24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M20.4999 16.5V8.5C20.4999 6.14298 20.4999 4.96447 19.7676 4.23223C19.0354 3.5 17.8569 3.5 15.4999 3.5H8.49988C6.14286 3.5 4.96434 3.5 4.23211 4.23223C3.49988 4.96447 3.49988 6.14298 3.49988 8.5V16.5"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="1.5"
+                      />
+                      <path
+                        d="M21.9841 20.5H2.01567C1.63273 20.5 1.38367 20.1088 1.55493 19.7764L3.49988 16.5H20.4999L22.4448 19.7764C22.6161 20.1088 22.367 20.5 21.9841 20.5Z"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="1.5"
+                      />
+                    </svg>
+                  </span>
+                  <span
+                    class="pointer-events-auto hidden items-center gap-0.5 group-hover/card:flex"
+                  >
+                    <button
+                      aria-label="Snooze until tomorrow"
+                      class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+                      type="button"
+                    >
+                      <svg
+                        class="size-3.5"
+                        color="currentColor"
+                        data-icon="Clock"
+                        fill="none"
+                        height="24"...
+ ❯ src/sidebar-v4/linked.test.tsx:151:25
+    149|     const { rendered } = mount("ready", log as never);
+    150|     fireEvent.click(await screen.findByRole("button", { name: "Needs y…
+    151|     expect(await screen.findByText("Owning thread unavailable: nothing…
+       |                         ^
+    152|     expect((openItem() as HTMLButtonElement).disabled).toBe(true);
+    153|     fireEvent.click(openItem());
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/9]⎯
+
+ FAIL  |bb-plugin-wizbar| src/sidebar-v4/linked.test.tsx > B1 (J88): a Needs-you click opens the verified owning thread > keeps an empty thread id visibly unavailable and never navigates
+TestingLibraryElementError: Unable to find an element with the text: Owning thread unavailable: nothing opens until it is verified.. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="flex min-h-0 flex-1 flex-col"
+    >
+      <div
+        class="flex shrink-0 items-center gap-1 px-2 pb-1"
+      >
+        <button
+          aria-autocomplete="none"
+          aria-expanded="false"
+          aria-label="Project scope: All projects"
+          class="flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"
+          data-state="closed"
+          dir="ltr"
+          role="combobox"
+          type="button"
+        >
+          <span
+            style="pointer-events: none;"
+          >
+            All projects
+          </span>
+          <svg
+            aria-hidden="true"
+            class="size-4 opacity-50"
+            color="currentColor"
+            data-icon="ChevronDown"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+      </div>
+      <div
+        class="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2"
+      >
+        <p
+          class="sr-only"
+        >
+          Drag a card into Pinned to pin it, out to unpin it, or inside Pinned to reorder it. With a card focused, Alt+Up and Alt+Down do the same.
+        </p>
+        <section>
+          <ul
+            class="flex flex-col gap-px"
+          >
+            <li
+              class="list-none"
+              data-state="closed"
+            >
+              <div
+                class="group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"
+              >
+                <a
+                  aria-describedby="_r_14_"
+                  aria-label="Spec 41 manager"
+                  class="absolute inset-0 cursor-pointer rounded-md"
+                  data-sidebar-thread-id="thr_b1_spec"
+                  data-sidebar-thread-shortcut-target=""
+                  href="#"
+                />
+                <div
+                  class="pointer-events-none relative flex h-5 items-center gap-1.5"
+                >
+                  <span
+                    class="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"
+                  >
+                     
+                  </span>
+                  <span
+                    aria-label="Local"
+                    class="pointer-events-none relative flex size-3.5 shrink-0 items-center justify-center text-muted-foreground"
+                    role="img"
+                    title="Local"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      class="size-3.5"
+                      color="currentColor"
+                      data-icon="Laptop"
+                      fill="none"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      width="24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M20.4999 16.5V8.5C20.4999 6.14298 20.4999 4.96447 19.7676 4.23223C19.0354 3.5 17.8569 3.5 15.4999 3.5H8.49988C6.14286 3.5 4.96434 3.5 4.23211 4.23223C3.49988 4.96447 3.49988 6.14298 3.49988 8.5V16.5"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="1.5"
+                      />
+                      <path
+                        d="M21.9841 20.5H2.01567C1.63273 20.5 1.38367 20.1088 1.55493 19.7764L3.49988 16.5H20.4999L22.4448 19.7764C22.6161 20.1088 22.367 20.5 21.9841 20.5Z"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="1.5"
+                      />
+                    </svg>
+                  </span>
+                  <span
+                    class="pointer-events-auto hidden items-center gap-0.5 group-hover/card:flex"
+                  >
+                    <button
+                      aria-label="Snooze until tomorrow"
+                      class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+                      type="button"
+                    >
+                      <svg
+                        class="size-3.5"
+                        color="currentColor"
+                        data-icon="Clock"
+                        fill="none"
+                        height="24"[39...
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="flex min-h-0 flex-1 flex-col"
+    >
+      <div
+        class="flex shrink-0 items-center gap-1 px-2 pb-1"
+      >
+        <button
+          aria-autocomplete="none"
+          aria-expanded="false"
+          aria-label="Project scope: All projects"
+          class="flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"
+          data-state="closed"
+          dir="ltr"
+          role="combobox"
+          type="button"
+        >
+          <span
+            style="pointer-events: none;"
+          >
+            All projects
+          </span>
+          <svg
+            aria-hidden="true"
+            class="size-4 opacity-50"
+            color="currentColor"
+            data-icon="ChevronDown"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+      </div>
+      <div
+        class="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2"
+      >
+        <p
+          class="sr-only"
+        >
+          Drag a card into Pinned to pin it, out to unpin it, or inside Pinned to reorder it. With a card focused, Alt+Up and Alt+Down do the same.
+        </p>
+        <section>
+          <ul
+            class="flex flex-col gap-px"
+          >
+            <li
+              class="list-none"
+              data-state="closed"
+            >
+              <div
+                class="group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"
+              >
+                <a
+                  aria-describedby="_r_14_"
+                  aria-label="Spec 41 manager"
+                  class="absolute inset-0 cursor-pointer rounded-md"
+                  data-sidebar-thread-id="thr_b1_spec"
+                  data-sidebar-thread-shortcut-target=""
+                  href="#"
+                />
+                <div
+                  class="pointer-events-none relative flex h-5 items-center gap-1.5"
+                >
+                  <span
+                    class="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"
+                  >
+                     
+                  </span>
+                  <span
+                    aria-label="Local"
+                    class="pointer-events-none relative flex size-3.5 shrink-0 items-center justify-center text-muted-foreground"
+                    role="img"
+                    title="Local"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      class="size-3.5"
+                      color="currentColor"
+                      data-icon="Laptop"
+                      fill="none"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      width="24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M20.4999 16.5V8.5C20.4999 6.14298 20.4999 4.96447 19.7676 4.23223C19.0354 3.5 17.8569 3.5 15.4999 3.5H8.49988C6.14286 3.5 4.96434 3.5 4.23211 4.23223C3.49988 4.96447 3.49988 6.14298 3.49988 8.5V16.5"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="1.5"
+                      />
+                      <path
+                        d="M21.9841 20.5H2.01567C1.63273 20.5 1.38367 20.1088 1.55493 19.7764L3.49988 16.5H20.4999L22.4448 19.7764C22.6161 20.1088 22.367 20.5 21.9841 20.5Z"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="1.5"
+                      />
+                    </svg>
+                  </span>
+                  <span
+                    class="pointer-events-auto hidden items-center gap-0.5 group-hover/card:flex"
+                  >
+                    <button
+                      aria-label="Snooze until tomorrow"
+                      class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+                      type="button"
+                    >
+                      <svg
+                        class="size-3.5"
+                        color="currentColor"
+                        data-icon="Clock"
+                        fill="none"
+                        height="24"[39...
+ ❯ src/sidebar-v4/linked.test.tsx:151:25
+    149|     const { rendered } = mount("ready", log as never);
+    150|     fireEvent.click(await screen.findByRole("button", { name: "Needs y…
+    151|     expect(await screen.findByText("Owning thread unavailable: nothing…
+       |                         ^
+    152|     expect((openItem() as HTMLButtonElement).disabled).toBe(true);
+    153|     fireEvent.click(openItem());
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/9]⎯
+
+ FAIL  |bb-plugin-wizbar| src/sidebar-v4/linked.test.tsx > B1 (J88): a Needs-you click opens the verified owning thread > keeps an unexpected shape visibly unavailable and never navigates
+TestingLibraryElementError: Unable to find an element with the text: Owning thread unavailable: nothing opens until it is verified.. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="flex min-h-0 flex-1 flex-col"
+    >
+      <div
+        class="flex shrink-0 items-center gap-1 px-2 pb-1"
+      >
+        <button
+          aria-autocomplete="none"
+          aria-expanded="false"
+          aria-label="Project scope: All projects"
+          class="flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"
+          data-state="closed"
+          dir="ltr"
+          role="combobox"
+          type="button"
+        >
+          <span
+            style="pointer-events: none;"
+          >
+            All projects
+          </span>
+          <svg
+            aria-hidden="true"
+            class="size-4 opacity-50"
+            color="currentColor"
+            data-icon="ChevronDown"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+      </div>
+      <div
+        class="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2"
+      >
+        <p
+          class="sr-only"
+        >
+          Drag a card into Pinned to pin it, out to unpin it, or inside Pinned to reorder it. With a card focused, Alt+Up and Alt+Down do the same.
+        </p>
+        <section>
+          <ul
+            class="flex flex-col gap-px"
+          >
+            <li
+              class="list-none"
+              data-state="closed"
+            >
+              <div
+                class="group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"
+              >
+                <a
+                  aria-describedby="_r_1b_"
+                  aria-label="Spec 41 manager"
+                  class="absolute inset-0 cursor-pointer rounded-md"
+                  data-sidebar-thread-id="thr_b1_spec"
+                  data-sidebar-thread-shortcut-target=""
+                  href="#"
+                />
+                <div
+                  class="pointer-events-none relative flex h-5 items-center gap-1.5"
+                >
+                  <span
+                    class="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"
+                  >
+                     
+                  </span>
+                  <span
+                    aria-label="Local"
+                    class="pointer-events-none relative flex size-3.5 shrink-0 items-center justify-center text-muted-foreground"
+                    role="img"
+                    title="Local"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      class="size-3.5"
+                      color="currentColor"
+                      data-icon="Laptop"
+                      fill="none"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      width="24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M20.4999 16.5V8.5C20.4999 6.14298 20.4999 4.96447 19.7676 4.23223C19.0354 3.5 17.8569 3.5 15.4999 3.5H8.49988C6.14286 3.5 4.96434 3.5 4.23211 4.23223C3.49988 4.96447 3.49988 6.14298 3.49988 8.5V16.5"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="1.5"
+                      />
+                      <path
+                        d="M21.9841 20.5H2.01567C1.63273 20.5 1.38367 20.1088 1.55493 19.7764L3.49988 16.5H20.4999L22.4448 19.7764C22.6161 20.1088 22.367 20.5 21.9841 20.5Z"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="1.5"
+                      />
+                    </svg>
+                  </span>
+                  <span
+                    class="pointer-events-auto hidden items-center gap-0.5 group-hover/card:flex"
+                  >
+                    <button
+                      aria-label="Snooze until tomorrow"
+                      class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+                      type="button"
+                    >
+                      <svg
+                        class="size-3.5"
+                        color="currentColor"
+                        data-icon="Clock"
+                        fill="none"
+                        height="24"[39...
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="flex min-h-0 flex-1 flex-col"
+    >
+      <div
+        class="flex shrink-0 items-center gap-1 px-2 pb-1"
+      >
+        <button
+          aria-autocomplete="none"
+          aria-expanded="false"
+          aria-label="Project scope: All projects"
+          class="flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"
+          data-state="closed"
+          dir="ltr"
+          role="combobox"
+          type="button"
+        >
+          <span
+            style="pointer-events: none;"
+          >
+            All projects
+          </span>
+          <svg
+            aria-hidden="true"
+            class="size-4 opacity-50"
+            color="currentColor"
+            data-icon="ChevronDown"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+      </div>
+      <div
+        class="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2"
+      >
+        <p
+          class="sr-only"
+        >
+          Drag a card into Pinned to pin it, out to unpin it, or inside Pinned to reorder it. With a card focused, Alt+Up and Alt+Down do the same.
+        </p>
+        <section>
+          <ul
+            class="flex flex-col gap-px"
+          >
+            <li
+              class="list-none"
+              data-state="closed"
+            >
+              <div
+                class="group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"
+              >
+                <a
+                  aria-describedby="_r_1b_"
+                  aria-label="Spec 41 manager"
+                  class="absolute inset-0 cursor-pointer rounded-md"
+                  data-sidebar-thread-id="thr_b1_spec"
+                  data-sidebar-thread-shortcut-target=""
+                  href="#"
+                />
+                <div
+                  class="pointer-events-none relative flex h-5 items-center gap-1.5"
+                >
+                  <span
+                    class="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"
+                  >
+                     
+                  </span>
+                  <span
+                    aria-label="Local"
+                    class="pointer-events-none relative flex size-3.5 shrink-0 items-center justify-center text-muted-foreground"
+                    role="img"
+                    title="Local"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      class="size-3.5"
+                      color="currentColor"
+                      data-icon="Laptop"
+                      fill="none"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      width="24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M20.4999 16.5V8.5C20.4999 6.14298 20.4999 4.96447 19.7676 4.23223C19.0354 3.5 17.8569 3.5 15.4999 3.5H8.49988C6.14286 3.5 4.96434 3.5 4.23211 4.23223C3.49988 4.96447 3.49988 6.14298 3.49988 8.5V16.5"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="1.5"
+                      />
+                      <path
+                        d="M21.9841 20.5H2.01567C1.63273 20.5 1.38367 20.1088 1.55493 19.7764L3.49988 16.5H20.4999L22.4448 19.7764C22.6161 20.1088 22.367 20.5 21.9841 20.5Z"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="1.5"
+                      />
+                    </svg>
+                  </span>
+                  <span
+                    class="pointer-events-auto hidden items-center gap-0.5 group-hover/card:flex"
+                  >
+                    <button
+                      aria-label="Snooze until tomorrow"
+                      class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+                      type="button"
+                    >
+                      <svg
+                        class="size-3.5"
+                        color="currentColor"
+                        data-icon="Clock"
+                        fill="none"
+                        height="24"[39...
+ ❯ src/sidebar-v4/linked.test.tsx:151:25
+    149|     const { rendered } = mount("ready", log as never);
+    150|     fireEvent.click(await screen.findByRole("button", { name: "Needs y…
+    151|     expect(await screen.findByText("Owning thread unavailable: nothing…
+       |                         ^
+    152|     expect((openItem() as HTMLButtonElement).disabled).toBe(true);
+    153|     fireEvent.click(openItem());
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/9]⎯
+
+ FAIL  |bb-plugin-wizbar| src/sidebar-v4/linked.test.tsx > B1 (J88): a Needs-you click opens the verified owning thread > keeps a failed read visibly unavailable and never navigates
+TestingLibraryElementError: Unable to find an element with the text: Owning thread unavailable: nothing opens until it is verified.. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="flex min-h-0 flex-1 flex-col"
+    >
+      <div
+        class="flex shrink-0 items-center gap-1 px-2 pb-1"
+      >
+        <button
+          aria-autocomplete="none"
+          aria-expanded="false"
+          aria-label="Project scope: All projects"
+          class="flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"
+          data-state="closed"
+          dir="ltr"
+          role="combobox"
+          type="button"
+        >
+          <span
+            style="pointer-events: none;"
+          >
+            All projects
+          </span>
+          <svg
+            aria-hidden="true"
+            class="size-4 opacity-50"
+            color="currentColor"
+            data-icon="ChevronDown"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+      </div>
+      <div
+        class="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2"
+      >
+        <p
+          class="sr-only"
+        >
+          Drag a card into Pinned to pin it, out to unpin it, or inside Pinned to reorder it. With a card focused, Alt+Up and Alt+Down do the same.
+        </p>
+        <section>
+          <ul
+            class="flex flex-col gap-px"
+          >
+            <li
+              class="list-none"
+              data-state="closed"
+            >
+              <div
+                class="group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"
+              >
+                <a
+                  aria-describedby="_r_1i_"
+                  aria-label="Spec 41 manager"
+                  class="absolute inset-0 cursor-pointer rounded-md"
+                  data-sidebar-thread-id="thr_b1_spec"
+                  data-sidebar-thread-shortcut-target=""
+                  href="#"
+                />
+                <div
+                  class="pointer-events-none relative flex h-5 items-center gap-1.5"
+                >
+                  <span
+                    class="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"
+                  >
+                     
+                  </span>
+                  <span
+                    aria-label="Local"
+                    class="pointer-events-none relative flex size-3.5 shrink-0 items-center justify-center text-muted-foreground"
+                    role="img"
+                    title="Local"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      class="size-3.5"
+                      color="currentColor"
+                      data-icon="Laptop"
+                      fill="none"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      width="24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M20.4999 16.5V8.5C20.4999 6.14298 20.4999 4.96447 19.7676 4.23223C19.0354 3.5 17.8569 3.5 15.4999 3.5H8.49988C6.14286 3.5 4.96434 3.5 4.23211 4.23223C3.49988 4.96447 3.49988 6.14298 3.49988 8.5V16.5"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="1.5"
+                      />
+                      <path
+                        d="M21.9841 20.5H2.01567C1.63273 20.5 1.38367 20.1088 1.55493 19.7764L3.49988 16.5H20.4999L22.4448 19.7764C22.6161 20.1088 22.367 20.5 21.9841 20.5Z"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="1.5"
+                      />
+                    </svg>
+                  </span>
+                  <span
+                    class="pointer-events-auto hidden items-center gap-0.5 group-hover/card:flex"
+                  >
+                    <button
+                      aria-label="Snooze until tomorrow"
+                      class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+                      type="button"
+                    >
+                      <svg
+                        class="size-3.5"
+                        color="currentColor"
+                        data-icon="Clock"
+                        fill="none"
+                        height="24"[39...
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="flex min-h-0 flex-1 flex-col"
+    >
+      <div
+        class="flex shrink-0 items-center gap-1 px-2 pb-1"
+      >
+        <button
+          aria-autocomplete="none"
+          aria-expanded="false"
+          aria-label="Project scope: All projects"
+          class="flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"
+          data-state="closed"
+          dir="ltr"
+          role="combobox"
+          type="button"
+        >
+          <span
+            style="pointer-events: none;"
+          >
+            All projects
+          </span>
+          <svg
+            aria-hidden="true"
+            class="size-4 opacity-50"
+            color="currentColor"
+            data-icon="ChevronDown"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+      </div>
+      <div
+        class="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2"
+      >
+        <p
+          class="sr-only"
+        >
+          Drag a card into Pinned to pin it, out to unpin it, or inside Pinned to reorder it. With a card focused, Alt+Up and Alt+Down do the same.
+        </p>
+        <section>
+          <ul
+            class="flex flex-col gap-px"
+          >
+            <li
+              class="list-none"
+              data-state="closed"
+            >
+              <div
+                class="group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"
+              >
+                <a
+                  aria-describedby="_r_1i_"
+                  aria-label="Spec 41 manager"
+                  class="absolute inset-0 cursor-pointer rounded-md"
+                  data-sidebar-thread-id="thr_b1_spec"
+                  data-sidebar-thread-shortcut-target=""
+                  href="#"
+                />
+                <div
+                  class="pointer-events-none relative flex h-5 items-center gap-1.5"
+                >
+                  <span
+                    class="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"
+                  >
+                     
+                  </span>
+                  <span
+                    aria-label="Local"
+                    class="pointer-events-none relative flex size-3.5 shrink-0 items-center justify-center text-muted-foreground"
+                    role="img"
+                    title="Local"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      class="size-3.5"
+                      color="currentColor"
+                      data-icon="Laptop"
+                      fill="none"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      width="24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M20.4999 16.5V8.5C20.4999 6.14298 20.4999 4.96447 19.7676 4.23223C19.0354 3.5 17.8569 3.5 15.4999 3.5H8.49988C6.14286 3.5 4.96434 3.5 4.23211 4.23223C3.49988 4.96447 3.49988 6.14298 3.49988 8.5V16.5"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="1.5"
+                      />
+                      <path
+                        d="M21.9841 20.5H2.01567C1.63273 20.5 1.38367 20.1088 1.55493 19.7764L3.49988 16.5H20.4999L22.4448 19.7764C22.6161 20.1088 22.367 20.5 21.9841 20.5Z"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="1.5"
+                      />
+                    </svg>
+                  </span>
+                  <span
+                    class="pointer-events-auto hidden items-center gap-0.5 group-hover/card:flex"
+                  >
+                    <button
+                      aria-label="Snooze until tomorrow"
+                      class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+                      type="button"
+                    >
+                      <svg
+                        class="size-3.5"
+                        color="currentColor"
+                        data-icon="Clock"
+                        fill="none"
+                        height="24"[39...
+ ❯ src/sidebar-v4/linked.test.tsx:151:25
+    149|     const { rendered } = mount("ready", log as never);
+    150|     fireEvent.click(await screen.findByRole("button", { name: "Needs y…
+    151|     expect(await screen.findByText("Owning thread unavailable: nothing…
+       |                         ^
+    152|     expect((openItem() as HTMLButtonElement).disabled).toBe(true);
+    153|     fireEvent.click(openItem());
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/9]⎯
+
+ FAIL  |bb-plugin-wizbar| src/sidebar-v4/linked.test.tsx > B1 (J88): a Needs-you click opens the verified owning thread > opens nothing when ownership turns stale or the factory changes while the click verifies it
+TestingLibraryElementError: Unable to find role="button" and name "Open N-12 in its owning thread: Which changelog headline ships?"
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="flex min-h-0 flex-1 flex-col"
+    >
+      <div
+        class="flex shrink-0 items-center gap-1 px-2 pb-1"
+      >
+        <button
+          aria-autocomplete="none"
+          aria-expanded="false"
+          aria-label="Project scope: All projects"
+          class="flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"
+          data-state="closed"
+          dir="ltr"
+          role="combobox"
+          type="button"
+        >
+          <span
+            style="pointer-events: none;"
+          >
+            All projects
+          </span>
+          <svg
+            aria-hidden="true"
+            class="size-4 opacity-50"
+            color="currentColor"
+            data-icon="ChevronDown"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+      </div>
+      <div
+        class="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2"
+      >
+        <p
+          class="sr-only"
+        >
+          Drag a card into Pinned to pin it, out to unpin it, or inside Pinned to reorder it. With a card focused, Alt+Up and Alt+Down do the same.
+        </p>
+        <section>
+          <ul
+            class="flex flex-col gap-px"
+          >
+            <li
+              class="list-none"
+              data-state="closed"
+            >
+              <div
+                class="group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"
+              >
+                <a
+                  aria-describedby="_r_1p_"
+                  aria-label="Spec 41 manager"
+                  class="absolute inset-0 cursor-pointer rounded-md"
+                  data-sidebar-thread-id="thr_b1_spec"
+                  data-sidebar-thread-shortcut-target=""
+                  href="#"
+                />
+                <div
+                  class="pointer-events-none relative flex h-5 items-center gap-1.5"
+                >
+                  <span
+                    class="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"
+                  >
+                     
+                  </span>
+                  <span
+                    aria-label="Local"
+                    class="pointer-events-none relative flex size-3.5 shrink-0 items-center justify-center text-muted-foreground"
+                    role="img"
+                    title="Local"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      class="size-3.5"
+                      color="currentColor"
+                      data-icon="Laptop"
+                      fill="none"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      width="24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M20.4999 16.5V8.5C20.4999 6.14298 20.4999 4.96447 19.7676 4.23223C19.0354 3.5 17.8569 3.5 15.4999 3.5H8.49988C6.14286 3.5 4.96434 3.5 4.23211 4.23223C3.49988 4.96447 3.49988 6.14298 3.49988 8.5V16.5"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="1.5"
+                      />
+                      <path
+                        d="M21.9841 20.5H2.01567C1.63273 20.5 1.38367 20.1088 1.55493 19.7764L3.49988 16.5H20.4999L22.4448 19.7764C22.6161 20.1088 22.367 20.5 21.9841 20.5Z"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="1.5"
+                      />
+                    </svg>
+                  </span>
+                  <span
+                    class="pointer-events-auto hidden items-center gap-0.5 group-hover/card:flex"
+                  >
+                    <button
+                      aria-label="Snooze until tomorrow"
+                      class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+                      type="button"
+                    >
+                      <svg
+                        class="size-3.5"
+                        color="currentColor"
+                        data-icon="Clock"
+                        fill="none"
+                        height="24"[39...
+
+Ignored nodes: comments, script, style
+<html>
+  <head />
+  <body>
+    <div>
+      <div
+        class="flex min-h-0 flex-1 flex-col"
+      >
+        <div
+          class="flex shrink-0 items-center gap-1 px-2 pb-1"
+        >
+          <button
+            aria-autocomplete="none"
+            aria-expanded="false"
+            aria-label="Project scope: All projects"
+            class="flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"
+            data-state="closed"
+            dir="ltr"
+            role="combobox"
+            type="button"
+          >
+            <span
+              style="pointer-events: none;"
+            >
+              All projects
+            </span>
+            <svg
+              aria-hidden="true"
+              class="size-4 opacity-50"
+              color="currentColor"
+              data-icon="ChevronDown"
+              fill="none"
+              height="24"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="1.5"
+              />
+            </svg>
+          </button>
+        </div>
+        <div
+          class="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2"
+        >
+          <p
+            class="sr-only"
+          >
+            Drag a card into Pinned to pin it, out to unpin it, or inside Pinned to reorder it. With a card focused, Alt+Up and Alt+Down do the same.
+          </p>
+          <section>
+            <ul
+              class="flex flex-col gap-px"
+            >
+              <li
+                class="list-none"
+                data-state="closed"
+              >
+                <div
+                  class="group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"
+                >
+                  <a
+                    aria-describedby="_r_1p_"
+                    aria-label="Spec 41 manager"
+                    class="absolute inset-0 cursor-pointer rounded-md"
+                    data-sidebar-thread-id="thr_b1_spec"
+                    data-sidebar-thread-shortcut-target=""
+                    href="#"
+                  />
+                  <div
+                    class="pointer-events-none relative flex h-5 items-center gap-1.5"
+                  >
+                    <span
+                      class="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"
+                    >
+                       
+                    </span>
+                    <span
+                      aria-label="Local"
+                      class="pointer-events-none relative flex size-3.5 shrink-0 items-center justify-center text-muted-foreground"
+                      role="img"
+                      title="Local"
+                    >
+                      <svg
+                        aria-hidden="true"
+                        class="size-3.5"
+                        color="currentColor"
+                        data-icon="Laptop"
+                        fill="none"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        width="24"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M20.4999 16.5V8.5C20.4999 6.14298 20.4999 4.96447 19.7676 4.23223C19.0354 3.5 17.8569 3.5 15.4999 3.5H8.49988C6.14286 3.5 4.96434 3.5 4.23211 4.23223C3.49988 4.96447 3.49988 6.14298 3.49988 8.5V16.5"
+                          stroke="currentColor"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="1.5"
+                        />
+                        <path
+                          d="M21.9841 20.5H2.01567C1.63273 20.5 1.38367 20.1088 1.55493 19.7764L3.49988 16.5H20.4999L22.4448 19.7764C22.6161 20.1088 22.367 20.5 21.9841 20.5Z"
+                          stroke="currentColor"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="1.5"
+                        />
+                      </svg>
+                    </span>
+                    <span
+                      class="pointer-events-auto hidden items-center gap-0.5 group-hover/card:flex"
+                    >
+                      <button
+                        aria-label="Snooze until tomorrow"
+                        class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+                        type="button"
+                      >
+                        <svg
+                  ...
+ ❯ src/sidebar-v4/linked.test.tsx:174:11
+    172|     });
+    173|     fireEvent.click(await screen.findByRole("button", { name: "Needs y…
+    174|     await waitFor(() => expect((openItem() as HTMLButtonElement).disab…
+       |           ^
+    175|     // Stale: verified when the list opened, unverified at the click.
+    176|     answer = actionLog({ status: "unavailable", threadId: "thr_b1_orch…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/9]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  9 failed | 4 passed (13)
+   Start at  21:03:16
+   Duration  11.17s (transform 252ms, setup 0ms, import 553ms, tests 10.02s, environment 488ms)
+

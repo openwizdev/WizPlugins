@@ -10,7 +10,8 @@ import type { PluginSidebarPullRequest } from "@get-bb/plugin-sdk/app";
 import { buildHomeView } from "../deck/data/home";
 import type { BoardV1 } from "../deck/data/board";
 import type { DeckWatchResultV1 } from "../deck/data/server";
-import { getSelection, setSelection, WIZDECK_ACTION_ID } from "../deck/selection/selection";
+import { getSelection, setSelection } from "../deck/selection/selection";
+import { HEARTBEAT_MS } from "../deck/home/useDeckHome";
 import { b1Row } from "./fixtures";
 
 const NOW = Date.parse("2026-11-15T20:30:00Z");
@@ -67,7 +68,13 @@ const threads = [
   b1Row("thr_b1_other", { displayTitle: "Other work", createdAt: 10, environment: environment("room/77-other") }),
 ];
 
-function mount(queue: "ready" | "missing" | "setup" = "ready", openThreadPanel = () => true) {
+/** D2's declared action log answer (#74; PR #85 at c0d01a0f): only its `orchestrator` target is read. */
+const actionLog = (orchestrator: Record<string, unknown>, projectKey = "sample-factory") =>
+  ({ projectKey, orchestrator, records: [], reply: { status: "link-only", reason: "No turn correlation." } });
+const verified = (threadId = "thr_b1_orch") => actionLog({ status: "verified", threadId, title: "Orchestrator" });
+
+function mount(queue: "ready" | "missing" | "setup" = "ready", deckActionLog: ((input: unknown) => unknown) | null = () => verified(),
+  openThreadPanel = () => true) {
   const deckWatch = vi.fn(() => queue === "setup"
     ? { projects: [], projectKey: null, view: null, setup: "No factory is configured." }
     : deck(queue));
@@ -78,7 +85,8 @@ function mount(queue: "ready" | "missing" | "setup" = "ready", openThreadPanel =
     sidebarThreads: { status: "ready", threads },
     sidebarPullRequests: { thr_b1_spec: pr(60), thr_b1_merged: pr(52), thr_b1_other: pr(70) },
     openThreadPanel,
-    rpc: { listLifecycle: () => ({ rows: [] }), deckWatch, deckRelease: () => ({ ok: true }) } as never,
+    rpc: { listLifecycle: () => ({ rows: [] }), deckWatch, deckRelease: () => ({ ok: true }),
+      ...(deckActionLog ? { deckActionLog } : {}) } as never,
   });
   return { rendered, deckWatch };
 }
@@ -91,17 +99,97 @@ Element.prototype.scrollIntoView ??= function scrollIntoView() {};
 beforeEach(() => { vi.useFakeTimers({ shouldAdvanceTime: true }); vi.setSystemTime(NOW); setSelection({ kind: "none" }); });
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks(); setSelection({ kind: "none" }); });
 
-describe("B1: the sidebar's Needs-you entry", () => {
-  it("opens WizDeck focused on the exact item it names, and nothing else", async () => {
-    // Bug caught: the entry opening the deck without the item, or navigating the conversation.
-    const { rendered } = mount();
+/** Methods that would send, answer or change anything: never called from the sidebar's Needs-you entry. */
+const effectMethods = ["deckBindAnswer", "deckDispatch", "deckTell", "deckSpecAction", "deckFeedback", "deckCancel"];
+const openItem = () => screen.getByRole("button", { name: "Open N-12 in its owning thread: Which changelog headline ships?" });
+
+describe("B1 (J88): a Needs-you click opens the verified owning thread", () => {
+  // Bug caught: the click opening WizDeck, a guessed thread, or sending/answering anything.
+  it("opens the verified owning thread exactly once, with no panel open, send or answer", async () => {
+    const log = vi.fn(() => verified());
+    const { rendered } = mount("ready", log);
     const entry = await screen.findByRole("button", { name: "Needs you · 1" });
     expect(entry.getAttribute("aria-expanded")).toBe("false");
     fireEvent.click(entry);
-    fireEvent.click(screen.getByRole("button", { name: "Open N-12 in WizDeck: Which changelog headline ships?" }));
-    expect(rendered.navigateCalls).toEqual([{ method: "openThreadPanel",
-      options: { actionId: WIZDECK_ACTION_ID, params: { focus: { kind: "needs-you", projectKey: "sample-factory", itemId: "n12" } } } }]);
+    await waitFor(() => expect((openItem() as HTMLButtonElement).disabled).toBe(false));
+    fireEvent.click(openItem());
+    await waitFor(() => expect(rendered.sidebarActionCalls).toHaveLength(1));
+    expect(rendered.sidebarActionCalls).toEqual([{ method: "open", threadId: "thr_b1_orch", options: { split: false } }]);
+    expect(rendered.navigateCalls).toEqual([]);
+    expect(rendered.sdkCalls).toEqual([]);
+    expect(rendered.rpcCalls.filter(({ method }) => effectMethods.includes(method))).toEqual([]);
+    // The target is verified again at the click, for the entry's own factory.
+    expect(log.mock.calls.at(-1)).toEqual([{ projectKey: "sample-factory" }]);
+  });
+
+  // Bug caught: a repeat click needing a new channel, or doing nothing.
+  it("opens it again on a repeat click through the same native route", async () => {
+    const { rendered } = mount();
+    fireEvent.click(await screen.findByRole("button", { name: "Needs you · 1" }));
+    await waitFor(() => expect((openItem() as HTMLButtonElement).disabled).toBe(false));
+    fireEvent.click(openItem());
+    await waitFor(() => expect(rendered.sidebarActionCalls).toHaveLength(1));
+    fireEvent.click(screen.getByRole("button", { name: "Needs you · 1" }));
+    await waitFor(() => expect((openItem() as HTMLButtonElement).disabled).toBe(false));
+    fireEvent.click(openItem());
+    await waitFor(() => expect(rendered.sidebarActionCalls).toHaveLength(2));
+    expect(rendered.sidebarActionCalls.every((call) => call.method === "open" && call.threadId === "thr_b1_orch")).toBe(true);
+    expect(rendered.navigateCalls).toEqual([]);
+  });
+
+  // Bug caught: an unknown, unverified, malformed or other-project target opening a guessed thread.
+  it.each([
+    ["no action-log source on this backend", null],
+    ["an unverified orchestrator", () => actionLog({ status: "unavailable", threadId: "thr_b1_orch", detail: "Not in this project." })],
+    ["another factory's answer", () => ({ ...verified(), projectKey: "other-factory" })],
+    ["an empty thread id", () => verified("  ")],
+    ["an unexpected shape", () => ({ orchestrator: { status: "verified", threadId: "thr_b1_orch" } })],
+    ["a failed read", () => { throw new Error("Backend unreachable."); }],
+  ] as const)("keeps %s visibly unavailable and never navigates", async (_, log) => {
+    const { rendered } = mount("ready", log as never);
+    fireEvent.click(await screen.findByRole("button", { name: "Needs you · 1" }));
+    expect(await screen.findByText("Owning thread unavailable: nothing opens until it is verified.")).toBeDefined();
+    expect((openItem() as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(openItem());
+    await act(async () => { await vi.advanceTimersByTimeAsync(10); });
     expect(rendered.sidebarActionCalls).toEqual([]);
+    expect(rendered.navigateCalls).toEqual([]);
+  });
+
+  // Bug caught: a target verified earlier, or for the factory shown before a switch, opening after it changed.
+  it("opens nothing when ownership turns stale or the factory changes while the click verifies it", async () => {
+    let answer: unknown = verified();
+    let release: ((value: unknown) => void) | null = null;
+    let hold = false;
+    const log = vi.fn(() => hold ? new Promise((resolve) => { release = resolve; }) : answer);
+    const watch = vi.fn((): unknown => deck("ready"));
+    const rendered = renderSlot(app.threadLists[0]!, {
+      activeThreadId: null, activeProjectId: null, isCompactViewport: false, searchQuery: "", onNavigate() {},
+    }, {
+      context: { projectId: "prj_b1_a", threadId: "thr_b1_other" },
+      sidebarThreads: { status: "ready", threads },
+      rpc: { listLifecycle: () => ({ rows: [] }), deckWatch: watch, deckRelease: () => ({ ok: true }), deckActionLog: log } as never,
+    });
+    fireEvent.click(await screen.findByRole("button", { name: "Needs you · 1" }));
+    await waitFor(() => expect((openItem() as HTMLButtonElement).disabled).toBe(false));
+    // Stale: verified when the list opened, unverified at the click.
+    answer = actionLog({ status: "unavailable", threadId: "thr_b1_orch", detail: "Archived." });
+    fireEvent.click(openItem());
+    expect(await screen.findByText("Owning thread unavailable: nothing opens until it is verified.")).toBeDefined();
+    expect(rendered.sidebarActionCalls).toEqual([]);
+    // Factory change: the click's verification is still out when the shown factory changes.
+    answer = verified();
+    fireEvent.click(screen.getByRole("button", { name: "Needs you · 1" }));
+    fireEvent.click(screen.getByRole("button", { name: "Needs you · 1" }));
+    await waitFor(() => expect((openItem() as HTMLButtonElement).disabled).toBe(false));
+    hold = true;
+    fireEvent.click(openItem());
+    watch.mockImplementation(() => ({ ...deck("ready"), projectKey: "other-factory",
+      projects: [{ projectKey: "other-factory", cloudroomProjectId: "prj_b1_b" }], view: { ...deck("ready").view!, projectKey: "other-factory" } }));
+    await act(async () => { await vi.advanceTimersByTimeAsync(HEARTBEAT_MS); });
+    await act(async () => { release?.(verified()); await vi.advanceTimersByTimeAsync(0); });
+    expect(rendered.sidebarActionCalls).toEqual([]);
+    expect(rendered.navigateCalls).toEqual([]);
   });
 
   it("shows an unreadable queue as unavailable, never as nothing to answer", async () => {
@@ -115,13 +203,6 @@ describe("B1: the sidebar's Needs-you entry", () => {
     const { deckWatch } = mount("setup");
     await waitFor(() => expect(deckWatch).toHaveBeenCalled());
     expect(screen.queryByText(/Needs you/)).toBeNull();
-  });
-
-  it("says so when the host has no side panel to open", async () => {
-    mount("ready", () => false);
-    fireEvent.click(await screen.findByRole("button", { name: "Needs you · 1" }));
-    fireEvent.click(screen.getByRole("button", { name: /^Open N-12 in WizDeck/ }));
-    expect(screen.getByText("Open a thread to see WizDeck beside it.")).toBeDefined();
   });
 });
 
@@ -139,6 +220,8 @@ describe("B1: shared selection highlights and never navigates", () => {
     expect(highlighted()).toEqual([]);
     act(() => setSelection({ kind: "thread", projectKey: "sample-factory", threadId: "thr_b1_other" }));
     expect(highlighted()).toEqual(["thr_b1_other"]);
+    // A background refresh of the deck while a selection is shown moves nothing either.
+    await act(async () => { await vi.advanceTimersByTimeAsync(HEARTBEAT_MS); });
     expect(rendered.navigateCalls).toEqual([]);
     expect(rendered.sidebarActionCalls).toEqual([]);
     expect(scroll).not.toHaveBeenCalled();
