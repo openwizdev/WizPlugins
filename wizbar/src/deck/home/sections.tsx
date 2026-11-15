@@ -148,7 +148,7 @@ function SpecRow({ spec, open, multiRepo }: { spec: SpecRowV1; open: (url: strin
           <p style={{ ...muted, margin: 0 }}>Status {status.reason === "ambiguous" ? "ambiguous" : "unavailable"} · When: {status.when}</p>
         )}
         <Progress spec={spec} />
-        {!spec.complete && <span style={{ ...muted, fontSize: 12, border: rule, borderRadius: 4, padding: "0 6px" }}>partial · not every ticket was read</span>}
+        {!spec.complete && <span style={{ ...muted, justifySelf: "start", fontSize: 12, border: rule, borderRadius: 4, padding: "0 6px" }}>partial · not every ticket was read</span>}
         <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0 8px" }}>
           <UrlButton url={spec.url} label={issueNumber(spec.ref)} open={open} />
           {spec.pullRequests.map((pr) => <UrlButton key={pr.ref} url={pr.url} label={`PR ${issueNumber(pr.ref)}`} open={open} />)}
@@ -209,7 +209,7 @@ export const homeCss = `
 .wizdeck-home { container-type: inline-size; }
 .wizdeck-spec { display: grid; gap: 6px; }
 .wizdeck-spec-body { display: grid; gap: 6px; }
-@container (min-width: 520px) {
+@container (min-width: 440px) {
   .wizdeck-spec { grid-template-columns: minmax(120px, 30%) 1fr; column-gap: 16px; }
 }
 `;
