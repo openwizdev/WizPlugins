@@ -5,6 +5,11 @@ import { useBbContext, useBbNavigate } from "@get-bb/plugin-sdk/app";
 import type { FocusRequestV1 } from "../../factory-contract";
 import { useDeckHome } from "./useDeckHome";
 import { HealthRow, NeedsYou, Versions, homeCss, tapTarget } from "./sections";
+// F1 (#75) live/fleet insertion.
+import type { SpecRefV1 } from "../../factory-contract";
+import { useSelection } from "../selection/selection";
+import { useLiveFleet } from "../live/useLiveFleet";
+import { FleetSection, LiveHealthRow, SpecFleet, type FleetActions } from "../fleet/FleetViews";
 
 const INTRO_KEY = "wizdeck.intro.v1";
 
@@ -37,6 +42,17 @@ export function Home({ focus }: { focus: FocusRequestV1 | null }) {
   const open = (url: string) => { navigate.openUrl(url); };
   const focusedItemId = focus && focus.projectKey === projectKey ? focus.itemId : null;
   const now = Date.now();
+  // F1 (#75): the live fleet, scoped to the shown factory's Cloudroom project.
+  // Work links reach the panel only once the backend leases them (pending).
+  const scopeProjectId = result?.projects.find((project) => project.projectKey === projectKey)?.cloudroomProjectId ?? null;
+  const fleet = useLiveFleet(view ? scopeProjectId : null, undefined, now);
+  const selection = useSelection();
+  const [fleetPage, setFleetPage] = useState<{ projectKey: string; spec: SpecRefV1 | null } | null>(null);
+  const fleetActions: FleetActions = { openUrl: open, openThread: (threadId) => navigate.toThread(threadId) };
+
+  // F1 (#75): an explicit Needs-you focus leaves a fleet page for Home, where the item is.
+  // PLANTED BUG (red run): an explicit focus leaves the fleet page in place.
+  useEffect(() => { if (focusedItemId) void 0; }, [focusedItemId]);
 
   useEffect(() => {
     if (!focusedItemId || !view) return;
@@ -80,12 +96,22 @@ export function Home({ focus }: { focus: FocusRequestV1 | null }) {
       )}
       {!result && !deck.error && <p style={{ color: "var(--muted-foreground)" }}>Loading…</p>}
 
-      {view && (
+      {view && fleet && projectKey && fleetPage?.projectKey === projectKey && (
+        <SpecFleet model={fleet} spec={fleetPage.spec} board={view.board} actions={fleetActions} selection={selection}
+          projectKey={projectKey} onBack={() => setFleetPage(null)} />
+      )}
+      {view && !(fleet && fleetPage?.projectKey === projectKey) && (
         <>
           <NeedsYou needsYou={view.needsYou} open={open} focusedItemId={focusedItemId} />
           {/* D2 slot: answer and Tell-the-factory actions. */}
-          <HealthRow health={view.health} />
+          {fleet
+            ? <LiveHealthRow model={fleet} mergesToday={view.health.mergesToday} mergesTodayDetail={view.health.mergesTodayDetail} />
+            : <HealthRow health={view.health} />}
           {/* F1 slot: running agents and the live fleet tree. */}
+          {fleet && projectKey && (
+            <FleetSection model={fleet} board={view.board} actions={fleetActions} selection={selection} projectKey={projectKey}
+              onView={(spec) => setFleetPage({ projectKey, spec })} />
+          )}
           <Versions board={view.board} open={open} />
           {!view.github.authenticated && (
             <p role="status" style={{ color: "var(--muted-foreground)" }}>No GitHub token is set, so the plan cannot be read. Add a read-only token in this plugin's settings.</p>

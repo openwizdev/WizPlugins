@@ -1,0 +1,269 @@
+
+ RUN  v4.1.10 wizbar
+
+ ❯ |bb-plugin-wizbar| src/deck/fleet/FleetViews.test.tsx (7 tests | 4 failed) 569ms
+     × keeps Running unavailable on an older host and shows every thread as unplaced, not lost 108ms
+     × opens unplaced work inside WizDeck, returns Home, and opens a thread only on explicit Open 200ms
+     × returns Home for an explicit Needs-you focus 79ms
+     × highlights a selected thread's spec and a selected spec without navigating, scrolling or moving focus 13ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/fleet/FleetViews.test.tsx > WizDeck Home live insertion > keeps Running unavailable on an older host and shows every thread as unplaced, not lost
+TestingLibraryElementError: Unable to find a label with the text of: Running: unavailable
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"wizdeck-home"[39m
+      [33mstyle[39m=[32m"padding: 4px 16px 16px; font-size: 14px; line-height: 20px; color: var(--foreground);"[39m
+    [36m>[39m
+      [36m<header[39m
+        [33mstyle[39m=[32m"display: flex; align-items: center; gap: 12px; justify-content: space-between; flex-wrap: wrap;"[39m
+      [36m>[39m
+        [36m<h2[39m
+          [33mstyle[39m=[32m"margin: 8px 0px; font-size: 24px; font-weight: 600;"[39m
+        [36m>[39m
+          [0mHome[0m
+        [36m</h2>[39m
+        [36m<label[39m
+          [33mstyle[39m=[32m"display: inline-flex; align-items: center; gap: 6px;"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33mstyle[39m=[32m"position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0px);"[39m
+          [36m>[39m
+            [0mFactory[0m
+          [36m</span>[39m
+          [36m<select[39m
+            [33mstyle[39m=[32m"min-height: 44px; min-width: 44px; padding: 0px 10px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--border); border-radius: 8px; background: var(--background); color: var(--foreground); font: inherit; cursor: pointer;"[39m
+          [36m>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m"sample-factory"[39m
+            [36m>[39m
+              [0msample-factory[0m
+            [36m</option>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m"other-factory"[39m
+            [36m>[39m
+              [0mother-factory[0m
+            [36m</option>[39m
+          [36m</select>[39m
+        [36m</label>[39m
+      [36m</header>[39m
+      [36m<section[39m
+        [33maria-labelledby[39m=[32m"wizdeck-needs-you"[39m
+        [33mdata-freshness[39m=[32m"unavailable"[39m
+      [36m>[39m
+        [36m<h3[39m
+          [33mid[39m=[32m"wizdeck-needs-you"[39m
+          [33mstyle[39m=[32m"display: flex; align-items: center; gap: 10px; margin: 18px 0px 6px; font-size: 15px; font-weight: 600;"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33mstyle[39m=[32m"white-space: nowrap;"[39m
+          [36m>[39m
+            [0mNeeds you · unavailable[0m
+          [36m</span>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mstyle[39m=[32m"flex: 1 1 0%; border-top: 1px solid var(--border);"[39m
+          [36m/>[39m
+        [36m</h3>[39m
+        [36m<div[39m
+          [33mrole[39m=[32m"status"[39m
+          [33mstyle[39m=[32m"margin: 6px 0px;"[39m
+        [36m>[39m
+          [36m<p[39m
+            [33mstyle[39m=[32m"margin: 0px;"[39m
+          [36m>[39m
+            [0mNo file.[0m
+          [36m</p>[39m
+          [36m<p[39m
+            [33mstyle[39m=[32m"color: var(--muted-foreground); margin: 2px 0px 0px;"[39m
+          [36m>[39m
+            [0mThis is not an empty list: nothing can be answered until the file can be read.[0m
+          [36m</p>[39m
+        [36m</div>[39m
+      [36m</section>[39m
+      [36m<section[39m
+        [33maria-label[39m=[32m"Running and health"[39m
+        [33mstyle[39m=[32m"display: flex; margin: 14px 0px 4px; border-bottom: 1px solid var(--border); padding-bottom: 10px;"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mstyle[39m=[32m"flex: 1 1 0%; min-width: 0px; padding: 4px 10px;"[39m
+          [33mtitle[39m=[32m"Running unavailable: this host does not report its running threads"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33maria-label[39m=[32m"Running: 0"[39m
+            [33mstyle[39m=[32m"font-size: 28px; line-height: 34px; font-weight: 600; font-variant-numeric: tabular-nums;"[39m
+          [36m>[39m
+            [0m0[0m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mstyle[39m=[32m"color: var(--muted-foreground);"[39m
+          [36m>[39m
+            [0mRunning[0m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33maria-hidden[39m=[32m"true"[39m
+          [33mstyle[39m=[32m"border-left: 1px solid var(--border);"[39m
+        [36m/>[39m
+        [36m<div[39m
+          [33mstyle[39m=[32m"flex: 1 1 0%; min-width: 0px; padding: 4px 10px;"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33maria-label[39m=[32m"Merges today: 0"[39m
+            [33mstyle[39m=[32m"font-size: 28px; line-height: 34px; font-weight: 600; font-variant-numeric: tabular-nums;"[39m
+          [36m>[39m
+            [0m0[0m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mstyle[39m=[32m"color: var(--muted-foreground);"[39m
+          [36m>[39m
+            [0mMerges today[0m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33maria-hidden[39m=[32m"true"[39m
+          [33mstyle[39m=[32m"border-left: 1px solid var(--border);"[39m
+        [36m/>[39m
+        [36m<div[39m
+          [33mstyle[39m=[32m"flex: 1 1 0%; min-width: 0px; padding: 4px 10px;"[39m
+          [33mtitle[39m=[32m"Unavailable: the host sent no usable running inventory."[39m
+        [36m>[39m
+          [36m<div[39m
+            [33maria-label[39m=[32m"Stalls: unavailable"[39m
+            [33mstyle[39m=[32m"font-size: 28px; line-height: 34px; font-weight: 600; font-variant-numeric: tabular-nums;"[39m
+          [36m>[39m
+            [0m—[0m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mstyle[39m=[32m"color: var(--muted-foreground);"[39m
+          [36m>[39m
+            [0mStalls · unavailable[0m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</section>[39m
+      [36m<section[39m
+        [33maria-labelledby[39m=[32m"wizdeck-fleet"[39m
+      [36m>[39m
+        [36m<h3[39m
+          [33mid[39m=[32m"wizdeck-fleet"[39m
+          [33mstyle[39m=[32m"display: flex; align-items: center; gap: 10px; margin: 18px 0px 6px; font-size: 15px; font-weight: 600;"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33mstyle[39m=[32m"white-space: nowrap;"[39m
+          [36m>[39m
+            [0mFleet[0m
+          [36m</span>[39m
+          [36m<span[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mstyle[39m=[32m"flex: 1 1 0%; border-top: 1px solid var(--border);"[39m
+          [36m/>[39m
+        [36m</h3>[39m
+        [36m<p[39m
+          [33mstyle[39m=[32m"color: var(--muted-foreground); margin: 2px 0px 6px;"[39m
+        [36m>[39m
+          [0mRunning unavailable: this host does not report its running threads[0m
+          [0m · [0m
+          [0m7[0m
+          [0m thread[0m
+          [0ms[0m
+        [36m</p>[39m
+        [36m<p[39m
+          [33mrole[39m=[32m"status"[39m
+          [33mstyle[39m=[32m"color: var(--muted-foreground); margin: 0px ...
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ getAllByLabelText node_modules/@testing-library/dom/dist/queries/label-text.js:111:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/deck/fleet/FleetViews.test.tsx:100:19
+     98|     mountHome();
+     99|     await flush();
+    100|     expect(screen.getByLabelText("Running: unavailable")).toBeTruthy();
+       |                   ^
+    101|     expect(screen.getByLabelText("Stalls: unavailable")).toBeTruthy();
+    102|     const fleet = screen.getByRole("region", { name: "Fleet" });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/fleet/FleetViews.test.tsx > WizDeck Home live insertion > opens unplaced work inside WizDeck, returns Home, and opens a thread only on explicit Open
+AssertionError: expected [ { method: 'toThread', …(1) } ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   {
++     "method": "toThread",
++     "threadId": "thr_b2",
++   },
++ ]
+
+ ❯ src/deck/fleet/FleetViews.test.tsx:124:43
+    122|     expect(screen.getByRole("heading", { name: "Unplaced work" })).toB…
+    123|     fireEvent.click(screen.getByRole("button", { name: "Build T2 filte…
+    124|     expect(slot.inspection.navigateCalls).toEqual([]);
+       |                                           ^
+    125|     expect(getSelection()).toEqual({ kind: "thread", projectKey: "samp…
+    126|     fireEvent.click(screen.getByRole("button", { name: "Open Search he…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/fleet/FleetViews.test.tsx > WizDeck Home live insertion > returns Home for an explicit Needs-you focus
+AssertionError: expected <h2 …(1)></h2> to be null
+
+- Expected:
+null
+
++ Received:
+<h2
+  style="margin: 4px 0px 0px; font-size: 20px; line-height: 26px; font-weight: 600; overflow-wrap: anywhere;"
+>
+  Unplaced work
+</h2>
+
+ ❯ src/deck/fleet/FleetViews.test.tsx:141:70
+    139|     slot.lifecycle.rerender(<WizDeckPanel threadId="thr_any" params={{…
+    140|     await flush();
+    141|     expect(screen.queryByRole("heading", { name: "Unplaced work" })).t…
+       |                                                                      ^
+    142|     expect(screen.getByRole("region", { name: "Fleet" })).toBeTruthy();
+    143|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/fleet/FleetViews.test.tsx > spec fleet page with work links > highlights a selected thread's spec and a selected spec without navigating, scrolling or moving focus
+AssertionError: expected "vi.fn()" to not be called at all, but actually been called 2 times
+
+Received:
+
+  1st vi.fn() call:
+
+    Array []
+
+  2nd vi.fn() call:
+
+    Array []
+
+
+Number of calls: 2
+
+ ❯ src/deck/fleet/FleetViews.test.tsx:204:24
+    202|     expect(document.querySelector(`[data-spec="${SPEC}"]`)?.getAttribu…
+    203|     await flush();
+    204|     expect(scroll).not.toHaveBeenCalled();
+       |                        ^
+    205|     expect(document.activeElement).toBe(before);
+    206|     expect(slot.inspection.navigateCalls).toEqual([]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed | 3 passed (7)
+   Start at  19:18:09
+   Duration  1.46s (transform 144ms, setup 0ms, import 296ms, tests 569ms, environment 494ms)
+
