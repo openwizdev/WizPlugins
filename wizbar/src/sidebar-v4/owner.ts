@@ -3,17 +3,16 @@
 // so the owner is that orchestrator, taken only from D2's declared action log
 // (#74: the configured orchestrator, freshly verified by the backend against
 // the host: same thread, the factory's Cloudroom project, not archived or
-// deleted). Pinned to its shape in PR #85 at c0d01a0f41d5d26357d39bac72979b8f8963791e.
+// deleted). Typed from D2's merged contract (PR #85, head c0d01a0f, merge
+// c6b3db6c); the answer is still read strictly at run time.
 // Nothing here guesses: no selected thread, title or route; any other answer,
 // a missing backend method or a failed read is unavailable.
 import { useCallback } from "react";
 import { useRpc } from "@get-bb/plugin-sdk/app";
-import type { z } from "zod";
+import type { deckActionsRpcContract } from "../deck/actions/server";
 
 /** D2's `deckActionLog` call, read-only from the sidebar; only its target is used. */
-type ActionLogRead = {
-  deckActionLog: { input: z.ZodObject<{ projectKey: z.ZodString }>; output: z.ZodUnknown };
-};
+type ActionLogRead = Pick<typeof deckActionsRpcContract, "deckActionLog">;
 
 export type OwnerV1 = { status: "verified"; threadId: string } | { status: "unavailable" };
 
