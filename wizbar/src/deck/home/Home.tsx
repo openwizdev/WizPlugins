@@ -3,13 +3,13 @@
 import { useEffect, useState } from "react";
 import { useBbContext, useBbNavigate } from "@get-bb/plugin-sdk/app";
 import type { FocusRequestV1 } from "../../factory-contract";
-import { useDeckHome } from "./useDeckHome";
-import { HealthRow, NeedsYou, Versions, homeCss, tapTarget } from "./sections";
 // F1 (#75) live/fleet insertion.
 import type { SpecRefV1 } from "../../factory-contract";
 import { useSelection } from "../selection/selection";
 import { useLiveFleet } from "../live/useLiveFleet";
 import { FleetSection, LiveHealthRow, SpecFleet, type FleetActions } from "../fleet/FleetViews";
+import { useDeckHome } from "./useDeckHome";
+import { HealthRow, NeedsYou, Versions, homeCss, tapTarget } from "./sections";
 
 const INTRO_KEY = "wizdeck.intro.v1";
 
