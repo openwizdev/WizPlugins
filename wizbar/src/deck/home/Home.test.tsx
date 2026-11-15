@@ -95,6 +95,18 @@ describe("WizDeck Home", () => {
     expect(screen.getByText("Stalls · unavailable")).toBeTruthy();
   });
 
+  // Bug caught: a version read only in part says "No specs yet." and shows a
+  // complete-looking summary, though later issues may hold specs.
+  it("keeps a partly read version's summary and empty state partial", async () => {
+    const partial = result("sample-factory");
+    partial.view!.board.versions = [{ repository: "example-org/sample-app", number: 3, title: "1.4", dueOn: null, complete: false, specs: [] }];
+    mount({ deckWatch: () => partial, deckRelease: () => ({ ok: true }) });
+    await flush();
+    expect(screen.getByText("1.4 · 0+/0 tickets merged")).toBeTruthy();
+    expect(screen.getByText("No specs among the issues read so far.")).toBeTruthy();
+    expect(screen.queryByText("No specs yet.")).toBeNull();
+  });
+
   it("marks a partial count as a lower bound", async () => {
     mount({ deckWatch: () => result("sample-factory", { complete: false, merged: 2 }), deckRelease: () => ({ ok: true }) });
     await flush();
