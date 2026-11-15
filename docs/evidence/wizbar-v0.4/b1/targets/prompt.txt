@@ -1,0 +1,25 @@
+Tool route: built-in image_gen.imagegen
+
+DESKTOP PROMPT:
+Create a flat, pixel-precise UI design target, screenshot only, no device frame. Ledger style: near-black #0b0b0c app surface, light grey text, compact dense rows, thin 1px grey separators, small section labels with a thin rule extending right, restrained lime #c6f432 only for small accents (running dot, highlight bar). System/Inter-like sans. No heavy shadows, gradients, emoji, credits or cost numbers, real names, people, companies, URLs or logos. Every word must be the invented text specified below.
+
+DESKTOP landscape target 1440 x 900 or nearest available. Dark desktop coding-agent app. LEFT sidebar about 300 px wide is "WizBar", a thread list; centre is a conversation placeholder with grey lines of text, title "Builder 42"; a narrow right panel shows tab "WizDeck" with heading "Home" and a "Needs you · 2" section with two compact rows.
+
+Sidebar top to bottom: ghost picker "All projects"; label "Pinned" with rule; card "Release prep", small muted project line "sample-app", time "4m"; label "Inbox" with rule; card "Spec 41 manager" with thin lime left bar, highlighted, linked to a selected spec, its third line has chips "#41" and a small chevron toggle "3 children · 2 running · total unknown" shown EXPANDED. Below it, indented slim child rows in order: "Builder 42" with lime running dot, "Reviewer 42" with lime running dot, then "Search helper" muted idle. Then two more collapsed cards "Docs cleanup" and "Sync retries" (chevron "1 child" collapsed).
+
+Sidebar footer above a thin rule: left a small row "Needs you · 2" with right arrow; right a count "◌ 5 running" with a thin spinner ring, NO lightning bolt icon. A popover is OPEN above the count, anchored to it, compact, titled "5 running · all projects", rows each ending with a small "Open" text button:
+group "Spec 41 manager" (a running row itself, lime dot) with indented "Builder 42", "Reviewer 42";
+muted context heading "Parent not running · Release prep" with indented "Docs helper" tagged small "muted";
+muted context heading "Unplaced · parent not loaded" with indented "Orphan task" tagged small "hidden".
+Footer line of popover in muted small text: "Esc to close". Render all specified words verbatim, no extra sections.
+
+PHONE PROMPT:
+Create a flat, pixel-precise UI design target, screenshot only, no device frame. Ledger style: near-black #0b0b0c app surface, light grey text, compact dense rows, thin 1px grey separators, small section labels with a thin rule extending right, restrained lime #c6f432 only for small accents (running dot, highlight bar). System/Inter-like sans. No heavy shadows, gradients, emoji, credits or cost numbers, real names, people, companies, URLs or logos. Every word must be the invented text specified below.
+
+PHONE portrait target 390 x 844 or nearest available. A full-screen dark WizBar sidebar sheet, no phone frame. Larger 44 px touch rows. Top to bottom: ghost picker "All projects"; label "Pinned" with rule; card "Release prep", small muted project line "sample-app", time "4m"; label "Inbox" with rule; card "Spec 41 manager" with thin lime left bar, highlighted, linked to a selected spec, its third line has chips "#41" and a small chevron toggle "3 children · 2 running · total unknown" shown EXPANDED. Below it, indented slim child rows in order: "Builder 42" with lime running dot, "Reviewer 42" with lime running dot, then "Search helper" muted idle. Then two more collapsed cards "Docs cleanup" and "Sync retries" (chevron "1 child" collapsed). Footer: "Needs you · 2" with right arrow and "◌ 5 running" with a thin spinner ring, NO lightning bolt icon.
+
+The running popover is OPEN as a bottom sheet titled "5 running · all projects", with a small "Close" button top right. Full-width rows each have an "Open" button at least 44 px tall. Show three groups:
+"Spec 41 manager" as a running row itself with lime dot, with indented "Builder 42", "Reviewer 42";
+muted context heading "Parent not running · Release prep" with indented "Docs helper" tagged small "muted";
+muted context heading "Unplaced · parent not loaded" with indented "Orphan task" tagged small "hidden".
+Footer in muted small text "Esc to close". Render all specified words verbatim, no extra sections.
