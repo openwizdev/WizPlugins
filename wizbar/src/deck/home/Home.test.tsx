@@ -16,7 +16,7 @@ const app = await loadPluginApp(() => import("../../../app"));
 const board = (repo: string, title: string, merged: number, complete = true): BoardV1 => ({
   repository: repo as BoardV1["repository"],
   versions: [{
-    repository: repo as BoardV1["repository"], number: 3, title: "1.4", dueOn: null,
+    repository: repo as BoardV1["repository"], number: 3, title: "1.4", dueOn: null, complete: true,
     specs: [{
       ref: `${repo}#41` as never, title, url: `https://github.com/${repo}/issues/41`, state: "open",
       total: 4, merged, complete,

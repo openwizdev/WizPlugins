@@ -5,7 +5,9 @@ import { createFakePluginHost, type FakePluginHost } from "@get-bb/plugin-sdk/te
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import plugin from "../../server";
 import type { DeckWatchResultV1 } from "./server";
-import { dxFactory, dxNow, dxOtherFactory, dxQueue, dxSettings, fakeGitHub } from "./fixtures";
+import { dxFactory, dxFillerIssues, dxNow, dxOtherFactory, dxQueue, dxSettings, dxStatusComment, fakeGitHub } from "./fixtures";
+import { loadBoard, mergesToday } from "./board";
+import { GitHubReader } from "./github";
 import { LEASE_MS, REFRESH_MS } from "./cache";
 
 const hosts: FakePluginHost[] = [];
@@ -144,16 +146,152 @@ describe("failure keeps last-good data stale, never zero", () => {
   });
 
   // Bug caught: a partial page is shown as a complete count.
-  it("a partial sub-issue page keeps known rows with a gap, and an incomplete merge read is unavailable", async () => {
+  // Bug caught: an interrupted continuation discards the rows already read, or
+  // presents a lower bound as a complete count.
+  it("an interrupted sub-issue continuation keeps known tickets with a gap, and a short merge read is unavailable", async () => {
     const t = setup();
-    const board = t.github.state.boards.get("example-org/sample-app") as ReturnType<typeof import("./fixtures").dxBoard>;
-    board.repository.milestones.nodes[0].issues.nodes[0].subIssues.pageInfo.hasNextPage = true;
+    const spec = t.github.state.repos.get("example-org/sample-app")![0].issues[0];
+    spec.tickets.push(...Array.from({ length: 60 }, (_, i) => ({ number: 2000 + i, repo: "example-org/sample-app", state: "OPEN" as const, prs: [] })));
+    t.github.state.override = (call) => call.kind === "subIssues" ? { status: 503 } : null;
     t.github.state.mergesIssueCount = 250;
     await t.watch("desk-tab"); await t.settle();
     const view = (await t.watch("desk-tab")).view!;
-    expect(view.board.versions[0].specs[0]).toMatchObject({ merged: 1, total: 4, complete: false });
-    expect(view.board.gaps.join(" ")).toMatch(/not read/);
+    expect(view.board.versions[0].specs[0]).toMatchObject({ merged: 1, total: 64, complete: false });
+    expect(view.board.gaps.join(" ")).toMatch(/some tickets or links were not read/);
     expect(view.health.mergesToday).toBeNull();
+  });
+});
+
+describe("R1: board connections continue past their first page", () => {
+  // Bug caught: later pages are invisible forever. The board read only the
+  // first page of each connection and never followed endCursor, so a spec,
+  // ticket or closing PR past page one never appeared, however often it refreshed.
+  it("shows a spec that sits after the first page of a version's issues", async () => {
+    const t = setup();
+    const milestone = t.github.state.repos.get("example-org/sample-app")![0];
+    milestone.issues.unshift(...dxFillerIssues(50));
+    await t.watch("desk-tab"); await t.settle();
+    const view = (await t.watch("desk-tab")).view!;
+    expect(view.board.versions[0].specs.map((spec) => spec.ref)).toEqual(["example-org/sample-app#41"]);
+    expect(view.board.versions[0]).toMatchObject({ complete: true });
+    expect(t.github.calls.filter((call) => call.kind === "issues").map((call) => call.variables?.after)).toEqual(["c49"]);
+  });
+
+  it("counts a verified ticket after the first sub-issue page, and a merged closing PR after the first link page", async () => {
+    const t = setup();
+    const repo = "example-org/sample-app";
+    const spec = t.github.state.repos.get(repo)![0].issues[0];
+    // 50 open tickets push one verified ticket onto the second sub-issue page.
+    spec.tickets.splice(1, 0, ...Array.from({ length: 50 }, (_, i) => ({ number: 3000 + i, repo, state: "OPEN" as const, prs: [] })));
+    spec.tickets.push({ number: 46, repo, state: "CLOSED", prs: [] });
+    // Ten unmerged PRs push its merged closing PR onto the second link page.
+    spec.tickets.at(-1)!.prs = [
+      ...Array.from({ length: 10 }, (_, i) => ({ number: 600 + i, repo, mergedAt: null, merged: false })),
+      { number: 70, repo, mergedAt: "2026-11-15T12:00:00Z", merged: true },
+    ];
+    await t.watch("desk-tab"); await t.settle();
+    const row = (await t.watch("desk-tab")).view!.board.versions[0].specs[0];
+    expect(row).toMatchObject({ total: 55, merged: 2, complete: true });
+    expect(row.pullRequests.map((link) => link.ref)).toEqual(["example-org/sample-app#70", "example-org/sample-app#52"]);
+  });
+
+  it("an interrupted issue continuation keeps known specs and marks the version partial", async () => {
+    const t = setup();
+    const milestone = t.github.state.repos.get("example-org/sample-app")![0];
+    milestone.issues.push(...dxFillerIssues(60));
+    t.github.state.override = (call) => call.kind === "issues" ? { status: 502 } : null;
+    await t.watch("desk-tab"); await t.settle();
+    const view = (await t.watch("desk-tab")).view!;
+    expect(view.board.freshness).toBe("fresh");
+    expect(view.board.versions[0]).toMatchObject({ complete: false });
+    expect(view.board.versions[0].specs.map((spec) => spec.title)).toEqual(["Search filters"]);
+    expect(view.board.gaps.join(" ")).toMatch(/not every issue was read/);
+  });
+
+  it("stops at its page bound and says so", async () => {
+    const t = setup();
+    const spec = t.github.state.repos.get("example-org/sample-app")![0].issues[0];
+    spec.tickets.push(...Array.from({ length: 4 * 50 }, (_, i) => ({ number: 4000 + i, repo: "example-org/sample-app", state: "OPEN" as const, prs: [] })));
+    await t.watch("desk-tab"); await t.settle();
+    const row = (await t.watch("desk-tab")).view!.board.versions[0].specs[0];
+    expect(row).toMatchObject({ total: 204, merged: 1, complete: false });
+    expect(t.github.calls.filter((call) => call.kind === "subIssues")).toHaveLength(3);
+  });
+});
+
+describe("R2: supplementary reads never discard the board", () => {
+  const manyComments = () => [dxStatusComment, ...Array.from({ length: 149 }, (_, i) => ({ user: { login: "someone" }, body: `note ${i}` }))];
+
+  // Bug caught: a failed later status-comment page threw away the whole
+  // successfully read board, so its specs, progress and links vanished.
+  it("a failed second comment page keeps the spec row, progress and links, with its status unavailable", async () => {
+    const t = setup();
+    t.github.state.comments = manyComments();
+    t.github.state.override = (call) => call.kind === "comments" && call.url.includes("page=2") ? { status: 503 } : null;
+    await t.watch("desk-tab"); await t.settle();
+    const view = (await t.watch("desk-tab")).view!;
+    expect(view.board.freshness).toBe("fresh");
+    const row = view.board.versions[0].specs[0];
+    expect(row).toMatchObject({ title: "Search filters", merged: 1, total: 4 });
+    expect(row.pullRequests.map((link) => link.ref)).toEqual(["example-org/sample-app#52"]);
+    expect(row.status).toEqual({ status: "unavailable", reason: "missing", when: "Not estimated" });
+    expect(view.board.gaps.join(" ")).toMatch(/status could not be read/);
+    expect(view.health.mergesToday).toBe(3);
+  });
+
+  // Bug caught: a failed later merge-search page discarded the board, and a
+  // partial merge read could have looked like a complete count.
+  it("a failed second merge page keeps the board, keeps known merge times and gives no count", async () => {
+    const github = fakeGitHub();
+    github.state.merges.set("example-org/sample-app", Array.from({ length: 130 }, (_, i) => ({ number: 5000 + i, mergedAt: "2026-11-15T19:00:00Z" })));
+    github.state.override = (call) => call.kind === "merges" && call.variables?.after ? { status: 503 } : null;
+    const result = await loadBoard({
+      reader: new GitHubReader(github.fetch, "synthetic-token", () => dxNow), repository: "example-org/sample-app",
+      repositories: ["example-org/sample-app"], statusWriterLogin: "sample-manager", now: () => dxNow,
+    }, new AbortController().signal);
+    expect(result.data.versions[0].specs[0]).toMatchObject({ title: "Search filters", merged: 1 });
+    expect(result.data.merges).toMatchObject({ complete: false });
+    expect(result.data.merges.pullRequests).toHaveLength(100);
+    expect(result.complete).toBe(false);
+    expect(mergesToday([result.data], "UTC", dxNow)).toBeNull();
+  });
+
+  // Bug caught: a rate limit met during a supplementary read was swallowed, so
+  // the shared cache kept reading GitHub before the reset.
+  it("a rate limit on a later page keeps the rows and holds the shared schedule until the reset", async () => {
+    const t = setup();
+    t.github.state.comments = manyComments();
+    const resetAt = Math.floor((dxNow + 10 * REFRESH_MS) / 1000);
+    t.github.state.override = (call) => call.kind === "comments" && call.url.includes("page=2") && Date.now() < resetAt * 1000
+      ? { status: 403, headers: { "x-ratelimit-remaining": "0", "x-ratelimit-reset": String(resetAt) } } : null;
+    await t.watch("desk-tab"); await t.settle();
+    const view = (await t.watch("desk-tab")).view!;
+    expect(view.board.versions[0].specs[0]).toMatchObject({ title: "Search filters", merged: 1 });
+    expect(view.board.gaps.join(" ")).toMatch(/asked us to wait/);
+    expect(view.health.mergesToday).toBeNull();
+    const calls = t.github.calls.length;
+    await t.heartbeat(9 * REFRESH_MS);
+    expect(t.github.calls.length).toBe(calls);
+    await t.heartbeat(2 * REFRESH_MS);
+    expect(t.github.calls.length).toBeGreaterThan(calls);
+    const later = (await t.watch("desk-tab")).view!;
+    expect(later.board.versions[0].specs[0].status.status).toBe("ready");
+    expect(later.health.mergesToday).toBe(3);
+  });
+
+  it("cancellation during a supplementary read is not swallowed", async () => {
+    const github = fakeGitHub();
+    const controller = new AbortController();
+    github.state.override = (call) => {
+      if (call.kind !== "comments") return null;
+      controller.abort();
+      throw new Error("aborted");
+    };
+    await expect(loadBoard({
+      reader: new GitHubReader(github.fetch, "synthetic-token", () => dxNow), repository: "example-org/sample-app",
+      repositories: ["example-org/sample-app"], statusWriterLogin: "sample-manager", now: () => dxNow,
+    }, controller.signal)).rejects.toThrow();
+    expect(github.calls.filter((call) => call.kind === "merges")).toHaveLength(0);
   });
 });
 
@@ -296,6 +434,28 @@ describe("factory selection and setup", () => {
     // The failure is still reported, in words, as unavailable.
     expect(after.view!.board.freshness).toBe("unavailable");
     expect(after.view!.board.detail).toBeTruthy();
+    for (const answer of [watched, refreshed, after]) expect(JSON.stringify(answer)).not.toContain("synthetic-token");
+    expect(JSON.stringify(t.host.harness.inspection.realtimeSignals)).not.toContain("synthetic-token");
+  });
+
+  // Bug caught: credential disclosure through a partial read's gaps. A later
+  // page's transport error, echoing the request, must not reach a panel either.
+  it("never returns the token when a later page fails and the board stays partial", async () => {
+    const t = setup();
+    t.github.state.comments = [dxStatusComment, ...Array.from({ length: 120 }, (_, i) => ({ user: { login: "someone" }, body: `note ${i}` }))];
+    t.github.state.override = (call) => {
+      if ((call.kind === "comments" && call.url.includes("page=2")) || (call.kind === "merges")) {
+        throw new Error("socket hang up: authorization: Bearer synthetic-token");
+      }
+      return null;
+    };
+    await t.watch("desk-tab"); await t.settle();
+    const watched = await t.watch("desk-tab");
+    vi.setSystemTime(dxNow + REFRESH_MS);
+    const refreshed = await t.refresh("desk-tab"); await t.settle();
+    const after = await t.watch("desk-tab");
+    expect(after.view!.board.versions[0].specs[0].title).toBe("Search filters");
+    expect(after.view!.board.gaps.length).toBeGreaterThan(0);
     for (const answer of [watched, refreshed, after]) expect(JSON.stringify(answer)).not.toContain("synthetic-token");
     expect(JSON.stringify(t.host.harness.inspection.realtimeSignals)).not.toContain("synthetic-token");
   });
