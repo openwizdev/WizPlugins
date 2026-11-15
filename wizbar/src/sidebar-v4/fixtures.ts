@@ -5,8 +5,9 @@ const idle = { workflows: 0, backgroundAgents: 0, backgroundCommands: 0, planMod
 
 /** One synthetic `PluginSidebarThread`, idle unless overridden. */
 export function b1Row(id: string, overrides: Partial<PluginSidebarThread> = {}): PluginSidebarThread {
+  const name = overrides.displayTitle ?? `Task ${id}`;
   return {
-    id, projectId: "prj_b1_a", title: `Task ${id}`, titleFallback: null, displayTitle: `Task ${id}`,
+    id, projectId: "prj_b1_a", title: name, titleFallback: null, displayTitle: name,
     parentThreadId: null, lifecycleOwnerThreadId: null, sourceThreadId: null, sectionId: null,
     originKind: null, originPluginId: null, providerId: "codex",
     status: "idle", runtimeStatus: "idle", queuedWork: "none", hasPendingInteraction: false,
