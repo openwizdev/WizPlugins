@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { deckSettingDescriptors } from "../data/binding";
 import { dxFactory, dxNow, dxQueue, dxSettings } from "../data/fixtures";
 import { registerDeckActions } from "./server";
+import entry from "../../server";
 import { SEND_TIMEOUT_MS, type ActionLogV1, type ActionRecordV1, type BindAnswerResultV1 } from "./protocol";
 
 const hosts: FakePluginHost[] = [];
@@ -287,5 +288,37 @@ describe("the reply is never guessed", () => {
     const t = setup({ get: async () => orchestratorThread({ deletedAt: dxNow }) });
     const log = await t.rpc<ActionLogV1>("deckActionLog", { projectKey: "sample-factory" });
     expect(log.orchestrator).toMatchObject({ status: "unavailable", detail: "The orchestrator thread is archived or deleted." });
+  });
+});
+
+describe("through the real plugin entry", () => {
+  // Bugs caught: the deck settings declared twice (the SDK throws and the plugin never loads),
+  // the action RPCs left unregistered, and the GitHub token reaching a panel through an action.
+  it("defines the settings once, reaches the action RPCs, and never returns the token", async () => {
+    const send = vi.fn(async () => { throw new Error("transport failed with Authorization: Bearer synthetic-token"); });
+    const get = vi.fn(async () => orchestratorThread());
+    const host = createFakePluginHost({
+      pluginId: "wizbar", settings: dxSettings(),
+      sdk: { files: { read: vi.fn(async () => { throw new Error("offline synthetic-token"); }), write: vi.fn() }, threads: { list: vi.fn(async () => []), get, send } } as never,
+    });
+    hosts.push(host);
+    expect(() => entry(host.bb)).not.toThrow();
+    const call = (name: string, input: unknown) => host.harness.behavior.callRpc(name, input);
+
+    const log = await call("deckActionLog", { projectKey: "sample-factory" }) as ActionLogV1;
+    expect(log.orchestrator).toMatchObject({ status: "verified", threadId: ORCH });
+    const told = await call("deckSteer", {
+      operationId: "op-test-entry-0001", projectKey: "sample-factory", orchestratorThreadId: ORCH,
+      kind: "tell", text: "Hold new builds until Monday.", answer: null, specAction: null,
+    }) as ActionRecordV1;
+    expect(told.state).toBe("uncertain");
+    expect(send).toHaveBeenCalledTimes(1);
+    const bound = await call("deckBindAnswer", { projectKey: "sample-factory", itemId: "n12", optionId: "short", shown });
+    expect(bound).toMatchObject({ ok: false, reason: "queue-unavailable" });
+    const after = await call("deckActionLog", { projectKey: "sample-factory" });
+
+    const seen = JSON.stringify([log, told, bound, after, host.harness.inspection.realtimeSignals]);
+    expect(seen).not.toContain("synthetic-token");
+    expect(seen).not.toContain("wizdeckGithubToken");
   });
 });
