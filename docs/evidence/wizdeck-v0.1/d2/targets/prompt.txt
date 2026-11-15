@@ -1,0 +1,126 @@
+D2 design target generation record
+
+Route: Built-in tools.image_gen__imagegen (OpenAI image_gen); no API key, HTML rendering, installs or external API runner.
+References: D1 desktop-1440.png and phone-390.png used as STYLE references only. Retries used their preceding generated target as edit reference.
+
+Selected: Desktop D2 (first retry); phone P3 (second retry).
+
+PROMPT D1 — not selected
+Use case: ui-mockup. Generate one high fidelity UI DESIGN TARGET picture, exact 1440 x 900 landscape canvas, whole desktop app window, no outer frame or perspective. The two supplied D1 pictures are STYLE REFERENCES ONLY: match Ledger's very dark #0b0b0c flat surface, light grey Inter-like sans text, compact clean rows, thin grey 1px separators and section headings with a thin rule extending right. Do not copy their content. No gradients, heavy shadows, emoji, real names, companies, URLs, credit or cost numbers. Lime #c6f432 ONLY on recommended answer outline, Undo countdown accent and progress bars; NO lime tab underline.
+
+STRICT geometry: left sidebar x=0..340 plain list, middle chat x=340..880 generic blurred grey lines only, right WizDeck panel x=880..1440 EXACTLY 560px wide with 24px padding. Right panel sharp legible text, body 12–14 px, no oversized typography. Sidebar exact three list labels: "Sample orchestrator", "Search filters builder", "Sync engine review". Middle chat contains no legible words, only blurred generic grey lines.
+
+RIGHT PANEL vertical order and EXACT COPY (no additional explanatory copy):
+top tab "WizDeck" in grey underline. Header "Home" at left, outlined pill "sample-factory ▾" right.
+Section "Needs you · 2" with rule. Two compact rows, each with small outlined "Open" button at far right:
+"N-12 · Which changelog headline ships with 1.4?"
+"Options: Short headline (rec) · Long headline"
+"N-14 · Publish 1.4 to the marketplace?"
+"Options: Publish · Hold"
+Thin row separators.
+
+Section "Answer" with rule. First row:
+"N-12 · Which changelog headline ships with 1.4?"
+two outlined option buttons "Short headline (rec)" (lime outline) and "Long headline" (grey outline).
+Below them the pending feedback exact 'Sending "Short headline"… 4 s · Undo'. Accent only countdown/Undo. It clearly binds N-12 question and choice and shows Undo.
+Second row:
+"N-14 · Publish 1.4 to the marketplace?"
+"Gated · publish: decide in the orchestrator"
+outlined "Open orchestrator" button; no Publish or Hold answer buttons in this gated Answer row.
+
+Section "Tell the factory" with rule. Empty outlined multi-line text box (no placeholder). Below textbox two outlined buttons "Send" and "Feedback".
+Then three compact log entries, each text, delivery label, and reply link:
+"Hold new builds for Sync engine until Monday."
+"Sent · steered" and "Reply: Open orchestrator"
+"Answer N-11 · Yes"
+"Waiting · queued by the host, not steered yet" and "Reply: Open orchestrator"
+"Feedback: the spec menu is hard to find."
+"Uncertain · may have arrived; not resent" and "Reply: Open orchestrator"
+
+Section "Spec actions" with rule. Outlined picker "Search filters · #41". Under it a single compact row of outlined controls "Pause", "Resume", "Prioritise", "Ask why", "Open spec".
+Then three equal metric cells, large values "—", "3", "—", labels "Running", "Merges today", "Stalls".
+The section "Versions" can start at the bottom edge. If any version content fits, only "1.4 · 2/5 tickets merged", "Search filters", "Now: Building T2–T3", "Next: Review T2, then merge", "When: Today ~16:00 UTC" with 2/5 progress. Prioritize all above content. Use efficient vertical spacing to fit the full requested controls and metrics inside 900px. Beautiful precise flat UI, restrained, no cards or decorative filler.
+
+PROMPT P1 — not selected
+Use case: ui-mockup. Generate a high fidelity MOBILE UI DESIGN TARGET for WizDeck, exact 390 x 844 portrait canvas (780 x 1688 at 2x acceptable). D1 images supplied are STYLE REFERENCES ONLY: same Ledger near-black #0b0b0c flat background, light grey Inter-like sans text, thin grey dividers, section headings with thin horizontal rule extending right. Full-screen phone interface, status bar then WizDeck panel, 16px horizontal padding. This is a PHONE layout with wrapped text, never a squeezed desktop. No phone hardware frame. NO gradients, heavy shadows, real names, companies, URLs, emoji, credits or costs. Lime #c6f432 ONLY recommended-answer outline and Undo countdown accent. Tab underline grey, never lime.
+
+Fit these required contents cleanly inside 844px, readable 12–14px body, around 18px section headings; EVERY visible button and picker at least 44px tall at final 390px width, including Open and Undo. Use compact spacing and 16px margins, avoid blank dead space. Exact text only as follows, no invented copy.
+
+Status bar "9:41" with simple white status glyphs.
+Tab "WizDeck".
+Header "Home" at left, outlined picker "sample-factory ▾" right, 44px tall.
+
+Section "Needs you · 2".
+Row 1 left wrapping question "N-12 · Which changelog headline ships with 1.4?" and right outlined "Open" button 44px tall.
+Row 2 left wrapping question "N-14 · Publish 1.4 to the marketplace?" and right outlined "Open" button 44px tall.
+No options descriptions in Needs you on phone; keep both questions complete.
+
+Section "Answer".
+"N-12 · Which changelog headline ships with 1.4?" wrapping.
+Pending row: 'Sending "Short headline"… 4 s · Undo'. Can wrap into two lines; "Undo" is an underlined or outlined 44px tall touch control; countdown lime. Because already pending, no answer-option buttons needed here.
+Next row "N-14 · Publish 1.4 to the marketplace?"
+"Gated · publish: decide in the orchestrator" wraps cleanly.
+Outlined "Open orchestrator" button 44px tall, no Publish or Hold answer buttons.
+
+Section "Tell the factory".
+Empty multi-line outlined text box, about 54px high, no placeholder.
+Then "Send" and "Feedback" outlined buttons, both 44px tall side by side.
+First log row:
+"Hold new builds for Sync engine until Monday."
+"Sent · steered"
+"Reply: Open orchestrator" (Open orchestrator link may be 44px tall).
+Everything through this first log must be visible. Let subsequent content scroll below viewport, DO NOT shrink to fit desktop content. Do not show desktop sidebar or chat. Sharp legible typography, balanced precise compact layout, flat panel and restrained outlines.
+
+PROMPT D2 — SELECTED
+Revise this desktop UI design target with ONE specific layout correction: preserve every word, control, order, typography, colour and content of the supplied generated desktop image, but correct the column widths on the final EXACT 1440x900 canvas. Left sidebar ends x=340 (23.61% canvas width); blurred chat ends x=880 (61.11% canvas width); right WizDeck panel begins x=880, width=560 (38.89% canvas width), ends x=1440. Current image panel begins too far left. Make the middle chat wider and the right panel narrower accordingly. No letter or word may be lost; wrap as necessary, keep 12–14px body at final size and 24px right-panel padding. Keep all sections through Spec actions and the three health values visible. Versions can begin at bottom edge, version detail may scroll below. Whole app window, flat #0b0b0c, no gradients, no shadows. Lime #c6f432 only recommended answer outline, Undo countdown accent and progress bars. Header factory text exact "sample-factory ▾". Pending row exact 'Sending "Short headline"… 4 s · Undo'. All other text exactly as the supplied image, except change three-dot ellipsis to the single … glyph. Target is 1440 x 900, horizontal proportions are the key correction. Do not preserve the incorrect column widths.
+
+PROMPT P2 — not selected
+Correct the supplied generated PHONE WizDeck target. Preserve all its exact words, section order and Ledger style, but change layout dimensions to satisfy 390x844 CSS px. Generate exact 780x1688 at 2x. Main defect to fix: buttons are too short. EVERY outlined button/picker MUST be 88 pixels tall in the 780x1688 output, equal to 44 CSS px. This includes factory picker, both "Open" buttons, "Open orchestrator", "Send", and "Feedback". Undo must also have an 88 pixel tall outlined control. Do not squeeze the image. Body font 26px at 2x =13px CSS, headings 32px at 2x =16px CSS, Home 44px at 2x =22px CSS. Horizontal padding 32px at 2x =16px CSS. Reduce excessive heading size and vertical whitespace to accommodate these tall controls. No gradients, no shadows, no new copy.
+
+Use these vertical bands in CSS px on final 390x844 image (double all coordinates if 780x1688):
+0–24 status bar.
+24–54 tab "WizDeck".
+54–106 header "Home" and 44px tall "sample-factory ▾".
+110–132 "Needs you · 2".
+132–190 row "N-12 · Which changelog headline ships with 1.4?" wrapping beside 44px "Open".
+190–248 row "N-14 · Publish 1.4 to the marketplace?" wrapping beside 44px "Open".
+252–276 section "Answer".
+278–314 "N-12 · Which changelog headline ships with 1.4?".
+314–366 pending row 'Sending "Short headline"… 4 s · Undo' with 44px tall outlined Undo at right, countdown lime.
+372–408 "N-14 · Publish 1.4 to the marketplace?".
+410–446 "Gated · publish: decide in the orchestrator".
+450–494 full width outlined "Open orchestrator" 44px tall.
+504–528 "Tell the factory".
+532–586 empty outlined multiline textbox.
+594–638 "Send" and "Feedback" side by side each 44px tall.
+650–694 first log text "Hold new builds for Sync engine until Monday.".
+698–720 "Sent · steered".
+728–772 "Reply: Open orchestrator" with outlined 44px tall Open orchestrator.
+Thin separators, no additional content necessary. All requested text must be visible through first log. Flat near-black #0b0b0c, light grey text, grey outlines. Lime #c6f432 only the 4 s countdown. Correct pending ellipsis to single … character. Keep status glyphs simple. This is a mobile design target, no sidebar/chat.
+
+PROMPT P3 — SELECTED
+Generate corrected mobile WizDeck target from reference, same copy and styling, with exactly 390:844 portrait aspect ratio (0.4621 width/height). IMPORTANT phone must be tall/narrow 780x1688, NOT the reference's wider 978x1610 proportion. Use 390x844 coordinate system. Flat near-black, light grey sans, 16px side padding, 13px body. Every outlined button at least 44 CSS px tall: use deliberately tall 52px buttons to ensure minimum. Factory picker 52px, both Open buttons 52px, Undo 52px, Open orchestrator 52px, Send and Feedback 52px. Reduce heading font sizes and excess gaps so all fits. No gradients or shadows or new copy. Lime only countdown "4 s".
+
+EXACT content order, all visible:
+status bar "9:41", tab "WizDeck".
+Header "Home", picker "sample-factory ▾".
+"Needs you · 2".
+"N-12 · Which changelog headline ships with 1.4?" wrapping beside "Open".
+"N-14 · Publish 1.4 to the marketplace?" wrapping beside "Open".
+"Answer".
+"N-12 · Which changelog headline ships with 1.4?"
+'Sending "Short headline"… 4 s ·' beside outlined "Undo".
+"N-14 · Publish 1.4 to the marketplace?"
+"Gated · publish: decide in the orchestrator" wrapped.
+full-width "Open orchestrator".
+"Tell the factory".
+Empty multi-line text box 48px high.
+"Send" and "Feedback" side by side, 52px high.
+"Hold new builds for Sync engine until Monday."
+"Sent · steered".
+Then one single 52px tall outlined button with exact text "Reply: Open orchestrator". DO NOT repeat Open orchestrator beside that final reply button. No duplicate reply control, no extra log rows. No sidebar/chat, no options descriptions, no spec controls. Grey section rules, grey tab underline. Fit the complete content inside 844px tall, 390px wide, with naturally wrapped body text. Body should be smaller than reference to make controls much taller relative to text.
+
+Remaining defects compared with brief:
+Desktop: column geometry remains approximate: sidebar about 318px instead of ~340px; right panel starts about x=906 instead of 880, width about 534px instead of 560. Pending ellipsis rendered as three dots rather than reliably a single glyph. Phone: generated aspect ratio differs from requested; resampled to 390x844, causing nonuniform scaling. Horizontal inset about 41px rather than 16px. Outlined controls approximately 35–42px tall after resizing, below the 44px minimum. Text mostly faithful and all required phone sections through first log visible; ellipsis rendered as dots. These are generated design targets, not screenshots or proof of actual UI. No spelling defects noticed in selected outputs.
+
+Processing: Python standard library only, bilinear resampling to exact requested output canvas; no text redrawing or compositing.

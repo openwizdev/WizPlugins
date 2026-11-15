@@ -1,0 +1,31 @@
+# D2 (#74) red: the entry test against checkpoint 400d985's backend registration (no action wiring), nothing planted
+# cmd: (cd wizbar && npx vitest run src/deck/actions/actions-server.test.ts -t 'real plugin entry')
+
+ RUN  v4.1.10 wizbar
+
+ ❯ |bb-plugin-wizbar| src/deck/actions/actions-server.test.ts (21 tests | 1 failed | 20 skipped) 46ms
+     × defines the settings once, reaches the action RPCs, and never returns the token 45ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/actions/actions-server.test.ts > through the real plugin entry > defines the settings once, reaches the action RPCs, and never returns the token
+Error: plugin "wizbar" has no rpc method "deckActionLog"
+ ❯ throwRpcError node_modules/@get-bb/plugin-sdk/dist/testing/index.js:2928:18
+ ❯ Object.callRpc node_modules/@get-bb/plugin-sdk/dist/testing/index.js:3883:16
+ ❯ call src/deck/actions/actions-server.test.ts:306:74
+    304|     hosts.push(host);
+    305|     expect(() => entry(host.bb)).not.toThrow();
+    306|     const call = (name: string, input: unknown) => host.harness.behavi…
+       |                                                                          ^
+    307|
+    308|     const log = await call("deckActionLog", { projectKey: "sample-fact…
+ ❯ src/deck/actions/actions-server.test.ts:308:23
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 20 skipped (21)
+   Start at  19:34:02
+   Duration  448ms (transform 183ms, setup 0ms, import 298ms, tests 46ms, environment 0ms)
+
