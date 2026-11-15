@@ -93,10 +93,7 @@ export interface FleetModelV1 {
 const byCreated = (a: { createdAt: number; id: string }, b: { createdAt: number; id: string }) =>
   a.createdAt - b.createdAt || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 
-function resolveLink(branch: string | null, links: FleetLinkSourceV1, title = ""): WorkLinkV1 {
-  // PLANTED BUG (red run): a spec guessed from a "#N" in the title.
-  const guess = /#(\d+)/.exec(title);
-  if (guess && links.status === "read" && links.pullRequests[0]) return { status: "linked", branch: branch ?? "", pullRequest: links.pullRequests[0], tickets: [], spec: links.pullRequests[0].tickets[0].spec as SpecRefV1 };
+function resolveLink(branch: string | null, links: FleetLinkSourceV1): WorkLinkV1 {
   if (links.status !== "read") return branch === null ? { status: "no-branch" } : { status: "links-unavailable", branch };
   if (branch === null) return { status: "no-branch" };
   const matches = links.pullRequests.filter((pr) => pr.headRefName === branch);
@@ -130,7 +127,7 @@ export function buildFleet(input: {
     isHidden: thread?.isHidden ?? false,
     running: runningIds ? runningIds.has(id) : null,
     stall: health.stalls.get(id),
-    link: resolveLink(thread?.environment?.branchName ?? null, links, thread?.displayTitle),
+    link: resolveLink(thread?.environment?.branchName ?? null, links),
     spec: null, placement: "none", role: null, depth: 0, parentNote: null,
     createdAt: thread?.createdAt ?? Number.MAX_SAFE_INTEGER,
   });
@@ -188,8 +185,6 @@ export function buildFleet(input: {
   for (const row of rows.values()) place(row);
   for (const row of rows.values()) {
     if (row.placement === "none") continue;
-    // PLANTED BUG (red run): hidden threads dropped from the fleet.
-    if (row.isHidden) rows.delete(row.id);
     row.role = row.link.status === "linked" ? "builder" : row.placement === "children" ? "manager" : "helper";
   }
 

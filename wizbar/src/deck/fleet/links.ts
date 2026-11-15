@@ -93,8 +93,7 @@ function pullRequest(raw: RawPr, state: "open" | "merged"): FleetPullRequestV1 |
   const closing = raw.closingIssuesReferences;
   if (!closing || !Array.isArray(closing.nodes) || typeof closing.pageInfo?.hasNextPage !== "boolean") bad("closing issues");
   // A fork's branch name says nothing about a thread in this repository.
-  // PLANTED BUG (red run): fork pull requests kept.
-  if (!raw.headRefName) return null;
+  if (raw.isCrossRepository || !raw.headRefName) return null;
   return {
     ref: `${repoName(raw.repository)}#${raw.number}`, url: raw.url, headRefName: raw.headRefName, state,
     mergedAt: state === "merged" ? raw.mergedAt : null,

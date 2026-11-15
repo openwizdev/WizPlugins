@@ -25,11 +25,9 @@ export type LiveRunningV1 =
  */
 export function scopedRunning(inventory: InventoryReadingV1, projectId: string): LiveRunningV1 {
   if (inventory.status === "not-ready") return { status: "unavailable", reason: inventory.reason, count: null };
-  // PLANTED BUG (red run): an older host reads as zero running.
-  if (inventory.status === "absent") return { status: "ready", projectId, rows: [], count: 0 };
+  if (inventory.status === "absent") return { status: "unavailable", reason: "absent", count: null };
   if (inventory.status === "incomplete") return { status: "unavailable", reason: inventory.reason, count: null };
-  // PLANTED BUG (red run): every project's running threads counted.
-  const rows = inventory.running;
+  const rows = inventory.running.filter((row) => row.projectId === projectId);
   return { status: "ready", projectId, rows, count: rows.length };
 }
 
@@ -67,10 +65,7 @@ export function liveHealth(input: {
   let known = true;
   let stalled = 0;
   for (const row of running.rows) {
-    // PLANTED BUG (red run): a host row/creation time used as the idle clock, with an assumed threshold.
-    const evidence = activity(row.id);
-    const status: StallV1 = evidence.status === "read" && evidence.pendingOperations === 0
-      ? { status: "stalled", idleMs: 3 * 3_600_000, thresholdMs: 1_800_000 } : stallStatus({ running: true, activity: evidence, threshold, now: input.now });
+    const status = stallStatus({ running: true, activity: activity(row.id), threshold, now: input.now });
     stalls.set(row.id, status);
     if (status.status === "stalled") stalled += 1;
     else if (status.status !== "ok") known = false;
