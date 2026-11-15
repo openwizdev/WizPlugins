@@ -16,7 +16,10 @@ fixture tests in CI; on a real host it awaits the live check in
 
 ## Map
 
-![WizPlugins' parts: WizBar, WizDeck, their contracts, the marketplace entry, the docs and the changelog lines](docs/images/map.png)
+<picture>
+  <source media="(max-width: 600px)" srcset="docs/images/map-phone.png">
+  <img alt="WizPlugins' parts: WizBar, WizDeck, their contracts, the marketplace entry, the docs and the changelog lines" src="docs/images/map.png" width="560">
+</picture>
 
 WizPlugins holds the factory's eyes inside Cloudroom: WizBar in the sidebar and WizDeck in the right panel. The [org map](https://github.com/openwizdev) shows how it fits with the other repos.
 
