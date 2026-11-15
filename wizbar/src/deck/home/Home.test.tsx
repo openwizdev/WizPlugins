@@ -126,7 +126,7 @@ describe("WizDeck Home", () => {
     expect(screen.getByText("sample-factory spec")).toBeTruthy();
     // A realtime re-read for the old factory is still in flight when the person switches.
     await act(async () => { await vi.advanceTimersByTimeAsync(30_000); });
-    fireEvent.change(screen.getByRole("combobox"), { target: { value: "other-factory" } });
+    fireEvent.change(screen.getByRole("combobox", { name: "Factory" }), { target: { value: "other-factory" } });
     expect(screen.queryByText("sample-factory spec")).toBeNull();
     await flush();
     expect(screen.getByText("other-factory spec")).toBeTruthy();
@@ -162,7 +162,7 @@ describe("WizDeck Home", () => {
     const slot = mount({ deckWatch: () => result("sample-factory"), deckRelease: () => ({ ok: true }) });
     await flush();
     const headings = screen.getAllByRole("heading", { level: 3 }).map((heading) => heading.textContent);
-    expect(headings).toEqual(["Needs you · 1", "Versions"]);
+    expect(headings).toEqual(["Needs you · 1", "Answer", "Tell the factory", "Spec actions", "Versions"]);
     expect(screen.getByText("Options: Short headline (rec) · Long headline")).toBeTruthy();
     const need = document.getElementById("wizdeck-need-n12")!;
     expect(within(need).getAllByRole("button").map((button) => button.textContent)).toEqual(["Open"]);
@@ -180,8 +180,9 @@ describe("WizDeck Home", () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(3 * 60_000); });
     expect(fetchSpy).not.toHaveBeenCalled();
     const methods = [...first.inspection.rpcCalls, ...second.inspection.rpcCalls].map((call) => call.method);
-    expect(new Set(methods)).toEqual(new Set(["deckWatch"]));
-    expect(methods.length).toBe(2 * (1 + 6)); // Mount plus one renewal per 30 s, per panel.
+    expect(new Set(methods)).toEqual(new Set(["deckWatch", "deckActionLog"]));
+    expect(methods.filter((method) => method === "deckWatch").length).toBe(2 * (1 + 6)); // Mount plus one renewal per 30 s, per panel.
+    expect(methods.filter((method) => method === "deckActionLog").length).toBe(2); // D2: one action-log read per mount, never polled.
     const ids = new Set(handlers.deckWatch.mock.calls.map((call: any) => call[0].clientId));
     expect(ids.size).toBe(2);
     first.lifecycle.unmount();

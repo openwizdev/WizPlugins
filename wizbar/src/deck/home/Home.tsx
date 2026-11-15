@@ -63,7 +63,7 @@ export function Home({ focus }: { focus: FocusRequestV1 | null }) {
       {showIntro && (
         <div role="note" style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--muted-foreground)", flexWrap: "wrap" }}>
           <p style={{ margin: 0, flex: 1, minWidth: 200 }}>
-            WizDeck reads your factory's GitHub plan and its Needs-you file. Read-only in this version: it sends nothing and changes nothing.
+            WizDeck reads your factory's GitHub plan and its Needs-you file. Its actions only message your orchestrator; it changes nothing on GitHub itself.
           </p>
           <button type="button" style={tapTarget} onClick={dismissIntro}>Got it</button>
         </div>
