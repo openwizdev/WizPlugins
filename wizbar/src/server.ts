@@ -15,6 +15,7 @@ import type { MovePositionV3 } from "./v3-types";
 import { sortPinned } from "./inbox";
 import { computeStats, runtimeDisplayStatuses, type StatsRow } from "./stats";
 import { childrenList, runtimeStatusesV3, type ChildrenRow } from "./children";
+import { registerDeckReaders } from "./deck/data/server";
 
 const migrations = [
   `CREATE TABLE IF NOT EXISTS thread_lifecycle (
@@ -404,6 +405,8 @@ export async function readChildren(bb: BbPluginApi, rawId: string, signal?: Abor
 
 export default function plugin(bb: BbPluginApi) {
   bb.settings.define(wizbarSettingDescriptors);
+  // WizDeck 0.1 (#73): its read-only readers and shared cache, in this same runtime.
+  registerDeckReaders(bb);
   const db = bb.storage.database();
   bb.storage.migrate(db, migrations);
 
