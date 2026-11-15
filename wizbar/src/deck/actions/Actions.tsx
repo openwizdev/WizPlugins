@@ -139,12 +139,12 @@ export function DeckActions({ projectKey, view, open }: { projectKey: string; vi
         if (pendingRef.current?.operationId === ready.operationId) { pendingRef.current = null; setPending(null); }
         void loadLog();
       });
-    }, 0 /* PLANT P1 */);
+    }, Math.max(0, pending.deadline - Date.now()));
     return () => { clearTimeout(timer); clearInterval(ticker); };
   }, [pending?.operationId, pending?.phase]);
 
   const choose = async (item: NeedsYouViewItemV1, optionId: string) => {
-    if (!canSend) return; // PLANT P4
+    if (pendingRef.current || !canSend) return;
     const option = item.options.find((candidate) => candidate.id === optionId)!;
     const next: Pending = {
       operationId: newOperationId(), projectKey, itemId: item.id, optionId, optionLabel: option.label,

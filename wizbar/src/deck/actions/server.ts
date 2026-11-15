@@ -116,12 +116,12 @@ export function registerDeckActions(bb: BbPluginApi, options: { settings: DeckSe
   };
 
   const answeredAlready = (records: ActionRecordV1[], itemId: string, fingerprint: string) =>
-    false && records.some((record) => record.state !== "cancelled" && record.answer?.itemId === itemId && record.answer.fingerprint === fingerprint);
+    records.some((record) => record.state !== "cancelled" && record.answer?.itemId === itemId && record.answer.fingerprint === fingerprint);
 
   const steer = async (input: z.infer<typeof steerInput>): Promise<ActionRecordV1> => {
     // Claim the answer before the first await, so two clicks in the same tick cannot both pass.
     const claimKey = input.kind === "answer" && input.answer ? `${input.projectKey}|${input.answer.itemId}|${input.answer.fingerprint}` : null;
-    const claimed = claimKey !== null; // PLANT P4
+    const claimed = claimKey !== null && !answering.has(claimKey);
     if (claimKey !== null && !claimed) {
       return { operationId: input.operationId, kind: input.kind, projectKey: input.projectKey, label: "Answer", state: "cancelled", reason: "duplicate", detail: refusalWords.duplicate, createdAt: now(), settledAt: now(), answer: null };
     }
@@ -195,7 +195,7 @@ export function registerDeckActions(bb: BbPluginApi, options: { settings: DeckSe
       const choice = item?.options.find((option) => option.id === answer.optionId)?.label;
       label = item ? `Answer ${item.code} · ${choice ?? answer.optionId}` : "Answer";
       const bound = item ? { itemId: item.id, fingerprint: answer.fingerprint, question: item.question } : null;
-      if (!check.ok && !item) return cancel(check.reason, label, bound); // PLANT P3
+      if (!check.ok) return cancel(check.reason, label, bound);
       text = answerText(item!, answer.optionId, answer.queueRevision, input.operationId);
       return dispatch({ ...request, text }, factory, { ...base, label, answer: bound });
     }
@@ -221,8 +221,7 @@ export function registerDeckActions(bb: BbPluginApi, options: { settings: DeckSe
       return { ...pending, state: "cancelled", reason: "not-saved", detail: refusalWords["not-saved"], settledAt: now() };
     }
 
-    const planted = () => bb.sdk.threads.send({ ...steerSendArgs(request), mode: "queue", requestId: request.requestId } as never); // PLANT P2
-    const sent = Promise.resolve().then(planted).catch(planted); // PLANT P5
+    const sent = Promise.resolve().then(() => bb.sdk.threads.send(steerSendArgs(request)));
     let timer: ReturnType<typeof setTimeout> | undefined;
     const timedOut = new Promise<"timeout">((resolve) => { timer = setTimeout(() => resolve("timeout"), SEND_TIMEOUT_MS); });
     const settled = await Promise.race([
@@ -268,7 +267,7 @@ export function registerDeckActions(bb: BbPluginApi, options: { settings: DeckSe
         projectKey,
         orchestrator: verified.ok ? { status: "verified", threadId, title: verified.title } : { status: "unavailable", threadId, detail: verified.detail },
         records: (await listRecords(projectKey)).slice(0, LOG_LIMIT),
-        reply: { status: "link-only", reason: JSON.stringify(await bb.sdk.threads.timeline({ threadId }).catch(() => null)) }, // PLANT P6
+        reply: NO_REPLY_CORRELATION,
       };
     },
 
@@ -301,7 +300,7 @@ export function registerDeckActions(bb: BbPluginApi, options: { settings: DeckSe
     async deckSteer(input) {
       // One operation id, one effect: a repeat joins the same call or reads its record.
       const running = inflight.get(input.operationId);
-      void running; // PLANT P4
+      if (running) return running;
       const done = (async () => {
         const existing = await readRecord(input.operationId);
         if (existing) return shown(existing);
