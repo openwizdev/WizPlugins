@@ -5,7 +5,7 @@ import { createFakePluginHost, type FakePluginHost } from "@get-bb/plugin-sdk/te
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import plugin from "../../server";
 import type { DeckWatchResultV1 } from "./server";
-import { dxFactory, dxFillerIssues, dxNow, dxOtherFactory, dxQueue, dxSettings, dxStatusComment, fakeGitHub } from "./fixtures";
+import { dxCutoffResponse, dxFactory, dxFillerIssues, dxNow, dxOtherFactory, dxQueue, dxSettings, dxStatusComment, fakeGitHub } from "./fixtures";
 import { loadBoard, mergesToday } from "./board";
 import { GitHubReader } from "./github";
 import { LEASE_MS, REFRESH_MS } from "./cache";
@@ -277,6 +277,83 @@ describe("R2: supplementary reads never discard the board", () => {
     const later = (await t.watch("desk-tab")).view!;
     expect(later.board.versions[0].specs[0].status.status).toBe("ready");
     expect(later.health.mergesToday).toBe(3);
+  });
+
+  // Bug caught: a later response cut off mid-body discards the board. After the
+  // board and the first comment page succeeded, a second comment page answered
+  // HTTP 200 and its body stream then failed; that raw error escaped the
+  // supplementary boundary and the specs, progress and links vanished.
+  it("a later comment page cut off mid-body keeps the board, with that status unavailable and no token", async () => {
+    const t = setup();
+    t.github.state.comments = manyComments();
+    t.github.state.override = (call) => call.kind === "comments" && call.url.includes("page=2") ? { response: dxCutoffResponse() } : null;
+    await t.watch("desk-tab"); await t.settle();
+    const watched = await t.watch("desk-tab");
+    const view = watched.view!;
+    expect(t.github.calls.filter((call) => call.kind === "comments").map((call) => call.url.includes("page=2"))).toEqual([false, true]);
+    expect(view.board.freshness).toBe("fresh");
+    const row = view.board.versions[0].specs[0];
+    expect(row).toMatchObject({ title: "Search filters", merged: 1, total: 4 });
+    expect(row.pullRequests.map((link) => link.ref)).toEqual(["example-org/sample-app#52"]);
+    expect(row.status).toEqual({ status: "unavailable", reason: "missing", when: "Not estimated" });
+    expect(view.board.gaps.join(" ")).toMatch(/status could not be read/);
+    expect(view.health.mergesToday).toBe(3);
+    vi.setSystemTime(dxNow + REFRESH_MS);
+    const refreshed = await t.refresh("desk-tab"); await t.settle();
+    const after = await t.watch("desk-tab");
+    expect(after.view!.board.versions[0].specs[0].title).toBe("Search filters");
+    for (const answer of [watched, refreshed, after]) expect(JSON.stringify(answer)).not.toContain("synthetic-token");
+    expect(JSON.stringify(t.host.harness.inspection.realtimeSignals)).not.toContain("synthetic-token");
+  });
+
+  // Bug caught: a later merge-search page cut off mid-body discards the board
+  // and the merge times already read.
+  it("a later merge-search page cut off mid-body keeps the board and known merge times, with no count", async () => {
+    const github = fakeGitHub();
+    github.state.merges.set("example-org/sample-app", Array.from({ length: 130 }, (_, i) => ({ number: 5000 + i, mergedAt: "2026-11-15T19:00:00Z" })));
+    github.state.override = (call) => call.kind === "merges" && call.variables?.after ? { response: dxCutoffResponse("{\"data\": ") } : null;
+    const result = await loadBoard({
+      reader: new GitHubReader(github.fetch, "synthetic-token", () => dxNow), repository: "example-org/sample-app",
+      repositories: ["example-org/sample-app"], statusWriterLogin: "sample-manager", now: () => dxNow,
+    }, new AbortController().signal);
+    expect(github.calls.filter((call) => call.kind === "merges").map((call) => call.variables?.after ?? null)).toEqual([null, "c99"]);
+    expect(result.data.versions[0].specs[0]).toMatchObject({ title: "Search filters", merged: 1 });
+    expect(result.data.merges).toMatchObject({ complete: false });
+    expect(result.data.merges.pullRequests).toHaveLength(100);
+    expect(result.complete).toBe(false);
+    expect(result.gaps.join(" ")).toMatch(/not every recent merge was read/);
+    expect(JSON.stringify(result)).not.toContain("synthetic-token");
+    expect(mergesToday([result.data], "UTC", dxNow)).toBeNull();
+  });
+
+  it("the same merge cutoff through the server keeps the specs and shows merges today unavailable, with no token", async () => {
+    const t = setup();
+    t.github.state.merges.set("example-org/sample-app", Array.from({ length: 130 }, (_, i) => ({ number: 5000 + i, mergedAt: "2026-11-15T19:00:00Z" })));
+    t.github.state.override = (call) => call.kind === "merges" && call.variables?.after ? { response: dxCutoffResponse("{\"data\": ") } : null;
+    await t.watch("desk-tab"); await t.settle();
+    const watched = await t.watch("desk-tab");
+    expect(watched.view!.board.freshness).toBe("fresh");
+    expect(watched.view!.board.versions[0].specs[0]).toMatchObject({ title: "Search filters", merged: 1 });
+    expect(watched.view!.health.mergesToday).toBeNull();
+    expect(JSON.stringify(watched)).not.toContain("synthetic-token");
+    expect(JSON.stringify(t.host.harness.inspection.realtimeSignals)).not.toContain("synthetic-token");
+  });
+
+  // Bug caught: normalizing a body cutoff must not turn real cancellation into a partial board.
+  it("a body cutoff caused by cancellation is still cancellation", async () => {
+    const github = fakeGitHub();
+    const controller = new AbortController();
+    github.state.comments = manyComments();
+    github.state.override = (call) => {
+      if (!(call.kind === "comments" && call.url.includes("page=2"))) return null;
+      controller.abort();
+      return { response: dxCutoffResponse() };
+    };
+    await expect(loadBoard({
+      reader: new GitHubReader(github.fetch, "synthetic-token", () => dxNow), repository: "example-org/sample-app",
+      repositories: ["example-org/sample-app"], statusWriterLogin: "sample-manager", now: () => dxNow,
+    }, controller.signal)).rejects.toThrow();
+    expect(github.calls.filter((call) => call.kind === "merges")).toHaveLength(0);
   });
 
   it("cancellation during a supplementary read is not swallowed", async () => {

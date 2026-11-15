@@ -96,7 +96,7 @@ export function fakeGitHub() {
     mergesIssueCount: null as number | null,
     comments: [dxStatusComment] as unknown[],
     etag: "\"etag-1\"",
-    override: null as null | ((call: FakeGitHubCall) => { status: number; headers?: Record<string, string>; body?: unknown } | null),
+    override: null as null | ((call: FakeGitHubCall) => { status: number; headers?: Record<string, string>; body?: unknown } | { response: Response } | null),
   };
   const response = (status: number, body: unknown, headers: Record<string, string> = {}) => ({
     status,
@@ -134,7 +134,7 @@ export function fakeGitHub() {
     const call: FakeGitHubCall = { method: init.method, url, kind, conditional: "if-none-match" in init.headers, body, variables: parsed?.variables };
     calls.push(call);
     const forced = state.override?.(call);
-    if (forced) return response(forced.status, forced.body ?? {}, forced.headers);
+    if (forced) return "response" in forced ? forced.response : response(forced.status, forced.body ?? {}, forced.headers);
     const v = parsed?.variables ?? {};
     const repo = `${v.owner}/${v.name}`;
     switch (kind) {
@@ -179,6 +179,21 @@ export function fakeGitHub() {
     }
   };
   return { fetch, calls, state };
+}
+
+/**
+ * A real HTTP 200 response whose body stream starts, then errors while it is
+ * being read, as when a connection drops mid-body. The error text echoes a
+ * request header, token included, as some transports do.
+ */
+export function dxCutoffResponse(start = "[{\"user\": "): Response {
+  const body = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(new TextEncoder().encode(start));
+      controller.error(new TypeError("terminated: other side closed; authorization: Bearer synthetic-token"));
+    },
+  });
+  return new Response(body, { status: 200, headers: { "content-type": "application/json" } });
 }
 
 export const dxQueue = (overrides: Record<string, unknown> = {}) => JSON.stringify({

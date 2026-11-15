@@ -1,0 +1,67 @@
+# D1 R2 final-fix red run: npx vitest run --config vitest.config.ts src/deck/data/ -t "cutoff|cut off" (from wizbar/), new tests against unchanged production code at 6cce446; real HTTP-200 Response whose ReadableStream errors mid-body; nothing planted. The cancellation case passes here as an existing guard.
+
+ RUN  v4.1.10 wizbar
+
+ ❯ |bb-plugin-wizbar| src/deck/data/deck-server.test.ts (46 tests | 3 failed | 42 skipped) 336ms
+     × a later comment page cut off mid-body keeps the board, with that status unavailable and no token 227ms
+     × a later merge-search page cut off mid-body keeps the board and known merge times, with no count 4ms
+     × the same merge cutoff through the server keeps the specs and shows merges today unavailable, with no token 101ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/data/deck-server.test.ts > R2: supplementary reads never discard the board > a later comment page cut off mid-body keeps the board, with that status unavailable and no token
+AssertionError: expected 'unavailable' to be 'fresh' // Object.is equality
+
+Expected: "fresh"
+Received: "unavailable"
+
+ ❯ src/deck/data/deck-server.test.ts:294:34
+    292|     const view = watched.view!;
+    293|     expect(t.github.calls.filter((call) => call.kind === "comments").m…
+    294|     expect(view.board.freshness).toBe("fresh");
+       |                                  ^
+    295|     const row = view.board.versions[0].specs[0];
+    296|     expect(row).toMatchObject({ title: "Search filters", merged: 1, to…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/data/deck-server.test.ts > R2: supplementary reads never discard the board > a later merge-search page cut off mid-body keeps the board and known merge times, with no count
+TypeError: terminated: other side closed; authorization: Bearer synthetic-token
+ ❯ Object.start src/deck/data/fixtures.ts:193:24
+    191|     start(controller) {
+    192|       controller.enqueue(new TextEncoder().encode(start));
+    193|       controller.error(new TypeError("terminated: other side closed; a…
+       |                        ^
+    194|     },
+    195|   });
+ ❯ dxCutoffResponse src/deck/data/fixtures.ts:190:16
+ ❯ Object.github.state.override src/deck/data/deck-server.test.ts:314:101
+ ❯ GitHubReader.fetch src/deck/data/fixtures.ts:136:26
+ ❯ GitHubReader.graphql src/deck/data/github.ts:117:29
+ ❯ src/deck/data/board.ts:212:55
+ ❯ Traversal.attempt src/deck/data/board.ts:157:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/data/deck-server.test.ts > R2: supplementary reads never discard the board > the same merge cutoff through the server keeps the specs and shows merges today unavailable, with no token
+AssertionError: expected 'unavailable' to be 'fresh' // Object.is equality
+
+Expected: "fresh"
+Received: "unavailable"
+
+ ❯ src/deck/data/deck-server.test.ts:335:43
+    333|     await t.watch("desk-tab"); await t.settle();
+    334|     const watched = await t.watch("desk-tab");
+    335|     expect(watched.view!.board.freshness).toBe("fresh");
+       |                                           ^
+    336|     expect(watched.view!.board.versions[0].specs[0]).toMatchObject({ t…
+    337|     expect(watched.view!.health.mergesToday).toBeNull();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 1 passed | 42 skipped (46)
+   Start at  18:45:22
+   Duration  704ms (transform 144ms, setup 0ms, import 263ms, tests 336ms, environment 0ms)
+
