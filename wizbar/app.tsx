@@ -10,6 +10,8 @@ import { ParentChip } from "./src/ParentChip";
 import { SubagentsChip } from "./src/SubagentsChip";
 import { StatsPanel } from "./src/StatsPanel";
 import { SettingsPage } from "./src/SettingsPage";
+import { WizDeckNewThreadPanel, WizDeckPanel } from "./src/deck/home/Panel";
+import { WIZDECK_ACTION_ID } from "./src/deck/selection/selection";
 
 export default definePluginApp((app) => {
   app.slots.settingsSection({ id: "wizbar-settings", component: SettingsPage });
@@ -48,4 +50,9 @@ export default definePluginApp((app) => {
     title: "Child threads",
     component: SubagentsChip,
   });
+
+  // WizDeck 0.1 (#73): the factory home in the right panel, from this same
+  // runtime, so WizBar can open it with the same-plugin opener.
+  app.slots.threadPanelAction({ id: WIZDECK_ACTION_ID, title: "WizDeck", icon: "Layers", component: WizDeckPanel });
+  app.slots.experimental_newThreadPanelAction({ id: WIZDECK_ACTION_ID, title: "WizDeck", icon: "Layers", component: WizDeckNewThreadPanel });
 });

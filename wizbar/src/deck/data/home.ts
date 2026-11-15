@@ -22,6 +22,8 @@ export interface HomeViewV1 {
   needsYou: {
     freshness: Freshness;
     view: NeedsYouViewV1 | null;
+    /** Each listed item's source link, for Open (the C1 view item carries none). */
+    sources: Record<string, string>;
     detail: string | null;
     fetchedAt: number | null;
   };
@@ -74,21 +76,22 @@ export function buildHomeView(input: {
   let needsYou: HomeViewV1["needsYou"];
   const queue = input.queue?.snapshot ?? null;
   if (input.configDetail) {
-    needsYou = { freshness: "unavailable", view: needsYouViewStub({ ok: false, reason: "not-configured" }), detail: input.configDetail, fetchedAt: null };
+    needsYou = { freshness: "unavailable", view: needsYouViewStub({ ok: false, reason: "not-configured" }), sources: {}, detail: input.configDetail, fetchedAt: null };
   } else if (!queue) {
-    needsYou = { freshness: "loading", view: null, detail: null, fetchedAt: null };
+    needsYou = { freshness: "loading", view: null, sources: {}, detail: null, fetchedAt: null };
   } else if (queue.status === "unavailable") {
-    needsYou = { freshness: "unavailable", view: needsYouViewStub({ ok: false, reason: queue.reason }), detail: input.queue?.detail ?? null, fetchedAt: null };
+    needsYou = { freshness: "unavailable", view: needsYouViewStub({ ok: false, reason: queue.reason }), sources: {}, detail: input.queue?.detail ?? null, fetchedAt: null };
   } else if (Date.parse(queue.data.queue.expiresAt) <= now) {
     // Expired since it was read: the producer has not replaced it.
     needsYou = {
-      freshness: "unavailable", view: needsYouViewStub({ ok: false, reason: "expired" }),
+      freshness: "unavailable", view: needsYouViewStub({ ok: false, reason: "expired" }), sources: {},
       detail: "The Needs-you file has expired: its producer has not refreshed it.", fetchedAt: queue.fetchedAt,
     };
   } else {
     const stale = now - queue.fetchedAt > STALE_AFTER_MS;
     needsYou = {
       freshness: stale ? "stale" : "fresh", view: needsYouViewStub({ ok: true, queue: queue.data.queue }),
+      sources: Object.fromEntries(queue.data.queue.items.map((item) => [item.id, item.sourceUrl])),
       detail: null, fetchedAt: queue.fetchedAt,
     };
   }

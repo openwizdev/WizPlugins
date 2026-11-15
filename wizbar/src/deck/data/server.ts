@@ -12,8 +12,9 @@ import { GitHubReader, type Fetch } from "./github";
 import { buildHomeView, type HomeViewV1 } from "./home";
 import { loadQueue, type QueueReadResultV1 } from "./queue";
 
-/** The channel panels re-read on. Its payload carries nothing private. */
-export const DECK_CHANNEL = "wizdeck";
+import { DECK_CHANNEL } from "./protocol";
+
+export { DECK_CHANNEL };
 
 export interface DeckProjectV1 {
   projectKey: string;
