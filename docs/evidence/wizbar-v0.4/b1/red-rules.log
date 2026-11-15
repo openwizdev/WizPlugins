@@ -1,0 +1,326 @@
+
+ RUN  v4.1.10 /code/work/WizPlugins/wizbar
+
+ ❯ |bb-plugin-wizbar| src/sidebar-v4/children.test.ts (4 tests | 4 failed) 10ms
+     × joins listed and host-delivered children once, hidden ones included, running first 6ms
+     × keeps creation order inside each group when the host reorders or a child's status changes 1ms
+     × uses the host's running set for running when it is delivered, not the row's own work fields 1ms
+     × never states a complete total, even for zero or one delivered child 1ms
+ ❯ |bb-plugin-wizbar| src/sidebar-v4/running.test.ts (13 tests | 9 failed) 17ms
+     × counts each delivered running row once and places every one of them under a heading 6ms
+     × never turns a parent heading or an in-process subagent count into a counted row 1ms
+     × keeps a host's empty running list as a real zero, and its absence as the observable fallback 3ms
+     × refuses a repeated id with another parent instead of guessing a number 1ms
+     × shows no number while the host rows are loading on a connected connection 1ms
+     × shows no number while the host rows are error on a connected connection 2ms
+     × shows no number while the host rows are ready on a reconnecting connection 1ms
+     × places a child under its parent even when the parent row only arrives in the running set 1ms
+     × breaks a parent cycle instead of dropping its rows 0ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 13 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/sidebar-v4/children.test.ts > B1 P6: a parent's children, running first and stable > joins listed and host-delivered children once, hidden ones included, running first
+AssertionError: expected [] to deeply equal [ [ 'thr_b1_builder', true ], …(2) ]
+
+- Expected
++ Received
+
+- [
+-   [
+-     "thr_b1_builder",
+-     true,
+-   ],
+-   [
+-     "thr_b1_reviewer",
+-     true,
+-   ],
+-   [
+-     "thr_b1_finished",
+-     false,
+-   ],
+- ]
++ []
+
+ ❯ src/sidebar-v4/children.test.ts:14:26
+     12|     const { threads, runningThreads, childrenByParentId } = b1Inventor…
+     13|     const group = childGroup("thr_b1_manager", { threads, runningThrea…
+     14|     expect(order(group)).toEqual([["thr_b1_builder", true], ["thr_b1_r…
+       |                          ^
+     15|     expect(childSummary(group)).toBe("3 children · 2 running · total u…
+     16|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/13]⎯
+
+ FAIL  |bb-plugin-wizbar| src/sidebar-v4/children.test.ts > B1 P6: a parent's children, running first and stable > keeps creation order inside each group when the host reorders or a child's status changes
+AssertionError: expected [] to deeply equal [ [ 'thr_b1_a', true ], …(3) ]
+
+- Expected
++ Received
+
+- [
+-   [
+-     "thr_b1_a",
+-     true,
+-   ],
+-   [
+-     "thr_b1_c",
+-     true,
+-   ],
+-   [
+-     "thr_b1_b",
+-     false,
+-   ],
+-   [
+-     "thr_b1_d",
+-     false,
+-   ],
+- ]
++ []
+
+ ❯ src/sidebar-v4/children.test.ts:26:8
+     24|     const d = b1Row("thr_b1_d", { parentThreadId: parent, createdAt: 3…
+     25|     expect(order(childGroup(parent, { threads: [d, c, b, a] })))
+     26|       .toEqual([["thr_b1_a", true], ["thr_b1_c", true], ["thr_b1_b", f…
+       |        ^
+     27|     const bStarted = b1Running("thr_b1_b", { parentThreadId: parent, c…
+     28|     expect(order(childGroup(parent, { threads: [a, bStarted, c, d] })))
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/13]⎯
+
+ FAIL  |bb-plugin-wizbar| src/sidebar-v4/children.test.ts > B1 P6: a parent's children, running first and stable > uses the host's running set for running when it is delivered, not the row's own work fields
+AssertionError: expected [] to deeply equal [ [ 'thr_b1_q', true ] ]
+
+- Expected
++ Received
+
+- [
+-   [
+-     "thr_b1_q",
+-     true,
+-   ],
+- ]
++ []
+
+ ❯ src/sidebar-v4/children.test.ts:36:26
+     34|     const quiet = b1Row("thr_b1_q", { parentThreadId: parent, createdA…
+     35|     const group = childGroup(parent, { threads: [quiet], runningThread…
+     36|     expect(order(group)).toEqual([["thr_b1_q", true]]);
+       |                          ^
+     37|   });
+     38|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/13]⎯
+
+ FAIL  |bb-plugin-wizbar| src/sidebar-v4/children.test.ts > B1 P6: a parent's children, running first and stable > never states a complete total, even for zero or one delivered child
+AssertionError: expected '' to be '0 children shown · total unknown' // Object.is equality
+
+- Expected
++ Received
+
+- 0 children shown · total unknown
+
+ ❯ src/sidebar-v4/children.test.ts:42:70
+     40|     // Bug caught: the delivered count shown as every child (#160 deli…
+     41|     // known children; no complete child read exists in the app).
+     42|     expect(childSummary(childGroup("thr_b1_none", { threads: [] }))).t…
+       |                                                                      ^
+     43|     const one = b1Row("thr_b1_one", { parentThreadId: "thr_b1_p" });
+     44|     expect(childSummary(childGroup("thr_b1_p", { threads: [one] }))).t…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/13]⎯
+
+ FAIL  |bb-plugin-wizbar| src/sidebar-v4/running.test.ts > B1 P6: one running set feeds the count and the popover > counts each delivered running row once and places every one of them under a heading
+AssertionError: expected 'unavailable' to be 'ready' // Object.is equality
+
+Expected: "ready"
+Received: "unavailable"
+
+ ❯ src/sidebar-v4/running.test.ts:20:27
+     18|     const { threads, runningThreads, childrenByParentId } = b1Inventor…
+     19|     const result = readRunningRows({ status: "ready", threads, running…
+     20|     expect(result.status).toBe("ready");
+       |                           ^
+     21|     if (result.status !== "ready") return;
+     22|     expect(result.source).toBe("host-inventory");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/13]⎯
+
+ FAIL  |bb-plugin-wizbar| src/sidebar-v4/running.test.ts > B1 P6: one running set feeds the count and the popover > never turns a parent heading or an in-process subagent count into a counted row
+Error: expected ready
+ ❯ src/sidebar-v4/running.test.ts:40:42
+     38|     const { threads, runningThreads } = b1Inventory();
+     39|     const result = readRunningRows({ status: "ready", threads, running…
+     40|     if (result.status !== "ready") throw new Error("expected ready");
+       |                                          ^
+     41|     expect(result.rows.map(({ id }) => id)).not.toContain("thr_b1_rele…
+     42|     expect(result.count).toBe(7);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/13]⎯
+
+ FAIL  |bb-plugin-wizbar| src/sidebar-v4/running.test.ts > B1 P6: one running set feeds the count and the popover > keeps a host's empty running list as a real zero, and its absence as the observable fallback
+AssertionError: expected { status: 'unavailable', …(1) } to match object { status: 'ready', …(3) }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "count": 0,
+-   "groups": [],
+-   "source": "host-inventory",
+-   "status": "ready",
++   "status": "unavailable",
+  }
+
+ ❯ src/sidebar-v4/running.test.ts:49:18
+     47|     const waiting = b1Running("thr_b1_waiting", { hasPendingInteractio…
+     48|     const zero = readRunningRows({ status: "ready", threads: [working]…
+     49|     expect(zero).toMatchObject({ status: "ready", source: "host-invent…
+       |                  ^
+     50|     // Older host: no `runningThreads`. The sidebar rows by the one ru…
+     51|     const fallback = readRunningRows({ status: "ready", threads: [work…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/13]⎯
+
+ FAIL  |bb-plugin-wizbar| src/sidebar-v4/running.test.ts > B1 P6: one running set feeds the count and the popover > refuses a repeated id with another parent instead of guessing a number
+AssertionError: expected { status: 'unavailable', …(1) } to deeply equal { status: 'unavailable', …(1) }
+
+- Expected
++ Received
+
+  {
+-   "reason": "conflicting-duplicate",
++   "reason": "malformed",
+    "status": "unavailable",
+  }
+
+ ❯ src/sidebar-v4/running.test.ts:63:8
+     61|   ])("refuses %s instead of guessing a number", (_, running, reason) =…
+     62|     expect(readRunningRows({ status: "ready", threads: [], runningThre…
+     63|       .toEqual({ status: "unavailable", reason });
+       |        ^
+     64|   });
+     65|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/13]⎯
+
+ FAIL  |bb-plugin-wizbar| src/sidebar-v4/running.test.ts > B1 P6: one running set feeds the count and the popover > shows no number while the host rows are loading on a connected connection
+AssertionError: expected { status: 'unavailable', …(1) } to deeply equal { status: 'unavailable', …(1) }
+
+- Expected
++ Received
+
+  {
+-   "reason": "loading",
++   "reason": "malformed",
+    "status": "unavailable",
+  }
+
+ ❯ src/sidebar-v4/running.test.ts:72:78
+     70|   ] as const)("shows no number while the host rows are %s on a %s conn…
+     71|     const { threads, runningThreads } = b1Inventory();
+     72|     expect(readRunningRows({ status, threads, runningThreads }, connec…
+       |                                                                              ^
+     73|   });
+     74|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/13]⎯
+
+ FAIL  |bb-plugin-wizbar| src/sidebar-v4/running.test.ts > B1 P6: one running set feeds the count and the popover > shows no number while the host rows are error on a connected connection
+AssertionError: expected { status: 'unavailable', …(1) } to deeply equal { status: 'unavailable', …(1) }
+
+- Expected
++ Received
+
+  {
+-   "reason": "error",
++   "reason": "malformed",
+    "status": "unavailable",
+  }
+
+ ❯ src/sidebar-v4/running.test.ts:72:78
+     70|   ] as const)("shows no number while the host rows are %s on a %s conn…
+     71|     const { threads, runningThreads } = b1Inventory();
+     72|     expect(readRunningRows({ status, threads, runningThreads }, connec…
+       |                                                                              ^
+     73|   });
+     74|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/13]⎯
+
+ FAIL  |bb-plugin-wizbar| src/sidebar-v4/running.test.ts > B1 P6: one running set feeds the count and the popover > shows no number while the host rows are ready on a reconnecting connection
+AssertionError: expected { status: 'unavailable', …(1) } to deeply equal { status: 'unavailable', …(1) }
+
+- Expected
++ Received
+
+  {
+-   "reason": "stale",
++   "reason": "malformed",
+    "status": "unavailable",
+  }
+
+ ❯ src/sidebar-v4/running.test.ts:72:78
+     70|   ] as const)("shows no number while the host rows are %s on a %s conn…
+     71|     const { threads, runningThreads } = b1Inventory();
+     72|     expect(readRunningRows({ status, threads, runningThreads }, connec…
+       |                                                                              ^
+     73|   });
+     74|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/13]⎯
+
+ FAIL  |bb-plugin-wizbar| src/sidebar-v4/running.test.ts > B1 P6: one running set feeds the count and the popover > places a child under its parent even when the parent row only arrives in the running set
+AssertionError: expected { status: 'unavailable', …(1) } to deeply equal [ Array(1) ]
+
+- Expected:
+[
+  {
+    "entries": [
+      [
+        "thr_b1_p",
+        0,
+      ],
+      [
+        "thr_b1_c",
+        1,
+      ],
+    ],
+    "heading": null,
+  },
+]
+
++ Received:
+{
+  "reason": "malformed",
+  "status": "unavailable",
+}
+
+ ❯ src/sidebar-v4/running.test.ts:87:25
+     85|     const child = b1Running("thr_b1_c", { parentThreadId: parent.id, c…
+     86|     const result = readRunningRows({ status: "ready", threads: [], run…
+     87|     expect(ids(result)).toEqual([{ heading: null, entries: [["thr_b1_p…
+       |                         ^
+     88|   });
+     89|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/13]⎯
+
+ FAIL  |bb-plugin-wizbar| src/sidebar-v4/running.test.ts > B1 P6: one running set feeds the count and the popover > breaks a parent cycle instead of dropping its rows
+Error: expected ready
+ ❯ src/sidebar-v4/running.test.ts:94:42
+     92|     const b = b1Running("thr_b1_b", { parentThreadId: "thr_b1_a", crea…
+     93|     const result = readRunningRows({ status: "ready", threads: [], run…
+     94|     if (result.status !== "ready") throw new Error("expected ready");
+       |                                          ^
+     95|     expect(result.count).toBe(2);
+     96|     expect(result.groups.flatMap((group) => group.entries.map(({ threa…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/13]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  13 failed | 4 passed (17)
+   Start at  19:11:28
+   Duration  180ms (transform 59ms, setup 0ms, import 80ms, tests 27ms, environment 0ms)
+
