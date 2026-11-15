@@ -5,6 +5,7 @@ import { useBbContext, useBbNavigate } from "@get-bb/plugin-sdk/app";
 import type { FocusRequestV1 } from "../../factory-contract";
 import { useDeckHome } from "./useDeckHome";
 import { HealthRow, NeedsYou, Versions, homeCss, tapTarget } from "./sections";
+import { DeckActions } from "../actions/Actions";
 
 const INTRO_KEY = "wizdeck.intro.v1";
 
@@ -84,6 +85,7 @@ export function Home({ focus }: { focus: FocusRequestV1 | null }) {
         <>
           <NeedsYou needsYou={view.needsYou} open={open} focusedItemId={focusedItemId} />
           {/* D2 slot: answer and Tell-the-factory actions. */}
+          <DeckActions projectKey={view.projectKey} view={view} open={open} />
           <HealthRow health={view.health} />
           {/* F1 slot: running agents and the live fleet tree. */}
           <Versions board={view.board} open={open} />
