@@ -21,6 +21,8 @@ import type { t3sidebarRpcContract } from "./server";
 import type { CardModelV3 } from "./v3-types";
 import { ChildRows } from "./sidebar-v4/ChildRows";
 import { childGroup, type ChildInputV4 } from "./sidebar-v4/children";
+import { factoryFor, isLinked, useSidebarDeckResult } from "./sidebar-v4/deck-link";
+import { setSelection, useSelection } from "./deck/selection/selection";
 
 /**
  * One thread as a three-line card: project and status, title, then model,
@@ -63,12 +65,16 @@ export function ThreadCard({
   // B1 (#76): the parent's children, collapsed by default, running first.
   const group = childGroup(thread.id, sidebar);
   const [expanded, setExpanded] = useState(false);
+  // Shared selection: a highlight only. Nothing here scrolls or navigates.
+  const deck = useSidebarDeckResult();
+  const selection = useSelection();
   const served = useCardModel(thread.id);
   const meta = cardMeta(thread, threads, pullRequest, served);
   const model = modelLabel(meta.model, meta.effort);
   const children = childCountLabel(meta.childCount);
   // The branch, or the machine when there is no worktree, on hover only.
   const location = meta.branch ?? thread.host?.name ?? null;
+  const linked = isLinked(selection, deck, { id: thread.id, branch: meta.branch, pullRequestUrl: pullRequest?.url ?? null });
   const locationId = useId();
   // Escape hides the overlay (it can cover the next card) without moving focus;
   // the next focus or hover shows it again. The description stays either way.
@@ -90,6 +96,8 @@ export function ThreadCard({
           }}
           onFocus={() => setLocationDismissed(false)}
           onMouseEnter={() => setLocationDismissed(false)}
+          {...(linked ? { "data-wizbar-highlighted": "" } : {})}
+          style={linked ? { boxShadow: "inset 2px 0 0 #c6f432" } : undefined}
         >
           <a
             // Both attributes, or bb's nine thread shortcuts stop finding rows.
@@ -104,6 +112,9 @@ export function ThreadCard({
               actions.open(thread.id, {
                 split: event.metaKey || event.ctrlKey,
               });
+              // The opened thread becomes the shared selection, for WizDeck to highlight.
+              const projectKey = factoryFor(deck, thread.projectId);
+              if (projectKey) setSelection({ kind: "thread", projectKey, threadId: thread.id });
               onNavigate();
             }}
             className="absolute inset-0 cursor-pointer rounded-md"

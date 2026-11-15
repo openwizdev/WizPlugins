@@ -3,6 +3,7 @@ import {
   experimental_useSidebarThreadActions as useSidebarThreadActions,
   experimental_useSidebarThreads as useSidebarThreads,
   useRealtimeConnectionState,
+  useBbContext,
   useRpc,
   type PluginSidebarThread,
   type PluginThreadListProps,
@@ -19,6 +20,8 @@ import {
 import { ThreadCard } from "./ThreadCard";
 import { FooterCounter } from "./FooterCounter";
 import { touchRowCss } from "./sidebar-v4/ChildRows";
+import { NeedsYouEntry } from "./sidebar-v4/NeedsYouEntry";
+import { SidebarDeckContext, useSidebarDeck } from "./sidebar-v4/deck-link";
 import { MachineIcon } from "./MachineIcon";
 import { useFeatureSourceStatus } from "./SettingsPage";
 import { SlimRow } from "./SlimRow";
@@ -65,6 +68,8 @@ export function ThreadInbox({
   useFeatureSourceStatus("icons", status === "ready" ? "unverified" : "unavailable");
   const actions = useSidebarThreadActions();
   const lifecycle = useLifecycle(threads);
+  // B1 (#76): WizDeck's read for the Needs-you entry and linked highlights.
+  const deck = useSidebarDeck(useBbContext().projectId);
   const [scope, setScope] = useState<string>(ALL_PROJECTS);
   // One clock for every card in a render, quantized to the minute so the
   // labels do not disagree and do not churn on unrelated re-renders.
@@ -136,6 +141,7 @@ export function ThreadInbox({
       : (projectNameById.get(scope) ?? "All projects");
 
   return (
+    <SidebarDeckContext.Provider value={deck}>
     <div className="flex min-h-0 flex-1 flex-col">
       <style>{touchRowCss}</style>
       {/* The one control the host has no equivalent for. Everything else in
@@ -268,12 +274,16 @@ export function ThreadInbox({
       </div>
       {/* B1 (#76): the running count and its popover replace the footer bolt.
           It reads every project's running rows, never this list's search or scope. */}
-      <FooterCounter
-        className="shrink-0 border-t border-sidebar-border px-3 py-1"
-        onNavigate={onNavigate}
-        tagsFor={(thread) => (lifecycle.shelfFor(thread) === "muted" ? ["muted"] : [])}
-      />
+      <div className="flex shrink-0 items-center gap-2 border-t border-sidebar-border px-3 py-1">
+        <NeedsYouEntry />
+        <span className="flex-1" />
+        <FooterCounter
+          onNavigate={onNavigate}
+          tagsFor={(thread) => (lifecycle.shelfFor(thread) === "muted" ? ["muted"] : [])}
+        />
+      </div>
     </div>
+    </SidebarDeckContext.Provider>
   );
 }
 

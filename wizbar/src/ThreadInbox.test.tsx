@@ -734,7 +734,8 @@ describe("WZ16: visible list-bottom running count", () => {
     expect(rendered.navigateCalls).toEqual([]);
     expect(rendered.sidebarActionCalls).toEqual([]);
     expect(rendered.sdkCalls).toEqual([]);
-    expect(rendered.rpcCalls.filter(({ method }) => method !== "listLifecycle")).toEqual([]);
+    // Only reads: lifecycle, and WizDeck's read-only lease for the Needs-you entry (B1).
+    expect(rendered.rpcCalls.filter(({ method }) => !["listLifecycle", "deckWatch", "deckRelease"].includes(method))).toEqual([]);
   });
 
   it("shows dim zero on an empty list and stops its spinner", () => {
@@ -833,7 +834,8 @@ describe("WZ21: drag to pin, unpin and reorder", () => {
     fireEvent.dragEnd(from);
   };
   const pinCalls = (rendered: { rpcCalls: { method: string; input: unknown }[] }) =>
-    rendered.rpcCalls.filter((c) => c.method !== "listLifecycle" && c.method !== "pinnedOrder" && c.method !== "cardModels")
+    // B1 (#76): WizDeck's read-only lease (deckWatch/deckRelease) is not a pin effect.
+    rendered.rpcCalls.filter((c) => !["listLifecycle", "pinnedOrder", "cardModels", "deckWatch", "deckRelease"].includes(c.method))
       .map((c) => [c.method, c.input]);
   const reads = (rendered: { rpcCalls: { method: string }[] }) =>
     rendered.rpcCalls.filter((c) => c.method === "pinnedOrder").length;

@@ -11,7 +11,7 @@ import {
 import type { RunningRowsV4 } from "./running";
 
 const LIME = "#c6f432";
-const css = `@keyframes wizbar-running-spin { to { transform: rotate(360deg); } }
+export const popoverCss = `@keyframes wizbar-running-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .wizbar-running-spinner { animation: none !important; } }
 .wizbar-running-pop { position: absolute; bottom: calc(100% + 6px); left: 0; width: min(320px, calc(100vw - 24px)); max-height: min(60vh, 420px); overflow-y: auto; }
 .wizbar-running-row { min-height: 28px; }
@@ -81,7 +81,7 @@ export function RunningPopover({ running, className, onNavigate, tagsFor }: {
         focusCount();
       }}
     >
-      <style>{css}</style>
+      <style>{popoverCss}</style>
       <span role="status" aria-live="polite" aria-label={`${count} running`} style={{ display: "inline-flex" }}>
         <button
           ref={button}
