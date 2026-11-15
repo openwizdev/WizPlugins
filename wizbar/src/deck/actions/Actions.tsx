@@ -65,6 +65,15 @@ const outstandingWords: Record<Outstanding["state"], string> = {
 
 const resolved = (record: ActionRecordV1) => record.state !== "dispatching";
 
+/**
+ * One operation's resolving record, from what this panel already knows and a newer RPC answer
+ * or log read. A confirmed delivery (sent or queued) is never replaced by fallback uncertainty,
+ * such as a `dispatching` record whose final write failed; otherwise the newer record wins, so
+ * an actual later confirmation upgrades uncertainty.
+ */
+const reconcile = (known: ActionRecordV1 | undefined, incoming: ActionRecordV1): ActionRecordV1 =>
+  known && (known.state === "sent" || known.state === "queued") && incoming.state === "uncertain" ? known : incoming;
+
 export function stateWords(record: Pick<ActionRecordV1, "state" | "detail">): string {
   switch (record.state) {
     case "dispatching": return "Sending…";
@@ -126,7 +135,9 @@ export function DeckActions({ projectKey, view, open }: { projectKey: string; vi
       // Only a resolving record settles an operation; `dispatching` updates what is known,
       // and a read without the operation changes nothing.
       const byId = new Map(next.records.map((record) => [record.operationId, record]));
-      for (const record of next.records) if (resolved(record)) settled.current.set(record.operationId, record);
+      for (const record of next.records) {
+        if (resolved(record)) settled.current.set(record.operationId, reconcile(settled.current.get(record.operationId), record));
+      }
       setOutstanding((all) => all
         .filter((entry) => !(byId.has(entry.operationId) && resolved(byId.get(entry.operationId)!)))
         .map((entry) => byId.has(entry.operationId) ? { ...entry, state: "dispatching" } : entry));
@@ -241,7 +252,7 @@ export function DeckActions({ projectKey, view, open }: { projectKey: string; vi
       setOutstanding((all) => all.map((entry) => entry.operationId === record.operationId ? { ...entry, state: "dispatching" } : entry));
       return;
     }
-    settled.current.set(record.operationId, record);
+    settled.current.set(record.operationId, reconcile(settled.current.get(record.operationId), record));
     setSettledCount((count) => count + 1);
     setOutstanding((all) => all.filter((entry) => entry.operationId !== record.operationId));
   }
@@ -286,15 +297,16 @@ export function DeckActions({ projectKey, view, open }: { projectKey: string; vi
       .sort((x, y) => y.createdAt - x.createdAt)[0];
     return record ? { label: record.label, words: stateWords(settled.current.get(record.operationId) ?? record) } : null;
   };
-  // Every operation by its own id, newest first: a resolving record wins, then what this panel
-  // knows of an unresolved one, then the backend's `dispatching` record.
+  // Every operation by its own id, newest first: its reconciled resolving record wins, then what
+  // this panel knows of an unresolved one, then the backend's `dispatching` record.
   const logged = current?.records ?? [];
   const loggedById = new Map(logged.map((record) => [record.operationId, record]));
   const outstandingById = new Map(outstanding.map((entry) => [entry.operationId, entry]));
   const ids = [...new Set([...outstanding.map((entry) => entry.operationId), ...settled.current.keys(), ...logged.map((record) => record.operationId)])];
   const recent = ids.map((operationId) => {
     const fromLog = loggedById.get(operationId);
-    const final = fromLog && resolved(fromLog) ? fromLog : settled.current.get(operationId);
+    const known = settled.current.get(operationId);
+    const final = fromLog && resolved(fromLog) ? reconcile(known, fromLog) : known;
     if (final) return { operationId, label: final.label, state: final.state as string, words: stateWords(final), at: final.createdAt };
     const local = outstandingById.get(operationId);
     if (local) return { operationId, label: local.label, state: local.state as string, words: outstandingWords[local.state], at: Number.MAX_SAFE_INTEGER };

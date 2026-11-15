@@ -1,0 +1,18 @@
+# #92 green at 72008d8
+> tsc --noEmit
+
+
+ RUN  v4.1.10 <checkout>/wizbar
+
+
+ Test Files  1 passed (1)
+      Tests  4 passed | 7 skipped (11)
+   Start at <time>
+   Duration <elided>
+
+
+ Test Files  29 passed (29)
+      Tests  903 passed (903)
+   Start at <time>
+   Duration <elided>
+
