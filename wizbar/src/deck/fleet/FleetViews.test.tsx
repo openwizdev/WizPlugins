@@ -64,9 +64,9 @@ const sidebar = (runningThreads?: unknown) => {
   return { status: "ready" as const, threads: fxThreads };
 };
 
-function mountHome(runningThreads?: unknown) {
+function mountHome(runningThreads?: unknown, withLinks = false) {
   return renderSlot({ component: WizDeckPanel }, { threadId: "thr_any", params: null as never }, {
-    rpc: { deckWatch: () => result(), deckRelease: () => ({ ok: true }) } as never,
+    rpc: { deckWatch: () => ({ ...result(), ...(withLinks ? { fleetLinks: linkViews } : {}) }), deckRelease: () => ({ ok: true }) } as never,
     context: { projectId: "prj_a", threadId: "thr_any" },
     sidebarThreads: sidebar(runningThreads) as never,
   });
@@ -101,7 +101,7 @@ describe("WizDeck Home live insertion", () => {
     expect(screen.getByLabelText("Stalls: unavailable")).toBeTruthy();
     const fleet = screen.getByRole("region", { name: "Fleet" });
     expect(within(fleet).getByText(/Running unavailable: this host does not report its running threads · 7 threads/)).toBeTruthy();
-    expect(within(fleet).getByText(/Work links are not connected/)).toBeTruthy();
+    expect(within(fleet).getByText(/Work links were not sent by the backend/)).toBeTruthy();
     expect(within(fleet).getByText(/7 threads · running unknown/)).toBeTruthy();
   });
 
@@ -128,6 +128,20 @@ describe("WizDeck Home live insertion", () => {
     fireEvent.click(screen.getByRole("button", { name: "← Home" }));
     expect(screen.queryByRole("heading", { name: "Unplaced work" })).toBeNull();
     expect(screen.getByRole("region", { name: "Fleet" })).toBeTruthy();
+  });
+
+  // Bug caught: the backend sends work links but Home never passes them on, so nothing is placed.
+  it("places threads from the backend's fleetLinks and opens that spec's fleet page", async () => {
+    const slot = mountHome(fxRunning, true);
+    await flush();
+    const fleet = screen.getByRole("region", { name: "Fleet" });
+    expect(within(fleet).queryByText(/Work links were not sent/)).toBeNull();
+    expect(within(fleet).getByText(/4 running · 6 threads/)).toBeTruthy();
+    expect(within(fleet).getByText(/2 threads · no verified spec link/)).toBeTruthy();
+    fireEvent.click(within(fleet).getByRole("button", { name: "View fleet for Search filters for the sample catalogue" }));
+    expect([...document.querySelectorAll<HTMLElement>(".wizdeck-fleet-row")].map((row) => row.dataset.thread)).toEqual(["thr_mgr", "thr_b2", "thr_rev", "thr_ghost", "thr_b3", "thr_help"]);
+    expect(screen.getByRole("heading", { name: "Merged tickets · 2" })).toBeTruthy();
+    expect(slot.inspection.navigateCalls).toEqual([]);
   });
 
   // Bug caught: an explicit Needs-you focus lands while a fleet page hides the item.

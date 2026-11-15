@@ -57,7 +57,7 @@ function linkWords(link: WorkLinkV1): string {
 
 function linksNote(model: FleetModelV1): string | null {
   const links = model.links;
-  if (links.status === "not-connected") return "Work links are not connected in this build, so no thread can be placed under a spec yet.";
+  if (links.status === "not-connected") return "Work links were not sent by the backend, so no thread can be placed under a spec.";
   if (links.status === "loading") return "Reading work links…";
   if (links.status === "unavailable") return `Work links unavailable: ${links.detail}`;
   if (!links.complete || links.stale) return `Work links partial${links.stale ? " and stale" : ""}: ${links.gaps.join(" ") || "not every repository was read."}`;
