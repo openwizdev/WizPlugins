@@ -18,6 +18,7 @@ import {
 } from "./components/Select";
 import { ThreadCard } from "./ThreadCard";
 import { FooterCounter } from "./FooterCounter";
+import { touchRowCss } from "./sidebar-v4/ChildRows";
 import { MachineIcon } from "./MachineIcon";
 import { useFeatureSourceStatus } from "./SettingsPage";
 import { SlimRow } from "./SlimRow";
@@ -136,6 +137,7 @@ export function ThreadInbox({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
+      <style>{touchRowCss}</style>
       {/* The one control the host has no equivalent for. Everything else in
           the chrome above — New thread, search — is bb's and stays bb's. */}
       <div className="flex shrink-0 items-center gap-1 px-2 pb-1">
@@ -264,7 +266,13 @@ export function ThreadInbox({
           </>
         )}
       </div>
-      <FooterCounter className="shrink-0 border-t border-sidebar-border px-3 py-1" />
+      {/* B1 (#76): the running count and its popover replace the footer bolt.
+          It reads every project's running rows, never this list's search or scope. */}
+      <FooterCounter
+        className="shrink-0 border-t border-sidebar-border px-3 py-1"
+        onNavigate={onNavigate}
+        tagsFor={(thread) => (lifecycle.shelfFor(thread) === "muted" ? ["muted"] : [])}
+      />
     </div>
   );
 }

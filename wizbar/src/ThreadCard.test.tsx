@@ -343,7 +343,8 @@ describe("WZ18 card metadata at the registered app boundary", () => {
     })) as Models },
   ])("omits the model chip for $name, with no placeholder", async ({ cardModels }) => {
     renderMeta([thread({ environment: environment("git-worktree", "room/1043-x") }), child(1)], { cardModels });
-    const line = card();
+    // The model chip's own line: B1's child toggle below it uses "·" in its summary.
+    const line = within(card()).getByRole("group", { name: "Thread details" });
     expect(await within(line).findByText("1 child")).toBeDefined();
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(line.textContent).not.toMatch(/·|Opus|High|Unknown|model/i);

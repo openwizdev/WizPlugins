@@ -1,9 +1,11 @@
 import { useEffect, useId, useState } from "react";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk";
-import { countRunning, type ObservableRunningSource, type RunningCountSource } from "./running-count";
-import { isRunning, readSidebarRows, type SidebarRowsStatus } from "./stats";
+import { countRunning, type RunningCountSource } from "./running-count";
+import { readSidebarRows, type SidebarRowsStatus } from "./stats";
 import { experimental_usePluginId, experimental_useSidebarThreads, useRealtimeConnectionState } from "@get-bb/plugin-sdk/app";
 import { useFeatureSourceStatus, useWizBarSettings } from "./SettingsPage";
+import { readRunningRows, type RunningInputV4, type RunningRowsV4 } from "./sidebar-v4/running";
+import { RunningPopover } from "./sidebar-v4/RunningPopover";
 
 /**
  * One module-level gap store per plugin, shared by the list line and the panel.
@@ -46,19 +48,29 @@ export function useObservableRows(): { status: SidebarRowsStatus; rows: readonly
   return read;
 }
 
-/** Observable host cache only; neither coverage nor freshness is claimed live.
- * WZ20 (#41): counts the one running rule (stats.ts), the stats panel's total. */
-export function FooterCounter({ className }: { className?: string }) {
-  const { status, rows } = useObservableRows();
-  const base = { version: 1, scope: "observable-sidebar", subagents: { status: "unproven", count: null } } as const;
-  const source: ObservableRunningSource = rows && status === "ready"
-    ? { ...base, status, threads: rows.map((t) => ({ id: t.id, projectId: t.projectId, parentThreadId: t.parentThreadId, isWorking: isRunning(t) })) }
-    : { ...base, status: status === "ready" ? "incomplete" : status, threads: null };
-  useFeatureSourceStatus("footer", source.status === "ready" ? "unverified" : "unavailable");
-  return <FooterCounterArtwork className={className} source={source} />;
+/**
+ * B1 (#76): the running count that replaces the footer bolt. One running set
+ * (sidebar-v4/running.ts: the host's #160 inventory, else the sidebar's rows by
+ * the one running rule) feeds both the number and the popover's rows, across
+ * every project and independent of sidebar search. A snapshot the gap store
+ * refuses shows no number. No subagent number is added to the thread rows.
+ */
+export function FooterCounter({ className, onNavigate, tagsFor }: {
+  className?: string;
+  onNavigate?: () => void;
+  tagsFor?: (thread: PluginSidebarThread) => string[];
+}) {
+  const { status } = useObservableRows();
+  const state: RunningInputV4 = experimental_useSidebarThreads();
+  const connection = useRealtimeConnectionState();
+  const running: RunningRowsV4 = status === "ready" ? readRunningRows(state, connection) : { status: "unavailable", reason: "stale" };
+  useFeatureSourceStatus("footer", running.status === "ready" ? "unverified" : "unavailable");
+  const { footerCountEnabled } = useWizBarSettings();
+  if (!footerCountEnabled || running.status !== "ready") return null;
+  return <RunningPopover running={running} className={className} onNavigate={onNavigate} tagsFor={tagsFor} />;
 }
 
-/** Presentation over explicit inputs; synthetic harness inputs are not host proof. */
+/** Historical presentation over explicit count inputs (WZ5 artwork); production uses `FooterCounter`. */
 export function FooterCounterArtwork({ source, className }: {
   source: RunningCountSource | null;
   className?: string;

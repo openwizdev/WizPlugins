@@ -19,6 +19,8 @@ import { resolveSnoozePresets } from "./lifecycle";
 import { cardLinkText, cardMeta, childCountLabel, modelLabel } from "./card-meta";
 import type { t3sidebarRpcContract } from "./server";
 import type { CardModelV3 } from "./v3-types";
+import { ChildRows } from "./sidebar-v4/ChildRows";
+import { childGroup, type ChildInputV4 } from "./sidebar-v4/children";
 
 /**
  * One thread as a three-line card: project and status, title, then model,
@@ -56,7 +58,11 @@ export function ThreadCard({
   // worktree share one.
   const { pullRequest } = useSidebarThreadPullRequest(thread.id);
   // The same active-lifecycle rows the children chip reads (sidebar-v3 §3).
-  const { threads } = useSidebarThreads();
+  const sidebar: ChildInputV4 = useSidebarThreads();
+  const { threads } = sidebar;
+  // B1 (#76): the parent's children, collapsed by default, running first.
+  const group = childGroup(thread.id, sidebar);
+  const [expanded, setExpanded] = useState(false);
   const served = useCardModel(thread.id);
   const meta = cardMeta(thread, threads, pullRequest, served);
   const model = modelLabel(meta.model, meta.effort);
@@ -211,6 +217,9 @@ export function ThreadCard({
             </span>
           ) : null}
         </div>
+        {group.rows.length > 0 ? (
+          <ChildRows parent={thread} group={group} expanded={expanded} onToggle={() => setExpanded((open) => !open)} onNavigate={onNavigate} />
+        ) : null}
       </li>
     </RowContextMenu>
   );
