@@ -31,13 +31,13 @@ Fields, frozen as #71 specifies (`needsYouQueueSchema`; the JSON Schema is gener
 | `gaps` | Plain reasons |
 | `items` | Ordered open decisions |
 
-Each item: stable `id`, short `code` (1–32 characters), `question`, `options` (at least one `{ id, label }`, ids distinct), `recommendedOptionId` (one of the option ids, or null), `sourceUrl` (https), `spec` (`owner/name#N` or null), `risk` (`ordinary`, `live`, `release`, `publish`, `unknown`), `fingerprint`, optional `requestId` and `requestFingerprint` (always together; existing structured decisions keep their own ids), `createdAt` and `updatedAt` (`createdAt` ≤ `updatedAt`). Unknown fields are malformed.
+Each item: stable `id`, short `code` (1–32 characters), `question`, `options` (at least one `{ id, label }`, ids distinct), `recommendedOptionId` (one of the option ids, or null), `sourceUrl` (https), `spec` (`owner/name#N` or null), `risk` (`ordinary`, `live`, `release`, `publish`, `unknown`), `fingerprint`, optional `requestId` and `requestFingerprint` (always together; existing structured decisions keep their own ids), `createdAt` and `updatedAt` (`createdAt` ≤ `updatedAt`). Unknown fields are malformed. The JSON Schema states the shape; the cross-field rules below (project, distinct ids, recommended option, paired request fields, time order, gaps, revision and expiry) are the validator's, and a producer must meet both.
 
 **Reading** (`readNeedsYouQueue(content, { projectKey, now, previousRevision })`). Every failure is unavailable and never zero:
 
 | Input | Result |
 | --- | --- |
-| Not JSON, wrong shape, unknown field, broken item rule | `malformed` |
+| Not JSON, a repeated key in any object, wrong shape, unknown field, broken item rule | `malformed` |
 | `schema` other than v1 | `unknown-schema` |
 | `project` not the bound key | `wrong-project` |
 | Two items with one `id` | `duplicate-item` |

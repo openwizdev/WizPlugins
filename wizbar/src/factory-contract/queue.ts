@@ -56,6 +56,38 @@ export interface QueueReadContextV1 {
   previousRevision?: number;
 }
 
+/**
+ * True when some JSON object in `content` repeats a key. `JSON.parse` keeps
+ * the last one silently, so the reader refuses the file instead. Call only on
+ * text `JSON.parse` accepts.
+ */
+function hasRepeatedKey(content: string): boolean {
+  const stack: (Set<string> | null)[] = [];
+  let i = 0;
+  while (i < content.length) {
+    const ch = content[i];
+    if (ch === "\"") {
+      let end = i + 1;
+      while (content[end] !== "\"") end += content[end] === "\\" ? 2 : 1;
+      const token = content.slice(i, end + 1);
+      i = end + 1;
+      while (/\s/.test(content[i] ?? "")) i += 1;
+      const keys = stack[stack.length - 1];
+      if (content[i] === ":" && keys) {
+        const key = JSON.parse(token) as string;
+        if (keys.has(key)) return true;
+        keys.add(key);
+      }
+      continue;
+    }
+    if (ch === "{") stack.push(new Set());
+    else if (ch === "[") stack.push(null);
+    else if (ch === "}" || ch === "]") stack.pop();
+    i += 1;
+  }
+  return false;
+}
+
 /** Validate one queue file's UTF-8 text. Every failure is unavailable, never an empty queue. */
 export function readNeedsYouQueue(content: string, context: QueueReadContextV1): QueueReadV1 {
   let raw: unknown;
@@ -64,6 +96,7 @@ export function readNeedsYouQueue(content: string, context: QueueReadContextV1):
   } catch {
     return { ok: false, reason: "malformed" };
   }
+  if (hasRepeatedKey(content)) return { ok: false, reason: "malformed" };
   return validateNeedsYouQueue(raw, context);
 }
 
