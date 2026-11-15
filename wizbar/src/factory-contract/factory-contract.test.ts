@@ -40,6 +40,7 @@ describe("P1: the Needs-you queue boundary", () => {
     ["unknown schema", fxQueueWith({ schema: "openwiz.needs-you.v2" }), {}, "unknown-schema"],
     ["unknown field", fxQueueWith({ extra: true }), {}, "malformed"],
     ["not JSON", "{\"schema\":", {}, "malformed"],
+    ["repeated key", fxQueueText.replace('"project":"sample-factory"', '"project":"other-factory","project":"sample-factory"'), {}, "malformed"],
     ["recommended option missing", fxQueueWith({ items: [{ ...n1, recommendedOptionId: "maybe" }] }), {}, "malformed"],
     ["incomplete without a gap", fxQueueWith({ complete: false }), {}, "malformed"],
     ["expired", fxQueueText, { now: Date.parse("2026-11-15T12:30:00Z") }, "expired"],

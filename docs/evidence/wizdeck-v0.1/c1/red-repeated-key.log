@@ -1,0 +1,93 @@
+
+ RUN  v4.1.10 <repo>/wizbar
+
+ ❯ |bb-plugin-wizbar| src/factory-contract/factory-contract.test.ts (32 tests | 1 failed) 24ms
+     × rejects a repeated key file as unavailable, never zero 7ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/factory-contract/factory-contract.test.ts > P1: the Needs-you queue boundary > rejects a repeated key file as unavailable, never zero
+AssertionError: expected { ok: true, queue: { …(8) } } to deeply equal { ok: false, reason: 'malformed' }
+
+- Expected
++ Received
+
+  {
+-   "ok": false,
+-   "reason": "malformed",
++   "ok": true,
++   "queue": {
++     "complete": true,
++     "expiresAt": "2026-11-15T12:30:00Z",
++     "gaps": [],
++     "items": [
++       {
++         "code": "N1",
++         "createdAt": "2026-11-15T11:00:00Z",
++         "fingerprint": "fp-n1-1",
++         "id": "n1",
++         "options": [
++           {
++             "id": "yes",
++             "label": "Yes",
++           },
++           {
++             "id": "no",
++             "label": "No",
++           },
++         ],
++         "question": "Sample question n1?",
++         "recommendedOptionId": "yes",
++         "risk": "ordinary",
++         "sourceUrl": "https://example.com/sample/n1",
++         "spec": "example-org/sample-app#7",
++         "updatedAt": "2026-11-15T11:30:00Z",
++       },
++       {
++         "code": "N2",
++         "createdAt": "2026-11-15T11:00:00Z",
++         "fingerprint": "fp-n2-1",
++         "id": "n2",
++         "options": [
++           {
++             "id": "yes",
++             "label": "Yes",
++           },
++           {
++             "id": "no",
++             "label": "No",
++           },
++         ],
++         "question": "Sample question n2?",
++         "recommendedOptionId": null,
++         "requestFingerprint": "rfp-sample-2",
++         "requestId": "req-sample-2",
++         "risk": "release",
++         "sourceUrl": "https://example.com/sample/n2",
++         "spec": "example-org/sample-app#7",
++         "updatedAt": "2026-11-15T11:30:00Z",
++       },
++     ],
++     "project": "sample-factory",
++     "revision": 4,
++     "schema": "openwiz.needs-you.v1",
++     "updatedAt": "2026-11-15T11:55:00Z",
++   },
+  }
+
+ ❯ src/factory-contract/factory-contract.test.ts:50:18
+     48|   ])("rejects a %s file as unavailable, never zero", (_name, text, ext…
+     49|     const read = readNeedsYouQueue(text, { ...context, ...extra });
+     50|     expect(read).toEqual({ ok: false, reason });
+       |                  ^
+     51|     expect(needsYouViewStub(read)).toEqual({ state: "unavailable", rea…
+     52|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 31 passed (32)
+   Start at  09:56:36
+   Duration  250ms (transform 51ms, setup 0ms, import 119ms, tests 24ms, environment 0ms)
+
