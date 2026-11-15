@@ -1,0 +1,584 @@
+# D1 data-layer red run: npx vitest run --config vitest.config.ts src/deck/data/ (from wizbar/), with planted bugs P1-P5 (see README)
+
+ RUN  v4.1.10 wizbar
+
+ ❯ |bb-plugin-wizbar| src/deck/data/deck-server.test.ts (31 tests | 16 failed) 841ms
+     × two consumers advance one fake clock with one GitHub read per interval 46ms
+     × a refresh inside the interval reads nothing; after it, one read 40ms
+     × honours a rate-limit reset and keeps the last good rows visibly stale 29ms
+     × a partial sub-issue page keeps known rows with a gap, and an incomplete merge read is unavailable 26ms
+     × counts only closed tickets with a merged PR in a configured repository 26ms
+     × derives each viewer's local day from the same cached merge times 25ms
+     × reads with the explicit configured host and root, only the fixed relative file 26ms
+     × offline host is unavailable with answers disabled 24ms
+     × forbidden root relative/home is refused before any SDK call 28ms
+     × forbidden root / is refused before any SDK call 26ms
+     × forbidden root /synthetic/../etc is refused before any SDK call 24ms
+     × forbidden root /synthetic/./home is refused before any SDK call 24ms
+     × forbidden root ~/home is refused before any SDK call 28ms
+     × forbidden root /synthetic//home is refused before any SDK call 25ms
+     × forbidden root /synthetic/home/ is refused before any SDK call 25ms
+     × a queue that expires between refreshes becomes unavailable without a read 25ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 16 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/data/deck-server.test.ts > one shared 60-second GitHub refresh > two consumers advance one fake clock with one GitHub read per interval
+AssertionError: expected 2 to be 1 // Object.is equality
+
+- Expected
++ Received
+
+- 1
++ 2
+
+ ❯ src/deck/data/deck-server.test.ts:56:30
+     54|     const t = setup();
+     55|     await t.watch("desk-tab"); await t.watch("phone"); await t.settle(…
+     56|     expect(t.count("board")).toBe(1);
+       |                              ^
+     57|     expect(t.read).toHaveBeenCalledTimes(1);
+     58|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/16]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/data/deck-server.test.ts > one shared 60-second GitHub refresh > a refresh inside the interval reads nothing; after it, one read
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ src/deck/data/deck-server.test.ts:74:51
+     72|     const t = setup();
+     73|     await t.watch("desk-tab"); await t.settle();
+     74|     expect((await t.refresh("desk-tab")).started).toBe(false);
+       |                                                   ^
+     75|     expect((await t.refresh("phone")).started).toBe(false);
+     76|     await t.settle();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/16]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/data/deck-server.test.ts > failure keeps last-good data stale, never zero > honours a rate-limit reset and keeps the last good rows visibly stale
+AssertionError: expected 'unavailable' to be 'stale' // Object.is equality
+
+Expected: "stale"
+Received: "unavailable"
+
+ ❯ src/deck/data/deck-server.test.ts:120:34
+    118|     await t.heartbeat(REFRESH_MS);
+    119|     const view = (await t.watch("desk-tab")).view!;
+    120|     expect(view.board.freshness).toBe("stale");
+       |                                  ^
+    121|     expect(view.board.versions[0].specs[0]).toMatchObject({ title: "Se…
+    122|     expect(view.board.detail).toMatch(/rate limit/i);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/16]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/data/deck-server.test.ts > failure keeps last-good data stale, never zero > a partial sub-issue page keeps known rows with a gap, and an incomplete merge read is unavailable
+AssertionError: expected { …(9) } to match object { Object (merged, total, ...) }
+(11 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "complete": false,
+-   "merged": 1,
++   "merged": 3,
+    "total": 4,
+  }
+
+ ❯ src/deck/data/deck-server.test.ts:154:45
+    152|     await t.watch("desk-tab"); await t.settle();
+    153|     const view = (await t.watch("desk-tab")).view!;
+    154|     expect(view.board.versions[0].specs[0]).toMatchObject({ merged: 1,…
+       |                                             ^
+    155|     expect(view.board.gaps.join(" ")).toMatch(/not read/);
+    156|     expect(view.health.mergesToday).toBeNull();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/16]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/data/deck-server.test.ts > verified progress and merges today > counts only closed tickets with a merged PR in a configured repository
+AssertionError: expected { …(9) } to match object { …(4) }
+(10 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "complete": true,
+-   "merged": 1,
++   "merged": 3,
+    "ref": "example-org/sample-app#41",
+    "total": 4,
+  }
+
+ ❯ src/deck/data/deck-server.test.ts:166:18
+    164|     await t.watch("desk-tab"); await t.settle();
+    165|     const spec = (await t.watch("desk-tab")).view!.board.versions[0].s…
+    166|     expect(spec).toMatchObject({ ref: "example-org/sample-app#41", mer…
+       |                  ^
+    167|     expect(spec.pullRequests).toEqual([{ ref: "example-org/sample-app#…
+    168|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/16]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/data/deck-server.test.ts > verified progress and merges today > derives each viewer's local day from the same cached merge times
+AssertionError: expected 3 to be 1 // Object.is equality
+
+- Expected
++ Received
+
+- 1
++ 3
+
+ ❯ src/deck/data/deck-server.test.ts:176:91
+    174|     expect((await t.watch("utc", { timeZone: "UTC" })).view!.health.me…
+    175|     // 20:30Z is 2026-11-16 05:30 in Tokyo (+9), whose day began at 15…
+    176|     expect((await t.watch("tokyo", { timeZone: "Asia/Tokyo" })).view!.…
+       |                                                                                           ^
+    177|     // 20:30Z is 2026-11-15 10:30 in Honolulu (-10), whose day began a…
+    178|     expect((await t.watch("honolulu", { timeZone: "Pacific/Honolulu" }…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/16]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/data/deck-server.test.ts > Needs-you queue host read > reads with the explicit configured host and root, only the fixed relative file
+AssertionError: expected "vi.fn()" to be called 1 times, but got 2 times
+ ❯ src/deck/data/deck-server.test.ts:197:20
+    195|     const t = setup();
+    196|     const needsYou = await view(t);
+    197|     expect(t.read).toHaveBeenCalledTimes(1);
+       |                    ^
+    198|     expect(t.read.mock.calls[0][0]).toMatchObject({ hostId: "host_d1_s…
+    199|     expect(needsYou.freshness).toBe("fresh");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/16]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/data/deck-server.test.ts > Needs-you queue host read > offline host is unavailable with answers disabled
+AssertionError: expected 'fresh' to be 'unavailable' // Object.is equality
+
+Expected: "unavailable"
+Received: "fresh"
+
+ ❯ src/deck/data/deck-server.test.ts:224:32
+    222|     if ("queue" in input) t.setQueue(input.queue);
+    223|     const needsYou = await view(t);
+    224|     expect(needsYou.freshness).toBe("unavailable");
+       |                                ^
+    225|     expect(needsYou.view).toEqual({ state: "unavailable", reason, coun…
+    226|     expect(needsYou.detail).toBeTruthy();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/16]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/data/deck-server.test.ts > Needs-you queue host read > forbidden root relative/home is refused before any SDK call
+AssertionError: expected "vi.fn()" to not be called at all, but actually been called 2 times
+
+Received:
+
+  1st vi.fn() call:
+
+    Array [
+      Object {
+        "hostId": "host_d1_sample",
+        "path": ".openwiz/needs-you.v1.json",
+        "rootPath": "relative/home",
+        "signal": AbortSignal {
+          Symbol(kEvents): undefined,
+          Symbol(events.maxEventTargetListeners): 0,
+          Symbol(events.maxEventTargetListenersWarned): false,
+          Symbol(kHandlers): undefined,
+          Symbol(kAborted): false,
+          Symbol(kReason): undefined,
+          Symbol(kComposite): false,
+        },
+      },
+    ]
+
+  2nd vi.fn() call:
+
+    Array [
+      Object {
+        "hostId": "host_d1_sample",
+        "path": ".openwiz/needs-you.v1.json",
+        "rootPath": "relative/home",
+        "signal": AbortSignal {
+          Symbol(kEvents): undefined,
+          Symbol(events.maxEventTargetListeners): 0,
+          Symbol(events.maxEventTargetListenersWarned): false,
+          Symbol(kHandlers): undefined,
+          Symbol(kAborted): false,
+          Symbol(kReason): undefined,
+          Symbol(kComposite): false,
+        },
+      },
+    ]
+
+
+Number of calls: 2
+
+ ❯ src/deck/data/deck-server.test.ts:233:26
+    231|       const t = setup({ settings: dxSettings([{ ...dxFactory, home: { …
+    232|       const needsYou = await view(t);
+    233|       expect(t.read).not.toHaveBeenCalled();
+       |                          ^
+    234|       expect(needsYou.view).toEqual({ state: "unavailable", reason: "n…
+    235|       expect(needsYou.detail).toMatch(/forbidden home root/i);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/16]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/data/deck-server.test.ts > Needs-you queue host read > forbidden root / is refused before any SDK call
+AssertionError: expected "vi.fn()" to not be called at all, but actually been called 2 times
+
+Received:
+
+  1st vi.fn() call:
+
+    Array [
+      Object {
+        "hostId": "host_d1_sample",
+        "path": ".openwiz/needs-you.v1.json",
+        "rootPath": "/",
+        "signal": AbortSignal {
+          Symbol(kEvents): undefined,
+          Symbol(events.maxEventTargetListeners): 0,
+          Symbol(events.maxEventTargetListenersWarned): false,
+          Symbol(kHandlers): undefined,
+          Symbol(kAborted): false,
+          Symbol(kReason): undefined,
+          Symbol(kComposite): false,
+        },
+      },
+    ]
+
+  2nd vi.fn() call:
+
+    Array [
+      Object {
+        "hostId": "host_d1_sample",
+        "path": ".openwiz/needs-you.v1.json",
+        "rootPath": "/",
+        "signal": AbortSignal {
+          Symbol(kEvents): undefined,
+          Symbol(events.maxEventTargetListeners): 0,
+          Symbol(events.maxEventTargetListenersWarned): false,
+          Symbol(kHandlers): undefined,
+          Symbol(kAborted): false,
+          Symbol(kReason): undefined,
+          Symbol(kComposite): false,
+        },
+      },
+    ]
+
+
+Number of calls: 2
+
+ ❯ src/deck/data/deck-server.test.ts:233:26
+    231|       const t = setup({ settings: dxSettings([{ ...dxFactory, home: { …
+    232|       const needsYou = await view(t);
+    233|       expect(t.read).not.toHaveBeenCalled();
+       |                          ^
+    234|       expect(needsYou.view).toEqual({ state: "unavailable", reason: "n…
+    235|       expect(needsYou.detail).toMatch(/forbidden home root/i);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/16]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/data/deck-server.test.ts > Needs-you queue host read > forbidden root /synthetic/../etc is refused before any SDK call
+AssertionError: expected "vi.fn()" to not be called at all, but actually been called 2 times
+
+Received:
+
+  1st vi.fn() call:
+
+    Array [
+      Object {
+        "hostId": "host_d1_sample",
+        "path": ".openwiz/needs-you.v1.json",
+        "rootPath": "/synthetic/../etc",
+        "signal": AbortSignal {
+          Symbol(kEvents): undefined,
+          Symbol(events.maxEventTargetListeners): 0,
+          Symbol(events.maxEventTargetListenersWarned): false,
+          Symbol(kHandlers): undefined,
+          Symbol(kAborted): false,
+          Symbol(kReason): undefined,
+          Symbol(kComposite): false,
+        },
+      },
+    ]
+
+  2nd vi.fn() call:
+
+    Array [
+      Object {
+        "hostId": "host_d1_sample",
+        "path": ".openwiz/needs-you.v1.json",
+        "rootPath": "/synthetic/../etc",
+        "signal": AbortSignal {
+          Symbol(kEvents): undefined,
+          Symbol(events.maxEventTargetListeners): 0,
+          Symbol(events.maxEventTargetListenersWarned): false,
+          Symbol(kHandlers): undefined,
+          Symbol(kAborted): false,
+          Symbol(kReason): undefined,
+          Symbol(kComposite): false,
+        },
+      },
+    ]
+
+
+Number of calls: 2
+
+ ❯ src/deck/data/deck-server.test.ts:233:26
+    231|       const t = setup({ settings: dxSettings([{ ...dxFactory, home: { …
+    232|       const needsYou = await view(t);
+    233|       expect(t.read).not.toHaveBeenCalled();
+       |                          ^
+    234|       expect(needsYou.view).toEqual({ state: "unavailable", reason: "n…
+    235|       expect(needsYou.detail).toMatch(/forbidden home root/i);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/16]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/data/deck-server.test.ts > Needs-you queue host read > forbidden root /synthetic/./home is refused before any SDK call
+AssertionError: expected "vi.fn()" to not be called at all, but actually been called 2 times
+
+Received:
+
+  1st vi.fn() call:
+
+    Array [
+      Object {
+        "hostId": "host_d1_sample",
+        "path": ".openwiz/needs-you.v1.json",
+        "rootPath": "/synthetic/./home",
+        "signal": AbortSignal {
+          Symbol(kEvents): undefined,
+          Symbol(events.maxEventTargetListeners): 0,
+          Symbol(events.maxEventTargetListenersWarned): false,
+          Symbol(kHandlers): undefined,
+          Symbol(kAborted): false,
+          Symbol(kReason): undefined,
+          Symbol(kComposite): false,
+        },
+      },
+    ]
+
+  2nd vi.fn() call:
+
+    Array [
+      Object {
+        "hostId": "host_d1_sample",
+        "path": ".openwiz/needs-you.v1.json",
+        "rootPath": "/synthetic/./home",
+        "signal": AbortSignal {
+          Symbol(kEvents): undefined,
+          Symbol(events.maxEventTargetListeners): 0,
+          Symbol(events.maxEventTargetListenersWarned): false,
+          Symbol(kHandlers): undefined,
+          Symbol(kAborted): false,
+          Symbol(kReason): undefined,
+          Symbol(kComposite): false,
+        },
+      },
+    ]
+
+
+Number of calls: 2
+
+ ❯ src/deck/data/deck-server.test.ts:233:26
+    231|       const t = setup({ settings: dxSettings([{ ...dxFactory, home: { …
+    232|       const needsYou = await view(t);
+    233|       expect(t.read).not.toHaveBeenCalled();
+       |                          ^
+    234|       expect(needsYou.view).toEqual({ state: "unavailable", reason: "n…
+    235|       expect(needsYou.detail).toMatch(/forbidden home root/i);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/16]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/data/deck-server.test.ts > Needs-you queue host read > forbidden root ~/home is refused before any SDK call
+AssertionError: expected "vi.fn()" to not be called at all, but actually been called 2 times
+
+Received:
+
+  1st vi.fn() call:
+
+    Array [
+      Object {
+        "hostId": "host_d1_sample",
+        "path": ".openwiz/needs-you.v1.json",
+        "rootPath": "~/home",
+        "signal": AbortSignal {
+          Symbol(kEvents): undefined,
+          Symbol(events.maxEventTargetListeners): 0,
+          Symbol(events.maxEventTargetListenersWarned): false,
+          Symbol(kHandlers): undefined,
+          Symbol(kAborted): false,
+          Symbol(kReason): undefined,
+          Symbol(kComposite): false,
+        },
+      },
+    ]
+
+  2nd vi.fn() call:
+
+    Array [
+      Object {
+        "hostId": "host_d1_sample",
+        "path": ".openwiz/needs-you.v1.json",
+        "rootPath": "~/home",
+        "signal": AbortSignal {
+          Symbol(kEvents): undefined,
+          Symbol(events.maxEventTargetListeners): 0,
+          Symbol(events.maxEventTargetListenersWarned): false,
+          Symbol(kHandlers): undefined,
+          Symbol(kAborted): false,
+          Symbol(kReason): undefined,
+          Symbol(kComposite): false,
+        },
+      },
+    ]
+
+
+Number of calls: 2
+
+ ❯ src/deck/data/deck-server.test.ts:233:26
+    231|       const t = setup({ settings: dxSettings([{ ...dxFactory, home: { …
+    232|       const needsYou = await view(t);
+    233|       expect(t.read).not.toHaveBeenCalled();
+       |                          ^
+    234|       expect(needsYou.view).toEqual({ state: "unavailable", reason: "n…
+    235|       expect(needsYou.detail).toMatch(/forbidden home root/i);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/16]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/data/deck-server.test.ts > Needs-you queue host read > forbidden root /synthetic//home is refused before any SDK call
+AssertionError: expected "vi.fn()" to not be called at all, but actually been called 2 times
+
+Received:
+
+  1st vi.fn() call:
+
+    Array [
+      Object {
+        "hostId": "host_d1_sample",
+        "path": ".openwiz/needs-you.v1.json",
+        "rootPath": "/synthetic//home",
+        "signal": AbortSignal {
+          Symbol(kEvents): undefined,
+          Symbol(events.maxEventTargetListeners): 0,
+          Symbol(events.maxEventTargetListenersWarned): false,
+          Symbol(kHandlers): undefined,
+          Symbol(kAborted): false,
+          Symbol(kReason): undefined,
+          Symbol(kComposite): false,
+        },
+      },
+    ]
+
+  2nd vi.fn() call:
+
+    Array [
+      Object {
+        "hostId": "host_d1_sample",
+        "path": ".openwiz/needs-you.v1.json",
+        "rootPath": "/synthetic//home",
+        "signal": AbortSignal {
+          Symbol(kEvents): undefined,
+          Symbol(events.maxEventTargetListeners): 0,
+          Symbol(events.maxEventTargetListenersWarned): false,
+          Symbol(kHandlers): undefined,
+          Symbol(kAborted): false,
+          Symbol(kReason): undefined,
+          Symbol(kComposite): false,
+        },
+      },
+    ]
+
+
+Number of calls: 2
+
+ ❯ src/deck/data/deck-server.test.ts:233:26
+    231|       const t = setup({ settings: dxSettings([{ ...dxFactory, home: { …
+    232|       const needsYou = await view(t);
+    233|       expect(t.read).not.toHaveBeenCalled();
+       |                          ^
+    234|       expect(needsYou.view).toEqual({ state: "unavailable", reason: "n…
+    235|       expect(needsYou.detail).toMatch(/forbidden home root/i);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/16]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/data/deck-server.test.ts > Needs-you queue host read > forbidden root /synthetic/home/ is refused before any SDK call
+AssertionError: expected "vi.fn()" to not be called at all, but actually been called 2 times
+
+Received:
+
+  1st vi.fn() call:
+
+    Array [
+      Object {
+        "hostId": "host_d1_sample",
+        "path": ".openwiz/needs-you.v1.json",
+        "rootPath": "/synthetic/home/",
+        "signal": AbortSignal {
+          Symbol(kEvents): undefined,
+          Symbol(events.maxEventTargetListeners): 0,
+          Symbol(events.maxEventTargetListenersWarned): false,
+          Symbol(kHandlers): undefined,
+          Symbol(kAborted): false,
+          Symbol(kReason): undefined,
+          Symbol(kComposite): false,
+        },
+      },
+    ]
+
+  2nd vi.fn() call:
+
+    Array [
+      Object {
+        "hostId": "host_d1_sample",
+        "path": ".openwiz/needs-you.v1.json",
+        "rootPath": "/synthetic/home/",
+        "signal": AbortSignal {
+          Symbol(kEvents): undefined,
+          Symbol(events.maxEventTargetListeners): 0,
+          Symbol(events.maxEventTargetListenersWarned): false,
+          Symbol(kHandlers): undefined,
+          Symbol(kAborted): false,
+          Symbol(kReason): undefined,
+          Symbol(kComposite): false,
+        },
+      },
+    ]
+
+
+Number of calls: 2
+
+ ❯ src/deck/data/deck-server.test.ts:233:26
+    231|       const t = setup({ settings: dxSettings([{ ...dxFactory, home: { …
+    232|       const needsYou = await view(t);
+    233|       expect(t.read).not.toHaveBeenCalled();
+       |                          ^
+    234|       expect(needsYou.view).toEqual({ state: "unavailable", reason: "n…
+    235|       expect(needsYou.detail).toMatch(/forbidden home root/i);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/16]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/data/deck-server.test.ts > Needs-you queue host read > a queue that expires between refreshes becomes unavailable without a read
+AssertionError: expected "vi.fn()" to be called 1 times, but got 3 times
+ ❯ src/deck/data/deck-server.test.ts:245:20
+    243|     const needsYou = (await t.watch("desk-tab")).view!.needsYou;
+    244|     expect(needsYou.view).toMatchObject({ state: "unavailable", reason…
+    245|     expect(t.read).toHaveBeenCalledTimes(1);
+       |                    ^
+    246|   });
+    247| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[16/16]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  16 failed | 15 passed (31)
+   Start at  17:40:25
+   Duration  1.21s (transform 136ms, setup 0ms, import 256ms, tests 841ms, environment 0ms)
+
