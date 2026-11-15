@@ -328,7 +328,8 @@ describe("review round 1", () => {
   // factory's orchestrator was replaced, so the superseded orchestrator still receives it.
   it("R3: a binding changed during orchestrator verification cancels with zero sends", async () => {
     let releaseGet!: () => void;
-    const t = setup({ get: () => new Promise((resolve) => { releaseGet = () => resolve(orchestratorThread()); }) });
+    let held = true; // Only the dispatch's own verification is held; the later log read answers at once.
+    const t = setup({ get: () => held ? new Promise((resolve) => { held = false; releaseGet = () => resolve(orchestratorThread()); }) : Promise.resolve(orchestratorThread({ id: "thr_d2_replacement" })) });
     const pending = t.steer({ operationId: "op-test-binding-moved" });
     for (let turn = 0; turn < 100 && t.get.mock.calls.length === 0; turn += 1) await vi.advanceTimersByTimeAsync(0);
     expect(t.get).toHaveBeenCalledTimes(1);

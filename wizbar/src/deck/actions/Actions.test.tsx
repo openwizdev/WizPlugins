@@ -214,7 +214,7 @@ describe("five-second Undo for ordinary answers", () => {
     const t = mount({
       log: (input) => log(records)(input),
       steer: (input) => {
-        const made = record({ operationId: input.operationId, kind: "answer", state, label: "Answer N-12 · Short headline", answer: { itemId: "n12", fingerprint: "fp-n12-1", question: ordinary.question } });
+        const made = record({ operationId: input.operationId, kind: "answer", state, label: "Answer N-12 · Short headline", answer: { itemId: "n12", fingerprint: "fp-n12-1", shown: { code: ordinary.code, question: ordinary.question, risk: ordinary.risk, options: ordinary.options } } });
         records = [made];
         return made;
       },
@@ -230,7 +230,7 @@ describe("five-second Undo for ordinary answers", () => {
     expect(t.calls("deckSteer")).toHaveLength(1);
 
     state = "queued";
-    records = [record({ kind: "answer", state: "queued", label: "Answer N-12 · Short headline", answer: { itemId: "n12", fingerprint: "fp-n12-1", question: ordinary.question } })];
+    records = [record({ kind: "answer", state: "queued", label: "Answer N-12 · Short headline", answer: { itemId: "n12", fingerprint: "fp-n12-1", shown: { code: ordinary.code, question: ordinary.question, risk: ordinary.risk, options: ordinary.options } } })];
     await t.slot.behavior.emitRealtime("wizdeck-actions", {});
     expect(t.answerRow().textContent).toContain("Waiting · queued by the host, not steered yet.");
   });

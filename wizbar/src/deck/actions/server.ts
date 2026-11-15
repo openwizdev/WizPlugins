@@ -194,7 +194,10 @@ export function registerDeckActions(bb: BbPluginApi, options: { settings: DeckSe
       item = current.ok ? current.queue.items.find((candidate) => candidate.id === answer.itemId) ?? null : null;
       const choice = item?.options.find((option) => option.id === answer.optionId)?.label;
       label = item ? `Answer ${item.code} · ${choice ?? answer.optionId}` : "Answer";
-      const bound = item ? { itemId: item.id, fingerprint: answer.fingerprint, question: item.question } : null;
+      const bound = item ? {
+        itemId: item.id, fingerprint: answer.fingerprint,
+        shown: { code: item.code, question: item.question, risk: item.risk, options: item.options.map(({ id, label }) => ({ id, label })) },
+      } : null;
       if (!check.ok) return cancel(check.reason, label, bound);
       text = answerText(item!, answer.optionId, answer.queueRevision, input.operationId);
       return dispatch({ ...request, text }, factory, { ...base, label, answer: bound });
@@ -219,6 +222,18 @@ export function registerDeckActions(bb: BbPluginApi, options: { settings: DeckSe
       await saveRecord(pending);
     } catch {
       return { ...pending, state: "cancelled", reason: "not-saved", detail: refusalWords["not-saved"], settledAt: now() };
+    }
+    publish(); // Every panel shows this operation as sending before the host answers.
+
+    // The binding was read before the awaits above. Read it again now: a changed, removed or
+    // unreadable binding cancels; the pending action is never retargeted.
+    let currentBinding: DeckFactoryV1 | null = null;
+    try { currentBinding = await factoryFor(request.projectKey); } catch { currentBinding = null; }
+    if (!currentBinding || JSON.stringify(currentBinding) !== JSON.stringify(factory)) {
+      const record: ActionRecordV1 = { ...pending, state: "cancelled", reason: "binding-changed", detail: refusalWords["binding-changed"], settledAt: now() };
+      try { await saveRecord(record); } catch { /* Nothing was sent; the saved `dispatching` record would read as uncertain, never resent. */ }
+      publish();
+      return record;
     }
 
     const sent = Promise.resolve().then(() => bb.sdk.threads.send(steerSendArgs(request)));
