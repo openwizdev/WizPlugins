@@ -88,8 +88,7 @@ export function FleetRow({ row, actions, selection, projectKey }: {
         outline: selected ? `1px solid ${LIME}` : undefined }}>
       <div style={{ flex: 1, minWidth: 0 }}>
         <button type="button" aria-pressed={selected}
-          // PLANTED BUG (red run): selecting a row also navigates the center pane.
-          onClick={() => { setSelection(selected ? { kind: "none" } : { kind: "thread", projectKey, threadId: row.id }); actions.openThread(row.id); }}
+          onClick={() => setSelection(selected ? { kind: "none" } : { kind: "thread", projectKey, threadId: row.id })}
           style={{ ...linkStyle, textDecoration: "none", fontWeight: row.depth === 0 ? 600 : 400, textAlign: "left", overflowWrap: "anywhere", padding: 0, minHeight: 32 }}>
           {row.title}
         </button>
@@ -128,8 +127,6 @@ export function FleetSection({ model, board, actions, selection, projectKey, onV
           const spec = findSpec(board, group.spec);
           const title = spec?.title ?? group.spec ?? "";
           const on = highlighted !== null && highlighted === group.spec;
-          // PLANTED BUG (red run): a highlight scrolls the deck.
-          if (on) queueMicrotask(() => document.querySelector(`[data-spec="${group.spec}"]`)?.scrollIntoView());
           return (
             <li key={group.spec} data-spec={group.spec} data-highlighted={on || undefined}
               style={{ display: "flex", alignItems: "center", gap: 10, padding: "4px 0", borderBottom: rule, outline: on ? `1px solid ${LIME}` : undefined }}>
@@ -279,8 +276,7 @@ export function LiveHealthRow({ model, mergesToday, mergesTodayDetail }: {
 }) {
   return (
     <section aria-label="Running and health" style={{ display: "flex", margin: "14px 0 4px", borderBottom: rule, paddingBottom: 10 }}>
-      {/* PLANTED BUG (red run): unavailable running shown as zero. */}
-      <Big value={model.running.count ?? 0} label="Running" detail={runningWords(model)} />
+      <Big value={model.running.count} label="Running" detail={runningWords(model)} />
       <div aria-hidden style={{ borderLeft: rule }} />
       <Big value={mergesToday} label="Merges today" detail={mergesTodayDetail ?? undefined} />
       <div aria-hidden style={{ borderLeft: rule }} />

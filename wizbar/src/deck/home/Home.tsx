@@ -51,8 +51,7 @@ export function Home({ focus }: { focus: FocusRequestV1 | null }) {
   const fleetActions: FleetActions = { openUrl: open, openThread: (threadId) => navigate.toThread(threadId) };
 
   // F1 (#75): an explicit Needs-you focus leaves a fleet page for Home, where the item is.
-  // PLANTED BUG (red run): an explicit focus leaves the fleet page in place.
-  useEffect(() => { if (focusedItemId) void 0; }, [focusedItemId]);
+  useEffect(() => { if (focusedItemId) setFleetPage(null); }, [focusedItemId]);
 
   useEffect(() => {
     if (!focusedItemId || !view) return;
