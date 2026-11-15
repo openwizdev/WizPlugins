@@ -275,7 +275,7 @@ export function ThreadInbox({
       {/* B1 (#76): the running count and its popover replace the footer bolt.
           It reads every project's running rows, never this list's search or scope. */}
       <div className="flex shrink-0 items-center gap-2 border-t border-sidebar-border px-3 py-1">
-        <NeedsYouEntry />
+        <NeedsYouEntry onNavigate={onNavigate} />
         <span className="flex-1" />
         <FooterCounter
           onNavigate={onNavigate}

@@ -159,9 +159,10 @@ describe("B1 (J88): a Needs-you click opens the verified owning thread", () => {
   // Bug caught: a target verified earlier, or for the factory shown before a switch, opening after it changed.
   it("opens nothing when ownership turns stale or the factory changes while the click verifies it", async () => {
     let answer: unknown = verified();
-    let release: ((value: unknown) => void) | null = null;
+    // Held reads, in call order: the click's own read is the first one held.
+    const held: ((value: unknown) => void)[] = [];
     let hold = false;
-    const log = vi.fn(() => hold ? new Promise((resolve) => { release = resolve; }) : answer);
+    const log = vi.fn(() => hold ? new Promise((resolve) => { held.push(resolve); }) : answer);
     const watch = vi.fn((): unknown => deck("ready"));
     const rendered = renderSlot(app.threadLists[0]!, {
       activeThreadId: null, activeProjectId: null, isCompactViewport: false, searchQuery: "", onNavigate() {},
@@ -187,7 +188,9 @@ describe("B1 (J88): a Needs-you click opens the verified owning thread", () => {
     watch.mockImplementation(() => ({ ...deck("ready"), projectKey: "other-factory",
       projects: [{ projectKey: "other-factory", cloudroomProjectId: "prj_b1_b" }], view: { ...deck("ready").view!, projectKey: "other-factory" } }));
     await act(async () => { await vi.advanceTimersByTimeAsync(HEARTBEAT_MS); });
-    await act(async () => { release?.(verified()); await vi.advanceTimersByTimeAsync(0); });
+    expect(held.length).toBeGreaterThan(0);
+    await act(async () => { held[0]!(verified()); await vi.advanceTimersByTimeAsync(0); });
+    expect(screen.getByRole("button", { name: "Needs you · 1" })).toBeDefined();
     expect(rendered.sidebarActionCalls).toEqual([]);
     expect(rendered.navigateCalls).toEqual([]);
   });
