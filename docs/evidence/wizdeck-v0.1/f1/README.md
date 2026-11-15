@@ -37,6 +37,14 @@ Reviewed head `dc045d8`. Red: `red-final-check.log` (commit `2539150`). Four tes
 - **R6, deferred focus scope.** The deferred request now records its factory, is cancelled when the factory changes, and looks only inside its own Home (found from an anchor at F1's slot, by attribute selector). It ends when that Home's read list lacks the item. D1's shell and focus effect are unchanged, and F1's `useRef` import sits in F1's import block. Proofs: `FleetViews.test.tsx` "cancels on a manual switch from loading A to B; focus stays on the picker" (a second Home is mounted) and "focuses its own Home's item when another mounted Home shows the same id". The round-1 R4 test still passes, now opened from the unplaced page.
 - R3's preserved pages, actual reset deadline, cancellation and token protections are unchanged and still pass.
 
+## Base integration with D2 (#85)
+
+`origin/main` (D2 merged as `c6b3db6`) was merged in normally (no rebase), resolving the two real conflicts:
+- `Home.tsx`: D2's `DeckActions`, then F1's live/D1 health row, then the F1 slot (anchor and Fleet section).
+- `Home.test.tsx`: the heading order with both features is now Needs you, Answer, Tell the factory, Spec actions, Fleet, Versions.
+
+`deck/data/server.ts` merged cleanly. D2's `return { settings }` and its `registerDeckActions(bb, { settings: deckReaders.settings })` entry sit beside F1's fleet-links lease. D2 adds no lease inside `watch()`, so the lease key order (queue, boards, links) that F1 indexes is unchanged. No new test: the merged heading assertion catches either feature being dropped, and the existing D2 and F1 suites cover both. The full local suite passes 948/948 with typecheck clean (`green.log`). Production still places no thread (R1 capability gap), and the other gaps are unchanged.
+
 ## Claims and proof
 
 | Acceptance criterion | Claim | Evidence | Ready |

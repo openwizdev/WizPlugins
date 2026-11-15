@@ -1,6 +1,6 @@
  RUN  v4.1.10 wizbar
- Test Files  30 passed (30)
-      Tests  905 passed (905)
-   Start at  21:06:31
-   Duration  21.09s (transform 817ms, setup 0ms, import 5.26s, tests 27.21s, environment 5.92s)
+ Test Files  33 passed (33)
+      Tests  948 passed (948)
+   Start at  21:53:43
+   Duration  20.07s (transform 815ms, setup 0ms, import 5.71s, tests 23.42s, environment 6.89s)
 typecheck (npx tsc --noEmit): exit 0
