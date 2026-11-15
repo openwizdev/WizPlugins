@@ -1,0 +1,607 @@
+
+ RUN  v4.1.10 <repo>/wizbar
+
+ ❯ |bb-plugin-wizbar| src/factory-contract/factory-contract.test.ts (31 tests | 15 failed) 30ms
+     × rejects a wrong project file as unavailable, never zero 7ms
+     × rejects a duplicate item file as unavailable, never zero 2ms
+     × rejects a unknown schema file as unavailable, never zero 1ms
+     × rejects a expired file as unavailable, never zero 1ms
+     × rejects a older revision file as unavailable, never zero 1ms
+     × counts zero only for a fresh complete empty queue 2ms
+     × cancels a send on a changed proposal 1ms
+     × cancels a send on a changed revision 1ms
+     × keeps sent, queued and uncertain distinct 1ms
+     × falls back to Not estimated for a malformed, foreign or ambiguous status 1ms
+     × keeps absent distinct from empty 1ms
+     × reports an active long tool as operation-pending, not stalled 1ms
+     × leaves true inactivity unavailable until a verified clock exists 1ms
+     × refuses a stale observation and a non-latest page 1ms
+     × has no adopted threshold, so stall stays unavailable 1ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 15 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/factory-contract/factory-contract.test.ts > P1: the Needs-you queue boundary > rejects a wrong project file as unavailable, never zero
+AssertionError: expected { ok: true, queue: { …(8) } } to deeply equal { ok: false, reason: 'wrong-project' }
+
+- Expected
++ Received
+
+  {
+-   "ok": false,
+-   "reason": "wrong-project",
++   "ok": true,
++   "queue": {
++     "complete": true,
++     "expiresAt": "2026-11-15T12:30:00Z",
++     "gaps": [],
++     "items": [
++       {
++         "code": "N1",
++         "createdAt": "2026-11-15T11:00:00Z",
++         "fingerprint": "fp-n1-1",
++         "id": "n1",
++         "options": [
++           {
++             "id": "yes",
++             "label": "Yes",
++           },
++           {
++             "id": "no",
++             "label": "No",
++           },
++         ],
++         "question": "Sample question n1?",
++         "recommendedOptionId": "yes",
++         "risk": "ordinary",
++         "sourceUrl": "https://example.com/sample/n1",
++         "spec": "example-org/sample-app#7",
++         "updatedAt": "2026-11-15T11:30:00Z",
++       },
++       {
++         "code": "N2",
++         "createdAt": "2026-11-15T11:00:00Z",
++         "fingerprint": "fp-n2-1",
++         "id": "n2",
++         "options": [
++           {
++             "id": "yes",
++             "label": "Yes",
++           },
++           {
++             "id": "no",
++             "label": "No",
++           },
++         ],
++         "question": "Sample question n2?",
++         "recommendedOptionId": null,
++         "requestFingerprint": "rfp-sample-2",
++         "requestId": "req-sample-2",
++         "risk": "release",
++         "sourceUrl": "https://example.com/sample/n2",
++         "spec": "example-org/sample-app#7",
++         "updatedAt": "2026-11-15T11:30:00Z",
++       },
++     ],
++     "project": "other-factory",
++     "revision": 4,
++     "schema": "openwiz.needs-you.v1",
++     "updatedAt": "2026-11-15T11:55:00Z",
++   },
+  }
+
+ ❯ src/factory-contract/factory-contract.test.ts:49:18
+     47|   ])("rejects a %s file as unavailable, never zero", (_name, text, ext…
+     48|     const read = readNeedsYouQueue(text, { ...context, ...extra });
+     49|     expect(read).toEqual({ ok: false, reason });
+       |                  ^
+     50|     expect(needsYouViewStub(read)).toEqual({ state: "unavailable", rea…
+     51|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/15]⎯
+
+ FAIL  |bb-plugin-wizbar| src/factory-contract/factory-contract.test.ts > P1: the Needs-you queue boundary > rejects a duplicate item file as unavailable, never zero
+AssertionError: expected { ok: true, queue: { …(8) } } to deeply equal { ok: false, reason: 'duplicate-item' }
+
+- Expected
++ Received
+
+  {
+-   "ok": false,
+-   "reason": "duplicate-item",
++   "ok": true,
++   "queue": {
++     "complete": true,
++     "expiresAt": "2026-11-15T12:30:00Z",
++     "gaps": [],
++     "items": [
++       {
++         "code": "N1",
++         "createdAt": "2026-11-15T11:00:00Z",
++         "fingerprint": "fp-n1-1",
++         "id": "n1",
++         "options": [
++           {
++             "id": "yes",
++             "label": "Yes",
++           },
++           {
++             "id": "no",
++             "label": "No",
++           },
++         ],
++         "question": "Sample question n1?",
++         "recommendedOptionId": "yes",
++         "risk": "ordinary",
++         "sourceUrl": "https://example.com/sample/n1",
++         "spec": "example-org/sample-app#7",
++         "updatedAt": "2026-11-15T11:30:00Z",
++       },
++       {
++         "code": "N1",
++         "createdAt": "2026-11-15T11:00:00Z",
++         "fingerprint": "fp-n1-1",
++         "id": "n1",
++         "options": [
++           {
++             "id": "yes",
++             "label": "Yes",
++           },
++           {
++             "id": "no",
++             "label": "No",
++           },
++         ],
++         "question": "Sample duplicate?",
++         "recommendedOptionId": "yes",
++         "risk": "ordinary",
++         "sourceUrl": "https://example.com/sample/n1",
++         "spec": "example-org/sample-app#7",
++         "updatedAt": "2026-11-15T11:30:00Z",
++       },
++     ],
++     "project": "sample-factory",
++     "revision": 4,
++     "schema": "openwiz.needs-you.v1",
++     "updatedAt": "2026-11-15T11:55:00Z",
++   },
+  }
+
+ ❯ src/factory-contract/factory-contract.test.ts:49:18
+     47|   ])("rejects a %s file as unavailable, never zero", (_name, text, ext…
+     48|     const read = readNeedsYouQueue(text, { ...context, ...extra });
+     49|     expect(read).toEqual({ ok: false, reason });
+       |                  ^
+     50|     expect(needsYouViewStub(read)).toEqual({ state: "unavailable", rea…
+     51|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/15]⎯
+
+ FAIL  |bb-plugin-wizbar| src/factory-contract/factory-contract.test.ts > P1: the Needs-you queue boundary > rejects a unknown schema file as unavailable, never zero
+AssertionError: expected { ok: false, reason: 'malformed' } to deeply equal { ok: false, reason: 'unknown-schema' }
+
+- Expected
++ Received
+
+  {
+    "ok": false,
+-   "reason": "unknown-schema",
++   "reason": "malformed",
+  }
+
+ ❯ src/factory-contract/factory-contract.test.ts:49:18
+     47|   ])("rejects a %s file as unavailable, never zero", (_name, text, ext…
+     48|     const read = readNeedsYouQueue(text, { ...context, ...extra });
+     49|     expect(read).toEqual({ ok: false, reason });
+       |                  ^
+     50|     expect(needsYouViewStub(read)).toEqual({ state: "unavailable", rea…
+     51|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/15]⎯
+
+ FAIL  |bb-plugin-wizbar| src/factory-contract/factory-contract.test.ts > P1: the Needs-you queue boundary > rejects a expired file as unavailable, never zero
+AssertionError: expected { ok: true, queue: { …(8) } } to deeply equal { ok: false, reason: 'expired' }
+
+- Expected
++ Received
+
+  {
+-   "ok": false,
+-   "reason": "expired",
++   "ok": true,
++   "queue": {
++     "complete": true,
++     "expiresAt": "2026-11-15T12:30:00Z",
++     "gaps": [],
++     "items": [
++       {
++         "code": "N1",
++         "createdAt": "2026-11-15T11:00:00Z",
++         "fingerprint": "fp-n1-1",
++         "id": "n1",
++         "options": [
++           {
++             "id": "yes",
++             "label": "Yes",
++           },
++           {
++             "id": "no",
++             "label": "No",
++           },
++         ],
++         "question": "Sample question n1?",
++         "recommendedOptionId": "yes",
++         "risk": "ordinary",
++         "sourceUrl": "https://example.com/sample/n1",
++         "spec": "example-org/sample-app#7",
++         "updatedAt": "2026-11-15T11:30:00Z",
++       },
++       {
++         "code": "N2",
++         "createdAt": "2026-11-15T11:00:00Z",
++         "fingerprint": "fp-n2-1",
++         "id": "n2",
++         "options": [
++           {
++             "id": "yes",
++             "label": "Yes",
++           },
++           {
++             "id": "no",
++             "label": "No",
++           },
++         ],
++         "question": "Sample question n2?",
++         "recommendedOptionId": null,
++         "requestFingerprint": "rfp-sample-2",
++         "requestId": "req-sample-2",
++         "risk": "release",
++         "sourceUrl": "https://example.com/sample/n2",
++         "spec": "example-org/sample-app#7",
++         "updatedAt": "2026-11-15T11:30:00Z",
++       },
++     ],
++     "project": "sample-factory",
++     "revision": 4,
++     "schema": "openwiz.needs-you.v1",
++     "updatedAt": "2026-11-15T11:55:00Z",
++   },
+  }
+
+ ❯ src/factory-contract/factory-contract.test.ts:49:18
+     47|   ])("rejects a %s file as unavailable, never zero", (_name, text, ext…
+     48|     const read = readNeedsYouQueue(text, { ...context, ...extra });
+     49|     expect(read).toEqual({ ok: false, reason });
+       |                  ^
+     50|     expect(needsYouViewStub(read)).toEqual({ state: "unavailable", rea…
+     51|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/15]⎯
+
+ FAIL  |bb-plugin-wizbar| src/factory-contract/factory-contract.test.ts > P1: the Needs-you queue boundary > rejects a older revision file as unavailable, never zero
+AssertionError: expected { ok: true, queue: { …(8) } } to deeply equal { ok: false, reason: 'stale-revision' }
+
+- Expected
++ Received
+
+  {
+-   "ok": false,
+-   "reason": "stale-revision",
++   "ok": true,
++   "queue": {
++     "complete": true,
++     "expiresAt": "2026-11-15T12:30:00Z",
++     "gaps": [],
++     "items": [
++       {
++         "code": "N1",
++         "createdAt": "2026-11-15T11:00:00Z",
++         "fingerprint": "fp-n1-1",
++         "id": "n1",
++         "options": [
++           {
++             "id": "yes",
++             "label": "Yes",
++           },
++           {
++             "id": "no",
++             "label": "No",
++           },
++         ],
++         "question": "Sample question n1?",
++         "recommendedOptionId": "yes",
++         "risk": "ordinary",
++         "sourceUrl": "https://example.com/sample/n1",
++         "spec": "example-org/sample-app#7",
++         "updatedAt": "2026-11-15T11:30:00Z",
++       },
++       {
++         "code": "N2",
++         "createdAt": "2026-11-15T11:00:00Z",
++         "fingerprint": "fp-n2-1",
++         "id": "n2",
++         "options": [
++           {
++             "id": "yes",
++             "label": "Yes",
++           },
++           {
++             "id": "no",
++             "label": "No",
++           },
++         ],
++         "question": "Sample question n2?",
++         "recommendedOptionId": null,
++         "requestFingerprint": "rfp-sample-2",
++         "requestId": "req-sample-2",
++         "risk": "release",
++         "sourceUrl": "https://example.com/sample/n2",
++         "spec": "example-org/sample-app#7",
++         "updatedAt": "2026-11-15T11:30:00Z",
++       },
++     ],
++     "project": "sample-factory",
++     "revision": 4,
++     "schema": "openwiz.needs-you.v1",
++     "updatedAt": "2026-11-15T11:55:00Z",
++   },
+  }
+
+ ❯ src/factory-contract/factory-contract.test.ts:49:18
+     47|   ])("rejects a %s file as unavailable, never zero", (_name, text, ext…
+     48|     const read = readNeedsYouQueue(text, { ...context, ...extra });
+     49|     expect(read).toEqual({ ok: false, reason });
+       |                  ^
+     50|     expect(needsYouViewStub(read)).toEqual({ state: "unavailable", rea…
+     51|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/15]⎯
+
+ FAIL  |bb-plugin-wizbar| src/factory-contract/factory-contract.test.ts > P1: the Needs-you queue boundary > counts zero only for a fresh complete empty queue
+AssertionError: expected { state: 'ready', …(4) } to match object { state: 'ready', …(3) }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "complete": false,
+-   "count": null,
++   "count": 2,
+    "gaps": [
+      "sample gap",
+    ],
+    "state": "ready",
+  }
+
+ ❯ src/factory-contract/factory-contract.test.ts:59:8
+     57|       .toMatchObject({ state: "ready", complete: true, count: 0 });
+     58|     expect(needsYouViewStub(readNeedsYouQueue(fxQueueWith({ complete: …
+     59|       .toMatchObject({ state: "ready", complete: false, count: null, g…
+       |        ^
+     60|   });
+     61|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/15]⎯
+
+ FAIL  |bb-plugin-wizbar| src/factory-contract/factory-contract.test.ts > P1: a pending answer is rechecked against the current queue > cancels a send on a changed proposal
+AssertionError: expected { ok: true } to deeply equal { ok: false, …(1) }
+
+- Expected
++ Received
+
+  {
+-   "ok": false,
+-   "reason": "proposal-changed",
++   "ok": true,
+  }
+
+ ❯ src/factory-contract/factory-contract.test.ts:89:77
+     87|     ["release-risk item", current, { answer: { itemId: "n2", optionId:…
+     88|   ])("cancels a send on a %s", (_name, read, change, reason) => {
+     89|     expect(checkSteerDispatch({ ...fxAnswer, ...change }, fxBinding, r…
+       |                                                                             ^
+     90|   });
+     91| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/15]⎯
+
+ FAIL  |bb-plugin-wizbar| src/factory-contract/factory-contract.test.ts > P1: a pending answer is rechecked against the current queue > cancels a send on a changed revision
+AssertionError: expected { ok: true } to deeply equal { ok: false, …(1) }
+
+- Expected
++ Received
+
+  {
+-   "ok": false,
+-   "reason": "revision-changed",
++   "ok": true,
+  }
+
+ ❯ src/factory-contract/factory-contract.test.ts:89:77
+     87|     ["release-risk item", current, { answer: { itemId: "n2", optionId:…
+     88|   ])("cancels a send on a %s", (_name, read, change, reason) => {
+     89|     expect(checkSteerDispatch({ ...fxAnswer, ...change }, fxBinding, r…
+       |                                                                             ^
+     90|   });
+     91| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/15]⎯
+
+ FAIL  |bb-plugin-wizbar| src/factory-contract/factory-contract.test.ts > Steer route > keeps sent, queued and uncertain distinct
+AssertionError: expected { requestId: 'op1', delivery: 'sent' } to deeply equal { requestId: 'op1', …(2) }
+
+- Expected
++ Received
+
+  {
+-   "delivery": "queued",
+-   "queuedMessageId": "qm_c1",
++   "delivery": "sent",
+    "requestId": "op1",
+  }
+
+ ❯ src/factory-contract/factory-contract.test.ts:110:8
+    108|       .toEqual({ requestId: "op1", delivery: "sent" });
+    109|     expect(steerOutcome("op1", { status: "fulfilled", value: { ok: tru…
+    110|       .toEqual({ requestId: "op1", delivery: "queued", queuedMessageId…
+       |        ^
+    111|     expect(steerOutcome("op1", { status: "rejected", reason: new Error…
+    112|       .toEqual({ requestId: "op1", delivery: "uncertain", message: "Re…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/15]⎯
+
+ FAIL  |bb-plugin-wizbar| src/factory-contract/factory-contract.test.ts > Spec status comment > falls back to Not estimated for a malformed, foreign or ambiguous status
+AssertionError: expected { status: 'ready', …(4) } to deeply equal { status: 'unavailable', …(2) }
+
+- Expected
++ Received
+
+  {
+-   "reason": "malformed",
+-   "status": "unavailable",
+-   "when": "Not estimated",
++   "next": "Review the sample board.",
++   "now": "Building the sample home (example-org/sample-app#8).",
++   "status": "ready",
++   "updated": "2026-11-15T11:00:00Z",
++   "when": "2026-11-16 17:00",
+  }
+
+ ❯ src/factory-contract/factory-contract.test.ts:130:73
+    128|   it("falls back to Not estimated for a malformed, foreign or ambiguou…
+    129|     const fallback = (reason: string) => ({ status: "unavailable", rea…
+    130|     expect(parseSpecStatus(fxStatusBody.replace("17:00 UTC", "17:00"))…
+       |                                                                         ^
+    131|     expect(parseSpecStatus(fxStatusBody.replace("Next:", "Later:"))).t…
+    132|     expect(readSpecStatus([{ authorLogin: "someone-else", body: fxStat…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/15]⎯
+
+ FAIL  |bb-plugin-wizbar| src/factory-contract/factory-contract.test.ts > Host inventory (Cloudroom #160 at fec35c49) > keeps absent distinct from empty
+AssertionError: expected { status: 'ready', running: [], …(1) } to deeply equal { status: 'absent' }
+
+- Expected
++ Received
+
+  {
++   "children": {
+      "status": "absent",
++   },
++   "running": [],
++   "status": "ready",
+  }
+
+ ❯ src/factory-contract/factory-contract.test.ts:143:35
+    141|   // Bug caught: an older host's missing inventory shown as zero runni…
+    142|   it("keeps absent distinct from empty", () => {
+    143|     expect(readHostInventory({})).toEqual({ status: "absent" });
+       |                                   ^
+    144|     expect(readHostInventory({ runningThreads: [] })).toEqual({ status…
+    145|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/15]⎯
+
+ FAIL  |bb-plugin-wizbar| src/factory-contract/factory-contract.test.ts > Activity and stall: no guessed amber > reports an active long tool as operation-pending, not stalled
+AssertionError: expected { status: 'read', …(4) } to deeply equal { status: 'read', …(4) }
+
+- Expected
++ Received
+
+  {
+    "activeTurnId": "turn_c1",
+    "fetchedAt": 1794744000000,
+-   "lastActivityAt": null,
+-   "pendingOperations": 1,
++   "lastActivityAt": 1794738600000,
++   "pendingOperations": 0,
+    "status": "read",
+  }
+
+ ❯ src/factory-contract/factory-contract.test.ts:169:38
+    167|   // Bug caught: a long-running tool shown as an idle stall.
+    168|   it("reports an active long tool as operation-pending, not stalled", …
+    169|     expect(read(fxTimelineLongTool)).toEqual({
+       |                                      ^
+    170|       status: "read", fetchedAt: fxNow, activeTurnId: "turn_c1", pendi…
+    171|     });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/15]⎯
+
+ FAIL  |bb-plugin-wizbar| src/factory-contract/factory-contract.test.ts > Activity and stall: no guessed amber > leaves true inactivity unavailable until a verified clock exists
+AssertionError: expected { status: 'stalled', …(2) } to deeply equal { status: 'unavailable', …(1) }
+
+- Expected
++ Received
+
+  {
+-   "reason": "no-activity-clock",
+-   "status": "unavailable",
++   "idleMs": 10800000,
++   "status": "stalled",
++   "thresholdMs": 3600000,
+  }
+
+ ❯ src/factory-contract/factory-contract.test.ts:180:8
+    178|   it("leaves true inactivity unavailable until a verified clock exists…
+    179|     expect(stallStatus({ running: true, activity: read(fxTimelineInact…
+    180|       .toEqual({ status: "unavailable", reason: "no-activity-clock" });
+       |        ^
+    181|     expect(stallStatus({ running: true, threshold: synthetic, now: fxN…
+    182|       activity: { status: "read", fetchedAt: fxNow, activeTurnId: null…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/15]⎯
+
+ FAIL  |bb-plugin-wizbar| src/factory-contract/factory-contract.test.ts > Activity and stall: no guessed amber > refuses a stale observation and a non-latest page
+AssertionError: expected { status: 'stalled', …(2) } to deeply equal { status: 'unavailable', …(1) }
+
+- Expected
++ Received
+
+  {
+-   "reason": "stale-observation",
+-   "status": "unavailable",
++   "idleMs": 5400000,
++   "status": "stalled",
++   "thresholdMs": 3600000,
+  }
+
+ ❯ src/factory-contract/factory-contract.test.ts:190:8
+    188|     const old = readTimelineActivity(fxTimelineLongTool, fxNow - activ…
+    189|     expect(stallStatus({ running: true, activity: old, threshold: synt…
+    190|       .toEqual({ status: "unavailable", reason: "stale-observation" });
+       |        ^
+    191|     expect(read(fxTimelineOlderPage)).toEqual({ status: "unavailable",…
+    192|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/15]⎯
+
+ FAIL  |bb-plugin-wizbar| src/factory-contract/factory-contract.test.ts > Activity and stall: no guessed amber > has no adopted threshold, so stall stays unavailable
+AssertionError: expected { status: 'stalled', …(2) } to deeply equal { status: 'unavailable', …(1) }
+
+- Expected
++ Received
+
+  {
+-   "reason": "no-threshold",
+-   "status": "unavailable",
++   "idleMs": 18000000,
++   "status": "stalled",
++   "thresholdMs": 1800000,
+  }
+
+ ❯ src/factory-contract/factory-contract.test.ts:200:8
+    198|     expect(stallStatus({ running: true, threshold: stallThresholdV1, n…
+    199|       activity: { status: "read", fetchedAt: fxNow, activeTurnId: null…
+    200|       .toEqual({ status: "unavailable", reason: "no-threshold" });
+       |        ^
+    201|   });
+    202| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/15]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  15 failed | 16 passed (31)
+   Start at  09:54:58
+   Duration  365ms (transform 138ms, setup 0ms, import 204ms, tests 30ms, environment 0ms)
+
