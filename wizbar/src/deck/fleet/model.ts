@@ -311,5 +311,5 @@ export function specOfThread(model: FleetModelV1, threadId: string): SpecRefV1 |
  * Full membership, not only threads behind already-merged pull requests.
  */
 export function threadsOfSpec(model: FleetModelV1, spec: SpecRefV1): string[] {
-  return [];
+  return model.groups.find((group) => group.spec === spec)?.rows.map((row) => row.id) ?? [];
 }

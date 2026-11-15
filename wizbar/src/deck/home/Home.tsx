@@ -43,9 +43,8 @@ export function Home({ focus }: { focus: FocusRequestV1 | null }) {
   const focusedItemId = focus && focus.projectKey === projectKey ? focus.itemId : null;
   const now = Date.now();
   // F1 (#75): the live fleet, scoped to the shown factory's Cloudroom project.
-  // Work links reach the panel only once the backend leases them (pending).
   const scopeProjectId = result?.projects.find((project) => project.projectKey === projectKey)?.cloudroomProjectId ?? null;
-  const fleet = useLiveFleet(view ? scopeProjectId : null, undefined, now);
+  const fleet = useLiveFleet(view ? scopeProjectId : null, result?.fleetLinks, now);
   const selection = useSelection();
   const [fleetPage, setFleetPage] = useState<{ projectKey: string; spec: SpecRefV1 | null } | null>(null);
   const fleetActions: FleetActions = { openUrl: open, openThread: (threadId) => navigate.toThread(threadId) };

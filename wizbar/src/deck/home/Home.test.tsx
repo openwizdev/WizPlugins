@@ -162,7 +162,7 @@ describe("WizDeck Home", () => {
     const slot = mount({ deckWatch: () => result("sample-factory"), deckRelease: () => ({ ok: true }) });
     await flush();
     const headings = screen.getAllByRole("heading", { level: 3 }).map((heading) => heading.textContent);
-    expect(headings).toEqual(["Needs you · 1", "Versions"]);
+    expect(headings).toEqual(["Needs you · 1", "Fleet", "Versions"]);
     expect(screen.getByText("Options: Short headline (rec) · Long headline")).toBeTruthy();
     const need = document.getElementById("wizdeck-need-n12")!;
     expect(within(need).getAllByRole("button").map((button) => button.textContent)).toEqual(["Open"]);
