@@ -163,7 +163,7 @@ function SpecRow({ spec, open, multiRepo }: { spec: SpecRowV1; open: (url: strin
 function versionSummary(version: HomeVersionV1) {
   const merged = version.specs.reduce((sum, spec) => sum + spec.merged, 0);
   const total = version.specs.reduce((sum, spec) => sum + spec.total, 0);
-  const complete = version.specs.every((spec) => spec.complete);
+  const complete = version.complete && version.specs.every((spec) => spec.complete);
   return `${merged}${complete ? "" : "+"}/${total} tickets merged`;
 }
 
@@ -187,7 +187,10 @@ export function Versions({ board, open }: { board: HomeViewV1["board"]; open: (u
           <h4 style={{ margin: "10px 0 4px", fontSize: 14, fontWeight: 600 }}>
             {version.title} · {versionSummary(version)}{multiRepo ? <span style={muted}> · {version.repository}</span> : null}
           </h4>
-          {version.specs.length === 0 ? <p style={{ ...muted, margin: 0 }}>No specs yet.</p> : (
+          {!version.complete && (
+            <p role="status" style={{ ...muted, margin: "0 0 4px" }}>Partial: not every issue in this version was read, so some specs may be missing.</p>
+          )}
+          {version.specs.length === 0 ? <p style={{ ...muted, margin: 0 }}>{version.complete ? "No specs yet." : "No specs among the issues read so far."}</p> : (
             <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
               {version.specs.map((spec) => <SpecRow key={spec.ref} spec={spec} open={open} multiRepo={multiRepo} />)}
             </ul>

@@ -14,6 +14,8 @@ export interface LoadResult<T> {
   data: T;
   complete: boolean;
   gaps: string[];
+  /** A back-off deadline (epoch ms) GitHub gave during a read that still returned partial data. */
+  retryAt?: number;
 }
 
 /** A loader's honest refusal: the read finished and gave nothing usable. */
@@ -163,6 +165,8 @@ export class SharedReadCache {
           complete: result.complete, gaps: [...result.gaps],
         };
         entry.detail = null;
+        // A partial read that met a rate limit keeps its rows and still waits for the deadline.
+        if (result.retryAt !== undefined) entry.retryAt = Math.max(entry.retryAt, result.retryAt);
       } catch (error) {
         if (error instanceof GitHubRateLimited) entry.retryAt = error.retryAt;
         const reason: UnavailableReasonV1 = error instanceof GitHubRateLimited ? "rate-limited"

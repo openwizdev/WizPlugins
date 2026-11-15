@@ -14,6 +14,8 @@ export interface HomeVersionV1 {
   number: number;
   title: string;
   dueOn: string | null;
+  /** False when not every issue in this version was read. */
+  complete: boolean;
   specs: SpecRowV1[];
 }
 
