@@ -1,0 +1,106 @@
+
+ RUN  v4.1.10 /tmp/hx2/wizbar
+
+ ❯ |bb-plugin-wizbar| src/deck/home/Home.test.tsx (20 tests | 3 failed | 17 skipped) 325ms
+     × selects the requested factory and focuses its exact item on every deliberate click, without new tabs 177ms
+     × never switches, scrolls or steals focus without a deliberate click 107ms
+     × refuses an unknown factory and never shows a stale answer for the old factory 40ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/home/Home.test.tsx > explicit Needs-you focus through the host's panel tabs > selects the requested factory and focuses its exact item on every deliberate click, without new tabs
+AssertionError: expected 'other-factory' to be 'sample-factory' // Object.is equality
+
+Expected: "sample-factory"
+Received: "other-factory"
+
+ ❯ src/deck/home/Home.test.tsx:317:29
+    315|     await click("sample-factory");
+    316|     await flush();
+    317|     expect(factory().value).toBe("sample-factory");
+       |                             ^
+    318|     expect(screen.queryByText("other-factory spec")).toBeNull();
+    319|     expect(document.activeElement?.id).toBe("wizdeck-need-n12");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/home/Home.test.tsx > explicit Needs-you focus through the host's panel tabs > never switches, scrolls or steals focus without a deliberate click
+AssertionError: expected <li id="wizdeck-need-n12" …(3)>…(2)</li> to be <select …(1)>…(2)</select> // Object.is equality
+
+- Expected
++ Received
+
+- <select
+-   style="min-height: 44px; min-width: 44px; padding: 0px 10px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--border); border-radius: 8px; background: var(--background); color: var(--foreground); font: inherit; cursor: pointer;"
++ <li
++   data-focused="true"
++   id="wizdeck-need-n12"
++   style="display: flex; gap: 12px; align-items: flex-start; padding: 8px 0px; border-bottom: 1px solid var(--border); outline: 1px solid var(--wizdeck-lime, #c6f432);"
++   tabindex="-1"
+  >
+-   <option
+-     value="sample-factory"
++   <div
++     style="flex: 1 1 0%; min-width: 0px;"
+    >
+-     sample-factory
+-   </option>
+-   <option
+-     value="other-factory"
++     <p
++       style="margin: 0px; font-weight: 600;"
+      >
+-     other-factory
+-   </option>
+- </select>
++       N-12
++        · 
++       Which changelog headline ships?
++     </p>
++     <p
++       style="color: var(--muted-foreground); margin: 2px 0px 0px;"
++     >
++       Options: 
++       Short headline (rec) · Long headline
++     </p>
++   </div>
++   <button
++     style="min-height: 44px; min-width: 44px; padding: 0px 14px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--border); border-radius: 8px; background: transparent; color: var(--foreground); font: inherit; cursor: pointer;"
++     type="button"
++   >
++     Open
++   </button>
++ </li>
+
+ ❯ src/deck/home/Home.test.tsx:366:36
+    364|     await flush();
+    365|     expect(factory().value).toBe("sample-factory");
+    366|     expect(document.activeElement).toBe(factory());
+       |                                    ^
+    367|     fireEvent.change(factory(), { target: { value: "other-factory" } }…
+    368|     await flush();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/home/Home.test.tsx > explicit Needs-you focus through the host's panel tabs > refuses an unknown factory and never shows a stale answer for the old factory
+AssertionError: expected 'other-factory' to be 'sample-factory' // Object.is equality
+
+Expected: "sample-factory"
+Received: "other-factory"
+
+ ❯ src/deck/home/Home.test.tsx:394:29
+    392|     await flush();
+    393|     await act(async () => { releaseOld?.(); await vi.advanceTimersByTi…
+    394|     expect(factory().value).toBe("sample-factory");
+       |                             ^
+    395|     expect(screen.queryByText("other-factory spec")).toBeNull();
+    396|     expect(screen.getByText("sample-factory spec")).toBeTruthy();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 17 skipped (20)
+   Start at  19:50:12
+   Duration  1.45s (transform 234ms, setup 0ms, import 539ms, tests 325ms, environment 484ms)
+

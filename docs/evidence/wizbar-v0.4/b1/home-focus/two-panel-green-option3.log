@@ -1,0 +1,9 @@
+
+ RUN  v4.1.10 /tmp/hx3/wizbar
+
+
+ Test Files  2 passed (2)
+      Tests  24 passed (24)
+   Start at  20:08:27
+   Duration  1.92s (transform 466ms, setup 0ms, import 1.08s, tests 1.36s, environment 965ms)
+

@@ -2,6 +2,8 @@
 
 Status: contract-first record for WizBar v0.3 ([plan revision 11 on #1](https://github.com/openwizdev/wizplugins/issues/1)). It defines shapes, sources and rules before any v0.3 UI work. Nothing here is live acceptance: real-host behaviour stays Unverified until the live check (#9).
 
+WizBar 0.4 transition (#76): section 4 continues to define the retained StatsPanel component and wizbar stats CLI, including their existing calculations and unavailable states. It no longer promises a registered UI route to that component. The section 6 stats/Zap footer disclosure is historical v0.3 behavior and is removed by #76. The 0.4 running-count popover uses the factory-view.v1.md host inventory and #76 count/list rules; its totals must not be equated with the legacy stats component or CLI when their source coverage differs. All other v0.3 rules remain unchanged. Removal and live-inventory work remain gated on Cloudroom #160 and #158; this note is not release or live-acceptance evidence.
+
 Sources, read 2026-11-12 from the locked packages in `wizbar/package-lock.json`:
 
 - **SDK 0.6.33** declarations in `@get-bb/plugin-sdk/bundled-types/`: `bb-plugin-sdk-app.d.ts` (app hooks and types) and `bb-plugin-sdk.d.ts` (server `bb.sdk`). Names below are those declarations' names.

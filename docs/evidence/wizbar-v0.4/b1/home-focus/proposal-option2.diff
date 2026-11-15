@@ -1,0 +1,289 @@
+--- a/wizbar/src/deck/home/Home.tsx
++++ b/wizbar/src/deck/home/Home.tsx
+@@ -1,9 +1,10 @@
+ // WizDeck Home shell (D1, #73). Shared file: this shell is D1's. D2 adds its
+ // action insertion and F1 its live/fleet insertion at the marked slots only.
+-import { useEffect, useState } from "react";
++import { useEffect, useRef, useState } from "react";
+ import { useBbContext, useBbNavigate } from "@get-bb/plugin-sdk/app";
+ import type { FocusRequestV1 } from "../../factory-contract";
+ import { useDeckHome } from "./useDeckHome";
++import { useWizDeckFocusEvent } from "../selection/selection";
+ import { HealthRow, NeedsYou, Versions, homeCss, tapTarget } from "./sections";
+ 
+ const INTRO_KEY = "wizdeck.intro.v1";
+@@ -35,13 +36,43 @@
+   // A view is shown only for the factory it was built for: switching never leaks rows.
+   const view = result?.view && result.view.projectKey === projectKey ? result.view : null;
+   const open = (url: string) => { navigate.openUrl(url); };
+-  const focusedItemId = focus && focus.projectKey === projectKey ? focus.itemId : null;
+   const now = Date.now();
+ 
++  // An explicit Needs-you open (never a selection update) is a request: select
++  // its factory if it is configured, then focus its item once that factory's
++  // view has loaded. `select` drops the other factory's rows and any answer
++  // still in flight. Each request focuses once; refreshes, rerenders and
++  // manual factory switches never move focus.
++  const [request, setRequest] = useState<{ focus: FocusRequestV1; tick: number } | null>(null);
++  const [applied, setApplied] = useState<(FocusRequestV1 & { tick: number }) | null>(null);
++  const ticks = useRef(0);
++  const focusedTick = useRef(0);
++  const askFocus = (next: FocusRequestV1) => setRequest({ focus: next, tick: ++ticks.current });
++  // The host opened or reactivated this tab with a focus.
++  useEffect(() => { if (focus) askFocus(focus); }, [focus]);
++  // The same click again, while this tab is already open: the host changes
++  // nothing visible here, so the opener's event carries it. Only this tab's own
++  // focus answers; an event before this panel mounted arrived in its params.
++  const event = useWizDeckFocusEvent();
++  const seenEvent = useRef(event?.seq ?? 0);
+   useEffect(() => {
+-    if (!focusedItemId || !view) return;
+-    document.getElementById(`wizdeck-need-${focusedItemId}`)?.focus();
+-  }, [focusedItemId, view !== null]);
++    if (!event || event.seq <= seenEvent.current) return;
++    seenEvent.current = event.seq;
++    if (focus && event.focus.projectKey === focus.projectKey && event.focus.itemId === focus.itemId) askFocus(event.focus);
++  }, [event]);
++  useEffect(() => {
++    if (!request || !result) return;
++    setRequest(null);
++    if (!result.projects.some((project) => project.projectKey === request.focus.projectKey)) return; // Unknown factory: refused.
++    if (projectKey !== request.focus.projectKey) deck.select(request.focus.projectKey);
++    setApplied({ ...request.focus, tick: request.tick });
++  }, [request, result]);
++  const focusedItemId = applied && applied.projectKey === projectKey ? applied.itemId : null;
++  useEffect(() => {
++    if (!applied || applied.tick === focusedTick.current || !view || view.projectKey !== applied.projectKey) return;
++    focusedTick.current = applied.tick;
++    document.getElementById(`wizdeck-need-${applied.itemId}`)?.focus();
++  }, [applied, view]);
+ 
+   return (
+     <div className="wizdeck-home" style={{ padding: "4px 16px 16px", fontSize: 14, lineHeight: "20px", color: "var(--foreground)" }}>
+@@ -51,7 +82,7 @@
+         {result && result.projects.length > 0 && (
+           <label style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+             <span style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }}>Factory</span>
+-            <select value={projectKey ?? ""} onChange={(event) => deck.select(event.target.value)}
++            <select aria-label="Factory" value={projectKey ?? ""} onChange={(event) => deck.select(event.target.value)}
+               style={{ ...tapTarget, padding: "0 10px", background: "var(--background)" }}>
+               {result.projects.map((project) => <option key={project.projectKey} value={project.projectKey}>{project.projectKey}</option>)}
+             </select>
+--- a/wizbar/src/deck/home/Home.test.tsx
++++ b/wizbar/src/deck/home/Home.test.tsx
+@@ -1,6 +1,7 @@
+ // @vitest-environment jsdom
+ // D1 (#73) rendered proofs: the real WizDeck panel through the SDK's slot
+ // harness, with synthetic backend answers. Fixtures prove no live host.
++import { createElement, useMemo, useState } from "react";
+ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+ import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
+ import { loadPluginApp, renderSlot } from "@get-bb/plugin-sdk/testing/app";
+@@ -9,6 +10,7 @@
+ import type { BoardV1 } from "../data/board";
+ import { openWizDeck, setSelection, WIZDECK_ACTION_ID } from "../selection/selection";
+ import { WizDeckNewThreadPanel, WizDeckPanel } from "./Panel";
++import { HEARTBEAT_MS } from "./useDeckHome";
+ 
+ const NOW = Date.parse("2026-11-15T20:30:00Z");
+ const app = await loadPluginApp(() => import("../../../app"));
+@@ -257,3 +259,141 @@
+     act(() => { setSelection({ kind: "none" }); });
+   });
+ });
++
++// ---- Explicit Needs-you focus through host-equivalent panel tabs -------------
++// Models Cloudroom 827a3d03's panel tabs (cited in B1's evidence): params are
++// serialized (`serializePluginPanelParams`), the tab id includes that string
++// (`createPluginPanelFixedPanelTab`), an existing tab is reactivated, not
++// recreated (`useThreadFileTabs.openPluginPanel`), only the active tab's content
++// renders, unkeyed, under a slot keyed by plugin/action/generation
++// (`ThreadSecondaryPanel`, `PluginPanelActions`), and params are memoized by
++// their serialized value (`usePersistedActionParams`).
++const host = { tabs: [] as { id: string; kind: "wizdeck" | "file"; paramsJson: string | null }[], active: null as string | null, bump: () => {} };
++const hostOpen = {
++  openThreadPanel(options: { actionId: string; params?: unknown }) {
++    const paramsJson = options.params === undefined ? null : JSON.stringify(options.params);
++    const id = `wizbar:${options.actionId}:${paramsJson ?? ""}`;
++    if (!host.tabs.some((tab) => tab.id === id)) host.tabs = [...host.tabs, { id, kind: "wizdeck", paramsJson }];
++    host.active = id;
++    host.bump();
++    return true;
++  },
++};
++function HostTabContent({ paramsJson }: { paramsJson: string | null }) {
++  const params = useMemo(() => (paramsJson === null ? null : JSON.parse(paramsJson)), [paramsJson]);
++  return createElement(WizDeckPanel, { key: "thread/wizbar/wizdeck/1", threadId: "thr_any", params });
++}
++function HostPanel() {
++  const [, setVersion] = useState(0);
++  host.bump = () => setVersion((v) => v + 1);
++  const active = host.tabs.find((tab) => tab.id === host.active);
++  if (!active) return null;
++  return active.kind === "file" ? createElement("p", null, "A file tab") : createElement(HostTabContent, { paramsJson: active.paramsJson });
++}
++const factory = () => screen.getByRole("combobox", { name: "Factory" }) as HTMLSelectElement;
++const click = (projectKey: string, itemId = "n12") =>
++  act(() => { openWizDeck(hostOpen as never, { kind: "needs-you", projectKey, itemId }); });
++
++describe("explicit Needs-you focus through the host's panel tabs", () => {
++  beforeEach(() => { host.tabs = []; host.active = null; });
++
++  function start(watch: (input: { projectKey: string | null }) => unknown = (input) => result(input.projectKey === "sample-factory" ? "sample-factory" : "other-factory")) {
++    const slot = renderSlot({ component: HostPanel }, {}, {
++      rpc: { deckWatch: watch, deckRelease: () => ({ ok: true }) } as never, context: { projectId: "prj_b", threadId: "thr_any" },
++    });
++    act(() => { openWizDeck(hostOpen as never); });
++    return { slot, watch };
++  }
++
++  // Bug caught: a Needs-you click for factory A, with the panel on factory B,
++  // opens WizDeck without showing or focusing the item; and a second click on
++  // the same item, after switching away, does nothing.
++  it("selects the requested factory and focuses its exact item on every deliberate click, without new tabs", async () => {
++    start();
++    await flush();
++    expect(factory().value).toBe("other-factory");
++    await click("sample-factory");
++    await flush();
++    expect(factory().value).toBe("sample-factory");
++    expect(screen.queryByText("other-factory spec")).toBeNull();
++    expect(document.activeElement?.id).toBe("wizdeck-need-n12");
++    expect(host.tabs).toHaveLength(2);
++
++    // The person switches away inside the same tab, then clicks the same item again.
++    fireEvent.change(factory(), { target: { value: "other-factory" } });
++    await flush();
++    factory().focus();
++    await click("sample-factory");
++    await flush();
++    expect(factory().value).toBe("sample-factory");
++    expect(document.activeElement?.id).toBe("wizdeck-need-n12");
++    expect(host.tabs).toHaveLength(2);
++
++    // Again with no factory change: focus returns to the item.
++    factory().focus();
++    await click("sample-factory");
++    await flush();
++    expect(document.activeElement?.id).toBe("wizdeck-need-n12");
++    // After a different tab was active, the reactivated tab still focuses it.
++    act(() => { host.tabs = [...host.tabs, { id: "file:x", kind: "file", paramsJson: null }]; host.active = "file:x"; host.bump(); });
++    await click("sample-factory");
++    await flush();
++    expect(document.activeElement?.id).toBe("wizdeck-need-n12");
++    expect(host.tabs.filter((tab) => tab.kind === "wizdeck")).toHaveLength(2);
++  });
++
++  // Bug caught: ordinary selection, a rerender or a background refresh switching
++  // the factory, scrolling or taking focus back to an old item.
++  it("never switches, scrolls or steals focus without a deliberate click", async () => {
++    Element.prototype.scrollIntoView ??= function scrollIntoView() {};
++    const scroll = vi.spyOn(Element.prototype, "scrollIntoView");
++    const { slot } = start();
++    await flush();
++    await click("sample-factory");
++    await flush();
++    fireEvent.change(factory(), { target: { value: "other-factory" } });
++    await flush();
++    factory().focus();
++    act(() => { setSelection({ kind: "spec", projectKey: "sample-factory", spec: "example-org/sample-app#41" }); });
++    await act(async () => { await vi.advanceTimersByTimeAsync(HEARTBEAT_MS); }); // background re-read
++    slot.rerender(createElement(HostPanel));
++    await flush();
++    // Switching back by hand is not a click either.
++    fireEvent.change(factory(), { target: { value: "sample-factory" } });
++    factory().focus();
++    await flush();
++    expect(factory().value).toBe("sample-factory");
++    expect(document.activeElement).toBe(factory());
++    fireEvent.change(factory(), { target: { value: "other-factory" } });
++    await flush();
++    expect(factory().value).toBe("other-factory");
++    expect(document.activeElement).toBe(factory());
++    expect(scroll).not.toHaveBeenCalled();
++    act(() => { setSelection({ kind: "none" }); });
++    scroll.mockRestore();
++  });
++
++  // Bug caught: a focus naming an unconfigured factory switching away, or a late
++  // answer for the old factory painting its rows under the requested one.
++  it("refuses an unknown factory and never shows a stale answer for the old factory", async () => {
++    let releaseOld: (() => void) | null = null;
++    const watch = vi.fn((input: { projectKey: string | null }) => {
++      if (input.projectKey === "sample-factory") return result("sample-factory");
++      if (watch.mock.calls.length > 1) return new Promise((resolve) => { releaseOld = () => resolve(result("other-factory")); });
++      return result("other-factory");
++    });
++    start(watch);
++    await flush();
++    await click("unknown-factory");
++    await flush();
++    expect(factory().value).toBe("other-factory");
++    await act(async () => { await vi.advanceTimersByTimeAsync(HEARTBEAT_MS); }); // an old-factory read is now in flight
++    await click("sample-factory");
++    await flush();
++    await act(async () => { releaseOld?.(); await vi.advanceTimersByTimeAsync(0); });
++    expect(factory().value).toBe("sample-factory");
++    expect(screen.queryByText("other-factory spec")).toBeNull();
++    expect(screen.getByText("sample-factory spec")).toBeTruthy();
++    expect(document.activeElement?.id).toBe("wizdeck-need-n12");
++  });
++});
+--- a/wizbar/src/deck/home/Panel.tsx
++++ b/wizbar/src/deck/home/Panel.tsx
+@@ -1,12 +1,16 @@
+ // WizDeck's right-panel tabs (D1, #73). A thread panel shows Home; the New
+ // thread screen has no thread, so it asks the person to open one.
++import { useMemo } from "react";
+ import type { PluginNewThreadPanelProps, PluginThreadPanelProps } from "@get-bb/plugin-sdk";
+ import { readWizDeckParams } from "../selection/selection";
+ import { Home } from "./Home";
+ 
+ export function WizDeckPanel({ params }: PluginThreadPanelProps) {
+   // The thread this panel sits beside is ignored on purpose: it never chooses the factory.
+-  return <Home focus={readWizDeckParams(params).focus} />;
++  // One focus object per host params object: the host memoizes params by their
++  // serialized value, so a new object means this tab was opened or reactivated.
++  const focus = useMemo(() => readWizDeckParams(params).focus, [params]);
++  return <Home focus={focus} />;
+ }
+ 
+ export function WizDeckNewThreadPanel(_: PluginNewThreadPanelProps) {
+--- a/wizbar/src/deck/selection/selection.ts
++++ b/wizbar/src/deck/selection/selection.ts
+@@ -48,7 +48,34 @@
+  */
+ export function openWizDeck(navigate: Pick<BbNavigate, "openThreadPanel">, focus: FocusRequestV1 | null = null): boolean {
+   const params: WizDeckParamsV1 = { focus: focus ? { kind: "needs-you", projectKey: focus.projectKey, itemId: focus.itemId } : null };
+-  return navigate.openThreadPanel({ actionId: WIZDECK_ACTION_ID, params: params as unknown as JsonValue });
++  const accepted = navigate.openThreadPanel({ actionId: WIZDECK_ACTION_ID, params: params as unknown as JsonValue });
++  if (accepted && params.focus) {
++    focusEvent = { seq: (focusEvent?.seq ?? 0) + 1, focus: params.focus };
++    for (const listener of [...focusListeners]) listener();
++  }
++  return accepted;
++}
++
++/**
++ * One event per explicit Needs-you open the host accepted (plugin-local, in
++ * this one plugin runtime; never persisted or sent). The host reactivates an
++ * already-open tab with identical params without any change a mounted panel
++ * can see, so a repeated click reaches that panel only through this event.
++ */
++export interface WizDeckFocusEventV1 {
++  seq: number;
++  focus: FocusRequestV1;
++}
++let focusEvent: WizDeckFocusEventV1 | null = null;
++const focusListeners = new Set<() => void>();
++const getFocusEvent = () => focusEvent;
++const subscribeFocusEvent = (listener: () => void) => {
++  focusListeners.add(listener);
++  return () => { focusListeners.delete(listener); };
++};
++
++export function useWizDeckFocusEvent(): WizDeckFocusEventV1 | null {
++  return useSyncExternalStore(subscribeFocusEvent, getFocusEvent, getFocusEvent);
+ }
+ 
+ /** Read a tab's persisted params; anything unexpected is no focus. */

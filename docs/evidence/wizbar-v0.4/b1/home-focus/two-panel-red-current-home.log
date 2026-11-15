@@ -1,0 +1,160 @@
+
+ RUN  v4.1.10 /tmp/hx3/wizbar
+
+stderr | src/deck/home/focus-recipient.test.tsx > explicit Needs-you focus reaches only the panel the host opened > with two mounted panels holding the same focus, a click switches and focuses only the focused pane's panel
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+stderr | src/deck/home/focus-recipient.test.tsx > explicit Needs-you focus reaches only the panel the host opened > with two mounted panels holding the same focus, a click switches and focuses only the focused pane's panel
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+stderr | src/deck/home/focus-recipient.test.tsx > explicit Needs-you focus reaches only the panel the host opened > selects the factory but never pulls focus back when the pane changes while the data loads
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+stderr | src/deck/home/focus-recipient.test.tsx > explicit Needs-you focus reaches only the panel the host opened > ordinary selection, rerenders, refreshes and manual switches never switch, scroll or steal focus
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+stderr | src/deck/home/focus-recipient.test.tsx > explicit Needs-you focus reaches only the panel the host opened > refuses an unknown factory and never shows a stale answer for the old factory
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+ ❯ |bb-plugin-wizbar| src/deck/home/focus-recipient.test.tsx (7 tests | 5 failed) 540ms
+     × with two mounted panels holding the same focus, a click switches and focuses only the focused pane's panel 208ms
+     × selects the factory but never pulls focus back when the pane changes while the data loads 48ms
+     × delivers an undelivered click once on mount, never to a disposed panel, and never twice 23ms
+     × ordinary selection, rerenders, refreshes and manual switches never switch, scroll or steal focus 73ms
+     × refuses an unknown factory and never shows a stale answer for the old factory 53ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/home/focus-recipient.test.tsx > explicit Needs-you focus reaches only the panel the host opened > with two mounted panels holding the same focus, a click switches and focuses only the focused pane's panel
+AssertionError: expected 'other-factory' to be 'sample-factory' // Object.is equality
+
+Expected: "sample-factory"
+Received: "other-factory"
+
+ ❯ src/deck/home/focus-recipient.test.tsx:161:37
+    159|     setRoute("thr_t2"); await click(); await flush();   // T2 focused:…
+    160|     expect(tabCount()).toBe(2);
+    161|     expect(factory("thr_t1").value).toBe("sample-factory");
+       |                                     ^
+    162|     expect(factory("thr_t2").value).toBe("sample-factory");
+    163|     // The person moves both panels to factory B by hand.
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/home/focus-recipient.test.tsx > explicit Needs-you focus reaches only the panel the host opened > selects the factory but never pulls focus back when the pane changes while the data loads
+AssertionError: expected 'other-factory' to be 'sample-factory' // Object.is equality
+
+Expected: "sample-factory"
+Received: "other-factory"
+
+ ❯ src/deck/home/focus-recipient.test.tsx:221:37
+    219|     elsewhere.focus();
+    220|     await act(async () => { release?.(); await vi.advanceTimersByTimeA…
+    221|     expect(factory("thr_t1").value).toBe("sample-factory");
+       |                                     ^
+    222|     expect(document.activeElement).toBe(elsewhere);
+    223|     await act(async () => { await vi.advanceTimersByTimeAsync(HEARTBEA…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/home/focus-recipient.test.tsx > explicit Needs-you focus reaches only the panel the host opened > delivers an undelivered click once on mount, never to a disposed panel, and never twice
+AssertionError: expected 'other-factory' to be 'sample-factory' // Object.is equality
+
+Expected: "sample-factory"
+Received: "other-factory"
+
+ ❯ src/deck/home/focus-recipient.test.tsx:234:37
+    232|     await click(); await flush(); // accepted while T1's pane is not m…
+    233|     shown.t1 = true; refreshWindow(); await flush();
+    234|     expect(factory("thr_t1").value).toBe("sample-factory");
+       |                                     ^
+    235|     expect(document.activeElement).toBe(itemIn("thr_t1"));
+    236|     // Switch away, dispose and remount: no replay.
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/home/focus-recipient.test.tsx > explicit Needs-you focus reaches only the panel the host opened > ordinary selection, rerenders, refreshes and manual switches never switch, scroll or steal focus
+AssertionError: expected <li id="wizdeck-need-n12" …(3)>…(2)</li> to be <select …(1)>…(2)</select> // Object.is equality
+
+- Expected
++ Received
+
+- <select
+-   style="min-height: 44px; min-width: 44px; padding: 0px 10px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--border); border-radius: 8px; background: var(--background); color: var(--foreground); font: inherit; cursor: pointer;"
++ <li
++   data-focused="true"
++   id="wizdeck-need-n12"
++   style="display: flex; gap: 12px; align-items: flex-start; padding: 8px 0px; border-bottom: 1px solid var(--border); outline: 1px solid var(--wizdeck-lime, #c6f432);"
++   tabindex="-1"
+  >
+-   <option
+-     value="sample-factory"
++   <div
++     style="flex: 1 1 0%; min-width: 0px;"
+    >
+-     sample-factory
+-   </option>
+-   <option
+-     value="other-factory"
++     <p
++       style="margin: 0px; font-weight: 600;"
+      >
+-     other-factory
+-   </option>
+- </select>
++       N-12
++        · 
++       Which changelog headline ships?
++     </p>
++     <p
++       style="color: var(--muted-foreground); margin: 2px 0px 0px;"
++     >
++       Options: 
++       Short headline (rec) · Long headline
++     </p>
++   </div>
++   <button
++     style="min-height: 44px; min-width: 44px; padding: 0px 14px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--border); border-radius: 8px; background: transparent; color: var(--foreground); font: inherit; cursor: pointer;"
++     type="button"
++   >
++     Open
++   </button>
++ </li>
+
+ ❯ src/deck/home/focus-recipient.test.tsx:267:36
+    265|     fireEvent.change(factory("thr_t1"), { target: { value: "sample-fac…
+    266|     await flush();
+    267|     expect(document.activeElement).toBe(factory("thr_t1"));
+       |                                    ^
+    268|     expect(slot.inspection.navigateCalls).toEqual([]);
+    269|     expect(scroll).not.toHaveBeenCalled();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/home/focus-recipient.test.tsx > explicit Needs-you focus reaches only the panel the host opened > refuses an unknown factory and never shows a stale answer for the old factory
+AssertionError: expected 'other-factory' to be 'sample-factory' // Object.is equality
+
+Expected: "sample-factory"
+Received: "other-factory"
+
+ ❯ src/deck/home/focus-recipient.test.tsx:291:37
+    289|     await click("sample-factory"); await flush();
+    290|     await act(async () => { releaseOld?.(); await vi.advanceTimersByTi…
+    291|     expect(factory("thr_t1").value).toBe("sample-factory");
+       |                                     ^
+    292|     expect(pane("thr_t1").queryByText("other-factory spec")).toBeNull(…
+    293|     expect(document.activeElement).toBe(itemIn("thr_t1"));
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/5]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  5 failed | 2 passed (7)
+   Start at  20:08:36
+   Duration  1.67s (transform 245ms, setup 0ms, import 541ms, tests 540ms, environment 485ms)
+

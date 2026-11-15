@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { createElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, screen } from "@testing-library/react";
+import { cleanup, fireEvent, screen, within } from "@testing-library/react";
 import type { PluginSidebarThreadsState } from "@get-bb/plugin-sdk";
 import { loadPluginApp, renderSlot } from "@get-bb/plugin-sdk/testing/app";
 import { getSourceStatuses } from "./settings";
@@ -98,7 +98,7 @@ describe("W3: synthetic footer artwork through the SDK rendering harness", () =>
     await screen.findByRole("region", { name: "Muted" });
     const shelf = await screen.findByRole("region", { name: "Settled" });
     fireEvent.click(shelf.querySelector("button")!);
-    expect(footer.container.querySelector('[role="status"]')?.textContent).toBe("2");
+    expect(footer.container.querySelector('[role="status"]')?.textContent).toBe("2 running");
     fireEvent.keyDown(screen.getByLabelText(/Project scope/), { key: "Enter" });
     fireEvent.click(screen.getByRole("option", { name: "Sample B" }));
     inbox.rerender(createElement(app.threadLists[0]!.component, {
@@ -106,7 +106,7 @@ describe("W3: synthetic footer artwork through the SDK rendering harness", () =>
       searchQuery: "no matching row", onNavigate() {},
     }));
     expect(inbox.container.querySelectorAll('[role="listitem"]')).toHaveLength(0);
-    expect(footer.container.querySelector('[role="status"]')?.textContent).toBe("2");
+    expect(footer.container.querySelector('[role="status"]')?.textContent).toBe("2 running");
   });
 });
 
@@ -116,20 +116,24 @@ describe("W3: synthetic footer artwork through the SDK rendering harness", () =>
 // gap passes its own copy, as a host would hand over a new snapshot.
 describe("N4: approved observable footer route", () => {
   const icon = line;
-  // WZ20 (#41): one disclosure with a named host icon and a fixed label
-  // replaces the no-op action and its count artwork icon.
-  it("registers one fixed-label disclosure on the host's bolt icon and no count artwork", () => {
+  // B1 (#76): the WZ20 bolt is gone. Bug caught: an obsolete footer bolt (or
+  // its stats disclosure) left registered beside the new count, so the footer
+  // offers a second, differently scoped running number.
+  it("registers no footer bolt, disclosure, action or icon", () => {
+    expect(app.experimentalSidebarFooterItems).toEqual([]);
     expect(app.sidebarFooterActions).toEqual([]);
     expect(app.icons).toEqual([]);
-    expect(app.experimentalSidebarFooterItems).toHaveLength(1);
-    // The harness adds its own `runtime` and `source`; the rest is the registration.
-    const { runtime: _runtime, source: _source, ...item } = app.experimentalSidebarFooterItems[0]! as typeof app.experimentalSidebarFooterItems[0] & { source?: string };
-    expect(item).toEqual({ id: "stats", kind: "disclosure", label: "WizBar stats", icon: "Zap", component: expect.any(Function) });
-    renderSlot({ component: item.kind === "disclosure" ? item.component : () => null }, { dismiss() {} }, {
-      sidebarThreads: { status: "ready", threads: v3Threads },
-    });
-    expect(app.experimentalSidebarFooterItems).toHaveLength(1);
-    expect(app.experimentalSidebarFooterItems[0]!.label).toBe("WizBar stats");
+  });
+
+  // B1 (#76): the count's route is the registered thread list itself. Bug
+  // caught: a count with no way to reach the threads it counts.
+  it("reaches the counted rows from the registered thread list's count", () => {
+    renderSlot(app.threadLists[0]!, {
+      activeThreadId: null, activeProjectId: null, isCompactViewport: false, searchQuery: "", onNavigate() {},
+    }, { sidebarThreads: { status: "ready", threads: [...positiveThreads] }, rpc: { listLifecycle: () => ({ rows: [] }) } });
+    fireEvent.click(screen.getByRole("button", { name: "2 running" }));
+    expect(within(screen.getByRole("dialog")).getAllByRole("link").map((link) => link.getAttribute("data-thread-id")).sort())
+      .toEqual(["sample-child", "sample-parent"]);
   });
 
   it("reads raw observable projects/children and publishes unverified coverage", () => {
@@ -137,11 +141,15 @@ describe("N4: approved observable footer route", () => {
       pluginId: "synthetic-running-source", sidebarThreads: { status: "ready", threads: [...positiveThreads, positiveThreads[0]!] },
     });
     const counter = screen.getByRole("status", { name: "2 running" });
-    expect(counter.textContent).toBe("2");
+    expect(counter.textContent).toBe("2 running");
     expect(getSourceStatuses("synthetic-running-source").footer).toBe("unverified");
-    fireEvent.mouseEnter(counter);
-    expect(screen.getByRole("tooltip").textContent).toBe("2 running · subagents not counted yet · some threads may be unseen");
-    fireEvent.click(counter);
+    // B1 (#76): an older host's sidebar rows say so, and add no subagent number.
+    fireEvent.mouseEnter(screen.getByRole("button", { name: "2 running" }));
+    const popover = screen.getByRole("dialog");
+    expect(popover.textContent).toContain("some running threads may be unseen");
+    expect(popover.textContent).not.toMatch(/subagent/i);
+    expect(within(popover).getAllByRole("link")).toHaveLength(2);
+    fireEvent.click(screen.getByRole("button", { name: "2 running" }));
     expect(rendered.sdkCalls).toEqual([]);
     expect(rendered.rpcCalls).toEqual([]);
     expect(rendered.navigateCalls).toEqual([]);
@@ -229,7 +237,7 @@ describe("V3: the list-bottom line counts the one running rule", () => {
   const base = v3Threads.find(({ id }) => id === "thr_v3_pinned_idle")!;
   it("shows the stats panel's running total for the fixture rows", () => {
     renderSlot(line, {}, { sidebarThreads: { status: "ready", threads: v3Threads } });
-    expect(screen.getByRole("status", { name: "4 running" }).textContent).toBe("4");
+    expect(screen.getByRole("status", { name: "4 running" }).textContent).toBe("4 running");
   });
   it.each([
     ["busy but waiting on you", { hasPendingInteraction: true, indicator: "waiting-for-input" as const,
@@ -238,7 +246,7 @@ describe("V3: the list-bottom line counts the one running rule", () => {
     ["runtime work behind no indicator", { status: "active" as const, runtimeStatus: "active" as const }, "1"],
   ])("counts %s by runtime work, not the indicator", (_, overrides, expected) => {
     renderSlot(line, {}, { sidebarThreads: { status: "ready", threads: [{ ...base, ...overrides }] } });
-    expect(screen.getByRole("status", { name: `${expected} running` }).textContent).toBe(expected);
+    expect(screen.getByRole("status", { name: `${expected} running` }).textContent).toBe(`${expected} running`);
   });
   it("hides the number when a row's runtime status is unrecognised", () => {
     const rendered = renderSlot(line, {}, { sidebarThreads: { status: "ready",

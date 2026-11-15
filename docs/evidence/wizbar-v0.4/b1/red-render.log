@@ -1,0 +1,1078 @@
+
+ RUN  v4.1.10 /code/work/WizPlugins/wizbar
+
+ ❯ |bb-plugin-wizbar| src/sidebar-v4/sidebar-v4.test.tsx (8 tests | 7 failed) 1406ms
+     × lists every counted row once, hidden, muted, child and absent-parent rows included 255ms
+     × keeps its all-project count and rows when the sidebar's search and project scope narrow the list 32ms
+     × shows a host's empty running list as zero with no rows, and no number while the host rows are loading 8ms
+     × says when an older host gives no running inventory, and still lists what it counts 11ms
+     × opens on hover and focus, latches on click, and dismisses on Escape and an outside click 8ms
+     × opens a row natively, closes, and never navigates or changes the conversation by itself 7ms
+     × starts collapsed, then lists running children first with an unknown total, each opening natively 1029ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 7 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/sidebar-v4/sidebar-v4.test.tsx > B1 P6: the count equals the rows it opens > lists every counted row once, hidden, muted, child and absent-parent rows included
+TestingLibraryElementError: Unable to find an accessible element with the role "button" and name "7 running"
+
+Here are the accessible roles:
+
+  combobox:
+
+  Name "Project scope: All projects":
+  <button
+    aria-autocomplete="none"
+    aria-expanded="false"
+    aria-label="Project scope: All projects"
+    class="flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"
+    data-state="closed"
+    dir="ltr"
+    role="combobox"
+    type="button"
+  />
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  <p
+    class="sr-only"
+  />
+
+  --------------------------------------------------
+  list:
+
+  Name "":
+  <ul
+    class="flex flex-col gap-px"
+  />
+
+  --------------------------------------------------
+  listitem:
+
+  Name "":
+  <li
+    class="list-none"
+    data-state="closed"
+  />
+
+  Name "":
+  <li
+    class="list-none"
+    data-state="closed"
+  />
+
+  Name "":
+  <li
+    class="list-none"
+    data-state="closed"
+  />
+
+  --------------------------------------------------
+  link:
+
+  Name "Hidden root":
+  <a
+    aria-label="Hidden root"
+    class="absolute inset-0 cursor-pointer rounded-md"
+    data-sidebar-thread-id="thr_b1_hidden"
+    data-sidebar-thread-shortcut-target=""
+    href="#"
+  />
+
+  Name "Spec 41 manager":
+  <a
+    aria-label="Spec 41 manager"
+    class="absolute inset-0 cursor-pointer rounded-md"
+    data-sidebar-thread-id="thr_b1_manager"
+    data-sidebar-thread-shortcut-target=""
+    href="#"
+  />
+
+  Name "Release prep":
+  <a
+    aria-label="Release prep"
+    class="absolute inset-0 cursor-pointer rounded-md"
+    data-sidebar-thread-id="thr_b1_release"
+    data-sidebar-thread-shortcut-target=""
+    href="#"
+  />
+
+  --------------------------------------------------
+  img:
+
+  Name "Cloud":
+  <span
+    aria-label="Cloud"
+    class="pointer-events-none relative flex size-3.5 shrink-0 items-center justify-center text-muted-foreground"
+    role="img"
+    title="Cloud"
+  />
+
+  Name "Codex":
+  <svg
+    aria-label="Codex"
+    class="size-3 text-muted-foreground/70"
+    fill="currentColor"
+    fill-rule="evenodd"
+    role="img"
+    viewBox="0 0 24 24"
+  />
+
+  Name "Cloud":
+  <span
+    aria-label="Cloud"
+    class="pointer-events-none relative flex size-3.5 shrink-0 items-center justify-center text-muted-foreground"
+    role="img"
+    title="Cloud"
+  />
+
+  Name "Codex":
+  <svg
+    aria-label="Codex"
+    class="size-3 text-muted-foreground/70"
+    fill="currentColor"
+    fill-rule="evenodd"
+    role="img"
+    viewBox="0 0 24 24"
+  />
+
+  Name "Cloud":
+  <span
+    aria-label="Cloud"
+    class="pointer-events-none relative flex size-3.5 shrink-0 items-center justify-center text-muted-foreground"
+    role="img"
+    title="Cloud"
+  />
+
+  Name "Codex":
+  <svg
+    aria-label="Codex"
+    class="size-3 text-muted-foreground/70"
+    fill="currentColor"
+    fill-rule="evenodd"
+    role="img"
+    viewBox="0 0 24 24"
+  />
+
+  --------------------------------------------------
+  group:
+
+  Name "Thread details":
+  <div
+    aria-label="Thread details"
+    class="pointer-events-none relative mt-1 flex min-w-0 flex-wrap items-center gap-1 text-2xs text-muted-foreground"
+    role="group"
+  />
+
+  Name "Thread details":
+  <div
+    aria-label="Thread details"
+    class="pointer-events-none relative mt-1 flex min-w-0 flex-wrap items-center gap-1 text-2xs text-muted-foreground"
+    role="group"
+  />
+
+  Name "Thread details":
+  <div
+    aria-label="Thread details"
+    class="pointer-events-none relative mt-1 flex min-w-0 flex-wrap items-center gap-1 text-2xs text-muted-foreground"
+    role="group"
+  />
+
+  --------------------------------------------------
+  button:
+
+  Name "3 children":
+  <button
+    aria-expanded="false"
+    aria-haspopup="dialog"
+    class="max-w-full rounded border border-border px-1 leading-4 [overflow-wrap:anywhere] hover:bg-accent hover:text-foreground"
+    type="button"
+  />
+
+  Name "Snooze until tomorrow":
+  <button
+    aria-label="Snooze until tomorrow"
+    class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+    type="button"
+  />
+
+  Name "Settle thread":
+  <button
+    aria-label="Settle thread"
+    class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+    type="button"
+  />
+
+  --------------------------------------------------
+  status:
+
+  Name "4 running":
+  <span
+    aria-label="4 running"
+    aria-live="polite"
+    class="shrink-0 border-t border-sidebar-border px-3 py-1"
+    role="status"
+    style="position: relative; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-variant-numeric: tabular-nums; line-height: 20px; color: var(--foreground);"
+    tabindex="0"
+  />
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="flex min-h-0 flex-1 flex-col"
+    >
+      <div
+        class="flex shrink-0 items-center gap-1 px-2 pb-1"
+      >
+        <button
+          aria-autocomplete="none"
+          aria-expanded="false"
+          aria-label="Project scope: All projects"
+          class="flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"
+          data-state="closed"
+          dir="ltr"
+          role="combobox"
+          type="button"
+        >
+          <span
+            style="pointer-events: none;"
+          >
+            All projects
+          </span>
+          <svg
+            aria-hidden="true"
+            class="size-4 opacity-50"
+            color="currentColor"
+            data-icon="ChevronDown"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+      </div>
+      <div
+        class="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2"
+      >
+        <p
+          class="sr-only"
+        >
+          Drag a card into Pinned to pin it, out to unpin it, or inside Pinned to reorder it. With a card focused, Alt+Up and Alt+Down do the same.
+        </p>
+        <section>
+          <ul
+            class="flex flex-col gap-px"
+          >
+            <li
+              class="list-none"
+              data-state="closed"
+            >
+              <div
+                class="group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"
+              >
+                <a
+                  aria-label="Hidden root"
+                  class="absolute inset-0 cursor-pointer rounded-md"
+                  data-sidebar-thread-id="thr_b1_hidden"
+                  data-sidebar-thread-shortcut-target=""
+                  href="#"
+                />
+                <div
+                  class="pointer-events-none relative flex h-5 items-center gap-1.5"
+                >
+                  <span
+                    class="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"
+                  >
+                     
+                  </span>
+                  <span
+                    aria-label="Cloud"
+                    class="pointer-events-none relative flex size-3.5 shrink-0 items-center justify-center text-muted-foreground"
+                    role="img"
+                    title="Cloud"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      class="size-3.5"
+                      color="currentColor"
+                      data-icon="Cloud"
+                      fill="none"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      width="24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M17.4776 10.0001C17.485 10 17.4925 10 17.5 10C19.9853 10 22 12.0147 22 14.5C22 16.9853 19.9853 19 17.5 19H7C4.23858 19 2 16.7614 2 14C2 11.4003 3.98398 9.26407 6.52042 9.0227M17.4776 10.0001C17.4924 9.83536 17.5 9.66856 17.5 9.5C17.5 6.46243 15.0376 4 12 4C9.12324 4 6.76233 6.20862 6.52042 9.0227M17.4776 10.0001C17.3753 11.1345 16.9286 12.1696 16.2428 13M6.52042 9.0227C6.67826 9.00768 6.83823 9 7 9C8.12582 9 9.16474 9.37209 10.0005 10"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="1.5"
+                      />
+                    </svg>
+                  </span>
+                  <span
+                    class="flex w-7 shrink-0 items-center justify-end"
+                  >
+                    <svg
+                      class="size-3.5 shrink-0 animate-spin text-muted-foreground/50"
+                      color="currentColor"
+                      data-icon="Loading"
+                      fill="none"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      width="24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M12 3V6"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-width="1.5"
+                      />
+                      <path
+                        d="M12 18V21"
+            ...
+ ❯ counter src/sidebar-v4/sidebar-v4.test.tsx:31:48
+     29|   return { status: "ready", threads, runningThreads, childrenByParentI…
+     30| };
+     31| const counter = (name = "7 running") => screen.getByRole("button", { n…
+       |                                                ^
+     32| const dialog = () => screen.queryByRole("dialog");
+     33| const rowLinks = () => within(dialog()!).getAllByRole("link");
+ ❯ src/sidebar-v4/sidebar-v4.test.tsx:45:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/7]⎯
+
+ FAIL  |bb-plugin-wizbar| src/sidebar-v4/sidebar-v4.test.tsx > B1 P6: the count equals the rows it opens > keeps its all-project count and rows when the sidebar's search and project scope narrow the list
+TestingLibraryElementError: Unable to find an accessible element with the role "button" and name "7 running"
+
+Here are the accessible roles:
+
+  combobox:
+
+  Name "Project scope: All projects":
+  <button
+    aria-autocomplete="none"
+    aria-expanded="false"
+    aria-label="Project scope: All projects"
+    class="flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"
+    data-state="closed"
+    dir="ltr"
+    role="combobox"
+    type="button"
+  />
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  <p
+    class="sr-only"
+  />
+
+  --------------------------------------------------
+  status:
+
+  Name "":
+  <p
+    class="px-2 py-6 text-center text-xs text-muted-foreground"
+    role="status"
+  />
+
+  Name "4 running":
+  <span
+    aria-label="4 running"
+    aria-live="polite"
+    class="shrink-0 border-t border-sidebar-border px-3 py-1"
+    role="status"
+    style="position: relative; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-variant-numeric: tabular-nums; line-height: 20px; color: var(--foreground);"
+    tabindex="0"
+  />
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="flex min-h-0 flex-1 flex-col"
+    >
+      <div
+        class="flex shrink-0 items-center gap-1 px-2 pb-1"
+      >
+        <button
+          aria-autocomplete="none"
+          aria-expanded="false"
+          aria-label="Project scope: All projects"
+          class="flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"
+          data-state="closed"
+          dir="ltr"
+          role="combobox"
+          type="button"
+        >
+          <span
+            style="pointer-events: none;"
+          >
+            All projects
+          </span>
+          <svg
+            aria-hidden="true"
+            class="size-4 opacity-50"
+            color="currentColor"
+            data-icon="ChevronDown"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+      </div>
+      <div
+        class="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2"
+      >
+        <p
+          class="sr-only"
+        >
+          Drag a card into Pinned to pin it, out to unpin it, or inside Pinned to reorder it. With a card focused, Alt+Up and Alt+Down do the same.
+        </p>
+        <p
+          class="px-2 py-6 text-center text-xs text-muted-foreground"
+          role="status"
+        >
+          No threads found
+        </p>
+      </div>
+      <span
+        aria-label="4 running"
+        aria-live="polite"
+        class="shrink-0 border-t border-sidebar-border px-3 py-1"
+        role="status"
+        style="position: relative; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-variant-numeric: tabular-nums; line-height: 20px; color: var(--foreground);"
+        tabindex="0"
+      >
+        <svg
+          aria-hidden="true"
+          class="wizbar-running-spinner"
+          fill="none"
+          height="14"
+          style="flex-shrink: 0; animation: wizbar-running-spin 1s linear infinite;"
+          viewBox="0 0 16 16"
+          width="14"
+        >
+          <circle
+            cx="8"
+            cy="8"
+            opacity="0.25"
+            r="6"
+            stroke="currentColor"
+            stroke-width="2"
+          />
+          <path
+            d="M8 2a6 6 0 0 1 6 6"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-width="2"
+          />
+        </svg>
+        <span>
+          4
+        </span>
+      </span>
+    </div>
+  </div>
+</body>
+ ❯ counter src/sidebar-v4/sidebar-v4.test.tsx:31:48
+     29|   return { status: "ready", threads, runningThreads, childrenByParentI…
+     30| };
+     31| const counter = (name = "7 running") => screen.getByRole("button", { n…
+       |                                                ^
+     32| const dialog = () => screen.queryByRole("dialog");
+     33| const rowLinks = () => within(dialog()!).getAllByRole("link");
+ ❯ src/sidebar-v4/sidebar-v4.test.tsx:70:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/7]⎯
+
+ FAIL  |bb-plugin-wizbar| src/sidebar-v4/sidebar-v4.test.tsx > B1 P6: the count equals the rows it opens > shows a host's empty running list as zero with no rows, and no number while the host rows are loading
+TestingLibraryElementError: Unable to find an accessible element with the role "button" and name "0 running"
+
+Here are the accessible roles:
+
+  status:
+
+  Name "1 running":
+  <span
+    aria-label="1 running"
+    aria-live="polite"
+    role="status"
+    style="position: relative; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-variant-numeric: tabular-nums; line-height: 20px; color: var(--foreground);"
+    tabindex="0"
+  />
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <span
+      aria-label="1 running"
+      aria-live="polite"
+      role="status"
+      style="position: relative; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-variant-numeric: tabular-nums; line-height: 20px; color: var(--foreground);"
+      tabindex="0"
+    >
+      <svg
+        aria-hidden="true"
+        class="wizbar-running-spinner"
+        fill="none"
+        height="14"
+        style="flex-shrink: 0; animation: wizbar-running-spin 1s linear infinite;"
+        viewBox="0 0 16 16"
+        width="14"
+      >
+        <circle
+          cx="8"
+          cy="8"
+          opacity="0.25"
+          r="6"
+          stroke="currentColor"
+          stroke-width="2"
+        />
+        <path
+          d="M8 2a6 6 0 0 1 6 6"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-width="2"
+        />
+      </svg>
+      <span>
+        1
+      </span>
+    </span>
+  </div>
+</body>
+ ❯ counter src/sidebar-v4/sidebar-v4.test.tsx:31:48
+     29|   return { status: "ready", threads, runningThreads, childrenByParentI…
+     30| };
+     31| const counter = (name = "7 running") => screen.getByRole("button", { n…
+       |                                                ^
+     32| const dialog = () => screen.queryByRole("dialog");
+     33| const rowLinks = () => within(dialog()!).getAllByRole("link");
+ ❯ src/sidebar-v4/sidebar-v4.test.tsx:78:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/7]⎯
+
+ FAIL  |bb-plugin-wizbar| src/sidebar-v4/sidebar-v4.test.tsx > B1 P6: the count equals the rows it opens > says when an older host gives no running inventory, and still lists what it counts
+TestingLibraryElementError: Unable to find an accessible element with the role "button" and name "1 running"
+
+Here are the accessible roles:
+
+  status:
+
+  Name "1 running":
+  <span
+    aria-label="1 running"
+    aria-live="polite"
+    role="status"
+    style="position: relative; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-variant-numeric: tabular-nums; line-height: 20px; color: var(--foreground);"
+    tabindex="0"
+  />
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <span
+      aria-label="1 running"
+      aria-live="polite"
+      role="status"
+      style="position: relative; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-variant-numeric: tabular-nums; line-height: 20px; color: var(--foreground);"
+      tabindex="0"
+    >
+      <svg
+        aria-hidden="true"
+        class="wizbar-running-spinner"
+        fill="none"
+        height="14"
+        style="flex-shrink: 0; animation: wizbar-running-spin 1s linear infinite;"
+        viewBox="0 0 16 16"
+        width="14"
+      >
+        <circle
+          cx="8"
+          cy="8"
+          opacity="0.25"
+          r="6"
+          stroke="currentColor"
+          stroke-width="2"
+        />
+        <path
+          d="M8 2a6 6 0 0 1 6 6"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-width="2"
+        />
+      </svg>
+      <span>
+        1
+      </span>
+    </span>
+  </div>
+</body>
+ ❯ counter src/sidebar-v4/sidebar-v4.test.tsx:31:48
+     29|   return { status: "ready", threads, runningThreads, childrenByParentI…
+     30| };
+     31| const counter = (name = "7 running") => screen.getByRole("button", { n…
+       |                                                ^
+     32| const dialog = () => screen.queryByRole("dialog");
+     33| const rowLinks = () => within(dialog()!).getAllByRole("link");
+ ❯ src/sidebar-v4/sidebar-v4.test.tsx:90:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/7]⎯
+
+ FAIL  |bb-plugin-wizbar| src/sidebar-v4/sidebar-v4.test.tsx > B1 P7: hover, keyboard and latched touch use > opens on hover and focus, latches on click, and dismisses on Escape and an outside click
+TestingLibraryElementError: Unable to find an accessible element with the role "button" and name "7 running"
+
+Here are the accessible roles:
+
+  paragraph:
+
+  Name "":
+  <p />
+
+  --------------------------------------------------
+  status:
+
+  Name "4 running":
+  <span
+    aria-label="4 running"
+    aria-live="polite"
+    role="status"
+    style="position: relative; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-variant-numeric: tabular-nums; line-height: 20px; color: var(--foreground);"
+    tabindex="0"
+  />
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div>
+      <p>
+        outside
+      </p>
+      <span
+        aria-label="4 running"
+        aria-live="polite"
+        role="status"
+        style="position: relative; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-variant-numeric: tabular-nums; line-height: 20px; color: var(--foreground);"
+        tabindex="0"
+      >
+        <svg
+          aria-hidden="true"
+          class="wizbar-running-spinner"
+          fill="none"
+          height="14"
+          style="flex-shrink: 0; animation: wizbar-running-spin 1s linear infinite;"
+          viewBox="0 0 16 16"
+          width="14"
+        >
+          <circle
+            cx="8"
+            cy="8"
+            opacity="0.25"
+            r="6"
+            stroke="currentColor"
+            stroke-width="2"
+          />
+          <path
+            d="M8 2a6 6 0 0 1 6 6"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-width="2"
+          />
+        </svg>
+        <span>
+          4
+        </span>
+      </span>
+    </div>
+  </div>
+</body>
+ ❯ counter src/sidebar-v4/sidebar-v4.test.tsx:31:48
+     29|   return { status: "ready", threads, runningThreads, childrenByParentI…
+     30| };
+     31| const counter = (name = "7 running") => screen.getByRole("button", { n…
+       |                                                ^
+     32| const dialog = () => screen.queryByRole("dialog");
+     33| const rowLinks = () => within(dialog()!).getAllByRole("link");
+ ❯ src/sidebar-v4/sidebar-v4.test.tsx:101:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/7]⎯
+
+ FAIL  |bb-plugin-wizbar| src/sidebar-v4/sidebar-v4.test.tsx > B1 P7: hover, keyboard and latched touch use > opens a row natively, closes, and never navigates or changes the conversation by itself
+TestingLibraryElementError: Unable to find an accessible element with the role "button" and name "7 running"
+
+Here are the accessible roles:
+
+  status:
+
+  Name "4 running":
+  <span
+    aria-label="4 running"
+    aria-live="polite"
+    role="status"
+    style="position: relative; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-variant-numeric: tabular-nums; line-height: 20px; color: var(--foreground);"
+    tabindex="0"
+  />
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <span
+      aria-label="4 running"
+      aria-live="polite"
+      role="status"
+      style="position: relative; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-variant-numeric: tabular-nums; line-height: 20px; color: var(--foreground);"
+      tabindex="0"
+    >
+      <svg
+        aria-hidden="true"
+        class="wizbar-running-spinner"
+        fill="none"
+        height="14"
+        style="flex-shrink: 0; animation: wizbar-running-spin 1s linear infinite;"
+        viewBox="0 0 16 16"
+        width="14"
+      >
+        <circle
+          cx="8"
+          cy="8"
+          opacity="0.25"
+          r="6"
+          stroke="currentColor"
+          stroke-width="2"
+        />
+        <path
+          d="M8 2a6 6 0 0 1 6 6"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-width="2"
+        />
+      </svg>
+      <span>
+        4
+      </span>
+    </span>
+  </div>
+</body>
+ ❯ counter src/sidebar-v4/sidebar-v4.test.tsx:31:48
+     29|   return { status: "ready", threads, runningThreads, childrenByParentI…
+     30| };
+     31| const counter = (name = "7 running") => screen.getByRole("button", { n…
+       |                                                ^
+     32| const dialog = () => screen.queryByRole("dialog");
+     33| const rowLinks = () => within(dialog()!).getAllByRole("link");
+ ❯ src/sidebar-v4/sidebar-v4.test.tsx:133:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/7]⎯
+
+ FAIL  |bb-plugin-wizbar| src/sidebar-v4/sidebar-v4.test.tsx > B1 P6: a parent's children expand in the sidebar > starts collapsed, then lists running children first with an unknown total, each opening natively
+TestingLibraryElementError: Unable to find role="button" and name "Show children of Spec 41 manager"
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="flex min-h-0 flex-1 flex-col"
+    >
+      <div
+        class="flex shrink-0 items-center gap-1 px-2 pb-1"
+      >
+        <button
+          aria-autocomplete="none"
+          aria-expanded="false"
+          aria-label="Project scope: All projects"
+          class="flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"
+          data-state="closed"
+          dir="ltr"
+          role="combobox"
+          type="button"
+        >
+          <span
+            style="pointer-events: none;"
+          >
+            All projects
+          </span>
+          <svg
+            aria-hidden="true"
+            class="size-4 opacity-50"
+            color="currentColor"
+            data-icon="ChevronDown"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+      </div>
+      <div
+        class="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2"
+      >
+        <p
+          class="sr-only"
+        >
+          Drag a card into Pinned to pin it, out to unpin it, or inside Pinned to reorder it. With a card focused, Alt+Up and Alt+Down do the same.
+        </p>
+        <section>
+          <ul
+            class="flex flex-col gap-px"
+          >
+            <li
+              class="list-none"
+              data-state="closed"
+            >
+              <div
+                class="group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"
+              >
+                <a
+                  aria-label="Hidden root"
+                  class="absolute inset-0 cursor-pointer rounded-md"
+                  data-sidebar-thread-id="thr_b1_hidden"
+                  data-sidebar-thread-shortcut-target=""
+                  href="#"
+                />
+                <div
+                  class="pointer-events-none relative flex h-5 items-center gap-1.5"
+                >
+                  <span
+                    class="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"
+                  >
+                     
+                  </span>
+                  <span
+                    aria-label="Cloud"
+                    class="pointer-events-none relative flex size-3.5 shrink-0 items-center justify-center text-muted-foreground"
+                    role="img"
+                    title="Cloud"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      class="size-3.5"
+                      color="currentColor"
+                      data-icon="Cloud"
+                      fill="none"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      width="24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M17.4776 10.0001C17.485 10 17.4925 10 17.5 10C19.9853 10 22 12.0147 22 14.5C22 16.9853 19.9853 19 17.5 19H7C4.23858 19 2 16.7614 2 14C2 11.4003 3.98398 9.26407 6.52042 9.0227M17.4776 10.0001C17.4924 9.83536 17.5 9.66856 17.5 9.5C17.5 6.46243 15.0376 4 12 4C9.12324 4 6.76233 6.20862 6.52042 9.0227M17.4776 10.0001C17.3753 11.1345 16.9286 12.1696 16.2428 13M6.52042 9.0227C6.67826 9.00768 6.83823 9 7 9C8.12582 9 9.16474 9.37209 10.0005 10"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="1.5"
+                      />
+                    </svg>
+                  </span>
+                  <span
+                    class="flex w-7 shrink-0 items-center justify-end"
+                  >
+                    <svg
+                      class="size-3.5 shrink-0 animate-spin text-muted-foreground/50"
+                      color="currentColor"
+                      data-icon="Loading"
+                      fill="none"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      width="24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M12 3V6"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-width="1.5"
+                      />
+                      <path
+                        d="M12 18V21"
+            ...
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="flex min-h-0 flex-1 flex-col"
+    >
+      <div
+        class="flex shrink-0 items-center gap-1 px-2 pb-1"
+      >
+        <button
+          aria-autocomplete="none"
+          aria-expanded="false"
+          aria-label="Project scope: All projects"
+          class="flex w-full items-center justify-between whitespace-nowrap rounded-md border-input bg-transparent transition-colors duration-150 hover:duration-0 placeholder:text-muted-foreground focus:outline-none focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 h-7 min-w-0 flex-1 border-0 px-1.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-sidebar-accent focus:ring-0"
+          data-state="closed"
+          dir="ltr"
+          role="combobox"
+          type="button"
+        >
+          <span
+            style="pointer-events: none;"
+          >
+            All projects
+          </span>
+          <svg
+            aria-hidden="true"
+            class="size-4 opacity-50"
+            color="currentColor"
+            data-icon="ChevronDown"
+            fill="none"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+            />
+          </svg>
+        </button>
+      </div>
+      <div
+        class="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2"
+      >
+        <p
+          class="sr-only"
+        >
+          Drag a card into Pinned to pin it, out to unpin it, or inside Pinned to reorder it. With a card focused, Alt+Up and Alt+Down do the same.
+        </p>
+        <section>
+          <ul
+            class="flex flex-col gap-px"
+          >
+            <li
+              class="list-none"
+              data-state="closed"
+            >
+              <div
+                class="group/card relative rounded-md px-2.5 py-2 transition-colors hover:bg-sidebar-accent/60"
+              >
+                <a
+                  aria-label="Hidden root"
+                  class="absolute inset-0 cursor-pointer rounded-md"
+                  data-sidebar-thread-id="thr_b1_hidden"
+                  data-sidebar-thread-shortcut-target=""
+                  href="#"
+                />
+                <div
+                  class="pointer-events-none relative flex h-5 items-center gap-1.5"
+                >
+                  <span
+                    class="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground"
+                  >
+                     
+                  </span>
+                  <span
+                    aria-label="Cloud"
+                    class="pointer-events-none relative flex size-3.5 shrink-0 items-center justify-center text-muted-foreground"
+                    role="img"
+                    title="Cloud"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      class="size-3.5"
+                      color="currentColor"
+                      data-icon="Cloud"
+                      fill="none"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      width="24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M17.4776 10.0001C17.485 10 17.4925 10 17.5 10C19.9853 10 22 12.0147 22 14.5C22 16.9853 19.9853 19 17.5 19H7C4.23858 19 2 16.7614 2 14C2 11.4003 3.98398 9.26407 6.52042 9.0227M17.4776 10.0001C17.4924 9.83536 17.5 9.66856 17.5 9.5C17.5 6.46243 15.0376 4 12 4C9.12324 4 6.76233 6.20862 6.52042 9.0227M17.4776 10.0001C17.3753 11.1345 16.9286 12.1696 16.2428 13M6.52042 9.0227C6.67826 9.00768 6.83823 9 7 9C8.12582 9 9.16474 9.37209 10.0005 10"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="1.5"
+                      />
+                    </svg>
+                  </span>
+                  <span
+                    class="flex w-7 shrink-0 items-center justify-end"
+                  >
+                    <svg
+                      class="size-3.5 shrink-0 animate-spin text-muted-foreground/50"
+                      color="currentColor"
+                      data-icon="Loading"
+                      fill="none"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      width="24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M12 3V6"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-width="1.5"
+                      />
+                      <path
+                        d="M12 18V21"
+            ...
+ ❯ src/sidebar-v4/sidebar-v4.test.tsx:148:33
+    146|     feed.current = inventoryFeed();
+    147|     const rendered = renderSlot({ component: () => inbox() }, {}, { rp…
+    148|     const toggle = await screen.findByRole("button", { name: "Show chi…
+       |                                 ^
+    149|     expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    150|     expect(toggle.textContent).toBe("3 children · 2 running · total un…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/7]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  7 failed | 1 passed (8)
+   Start at  19:13:51
+   Duration  2.53s (transform 222ms, setup 0ms, import 517ms, tests 1.41s, environment 493ms)
+

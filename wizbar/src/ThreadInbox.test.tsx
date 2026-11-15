@@ -705,7 +705,9 @@ describe("explicit muted shelf", () => {
 
 // WZ16: isolated artwork tests cannot prove a number exists in the thread list.
 describe("WZ16: visible list-bottom running count", () => {
-  it("keeps exactly one inert count below the scrolling rows, independent of search and projects", () => {
+  // B1 (#76): the count is no longer inert. It is one button below the
+  // scrolling rows whose popover lists exactly the counted threads.
+  it("keeps exactly one count below the scrolling rows, independent of search and projects, opening its rows", () => {
     const threads = [
       thread({ id: "sample-parent", indicator: "runtime", runtimeStatus: "active" }),
       thread({ id: "sample-child", parentThreadId: "sample-parent", indicator: "runtime", runtimeStatus: "active" }),
@@ -718,33 +720,33 @@ describe("WZ16: visible list-bottom running count", () => {
     const counters = screen.getAllByRole("status", { name: "3 running" });
     expect(counters).toHaveLength(1);
     const counter = counters[0]!;
-    expect(counter.textContent).toBe("3");
-    expect(counter.parentElement).toBe(rendered.container.firstElementChild);
-    expect(counter).toBe(counter.parentElement?.lastElementChild);
-    const scrollArea = counter.parentElement?.querySelector(".overflow-y-auto");
+    expect(counter.textContent).toBe("3 running");
+    const footer = rendered.container.firstElementChild!.lastElementChild!;
+    expect(footer.contains(counter)).toBe(true);
+    const scrollArea = rendered.container.querySelector(".overflow-y-auto");
     expect(scrollArea?.contains(counter)).toBe(false);
     expect(scrollArea!.compareDocumentPosition(counter) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.queryAllByRole("listitem")).toHaveLength(0);
     expect(counter.querySelector("svg")?.style.animation).toContain("wizbar-running-spin");
-    fireEvent.mouseEnter(counter);
-    expect(screen.getByRole("tooltip").textContent).toBe("3 running · subagents not counted yet · some threads may be unseen");
-    expect(counter.getAttribute("aria-describedby")).toBe(screen.getByRole("tooltip").id);
-    fireEvent.click(counter);
+    fireEvent.click(screen.getByRole("button", { name: "3 running" }));
+    const rows = within(screen.getByRole("dialog")).getAllByRole("link");
+    expect(rows.map((row) => row.getAttribute("data-thread-id")).sort()).toEqual(["sample-child", "sample-hidden", "sample-parent"]);
     expect(rendered.navigateCalls).toEqual([]);
     expect(rendered.sidebarActionCalls).toEqual([]);
     expect(rendered.sdkCalls).toEqual([]);
-    expect(rendered.rpcCalls.filter(({ method }) => method !== "listLifecycle")).toEqual([]);
-    expect(counter.closest("button, a")).toBeNull();
+    // Only reads: lifecycle, and WizDeck's read-only lease for the Needs-you entry (B1).
+    expect(rendered.rpcCalls.filter(({ method }) => !["listLifecycle", "deckWatch", "deckRelease"].includes(method))).toEqual([]);
   });
 
   it("shows dim zero on an empty list and stops its spinner", () => {
     render([]);
     const counter = screen.getByRole("status", { name: "0 running" });
-    expect(counter.textContent).toBe("0");
-    expect(counter.style.color).toBe("var(--muted-foreground)");
+    expect(counter.textContent).toBe("0 running");
+    const button = screen.getByRole("button", { name: "0 running" });
+    expect(button.style.color).toBe("var(--muted-foreground)");
     expect(counter.querySelector("svg")?.style.animation).toBe("");
-    fireEvent.mouseEnter(counter);
-    expect(screen.getByRole("tooltip").textContent).toBe("0 running · subagents not counted yet · some threads may be unseen");
+    fireEvent.mouseEnter(button);
+    expect(within(screen.getByRole("dialog")).getByText("Nothing is running.")).toBeDefined();
   });
 
   it.each(["loading", "error"] as const)("hides the number for %s despite retained rows", (status) => {
@@ -832,7 +834,8 @@ describe("WZ21: drag to pin, unpin and reorder", () => {
     fireEvent.dragEnd(from);
   };
   const pinCalls = (rendered: { rpcCalls: { method: string; input: unknown }[] }) =>
-    rendered.rpcCalls.filter((c) => c.method !== "listLifecycle" && c.method !== "pinnedOrder" && c.method !== "cardModels")
+    // B1 (#76): WizDeck's read-only lease (deckWatch/deckRelease) is not a pin effect.
+    rendered.rpcCalls.filter((c) => !["listLifecycle", "pinnedOrder", "cardModels", "deckWatch", "deckRelease"].includes(c.method))
       .map((c) => [c.method, c.input]);
   const reads = (rendered: { rpcCalls: { method: string }[] }) =>
     rendered.rpcCalls.filter((c) => c.method === "pinnedOrder").length;

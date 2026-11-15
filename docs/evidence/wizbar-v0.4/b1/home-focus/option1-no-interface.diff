@@ -1,0 +1,77 @@
+--- a/wizbar/src/deck/home/Home.tsx
++++ b/wizbar/src/deck/home/Home.tsx
+@@ -1,6 +1,6 @@
+ // WizDeck Home shell (D1, #73). Shared file: this shell is D1's. D2 adds its
+ // action insertion and F1 its live/fleet insertion at the marked slots only.
+-import { useEffect, useState } from "react";
++import { useEffect, useRef, useState } from "react";
+ import { useBbContext, useBbNavigate } from "@get-bb/plugin-sdk/app";
+ import type { FocusRequestV1 } from "../../factory-contract";
+ import { useDeckHome } from "./useDeckHome";
+@@ -35,13 +35,33 @@
+   // A view is shown only for the factory it was built for: switching never leaks rows.
+   const view = result?.view && result.view.projectKey === projectKey ? result.view : null;
+   const open = (url: string) => { navigate.openUrl(url); };
+-  const focusedItemId = focus && focus.projectKey === projectKey ? focus.itemId : null;
+   const now = Date.now();
+ 
++  // An explicit Needs-you open (never a selection update) is a request: select
++  // its factory if it is configured, then focus its item once that factory's
++  // view has loaded. `select` drops the other factory's rows and any answer
++  // still in flight. Each request focuses once; refreshes, rerenders and
++  // manual factory switches never move focus.
++  const [request, setRequest] = useState<{ focus: FocusRequestV1; tick: number } | null>(null);
++  const [applied, setApplied] = useState<(FocusRequestV1 & { tick: number }) | null>(null);
++  const ticks = useRef(0);
++  const focusedTick = useRef(0);
++  const askFocus = (next: FocusRequestV1) => setRequest({ focus: next, tick: ++ticks.current });
++  // FOCUS-SOURCES: the host opened or reactivated this tab with a focus.
++  useEffect(() => { if (focus) askFocus(focus); }, [focus]);
+   useEffect(() => {
+-    if (!focusedItemId || !view) return;
+-    document.getElementById(`wizdeck-need-${focusedItemId}`)?.focus();
+-  }, [focusedItemId, view !== null]);
++    if (!request || !result) return;
++    setRequest(null);
++    if (!result.projects.some((project) => project.projectKey === request.focus.projectKey)) return; // Unknown factory: refused.
++    if (projectKey !== request.focus.projectKey) deck.select(request.focus.projectKey);
++    setApplied({ ...request.focus, tick: request.tick });
++  }, [request, result]);
++  const focusedItemId = applied && applied.projectKey === projectKey ? applied.itemId : null;
++  useEffect(() => {
++    if (!applied || applied.tick === focusedTick.current || !view || view.projectKey !== applied.projectKey) return;
++    focusedTick.current = applied.tick;
++    document.getElementById(`wizdeck-need-${applied.itemId}`)?.focus();
++  }, [applied, view]);
+ 
+   return (
+     <div className="wizdeck-home" style={{ padding: "4px 16px 16px", fontSize: 14, lineHeight: "20px", color: "var(--foreground)" }}>
+@@ -51,7 +71,7 @@
+         {result && result.projects.length > 0 && (
+           <label style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+             <span style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }}>Factory</span>
+-            <select value={projectKey ?? ""} onChange={(event) => deck.select(event.target.value)}
++            <select aria-label="Factory" value={projectKey ?? ""} onChange={(event) => deck.select(event.target.value)}
+               style={{ ...tapTarget, padding: "0 10px", background: "var(--background)" }}>
+               {result.projects.map((project) => <option key={project.projectKey} value={project.projectKey}>{project.projectKey}</option>)}
+             </select>
+--- a/wizbar/src/deck/home/Panel.tsx
++++ b/wizbar/src/deck/home/Panel.tsx
+@@ -1,12 +1,16 @@
+ // WizDeck's right-panel tabs (D1, #73). A thread panel shows Home; the New
+ // thread screen has no thread, so it asks the person to open one.
++import { useMemo } from "react";
+ import type { PluginNewThreadPanelProps, PluginThreadPanelProps } from "@get-bb/plugin-sdk";
+ import { readWizDeckParams } from "../selection/selection";
+ import { Home } from "./Home";
+ 
+ export function WizDeckPanel({ params }: PluginThreadPanelProps) {
+   // The thread this panel sits beside is ignored on purpose: it never chooses the factory.
+-  return <Home focus={readWizDeckParams(params).focus} />;
++  // One focus object per host params object: the host memoizes params by their
++  // serialized value, so a new object means this tab was opened or reactivated.
++  const focus = useMemo(() => readWizDeckParams(params).focus, [params]);
++  return <Home focus={focus} />;
+ }
+ 
+ export function WizDeckNewThreadPanel(_: PluginNewThreadPanelProps) {

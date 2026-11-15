@@ -1,7 +1,13 @@
 // @vitest-environment jsdom
-// WZ20 (#41): the footer disclosure's panel, rendered through the registered
-// app and the SDK harness. Expected text is the contract's wording over the
-// hand-worked fixture numbers (`v3Stats`: 4 running, 2+2, 1/2/1, 3 waiting).
+// WZ20 (#41): the stats panel component, rendered with the SDK harness.
+// Expected text is the contract's wording over the hand-worked fixture
+// numbers (`v3Stats`: 4 running, 2+2, 1/2/1, 3 waiting).
+//
+// B1 (#76) removed the panel's footer registration (the bolt). These cases
+// render the unregistered `StatsPanel` component directly: they prove its
+// numbers, disclosures and unavailable states only, not a registered or
+// reachable UI route. The absent bolt and the new count route are proved in
+// FooterCounter.test.tsx.
 import { createElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, screen } from "@testing-library/react";
@@ -34,15 +40,10 @@ const fresh = () => v3Threads.map((thread) => ({ ...thread }));
 /** A new host snapshot: one row's revision moved on. */
 const changed = () => v3Threads.map((thread, i) => ({ ...thread, updatedAt: thread.updatedAt + (i === 0 ? 1 : 0) }));
 
-const app = await loadPluginApp(() => import("../app"));
+// Loaded through the app, so the module graph matches production.
+await loadPluginApp(() => import("../app"));
 const { FooterCounter } = await import("./FooterCounter");
-// Looked up per render, so a missing registration fails each test at its own
-// assertions (registration itself is proved in FooterCounter.test.tsx N4).
-function Panel(props: { dismiss(): void }) {
-  const item = app.experimentalSidebarFooterItems.find(({ id }) => id === "stats");
-  if (!item || item.kind !== "disclosure") return null;
-  return createElement(item.component, props);
-}
+const { StatsPanel: Panel } = await import("./StatsPanel");
 const panel = { component: Panel };
 const props = { dismiss() {} };
 afterEach(() => { cleanup(); fixtureFeed.current = null; });
@@ -88,8 +89,8 @@ describe("V3: footer stats panel", () => {
     expect(lines()[0], "a reconnect alone cannot certify the retained rows").toBe("Stats unavailable");
   });
 
-  // R1: snapshot validity is the plugin's, not one component's. The host may
-  // mount the disclosure only when it opens, after a gap the line observed.
+  // R1: snapshot validity is the plugin's, not one component's. A panel
+  // mounted after a gap the list line observed must not trust the old rows.
   it("opens unavailable after a gap the list line saw, until a new snapshot arrives", async () => {
     fixtureFeed.current = { status: "ready", threads: fresh() };
     const View = ({ open }: { open: boolean }) => createElement("div", null,

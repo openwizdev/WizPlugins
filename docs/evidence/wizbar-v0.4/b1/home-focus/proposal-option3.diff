@@ -1,0 +1,502 @@
+--- a/wizbar/src/deck/home/Home.tsx
++++ b/wizbar/src/deck/home/Home.tsx
+@@ -1,9 +1,10 @@
+ // WizDeck Home shell (D1, #73). Shared file: this shell is D1's. D2 adds its
+ // action insertion and F1 its live/fleet insertion at the marked slots only.
+-import { useEffect, useState } from "react";
++import { useEffect, useRef, useState } from "react";
+ import { useBbContext, useBbNavigate } from "@get-bb/plugin-sdk/app";
+ import type { FocusRequestV1 } from "../../factory-contract";
+ import { useDeckHome } from "./useDeckHome";
++import { claimWizDeckFocus, useWizDeckFocusEventSeq } from "../selection/selection";
+ import { HealthRow, NeedsYou, Versions, homeCss, tapTarget } from "./sections";
+ 
+ const INTRO_KEY = "wizdeck.intro.v1";
+@@ -24,7 +25,7 @@
+   return seconds < 60 ? `${seconds}s ago` : `${Math.round(seconds / 60)} min ago`;
+ }
+ 
+-export function Home({ focus }: { focus: FocusRequestV1 | null }) {
++export function Home({ focus, threadId = null }: { focus: FocusRequestV1 | null; threadId?: string | null }) {
+   const context = useBbContext();
+   const navigate = useBbNavigate();
+   // The default is the current project's factory; the selected thread never chooses the target.
+@@ -35,23 +36,48 @@
+   // A view is shown only for the factory it was built for: switching never leaks rows.
+   const view = result?.view && result.view.projectKey === projectKey ? result.view : null;
+   const open = (url: string) => { navigate.openUrl(url); };
+-  const focusedItemId = focus && focus.projectKey === projectKey ? focus.itemId : null;
+   const now = Date.now();
+ 
++  // Only an explicit Needs-you click addressed to this panel's thread acts:
++  // select its factory if configured, then focus its item once that view has
++  // loaded, unless the person has moved to another pane meanwhile. Params,
++  // refreshes, rerenders, selection and manual switches never move focus.
++  const eventSeq = useWizDeckFocusEventSeq();
++  const [request, setRequest] = useState<{ focus: FocusRequestV1; tick: number } | null>(null);
++  const [applied, setApplied] = useState<(FocusRequestV1 & { tick: number }) | null>(null);
++  const focusedTick = useRef(0);
++  const root = useRef<HTMLDivElement>(null);
+   useEffect(() => {
+-    if (!focusedItemId || !view) return;
+-    document.getElementById(`wizdeck-need-${focusedItemId}`)?.focus();
+-  }, [focusedItemId, view !== null]);
++    if (!threadId || !focus) return;
++    const claimed = claimWizDeckFocus(threadId, focus);
++    if (claimed) setRequest({ focus: claimed, tick: eventSeq });
++  }, [eventSeq, threadId, focus]);
++  useEffect(() => {
++    if (!request || !result) return;
++    setRequest(null);
++    if (!result.projects.some((project) => project.projectKey === request.focus.projectKey)) return; // Unknown factory: refused.
++    if (projectKey !== request.focus.projectKey) deck.select(request.focus.projectKey);
++    setApplied({ ...request.focus, tick: request.tick });
++  }, [request, result]);
++  const focusedItemId = applied && applied.projectKey === projectKey ? applied.itemId : null;
++  useEffect(() => {
++    if (!applied || applied.tick === focusedTick.current || !view || view.projectKey !== applied.projectKey) return;
++    focusedTick.current = applied.tick;
++    if (context.threadId !== threadId) return; // The person left this pane: never pull focus back.
++    // This panel's own row: another mounted panel can show the same item id.
++    const rows = root.current?.querySelectorAll<HTMLElement>("[id^='wizdeck-need-']") ?? [];
++    [...rows].find((row) => row.id === `wizdeck-need-${applied.itemId}`)?.focus();
++  }, [applied, view]);
+ 
+   return (
+-    <div className="wizdeck-home" style={{ padding: "4px 16px 16px", fontSize: 14, lineHeight: "20px", color: "var(--foreground)" }}>
++    <div ref={root} className="wizdeck-home" style={{ padding: "4px 16px 16px", fontSize: 14, lineHeight: "20px", color: "var(--foreground)" }}>
+       <style>{homeCss}</style>
+       <header style={{ display: "flex", alignItems: "center", gap: 12, justifyContent: "space-between", flexWrap: "wrap" }}>
+         <h2 style={{ margin: "8px 0", fontSize: 24, fontWeight: 600 }}>Home</h2>
+         {result && result.projects.length > 0 && (
+           <label style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+             <span style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }}>Factory</span>
+-            <select value={projectKey ?? ""} onChange={(event) => deck.select(event.target.value)}
++            <select aria-label="Factory" value={projectKey ?? ""} onChange={(event) => deck.select(event.target.value)}
+               style={{ ...tapTarget, padding: "0 10px", background: "var(--background)" }}>
+               {result.projects.map((project) => <option key={project.projectKey} value={project.projectKey}>{project.projectKey}</option>)}
+             </select>
+--- a/wizbar/src/deck/home/Panel.tsx
++++ b/wizbar/src/deck/home/Panel.tsx
+@@ -4,9 +4,10 @@
+ import { readWizDeckParams } from "../selection/selection";
+ import { Home } from "./Home";
+ 
+-export function WizDeckPanel({ params }: PluginThreadPanelProps) {
+-  // The thread this panel sits beside is ignored on purpose: it never chooses the factory.
+-  return <Home focus={readWizDeckParams(params).focus} />;
++export function WizDeckPanel({ threadId, params }: PluginThreadPanelProps) {
++  // The thread this panel sits beside never chooses the factory; it only names
++  // this panel as the recipient of an explicit Needs-you click.
++  return <Home focus={readWizDeckParams(params).focus} threadId={threadId} />;
+ }
+ 
+ export function WizDeckNewThreadPanel(_: PluginNewThreadPanelProps) {
+--- a/wizbar/src/deck/selection/selection.ts
++++ b/wizbar/src/deck/selection/selection.ts
+@@ -43,12 +43,55 @@
+ 
+ /**
+  * Open WizDeck in the current thread's side panel through the host's
+- * same-plugin opener. Pass a focus only for an explicit Needs-you click.
+- * Returns the host's answer: false where there is no side panel.
++ * same-plugin opener. Pass a focus only for an explicit Needs-you click, with
++ * the caller's `useBbContext().threadId`: the host routes the open to the
++ * focused pane, whose thread the route shows. Returns the host's answer:
++ * false where there is no side panel. True is not proof the item was focused.
+  */
+-export function openWizDeck(navigate: Pick<BbNavigate, "openThreadPanel">, focus: FocusRequestV1 | null = null): boolean {
++export function openWizDeck(
++  navigate: Pick<BbNavigate, "openThreadPanel">, focus: FocusRequestV1 | null = null, routeThreadId: string | null = null,
++): boolean {
+   const params: WizDeckParamsV1 = { focus: focus ? { kind: "needs-you", projectKey: focus.projectKey, itemId: focus.itemId } : null };
+-  return navigate.openThreadPanel({ actionId: WIZDECK_ACTION_ID, params: params as unknown as JsonValue });
++  const accepted = navigate.openThreadPanel({ actionId: WIZDECK_ACTION_ID, params: params as unknown as JsonValue });
++  if (accepted && params.focus && routeThreadId) {
++    focusEvent = { seq: (focusEvent?.seq ?? 0) + 1, threadId: routeThreadId, focus: params.focus, claimed: false };
++    for (const listener of [...focusListeners]) listener();
++  }
++  return accepted;
++}
++
++/**
++ * NEW plugin-local interface (B1 proposal; the user's boundary). One event per
++ * explicit Needs-you open the host accepted, addressed to the thread whose
++ * panel the host opened. Never persisted or sent. Only the newest event
++ * exists; the first panel of that thread with that focus claims it, once.
++ */
++export interface WizDeckFocusEventV1 {
++  seq: number;
++  threadId: string;
++  focus: FocusRequestV1;
++  claimed: boolean;
++}
++let focusEvent: WizDeckFocusEventV1 | null = null;
++const focusListeners = new Set<() => void>();
++const getFocusEvent = () => focusEvent?.seq ?? 0;
++const subscribeFocusEvent = (listener: () => void) => {
++  focusListeners.add(listener);
++  return () => { focusListeners.delete(listener); };
++};
++
++/** Re-renders when a new explicit focus event is published. */
++export function useWizDeckFocusEventSeq(): number {
++  return useSyncExternalStore(subscribeFocusEvent, getFocusEvent, getFocusEvent);
++}
++
++/** Claim the newest event if it is unclaimed and addressed to this thread and focus. */
++export function claimWizDeckFocus(threadId: string, focus: FocusRequestV1): FocusRequestV1 | null {
++  const event = focusEvent;
++  if (!event || event.claimed || event.threadId !== threadId ||
++    event.focus.projectKey !== focus.projectKey || event.focus.itemId !== focus.itemId) return null;
++  event.claimed = true;
++  return event.focus;
+ }
+ 
+ /** Read a tab's persisted params; anything unexpected is no focus. */
+--- a/wizbar/src/sidebar-v4/NeedsYouEntry.tsx
++++ b/wizbar/src/sidebar-v4/NeedsYouEntry.tsx
+@@ -3,7 +3,7 @@
+ // through D1's same-plugin opener. Nothing else here navigates. A queue that
+ // cannot be read is shown as unavailable, never as nothing to answer.
+ import { useEffect, useId, useRef, useState } from "react";
+-import { useBbNavigate } from "@get-bb/plugin-sdk/app";
++import { useBbContext, useBbNavigate } from "@get-bb/plugin-sdk/app";
+ import { openWizDeck } from "../deck/selection/selection";
+ import { useSidebarDeckResult } from "./deck-link";
+ import { popoverCss } from "./RunningPopover";
+@@ -11,6 +11,8 @@
+ export function NeedsYouEntry() {
+   const deck = useSidebarDeckResult();
+   const navigate = useBbNavigate();
++  // The route's thread is the focused pane's: the one the host's opener targets.
++  const routeThreadId = useBbContext().threadId;
+   const [open, setOpen] = useState(false);
+   const [declined, setDeclined] = useState(false);
+   const root = useRef<HTMLDivElement>(null);
+@@ -56,7 +58,7 @@
+                 <button type="button" className="wizbar-running-row"
+                   aria-label={`Open ${item.code} in WizDeck: ${item.question}`}
+                   onClick={() => {
+-                    const accepted = openWizDeck(navigate, { kind: "needs-you", projectKey, itemId: item.id });
++                    const accepted = openWizDeck(navigate, { kind: "needs-you", projectKey, itemId: item.id }, routeThreadId);
+                     setDeclined(!accepted);
+                     if (accepted) setOpen(false);
+                   }}
+--- a/wizbar/src/deck/home/Home.test.tsx
++++ b/wizbar/src/deck/home/Home.test.tsx
+@@ -222,9 +222,13 @@
+     expect(screen.queryByText("Versions")).toBeNull();
+   });
+ 
+-  it("focuses only the item an explicit Needs-you open names", async () => {
+-    mount({ deckWatch: () => result("sample-factory"), deckRelease: () => ({ ok: true }) },
+-      { focus: { kind: "needs-you", projectKey: "sample-factory", itemId: "n12" } });
++  // Bug caught: a restored Needs-you tab stealing focus, or an explicit open not focusing its item.
++  it("focuses only the item an explicit Needs-you open names, and only for that open", async () => {
++    const focus = { kind: "needs-you" as const, projectKey: "sample-factory", itemId: "n12" };
++    mount({ deckWatch: () => result("sample-factory"), deckRelease: () => ({ ok: true }) }, { focus });
++    await flush();
++    expect(document.activeElement?.id).not.toBe("wizdeck-need-n12");
++    act(() => { openWizDeck({ openThreadPanel: () => true }, focus, "thr_any"); });
+     await flush();
+     expect(document.activeElement?.id).toBe("wizdeck-need-n12");
+   });
+--- /dev/null
++++ b/wizbar/src/deck/home/focus-recipient.test.tsx
+@@ -0,0 +1,295 @@
++// @vitest-environment jsdom
++// B1 (#76) PROPOSAL evidence, scratch only: explicit Needs-you focus with two
++// mounted WizDeck panels. A host-equivalent model of Cloudroom 827a3d03 (see
++// docs/evidence/wizbar-v0.4/b1/home-focus/README.md): panel tab state per
++// thread (`panelStateId: threadId`), tab id = plugin:action:serialized params,
++// an existing tab is reactivated, only the active tab renders under a slot
++// keyed by plugin/action/generation with params memoized by `paramsJson`, a
++// thread is open in at most one pane, and the route follows the focused pane.
++// The opener mode "focused" models the proposed upstream sidebar opener
++// (focused pane, resolved at invocation); "none" is today's sidebar (no
++// handler); "declined" is a refused open. Synthetic data only; not the host.
++import { createElement, useMemo, useState, useSyncExternalStore } from "react";
++import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
++import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
++import { loadPluginApp, renderSlot } from "@get-bb/plugin-sdk/testing/app";
++import { buildHomeView } from "../data/home";
++import type { DeckWatchResultV1 } from "../data/server";
++import type { BoardV1 } from "../data/board";
++import { openWizDeck, setSelection } from "../selection/selection";
++import { HEARTBEAT_MS } from "./useDeckHome";
++
++// The route: which thread the focused pane shows (useBbContext's threadId).
++const route = vi.hoisted(() => ({ threadId: "thr_t1" as string | null, listeners: new Set<() => void>() }));
++const setRoute = (threadId: string | null) => { route.threadId = threadId; for (const listener of [...route.listeners]) listener(); };
++vi.mock("@get-bb/plugin-sdk/app", async (importOriginal) => {
++  const actual = await importOriginal<typeof import("@get-bb/plugin-sdk/app")>();
++  const { useSyncExternalStore: useStore } = await import("react");
++  const subscribe = (listener: () => void) => { route.listeners.add(listener); return () => { route.listeners.delete(listener); }; };
++  return { ...actual, useBbContext: () => {
++    const threadId = useStore(subscribe, () => route.threadId, () => route.threadId);
++    return { projectId: "prj_b", threadId };
++  } };
++});
++
++const NOW = Date.parse("2026-11-15T20:30:00Z");
++const app = await loadPluginApp(() => import("../../../app"));
++
++const board = (repo: string, title: string, merged: number, complete = true): BoardV1 => ({
++  repository: repo as BoardV1["repository"],
++  versions: [{
++    repository: repo as BoardV1["repository"], number: 3, title: "1.4", dueOn: null, complete: true,
++    specs: [{
++      ref: `${repo}#41` as never, title, url: `https://github.com/${repo}/issues/41`, state: "open",
++      total: 4, merged, complete,
++      pullRequests: merged ? [{ ref: `${repo}#52`, url: `https://github.com/${repo}/pull/52`, mergedAt: "2026-11-15T09:00:00Z" }] : [],
++      status: { status: "ready", now: "Building T2", next: "Review T2", when: "Today ~16:00 UTC", updated: "2026-11-15T20:00:00Z" },
++    }],
++  }],
++  merges: { since: "2026-11-14T18:30:00Z", complete: true, pullRequests: [{ ref: `${repo}#52`, mergedAt: "2026-11-15T19:00:00Z" }] },
++});
++const ready = <T,>(data: T) => ({ status: "ready" as const, data, fetchedAt: NOW - 5_000, stale: false, complete: true, gaps: [] });
++const queueFile = (items: unknown[]) => ({
++  queue: {
++    schema: "openwiz.needs-you.v1" as const, project: "sample-factory", revision: 2, updatedAt: "2026-11-15T20:20:00Z",
++    expiresAt: "2026-11-15T21:00:00Z", complete: true, gaps: [], items: items as never,
++  }, sha256: "x",
++});
++const item = {
++  id: "n12", code: "N-12", question: "Which changelog headline ships?",
++  options: [{ id: "short", label: "Short headline" }, { id: "long", label: "Long headline" }], recommendedOptionId: "short",
++  sourceUrl: "https://example.com/sample/n12", spec: null, risk: "ordinary", fingerprint: "fp", createdAt: "2026-11-15T20:00:00Z", updatedAt: "2026-11-15T20:00:00Z",
++};
++
++function result(projectKey: string, options: { queue?: "ready" | "empty" | "missing"; repo?: string; title?: string; merged?: number; complete?: boolean } = {}): DeckWatchResultV1 {
++  const repo = options.repo ?? (projectKey === "sample-factory" ? "example-org/sample-app" : "example-org/other-app");
++  const queue = options.queue ?? "ready";
++  return {
++    projects: [{ projectKey: "sample-factory", cloudroomProjectId: "prj_a" }, { projectKey: "other-factory", cloudroomProjectId: "prj_b" }],
++    projectKey, setup: null,
++    view: buildHomeView({
++      projectKey, timeZone: "UTC", now: NOW, authenticated: true,
++      queue: {
++        snapshot: queue === "missing" ? { status: "unavailable", reason: "missing", lastGood: null } : ready(queueFile(queue === "empty" ? [] : [item])),
++        detail: queue === "missing" ? "The Needs-you file does not exist in the configured home." : null, nextRefreshAt: NOW + 55_000, refreshing: false,
++      },
++      boards: [{ snapshot: { ...ready(board(repo, options.title ?? `${projectKey} spec`, options.merged ?? 1, options.complete ?? true)), complete: options.complete ?? true }, detail: null, nextRefreshAt: NOW + 55_000, refreshing: false }],
++    }),
++  };
++}
++
++
++const { WizDeckPanel } = await import("./Panel");
++void app;
++
++// ---- Host-equivalent panel tabs, per thread --------------------------------
++type Tab = { id: string; paramsJson: string | null };
++const host = {
++  mode: "focused" as "focused" | "none" | "declined",
++  threads: new Map<string, { tabs: Tab[]; active: string | null }>(),
++  listeners: new Set<() => void>(),
++  version: 0,
++};
++const bump = () => { host.version += 1; for (const listener of [...host.listeners]) listener(); };
++const opener = {
++  openThreadPanel(options: { actionId: string; params?: unknown }) {
++    if (host.mode !== "focused") return false;
++    const threadId = route.threadId; // resolved at invocation: the focused pane's thread
++    if (threadId === null) return false;
++    const paramsJson = options.params === undefined ? null : JSON.stringify(options.params);
++    const id = `wizbar:${options.actionId}:${paramsJson ?? ""}`;
++    const state = host.threads.get(threadId) ?? { tabs: [], active: null };
++    if (!state.tabs.some((tab) => tab.id === id)) state.tabs = [...state.tabs, { id, paramsJson }];
++    state.active = id;
++    host.threads.set(threadId, state);
++    bump();
++    return true;
++  },
++};
++const subscribeHost = (listener: () => void) => { host.listeners.add(listener); return () => { host.listeners.delete(listener); }; };
++function TabContent({ threadId, paramsJson }: { threadId: string; paramsJson: string | null }) {
++  const params = useMemo(() => (paramsJson === null ? null : JSON.parse(paramsJson)), [paramsJson]);
++  return createElement(WizDeckPanel, { key: "thread/wizbar/wizdeck/1", threadId, params });
++}
++function Pane({ threadId }: { threadId: string }) {
++  useSyncExternalStore(subscribeHost, () => host.version, () => host.version);
++  const state = host.threads.get(threadId);
++  const active = state?.tabs.find((tab) => tab.id === state.active);
++  return createElement("section", { "aria-label": `Pane ${threadId}` },
++    active ? createElement(TabContent, { threadId, paramsJson: active.paramsJson }) : null);
++}
++const shown = { t1: true, t2: true };
++function Window() {
++  const [, setVersion] = useState(0);
++  (Window as unknown as { refresh: () => void }).refresh = () => setVersion((v) => v + 1);
++  return createElement("div", null,
++    shown.t1 ? createElement(Pane, { threadId: "thr_t1" }) : null,
++    shown.t2 ? createElement(Pane, { threadId: "thr_t2" }) : null);
++}
++const refreshWindow = () => act(() => { (Window as unknown as { refresh: () => void }).refresh(); });
++
++/** What WizBar's Needs-you entry does: the opener, plus the click's route thread. */
++const click = (projectKey = "sample-factory", itemId = "n12") =>
++  act(() => { openWizDeck(opener as never, { kind: "needs-you", projectKey, itemId }, route.threadId as never); });
++const pane = (threadId: string) => within(screen.getByRole("region", { name: `Pane ${threadId}` }));
++const factory = (threadId: string) => pane(threadId).getByRole("combobox", { name: "Factory" }) as HTMLSelectElement;
++const itemIn = (threadId: string) => screen.getByRole("region", { name: `Pane ${threadId}` }).querySelector("[id='wizdeck-need-n12']"); // Not "#id": two panels can repeat it
++const tabCount = () => [...host.threads.values()].reduce((sum, state) => sum + state.tabs.length, 0);
++
++function mount(watch: (input: { projectKey: string | null }) => unknown =
++  (input) => result(input.projectKey === "sample-factory" ? "sample-factory" : "other-factory")) {
++  return renderSlot({ component: Window }, {}, { rpc: { deckWatch: watch, deckRelease: () => ({ ok: true }) } as never });
++}
++
++beforeEach(() => {
++  vi.useFakeTimers({ shouldAdvanceTime: false }); vi.setSystemTime(NOW);
++  host.mode = "focused"; host.threads = new Map(); shown.t1 = true; shown.t2 = true; setRoute("thr_t1");
++  Element.prototype.scrollIntoView ??= function scrollIntoView() {};
++});
++afterEach(() => { cleanup(); vi.useRealTimers(); setSelection({ kind: "none" }); });
++const flush = () => act(async () => { await vi.advanceTimersByTimeAsync(0); });
++
++describe("explicit Needs-you focus reaches only the panel the host opened", () => {
++  // Bug caught: one accepted click switching or focusing every mounted panel
++  // that holds the same factory/item focus (recipient chosen by data, not by pane).
++  it("with two mounted panels holding the same focus, a click switches and focuses only the focused pane's panel", async () => {
++    const scroll = vi.spyOn(Element.prototype, "scrollIntoView");
++    mount();
++    await click(); await flush();                       // T1 focused: its tab opens
++    setRoute("thr_t2"); await click(); await flush();   // T2 focused: its tab opens
++    expect(tabCount()).toBe(2);
++    expect(factory("thr_t1").value).toBe("sample-factory");
++    expect(factory("thr_t2").value).toBe("sample-factory");
++    // The person moves both panels to factory B by hand.
++    fireEvent.change(factory("thr_t1"), { target: { value: "other-factory" } });
++    fireEvent.change(factory("thr_t2"), { target: { value: "other-factory" } });
++    await flush();
++    factory("thr_t2").focus();
++    // T2 is focused; the same item is clicked again.
++    await click(); await flush();
++    expect(factory("thr_t2").value).toBe("sample-factory");
++    expect(document.activeElement).toBe(itemIn("thr_t2"));
++    expect(factory("thr_t1").value).toBe("other-factory");
++    // Now T1 is focused and clicked; T2 is left as it is.
++    setRoute("thr_t1");
++    factory("thr_t1").focus();
++    await click(); await flush();
++    expect(factory("thr_t1").value).toBe("sample-factory");
++    expect(document.activeElement).toBe(itemIn("thr_t1"));
++    expect(factory("thr_t2").value).toBe("sample-factory");
++    // Repeated identical clicks reuse each thread's one tab.
++    await click(); await click(); await flush();
++    expect(tabCount()).toBe(2);
++    expect(scroll).not.toHaveBeenCalled();
++    scroll.mockRestore();
++  });
++
++  // Bug caught: a refused or impossible open still switching a panel.
++  it.each(["none", "declined"] as const)("does nothing when the open is refused (%s)", async (mode) => {
++    mount();
++    await click(); await flush();
++    fireEvent.change(factory("thr_t1"), { target: { value: "other-factory" } });
++    await flush();
++    host.mode = mode;
++    factory("thr_t1").focus();
++    let accepted = true;
++    act(() => { accepted = openWizDeck(opener as never, { kind: "needs-you", projectKey: "sample-factory", itemId: "n12" }, route.threadId as never); });
++    await flush();
++    expect(accepted).toBe(false);
++    expect(factory("thr_t1").value).toBe("other-factory");
++    expect(document.activeElement).toBe(factory("thr_t1"));
++  });
++
++  // Bug caught: focus jumping back into a pane the person has already left.
++  it("selects the factory but never pulls focus back when the pane changes while the data loads", async () => {
++    let release: (() => void) | null = null;
++    let first = true;
++    mount((input) => {
++      if (input.projectKey === "sample-factory" && !first) return new Promise((resolve) => { release = () => resolve(result("sample-factory")); });
++      if (input.projectKey === "sample-factory") first = false;
++      return result(input.projectKey === "sample-factory" ? "sample-factory" : "other-factory");
++    });
++    await click(); await flush();
++    fireEvent.change(factory("thr_t1"), { target: { value: "other-factory" } });
++    await flush();
++    await click(); await flush(); // A's read is now pending
++    setRoute("thr_t2");
++    const elsewhere = document.createElement("button");
++    document.body.append(elsewhere);
++    elsewhere.focus();
++    await act(async () => { release?.(); await vi.advanceTimersByTimeAsync(0); });
++    expect(factory("thr_t1").value).toBe("sample-factory");
++    expect(document.activeElement).toBe(elsewhere);
++    await act(async () => { await vi.advanceTimersByTimeAsync(HEARTBEAT_MS); });
++    expect(document.activeElement).toBe(elsewhere);
++    elsewhere.remove();
++  });
++
++  // Bug caught: an unmounted panel acting, or a remount replaying an old click.
++  it("delivers an undelivered click once on mount, never to a disposed panel, and never twice", async () => {
++    shown.t1 = false; refreshWindow();
++    mount();
++    await click(); await flush(); // accepted while T1's pane is not mounted
++    shown.t1 = true; refreshWindow(); await flush();
++    expect(factory("thr_t1").value).toBe("sample-factory");
++    expect(document.activeElement).toBe(itemIn("thr_t1"));
++    // Switch away, dispose and remount: no replay.
++    fireEvent.change(factory("thr_t1"), { target: { value: "other-factory" } });
++    await flush();
++    shown.t1 = false; refreshWindow(); await flush();
++    shown.t1 = true; refreshWindow(); await flush();
++    expect(document.activeElement).not.toBe(itemIn("thr_t1"));
++    // A pending read for a disposed panel changes nothing after it is gone.
++    let release: (() => void) | null = null;
++    cleanup();
++    mount((input) => input.projectKey === "sample-factory"
++      ? new Promise((resolve) => { release = () => resolve(result("sample-factory")); }) : result("other-factory"));
++    await flush();
++    await click(); await flush();
++    shown.t1 = false; refreshWindow();
++    await act(async () => { release?.(); await vi.advanceTimersByTimeAsync(0); });
++    expect(screen.queryByRole("region", { name: "Pane thr_t1" })?.textContent ?? "").toBe("");
++  });
++
++  // Bug caught: ordinary selection, rerenders, refreshes or manual switches moving focus or the factory.
++  it("ordinary selection, rerenders, refreshes and manual switches never switch, scroll or steal focus", async () => {
++    const scroll = vi.spyOn(Element.prototype, "scrollIntoView");
++    const slot = mount();
++    await click(); await flush();
++    fireEvent.change(factory("thr_t1"), { target: { value: "other-factory" } });
++    await flush();
++    factory("thr_t1").focus();
++    act(() => { setSelection({ kind: "spec", projectKey: "sample-factory", spec: "example-org/sample-app#41" }); });
++    await act(async () => { await vi.advanceTimersByTimeAsync(HEARTBEAT_MS); });
++    slot.rerender(createElement(Window));
++    fireEvent.change(factory("thr_t1"), { target: { value: "sample-factory" } });
++    await flush();
++    expect(document.activeElement).toBe(factory("thr_t1"));
++    expect(slot.inspection.navigateCalls).toEqual([]);
++    expect(scroll).not.toHaveBeenCalled();
++    scroll.mockRestore();
++  });
++
++  // Bug caught: switching to an unconfigured factory, or an old factory's late answer painting.
++  it("refuses an unknown factory and never shows a stale answer for the old factory", async () => {
++    let releaseOld: (() => void) | null = null;
++    let calls = 0;
++    mount((input) => {
++      calls += 1;
++      if (input.projectKey === "sample-factory") return result("sample-factory");
++      if (calls > 2) return new Promise((resolve) => { releaseOld = () => resolve(result("other-factory")); });
++      return result("other-factory");
++    });
++    await click("sample-factory"); await flush();
++    fireEvent.change(factory("thr_t1"), { target: { value: "other-factory" } });
++    await flush();
++    await click("unknown-factory"); await flush();
++    expect(factory("thr_t1").value).toBe("other-factory");
++    await act(async () => { await vi.advanceTimersByTimeAsync(HEARTBEAT_MS); }); // old-factory read in flight
++    await click("sample-factory"); await flush();
++    await act(async () => { releaseOld?.(); await vi.advanceTimersByTimeAsync(0); });
++    expect(factory("thr_t1").value).toBe("sample-factory");
++    expect(pane("thr_t1").queryByText("other-factory spec")).toBeNull();
++    expect(document.activeElement).toBe(itemIn("thr_t1"));
++  });
++});

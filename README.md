@@ -14,6 +14,8 @@ styling; this is not an installed-app screenshot. v0.3's behaviour is proved by
 fixture tests in CI; on a real host it awaits the live check in
 [#9](https://github.com/openwizdev/WizPlugins/issues/9).
 
+Development toward WizBar 0.4 (#76) replaces the footer bolt with a running-count popover. The v0.3 description below remains historical; StatsPanel and wizbar stats keep their existing calculations, but StatsPanel has no registered footer route after #76. This development work is not a published release or installed-host verification and remains merge-gated on Cloudroom #160 and #158.
+
 ## Install
 
 **BB Marketplace (BB app and Cloudroom): not listed yet.** Publication waits for
