@@ -1,0 +1,34 @@
+
+ RUN  v4.1.10 /tmp/hx2/wizbar
+
+stderr | src/deck/home/Home.test.tsx > explicit Needs-you focus through the host's panel tabs > selects the requested factory and focuses its exact item on every deliberate click, without new tabs
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+ ❯ |bb-plugin-wizbar| src/deck/home/Home.test.tsx (20 tests | 1 failed) 742ms
+     × selects the requested factory and focuses its exact item on every deliberate click, without new tabs 63ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/home/Home.test.tsx > explicit Needs-you focus through the host's panel tabs > selects the requested factory and focuses its exact item on every deliberate click, without new tabs
+AssertionError: expected 'other-factory' to be 'sample-factory' // Object.is equality
+
+Expected: "sample-factory"
+Received: "other-factory"
+
+ ❯ src/deck/home/Home.test.tsx:328:29
+    326|     await click("sample-factory");
+    327|     await flush();
+    328|     expect(factory().value).toBe("sample-factory");
+       |                             ^
+    329|     expect(document.activeElement?.id).toBe("wizdeck-need-n12");
+    330|     expect(host.tabs).toHaveLength(2);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 19 passed (20)
+   Start at  19:50:29
+   Duration  1.85s (transform 227ms, setup 0ms, import 523ms, tests 742ms, environment 486ms)
+

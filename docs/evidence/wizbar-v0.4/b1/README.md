@@ -42,7 +42,8 @@ One swarm, one helper: image generator (Codex Terra 6.1, high, shared sandbox), 
 
 ## Gaps
 
-- **Cross-factory Needs-you focus (acceptance-blocking, open).** If the open WizDeck panel shows another factory, D1's Home ignores the focus. The exact fix and regression are proposed on #76; `Home.tsx` is not B1's and is not edited.
+- **Cross-factory and repeated Needs-you focus (acceptance-blocking, open).** If the open WizDeck panel shows another factory, D1's Home ignores the focus, and a repeated identical open of an active tab reaches no panel. The host trace, both options, the full diff and red/green runs are in `home-focus/`. The complete option needs a new plugin-local event (a user boundary); `Home.tsx` is not B1's and is not edited.
+- **Sidebar → WizDeck opener (host, open).** By Cloudroom source at `827a3d03` and #160's `fec35c49`, a sidebar slot has no thread-panel opener handler, so `openThreadPanel` from WizBar's sidebar returns `false`; the Needs-you entry then says "Open a thread to see WizDeck beside it." Opening from the sidebar needs a host change (`home-focus/README.md`, finding 4).
 - **Full spec highlighting (acceptance open).** Spec highlights use only links the deck has verified (merged PRs and the spec's own thread). An open builder PR is not in the board's verified list, so most fleet threads are not highlighted until F1's membership is integrated. This subset is not claimed as the complete behaviour.
 - The sidebar's WizDeck lease keeps D1's shared 60-second refresh alive while the sidebar is visible (#73's surface-in-use rule); renewals pause when the page is hidden.
 - Running and idle durations and stall status are not shown: C1 records that no activity clock or same role/state stall policy exists.
