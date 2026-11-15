@@ -33,8 +33,8 @@ export function Home({ focus }: { focus: FocusRequestV1 | null }) {
   const result = deck.result;
   const projectKey = deck.selected ?? result?.projectKey ?? null;
   // A view is shown only for the factory it was built for: switching never leaks rows.
-  const view = result?.view ?? null; // PLANTED U1
-  const open = (url: string) => { globalThis.open?.(url); }; void navigate; // PLANTED U2
+  const view = result?.view && result.view.projectKey === projectKey ? result.view : null;
+  const open = (url: string) => { navigate.openUrl(url); };
   const focusedItemId = focus && focus.projectKey === projectKey ? focus.itemId : null;
   const now = Date.now();
 

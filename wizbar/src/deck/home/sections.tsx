@@ -40,8 +40,7 @@ export function NeedsYou({ needsYou, open, focusedItemId }: {
 }) {
   const view: NeedsYouViewV1 | null = needsYou.view;
   const title = needsYou.freshness === "loading" ? "Needs you"
-    : !view || view.state === "unavailable" ? "Needs you · 0" // PLANTED U3
-    
+    : !view || view.state === "unavailable" ? "Needs you · unavailable"
     : view.count === null ? `Needs you · ${view.items.length} known` : `Needs you · ${view.count}`;
   return (
     <section aria-labelledby="wizdeck-needs-you" data-freshness={needsYou.freshness}>

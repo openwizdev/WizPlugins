@@ -43,7 +43,8 @@ export function useDeckHome(currentProjectId: string | null): DeckHomeState {
     const mine = ++seq.current;
     try {
       const next = await rpc.call(method, input());
-      void mine; setResult(next); // PLANTED U1
+      if (mine !== seq.current) return;
+      setResult(next);
       setError(null);
     } catch (caught) {
       if (mine !== seq.current) return;
@@ -53,7 +54,7 @@ export function useDeckHome(currentProjectId: string | null): DeckHomeState {
 
   useEffect(() => {
     void apply("deckWatch");
-    const timer = setInterval(() => { void apply("deckWatch"); void globalThis.fetch?.("https://api.github.com/graphql"); }, HEARTBEAT_MS); // PLANTED U4
+    const timer = setInterval(() => { void apply("deckWatch"); }, HEARTBEAT_MS);
     return () => clearInterval(timer);
   }, [apply, selected]);
 
@@ -64,7 +65,7 @@ export function useDeckHome(currentProjectId: string | null): DeckHomeState {
   const select = useCallback((projectKey: string) => {
     seq.current += 1; // Drop any answer still in flight for the previous factory.
     selectedRef.current = projectKey;
-    // PLANTED U1: old rows kept
+    setResult((previous) => previous && { ...previous, projectKey, view: null });
     setSelected(projectKey);
   }, []);
 
