@@ -19,6 +19,15 @@ Bug caught: credential disclosure through failure details. Before the fix, the r
 
 Settings: `settings.test.ts` now expects WizBar's four switches plus `wizdeckFactories` (string, multi-line) and `wizdeckGithubToken` (string, secret), with the four existing assertions unchanged. `contracts/settings.v1.md` gains the approved paragraph. `changes/73.md` holds the approved line (no new test: the changelog is prose and adds no behaviour).
 
+## Review round 1 (R1, R2)
+
+- **R1, later pages invisible forever.** The board followed no `endCursor`, so a spec, ticket or closing PR past the first page never appeared. Now milestones, a version's issues, a spec's sub-issues and a ticket's closing PRs are each continued in bounded batches (page and per-load call bounds in `BOARD_LIMITS`). Rows already read are kept when a bound or a failure stops traversal. A version records whether all of its issues were read, and its summary (`0+/0`) and empty state ("No specs among the issues read so far.") stay partial when they were not. Proof: `deck-server.test.ts` "R1: board connections continue past their first page" (a spec after 50 issues; a verified ticket after 50 sub-issues whose merged PR is after 10 links; an interrupted issue continuation; the page bound), and `Home.test.tsx` "keeps a partly read version's summary and empty state partial".
+- **R2, supplementary failure discards the board.** A failed status-comment page or merge-search page threw away a board already read. Now those reads are supplementary. A failed comment read marks only that spec's status unavailable, with a gap. A failed merge page keeps the times already read and leaves merges today null. A GitHub rate limit met in either keeps the rows, and its reset deadline is carried into the shared cache, which reads nothing until then. Cancellation is re-thrown, not swallowed. Proof: `deck-server.test.ts` "R2: supplementary reads never discard the board".
+- **Secret boundary kept.** Failure details in partial reads are fixed wording too: "never returns the token when a later page fails and the board stays partial" checks watch, refresh and realtime with a later page's transport error that echoes the token.
+- **Red:** `red-review-1.log` (commit `94259ee`) runs the new backend tests against the reviewed implementation at `24876b2`, nothing planted: 8 fail on their claims (two as `TypeError`s reading the discarded board). `red-review-1-home.log` (commit `3420f27`) does the same for the Home case.
+
+The screenshots in `screenshots/` were taken before this round. A fully read version renders the same as before.
+
 ## Queue-host access
 
 Every read is `bb.sdk.files.read({ hostId, rootPath, path: ".openwiz/needs-you.v1.json" })` with the binding's explicit host and root; there is no call without a `hostId`. The root must be absolute and normal (no `.`, `..`, empty or `~` segment, not a filesystem root, no trailing separator); anything else is refused before the SDK call. The returned path must be that file, and the SHA-256 of the returned bytes must equal the host's reported `sha256`. No credential, mount or file-write route was added.

@@ -1,4 +1,4 @@
-# D1 checks at the hand-back commit (from wizbar/): npm run typecheck -> passed; npx vitest run --config vitest.config.ts --maxWorkers=2
+# D1 checks at the review-round-1 hand-back commit (from wizbar/): npm run typecheck -> passed; npx vitest run --config vitest.config.ts --maxWorkers=2
  Test Files  26 passed (26)
-      Tests  842 passed (842)
-   Duration  17.82s (transform 756ms, setup 0ms, import 4.73s, tests 22.03s, environment 5.49s)
+      Tests  852 passed (852)
+   Duration  17.43s (transform 1.08s, setup 0ms, import 4.96s, tests 21.18s, environment 5.37s)
