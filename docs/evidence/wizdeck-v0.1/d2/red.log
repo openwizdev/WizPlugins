@@ -1,0 +1,155 @@
+# D2 (#74) red run: planted bugs P1-P6 (see README), nothing else changed
+# cmd: (cd wizbar && npx vitest run src/deck/actions/)
+
+ RUN  v4.1.10 wizbar
+
+ ❯ |bb-plugin-wizbar| src/deck/actions/actions-server.test.ts (20 tests | 9 failed) 69ms
+     × sends exactly the SDK's three steer arguments to the bound orchestrator 21ms
+     × a newer queue revision cancels with revision-changed and sends nothing 4ms
+     × a changed proposal fingerprint cancels with proposal-changed and sends nothing 2ms
+     × risk raised to live cancels with gated-risk and sends nothing 2ms
+     × the option withdrawn cancels with unknown-option and sends nothing 2ms
+     × a repeated operation id joins one send; a second operation for the same answer is refused 2ms
+     × a rejected send is uncertain, and neither a repeat nor a new operation resends it 3ms
+     × each makes one steer to the orchestrator and no GitHub, file or thread write 2ms
+     × the action log links to the orchestrator and carries no reply text 3ms
+ ❯ |bb-plugin-wizbar| src/deck/actions/Actions.test.tsx (13 tests | 1 failed) 973ms
+     × Undo before five seconds sends nothing; one valid answer sends exactly one steer after five seconds 221ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 10 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/actions/Actions.test.tsx > five-second Undo for ordinary answers > Undo before five seconds sends nothing; one valid answer sends exactly one steer after five seconds
+AssertionError: expected [ { method: 'deckSteer', …(1) } ] to have a length of +0 but got 1
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ src/deck/actions/Actions.test.tsx:112:34
+    110|     expect(within(t.answerRow()).getByRole("status").textContent).toCo…
+    111|     await advance(UNDO_MS - 100);
+    112|     expect(t.calls("deckSteer")).toHaveLength(0);
+       |                                  ^
+    113|     fireEvent.click(within(t.answerRow()).getByRole("button", { name: …
+    114|     await advance(UNDO_MS * 3);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/10]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/actions/actions-server.test.ts > one answer, one steer to the configured orchestrator > sends exactly the SDK's three steer arguments to the bound orchestrator
+AssertionError: expected [ 'input', 'mode', 'requestId', …(1) ] to deeply equal [ 'input', 'mode', 'threadId' ]
+
+- Expected
++ Received
+
+  [
+    "input",
+    "mode",
++   "requestId",
+    "threadId",
+  ]
+
+ ❯ src/deck/actions/actions-server.test.ts:82:38
+     80|     expect(t.send).toHaveBeenCalledTimes(1);
+     81|     const sent = t.send.mock.calls[0][0] as Record<string, unknown>;
+     82|     expect(Object.keys(sent).sort()).toEqual(["input", "mode", "thread…
+       |                                      ^
+     83|     expect(sent.threadId).toBe(ORCH);
+     84|     expect(sent.mode).toBe("steer");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/10]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/actions/actions-server.test.ts > stale, changed and wrong-target answers cancel before any send > a newer queue revision cancels with revision-changed and sends nothing
+ FAIL  |bb-plugin-wizbar| src/deck/actions/actions-server.test.ts > stale, changed and wrong-target answers cancel before any send > a changed proposal fingerprint cancels with proposal-changed and sends nothing
+ FAIL  |bb-plugin-wizbar| src/deck/actions/actions-server.test.ts > stale, changed and wrong-target answers cancel before any send > risk raised to live cancels with gated-risk and sends nothing
+ FAIL  |bb-plugin-wizbar| src/deck/actions/actions-server.test.ts > stale, changed and wrong-target answers cancel before any send > the option withdrawn cancels with unknown-option and sends nothing
+AssertionError: expected 'sent' to be 'cancelled' // Object.is equality
+
+Expected: "cancelled"
+Received: "sent"
+
+ ❯ src/deck/actions/actions-server.test.ts:116:28
+    114|       t.setQueue(next());
+    115|       const record = await t.steer(args);
+    116|       expect(record.state).toBe("cancelled");
+       |                            ^
+    117|       expect(record.reason).toBe(reason);
+    118|       expect(t.send).not.toHaveBeenCalled();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/10]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/actions/actions-server.test.ts > duplicates and uncertain outcomes never send twice > a repeated operation id joins one send; a second operation for the same answer is refused
+AssertionError: expected "vi.fn()" to be called 1 times, but got 3 times
+ ❯ src/deck/actions/actions-server.test.ts:180:20
+    178|     const other = t.steer(args);
+    179|     for (let turn = 0; turn < 100 && t.send.mock.calls.length === 0; t…
+    180|     expect(t.send).toHaveBeenCalledTimes(1);
+       |                    ^
+    181|     release({ ok: true, delivery: "sent" });
+    182|     const [one, two, three] = await Promise.all([first, second, other]…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/10]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/actions/actions-server.test.ts > duplicates and uncertain outcomes never send twice > a rejected send is uncertain, and neither a repeat nor a new operation resends it
+AssertionError: expected { operationId: 'op-test-0003', …(9) } to match object { state: 'cancelled', …(1) }
+(11 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "reason": "duplicate",
+-   "state": "cancelled",
++   "reason": null,
++   "state": "uncertain",
+  }
+
+ ❯ src/deck/actions/actions-server.test.ts:199:33
+    197|     expect(record.state).toBe("uncertain");
+    198|     expect(await t.steer(op)).toMatchObject({ state: "uncertain" });
+    199|     expect(await t.steer(args)).toMatchObject({ state: "cancelled", re…
+       |                                 ^
+    200|     expect(t.send).toHaveBeenCalledTimes(1);
+    201|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/10]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/actions/actions-server.test.ts > spec actions and feedback steer only the orchestrator > each makes one steer to the orchestrator and no GitHub, file or thread write
+AssertionError: expected 'queue' to be 'steer' // Object.is equality
+
+Expected: "steer"
+Received: "queue"
+
+ ❯ src/deck/actions/actions-server.test.ts:252:25
+    250|     for (const [args] of t.send.mock.calls as unknown as [{ threadId: …
+    251|       expect(args.threadId).toBe(ORCH);
+    252|       expect(args.mode).toBe("steer");
+       |                         ^
+    253|     }
+    254|     const texts = (t.send.mock.calls as unknown as [{ input: { text: s…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/10]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/actions/actions-server.test.ts > the reply is never guessed > the action log links to the orchestrator and carries no reply text
+AssertionError: expected '{"projectKey":"sample-factory","orche…' not to contain 'An unrelated latest reply'
+
+Expected: "An unrelated latest reply"
+Received: "{"projectKey":"sample-factory","orchestrator":{"status":"verified","threadId":"thr_d1_orchestrator","title":"Sample orchestrator"},"records":[{"operationId":"op-test-0001","kind":"tell","projectKey":"sample-factory","createdAt":1794774600000,"settledAt":1794774600000,"answer":null,"label":"Hold new builds until Monday.","state":"sent","reason":null,"detail":null}],"reply":{"status":"link-only","reason":"{\"rows\":[{\"kind\":\"message\",\"role\":\"assistant\",\"text\":\"An unrelated latest reply\"}]}"}}"
+
+ ❯ src/deck/actions/actions-server.test.ts:282:37
+    280|     expect(log.reply.status).toBe("link-only");
+    281|     expect(log.records).toHaveLength(1);
+    282|     expect(JSON.stringify(log)).not.toContain("An unrelated latest rep…
+       |                                     ^
+    283|     expect(t.timeline).not.toHaveBeenCalled();
+    284|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/10]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  10 failed | 23 passed (33)
+   Start at  19:19:17
+   Duration  1.86s (transform 368ms, setup 0ms, import 625ms, tests 1.04s, environment 507ms)
+
