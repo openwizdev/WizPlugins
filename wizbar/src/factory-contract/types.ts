@@ -141,17 +141,35 @@ export type HostInventoryV1 =
 
 // ---- Activity and stall ------------------------------------------------------
 
-/** Activity evidence from the host timeline. Never createdAt, updatedAt or a receipt time. */
+/**
+ * What one latest-page `bb.sdk.threads.timeline` read can establish. Turn and
+ * operation `status: "pending"` is supported state. Row times are host event
+ * record times (stored-event `created_at`, written at insertion), so no
+ * verified last-activity clock exists: `lastActivityAt` is always null from
+ * this reader. A future verified source fills it (F1 seam).
+ */
 export type ActivityEvidenceV1 =
-  | { source: "host-timeline"; turnStartedAt: number | null; lastActivityAt: number }
-  | { source: "none"; reason: "not-read" | "no-timeline-rows" | "unavailable" };
+  | {
+    status: "read";
+    /** Epoch ms when this plugin's read returned; freshness only, never activity. */
+    fetchedAt: number;
+    /** The pending turn on the latest page, if any. */
+    activeTurnId: string | null;
+    /** Pending operation rows (tools, commands, workflows) on the latest page. */
+    pendingOperations: number;
+    /** Verified last agent progress, epoch ms. Null: no supported clock. */
+    lastActivityAt: number | null;
+  }
+  | { status: "unavailable"; reason: "not-read" | "malformed" | "not-latest-page" };
 
-/** The factory's stall threshold, with its source. None is adopted in v1. */
+/** The factory's stall threshold for the same role and state, with provenance. */
 export type StallThresholdV1 =
-  | { source: "factory"; thresholdMs: number; reference: string }
+  | { source: "factory"; role: string; state: string; thresholdMs: number; reference: string }
   | { source: "none"; reason: string };
 
 export type StallV1 =
   | { status: "not-running" }
-  | { status: "unavailable"; reason: "no-activity-evidence" | "no-threshold" }
+  /** A tool or command is still pending: no idle claim either way. */
+  | { status: "operation-pending" }
+  | { status: "unavailable"; reason: "no-activity-evidence" | "stale-observation" | "no-threshold" | "no-activity-clock" }
   | { status: "ok" | "stalled"; idleMs: number; thresholdMs: number };
