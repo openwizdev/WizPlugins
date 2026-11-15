@@ -5,7 +5,7 @@ import { GitHubReadFailed, type GitHubReader } from "../data/github";
 import { liveHealth } from "../live/health";
 import { fxNow, fxPullRequests, fxRunning, fxThread, fxThreads, OTHER_SPEC, REPO, SPEC } from "./fixtures";
 import { FLEET_LINK_LIMITS, loadFleetLinks } from "./links";
-import { buildFleet, fleetLinkSource, specOfThread, viewGroup, type FleetLinkSourceV1, type FleetModelV1 } from "./model";
+import { buildFleet, fleetLinkSource, specOfThread, threadsOfSpec, viewGroup, type FleetLinkSourceV1, type FleetModelV1 } from "./model";
 
 const read = (pullRequests = fxPullRequests, complete = true): FleetLinkSourceV1 => ({ status: "read", pullRequests, complete, stale: false, gaps: [] });
 const model = (links: FleetLinkSourceV1 = read(), threads = fxThreads, host: { runningThreads?: unknown } = { runningThreads: fxRunning }): FleetModelV1 =>
@@ -78,6 +78,15 @@ describe("fleet placement", () => {
   it("says a branch was not found in what was read when the read is partial", () => {
     const m = model(read(fxPullRequests, false));
     expect(everyRow(m).find((row) => row.id === "thr_b3")?.link).toEqual({ status: "no-pull-request", branch: "room/t3", complete: false });
+  });
+
+  // Bug caught (B1 seam): a spec highlight reaching only threads behind merged PRs,
+  // missing its running manager, builders and helpers, or catching unplaced work.
+  it("gives a spec's full placed membership for the shared highlight", () => {
+    const m = model();
+    expect(threadsOfSpec(m, SPEC).sort()).toEqual(["thr_b2", "thr_b3", "thr_ghost", "thr_help", "thr_mgr", "thr_rev"]);
+    expect(threadsOfSpec(m, OTHER_SPEC)).toEqual([]);
+    expect(threadsOfSpec(model({ status: "not-connected" }), SPEC)).toEqual([]);
   });
 
   it("lists tickets closed by merged pull requests under their spec, once", () => {

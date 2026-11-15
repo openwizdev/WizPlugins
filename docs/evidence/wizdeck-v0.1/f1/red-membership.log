@@ -1,0 +1,40 @@
+
+ RUN  v4.1.10 wizbar
+
+ ❯ |bb-plugin-wizbar| src/deck/fleet/fleet.test.ts (15 tests | 1 failed) 24ms
+     × gives a spec's full placed membership for the shared highlight 5ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/fleet/fleet.test.ts > fleet placement > gives a spec's full placed membership for the shared highlight
+AssertionError: expected [] to deeply equal [ 'thr_b2', 'thr_b3', …(4) ]
+
+- Expected
++ Received
+
+- [
+-   "thr_b2",
+-   "thr_b3",
+-   "thr_ghost",
+-   "thr_help",
+-   "thr_mgr",
+-   "thr_rev",
+- ]
++ []
+
+ ❯ src/deck/fleet/fleet.test.ts:87:43
+     85|   it("gives a spec's full placed membership for the shared highlight",…
+     86|     const m = model();
+     87|     expect(threadsOfSpec(m, SPEC).sort()).toEqual(["thr_b2", "thr_b3",…
+       |                                           ^
+     88|     expect(threadsOfSpec(m, OTHER_SPEC)).toEqual([]);
+     89|     expect(threadsOfSpec(model({ status: "not-connected" }), SPEC)).to…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 14 passed (15)
+   Start at  19:34:31
+   Duration  265ms (transform 70ms, setup 0ms, import 134ms, tests 24ms, environment 0ms)
+

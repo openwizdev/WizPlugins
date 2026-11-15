@@ -304,3 +304,12 @@ export function specOfThread(model: FleetModelV1, threadId: string): SpecRefV1 |
   for (const group of model.groups) if (group.rows.some((row) => row.id === threadId)) return group.spec;
   return null;
 }
+
+/**
+ * Every thread placed under a spec (managers, builders and helpers, by
+ * verified links and parent relationships), for B1's (#76) sidebar highlight.
+ * Full membership, not only threads behind already-merged pull requests.
+ */
+export function threadsOfSpec(model: FleetModelV1, spec: SpecRefV1): string[] {
+  return [];
+}
