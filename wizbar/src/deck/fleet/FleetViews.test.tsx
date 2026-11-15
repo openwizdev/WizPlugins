@@ -58,7 +58,7 @@ const result = (withQueue = false): DeckWatchResultV1 => ({
     boards: [{ snapshot: ready(board), detail: null, nextRefreshAt: fxNow + 55_000, refreshing: false }],
   }),
 });
-const linkViews: CacheView<FleetLinksV1>[] = [{ snapshot: ready({ repository: REPO, pullRequests: fxPullRequests }), detail: null, nextRefreshAt: null, refreshing: false }];
+const linkViews: CacheView<FleetLinksV1>[] = [{ snapshot: ready({ repository: REPO, pullRequests: fxPullRequests, openComplete: true, mergedComplete: true }), detail: null, nextRefreshAt: null, refreshing: false }];
 
 beforeEach(() => {
   vi.useFakeTimers({ shouldAdvanceTime: false }); vi.setSystemTime(fxNow);
@@ -67,6 +67,9 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.useRealTimers(); });
 const flush = () => act(async () => { await vi.advanceTimersByTimeAsync(0); });
+
+/** The host's project record: the project's own repository (R1 provenance). */
+const hostProject = { projects: { get: async () => ({ gitRemoteUrl: `https://github.com/${REPO}.git` }) } } as never;
 
 /** The sidebar state a #160 host delivers; `runningThreads` is the additive field. */
 const sidebar = (runningThreads?: unknown) => {
@@ -79,6 +82,7 @@ function mountHome(runningThreads?: unknown, withLinks = false, withQueue = fals
     rpc: { deckWatch: () => ({ ...result(withQueue), ...(withLinks ? { fleetLinks: linkViews } : {}) }), deckRelease: () => ({ ok: true }) } as never,
     context: { projectId: "prj_a", threadId: "thr_any" },
     sidebarThreads: sidebar(runningThreads) as never,
+    sdk: hostProject,
   });
 }
 
@@ -98,7 +102,7 @@ function mountLinked() {
   const onUrl = (event: Event) => opened.url.push((event as CustomEvent).detail);
   const onThread = (event: Event) => opened.thread.push((event as CustomEvent).detail);
   window.addEventListener("open-url", onUrl); window.addEventListener("open-thread", onThread);
-  const slot = renderSlot({ component: LinkedFleet }, {}, { sidebarThreads: sidebar(fxRunning) as never });
+  const slot = renderSlot({ component: LinkedFleet }, {}, { sidebarThreads: sidebar(fxRunning) as never, sdk: hostProject });
   return { slot, opened };
 }
 

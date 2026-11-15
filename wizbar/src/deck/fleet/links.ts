@@ -4,7 +4,7 @@
 // shared cache and its 60-second schedule. Titles are never parsed.
 import type { RepositoryRefV1, SpecRefV1 } from "../../factory-contract";
 import type { LoadResult } from "../data/cache";
-import { GitHubReadFailed, type GitHubReader } from "../data/github";
+import { GitHubRateLimited, GitHubReadFailed, type GitHubReader } from "../data/github";
 
 export interface FleetTicketV1 {
   ref: SpecRefV1;
@@ -30,6 +30,10 @@ export interface FleetPullRequestV1 {
 export interface FleetLinksV1 {
   repository: RepositoryRefV1;
   pullRequests: FleetPullRequestV1[];
+  /** Every open pull request was read: a branch match among them is unique. */
+  openComplete: boolean;
+  /** Every merged pull request was read (rarely: the merged list is bounded). */
+  mergedComplete: boolean;
 }
 
 export const FLEET_LINK_LIMITS = { open: 50, openPages: 2, merged: 30, closing: 5 } as const;
@@ -114,24 +118,43 @@ export async function loadFleetLinks(
   if (!data?.repository) bad("repository");
   const gaps: string[] = [];
   let open = page(data.repository.open);
+  const merged = page(data.repository.merged);
   const pullRequests: FleetPullRequestV1[] = [];
   const add = (raws: RawPr[], state: "open" | "merged") => {
     for (const raw of raws) { const pr = pullRequest(raw, state); if (pr) pullRequests.push(pr); }
   };
   add(open.nodes, "open");
+  add(merged.nodes, "merged");
+  let openComplete = true;
+  let retryAt: number | undefined;
   for (let pages = 1; open.pageInfo.hasNextPage; pages += 1) {
     if (pages >= FLEET_LINK_LIMITS.openPages || !open.pageInfo.endCursor) {
+      openComplete = false;
       gaps.push(`${input.repository}: only the ${FLEET_LINK_LIMITS.open * FLEET_LINK_LIMITS.openPages} most recently updated open pull requests were read.`);
       break;
     }
-    const next = await input.reader.graphql(FLEET_OPEN_QUERY, { owner, name, after: open.pageInfo.endCursor }, signal) as { repository?: { open?: unknown } | null };
-    if (!next?.repository) bad("repository");
-    open = page(next.repository.open);
-    add(open.nodes, "open");
+    // A failed continuation keeps every page already read, as partial data with
+    // fixed wording; a rate limit's deadline goes to the shared cache.
+    // Cancellation is never turned into data.
+    try {
+      const next = await input.reader.graphql(FLEET_OPEN_QUERY, { owner, name, after: open.pageInfo.endCursor }, signal) as { repository?: { open?: unknown } | null };
+      if (!next?.repository) bad("repository");
+      open = page(next.repository.open);
+      add(open.nodes, "open");
+    } catch (error) {
+      if (signal.aborted) throw error;
+      if (error instanceof GitHubRateLimited) retryAt = error.retryAt;
+      else if (!(error instanceof GitHubReadFailed)) throw error;
+      openComplete = false;
+      gaps.push(`${input.repository}: a later page of open pull requests could not be read${retryAt ? " (GitHub rate limit)" : ""}.`);
+      break;
+    }
   }
-  const merged = page(data.repository.merged);
-  add(merged.nodes, "merged");
-  if (merged.pageInfo.hasNextPage) gaps.push(`${input.repository}: only the ${FLEET_LINK_LIMITS.merged} most recently updated merged pull requests were read.`);
+  const mergedComplete = !merged.pageInfo.hasNextPage;
+  if (!mergedComplete) gaps.push(`${input.repository}: only the ${FLEET_LINK_LIMITS.merged} most recently updated merged pull requests were read.`);
   if (pullRequests.some((pr) => !pr.ticketsComplete)) gaps.push(`${input.repository}: some pull requests close more tickets than were read.`);
-  return { data: { repository: input.repository, pullRequests }, complete: gaps.length === 0, gaps };
+  return {
+    data: { repository: input.repository, pullRequests, openComplete, mergedComplete },
+    complete: gaps.length === 0, gaps, ...(retryAt ? { retryAt } : {}),
+  };
 }

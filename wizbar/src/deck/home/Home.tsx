@@ -50,7 +50,18 @@ export function Home({ focus }: { focus: FocusRequestV1 | null }) {
   const fleetActions: FleetActions = { openUrl: open, openThread: (threadId) => navigate.toThread(threadId) };
 
   // F1 (#75): an explicit Needs-you focus leaves a fleet page for Home, where the item is.
-  useEffect(() => { if (focusedItemId) setFleetPage(null); }, [focusedItemId]);
+  // The item is not in the DOM while the fleet page is shown, so it is focused
+  // once Home has mounted it; a read Needs-you list without it ends the wait.
+  const [refocus, setRefocus] = useState<string | null>(null);
+  useEffect(() => {
+    if (focusedItemId && fleetPage) { setFleetPage(null); setRefocus(focusedItemId); }
+  }, [focusedItemId]);
+  useEffect(() => {
+    if (!refocus || fleetPage) return;
+    const item = document.getElementById(`wizdeck-need-${refocus}`);
+    if (item) item.focus();
+    if (item || (view && view.needsYou.freshness !== "loading")) setRefocus(null);
+  }, [refocus, fleetPage, view]);
 
   useEffect(() => {
     if (!focusedItemId || !view) return;

@@ -11,18 +11,34 @@ import type { FleetLinksV1, FleetPullRequestV1, FleetTicketV1 } from "./links";
 
 // ---- Link source -------------------------------------------------------------
 
+/** Which pull-request lists were read in full, per repository (lower-case `owner/name`). Absent: not read. */
+export type LinkCoverageV1 = Record<string, { open: boolean; merged: boolean }>;
+
 export type FleetLinkSourceV1 =
   /** The backend sends no work-link read: nothing can be placed. */
   | { status: "not-connected" }
   | { status: "loading" }
   | { status: "unavailable"; detail: string }
-  | { status: "read"; pullRequests: FleetPullRequestV1[]; complete: boolean; stale: boolean; gaps: string[] };
+  | { status: "read"; pullRequests: FleetPullRequestV1[]; complete: boolean; stale: boolean; gaps: string[]; coverage: LinkCoverageV1 };
+
+/**
+ * The repository the project's threads work in, from the host's project
+ * record (`projects.get(...).gitRemoteUrl`). Without it, a branch name proves
+ * nothing: the same name can exist in any configured repository.
+ */
+export type RepositoryProvenanceV1 =
+  | { status: "verified"; repository: string }
+  | { status: "unverified"; reason: "loading" | "unreadable" | "no-remote" | "unrecognised-remote" };
+
+const repoKey = (repository: string) => repository.toLowerCase();
+const repoOf = (ref: string) => ref.slice(0, ref.lastIndexOf("#"));
 
 /** Combine one factory's per-repository link reads. Any repository not read makes the whole read partial. */
 export function fleetLinkSource(views: readonly CacheView<FleetLinksV1>[] | undefined): FleetLinkSourceV1 {
   if (!views) return { status: "not-connected" };
   const pullRequests: FleetPullRequestV1[] = [];
   const gaps: string[] = [];
+  const coverage: LinkCoverageV1 = {};
   let read = 0; let loading = false; let stale = false; let complete = true;
   for (const view of views) {
     const snapshot = view.snapshot;
@@ -30,10 +46,14 @@ export function fleetLinkSource(views: readonly CacheView<FleetLinksV1>[] | unde
     const data = snapshot.status === "ready" ? snapshot.data : snapshot.lastGood?.data ?? null;
     if (snapshot.status === "ready") { gaps.push(...snapshot.gaps); complete &&= snapshot.complete; stale ||= snapshot.stale; }
     else { complete = false; stale = true; gaps.push(view.detail ?? "A repository's work links could not be read."); }
-    if (data) { read += 1; pullRequests.push(...data.pullRequests); }
+    if (data) {
+      read += 1;
+      pullRequests.push(...data.pullRequests);
+      coverage[repoKey(data.repository)] = { open: data.openComplete === true, merged: data.mergedComplete === true };
+    }
   }
   if (read === 0) return loading ? { status: "loading" } : { status: "unavailable", detail: gaps.join(" ") || "Work links could not be read." };
-  return { status: "read", pullRequests, complete, stale, gaps };
+  return { status: "read", pullRequests, complete, stale, gaps, coverage };
 }
 
 // ---- Rows ----------------------------------------------------------------------
@@ -43,6 +63,10 @@ export type WorkLinkV1 =
   | { status: "linked"; branch: string; pullRequest: FleetPullRequestV1; tickets: FleetTicketV1[]; spec: SpecRefV1 }
   | { status: "no-spec"; branch: string; pullRequest: FleetPullRequestV1; tickets: FleetTicketV1[] }
   | { status: "ambiguous"; branch: string; detail: string }
+  /** Known links, shown, but not proof of one spec: placement is withheld. */
+  | { status: "unproved"; branch: string; pullRequest: FleetPullRequestV1; tickets: FleetTicketV1[]; detail: string }
+  /** The thread's repository is not known from the host, so its branch matches nothing. */
+  | { status: "repository-unverified"; branch: string; reason: Extract<RepositoryProvenanceV1, { status: "unverified" }>["reason"] }
   | { status: "no-pull-request"; branch: string; complete: boolean }
   | { status: "no-branch" }
   | { status: "links-unavailable"; branch: string | null };
@@ -93,15 +117,25 @@ export interface FleetModelV1 {
 const byCreated = (a: { createdAt: number; id: string }, b: { createdAt: number; id: string }) =>
   a.createdAt - b.createdAt || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 
-function resolveLink(branch: string | null, links: FleetLinkSourceV1): WorkLinkV1 {
+function resolveLink(branch: string | null, links: FleetLinkSourceV1, repository: RepositoryProvenanceV1): WorkLinkV1 {
   if (links.status !== "read") return branch === null ? { status: "no-branch" } : { status: "links-unavailable", branch };
   if (branch === null) return { status: "no-branch" };
-  const matches = links.pullRequests.filter((pr) => pr.headRefName === branch);
+  if (repository.status !== "verified") return { status: "repository-unverified", branch, reason: repository.reason };
+  const key = repoKey(repository.repository);
+  const coverage = links.coverage[key];
+  if (!coverage) return { status: "no-pull-request", branch, complete: false };
+  // Only the thread's own repository's pull requests can be its work.
+  const matches = links.pullRequests.filter((pr) => pr.headRefName === branch && repoKey(repoOf(pr.ref)) === key);
   const open = matches.filter((pr) => pr.state === "open");
   const candidates = open.length > 0 ? open : matches;
-  if (candidates.length === 0) return { status: "no-pull-request", branch, complete: links.complete };
+  // An open match is unique only if every open PR was read; a merged-only match
+  // also needs every merged one. The merged list's bound is irrelevant to an open match.
+  const uniqueProved = open.length > 0 ? coverage.open : coverage.open && coverage.merged;
+  if (candidates.length === 0) return { status: "no-pull-request", branch, complete: coverage.open && coverage.merged };
   if (candidates.length > 1) return { status: "ambiguous", branch, detail: `${candidates.length} pull requests use this branch` };
   const pullRequest = candidates[0];
+  if (!uniqueProved) return { status: "unproved", branch, pullRequest, tickets: pullRequest.tickets, detail: "other pull requests for this branch were not all read" };
+  if (!pullRequest.ticketsComplete) return { status: "unproved", branch, pullRequest, tickets: pullRequest.tickets, detail: "it closes more tickets than were read" };
   const specs = [...new Set(pullRequest.tickets.map((ticket) => ticket.spec).filter((spec): spec is SpecRefV1 => spec !== null))];
   if (specs.length > 1) return { status: "ambiguous", branch, detail: "its tickets belong to different specs" };
   if (specs.length === 1) return { status: "linked", branch, pullRequest, tickets: pullRequest.tickets, spec: specs[0] };
@@ -113,8 +147,10 @@ export function buildFleet(input: {
   threads: readonly PluginSidebarThread[];
   health: LiveHealthV1;
   links: FleetLinkSourceV1;
+  /** The project's repository from the host; branches match only within it. */
+  repository: RepositoryProvenanceV1;
 }): FleetModelV1 {
-  const { projectId, health, links } = input;
+  const { projectId, health, links, repository } = input;
   const running = health.running;
   const runningIds = running.status === "ready" ? new Set(running.rows.map((row) => row.id)) : null;
 
@@ -127,7 +163,7 @@ export function buildFleet(input: {
     isHidden: thread?.isHidden ?? false,
     running: runningIds ? runningIds.has(id) : null,
     stall: health.stalls.get(id),
-    link: resolveLink(thread?.environment?.branchName ?? null, links),
+    link: resolveLink(thread?.environment?.branchName ?? null, links, repository),
     spec: null, placement: "none", role: null, depth: 0, parentNote: null,
     createdAt: thread?.createdAt ?? Number.MAX_SAFE_INTEGER,
   });
@@ -255,7 +291,7 @@ function haystack(row: FleetRowV1): string {
   const link = row.link;
   const parts = [row.title, row.spec ?? ""];
   if ("branch" in link && link.branch) parts.push(link.branch);
-  if (link.status === "linked" || link.status === "no-spec") {
+  if (link.status === "linked" || link.status === "no-spec" || link.status === "unproved") {
     parts.push(link.pullRequest.ref, `#${link.pullRequest.ref.split("#")[1]}`);
     for (const ticket of link.tickets) parts.push(ticket.ref, `#${ticket.ref.split("#")[1]}`, ticket.title);
   }

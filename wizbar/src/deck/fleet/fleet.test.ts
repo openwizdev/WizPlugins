@@ -223,7 +223,7 @@ describe("work-link reader", () => {
 
   // Bug caught: one unread repository presented as a complete link read.
   it("marks the combined read partial when a repository is unavailable", () => {
-    const ok = { snapshot: { status: "ready" as const, data: { repository: REPO as `${string}/${string}`, pullRequests: fxPullRequests }, fetchedAt: fxNow, stale: false, complete: true, gaps: [] }, detail: null, nextRefreshAt: null, refreshing: false };
+    const ok = { snapshot: { status: "ready" as const, data: { repository: REPO as `${string}/${string}`, pullRequests: fxPullRequests, openComplete: true, mergedComplete: true }, fetchedAt: fxNow, stale: false, complete: true, gaps: [] }, detail: null, nextRefreshAt: null, refreshing: false };
     const down = { snapshot: { status: "unavailable" as const, reason: "unreadable" as const, lastGood: null }, detail: "GitHub could not be read.", nextRefreshAt: null, refreshing: false };
     expect(fleetLinkSource(undefined)).toEqual({ status: "not-connected" });
     expect(fleetLinkSource([ok, down])).toMatchObject({ status: "read", complete: false, stale: true, gaps: ["GitHub could not be read."] });

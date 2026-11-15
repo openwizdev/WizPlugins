@@ -49,6 +49,8 @@ function linkWords(link: WorkLinkV1): string {
     case "linked": return "";
     case "no-spec": return "no spec linked to its ticket";
     case "ambiguous": return `link ambiguous: ${link.detail}`;
+    case "unproved": return `not placed: ${link.detail}`;
+    case "repository-unverified": return "not placed: the project's repository is not known from the host";
     case "no-pull-request": return link.complete ? "no pull request for its branch" : "no pull request found in what was read";
     case "no-branch": return "no work link: no branch";
     case "links-unavailable": return "work links unavailable";
@@ -96,7 +98,7 @@ export function FleetRow({ row, actions, selection, projectKey }: {
           {meta}
           {stall.amber && <span style={{ color: AMBER }}>{meta ? " · " : ""}{stall.text}</span>}
         </p>
-        {(link.status === "linked" || link.status === "no-spec") && (
+        {(link.status === "linked" || link.status === "no-spec" || link.status === "unproved") && (
           <div style={{ display: "flex", flexWrap: "wrap", gap: "0 8px" }}>
             {link.tickets.map((ticket) => <UrlButton key={ticket.ref} url={ticket.url} label={short(ticket.ref)} open={actions.openUrl} style={linkStyle} />)}
             <UrlButton url={link.pullRequest.url} label={`PR ${short(link.pullRequest.ref)}${link.pullRequest.state === "merged" ? " merged" : ""}`} open={actions.openUrl} style={linkStyle} />
