@@ -336,7 +336,7 @@ describe("review round 1", () => {
     await t.host.harness.behavior.setSettings({ wizdeckFactories: JSON.stringify([{ ...dxFactory, orchestratorThreadId: "thr_d2_replacement" }]) });
     releaseGet();
     const record = await pending;
-    expect(record).toMatchObject({ state: "cancelled", reason: "binding-changed" });
+    expect(record).toMatchObject({ state: "cancelled", reason: "wrong-target" });
     expect(t.send).not.toHaveBeenCalled();
     const log = await t.rpc<ActionLogV1>("deckActionLog", { projectKey: "sample-factory" });
     expect(log.records.find((entry) => entry.operationId === "op-test-binding-moved")?.state).toBe("cancelled");
@@ -349,7 +349,7 @@ describe("review round 1", () => {
     for (let turn = 0; turn < 100 && t.get.mock.calls.length === 0; turn += 1) await vi.advanceTimersByTimeAsync(0);
     await t.host.harness.behavior.setSettings({ wizdeckFactories: null });
     releaseGet();
-    expect(await pending).toMatchObject({ state: "cancelled", reason: "binding-changed" });
+    expect(await pending).toMatchObject({ state: "cancelled", reason: "wrong-project" });
     expect(t.send).not.toHaveBeenCalled();
   });
 });

@@ -8,8 +8,8 @@ import type { NeedsYouViewItemV1 } from "../../factory-contract";
 import type { HomeViewV1 } from "../data/home";
 import { LIME, SectionHeading, tapTarget } from "../home/sections";
 import {
-  ACTIONS_CHANNEL, MAX_TEXT, SPEC_ACTIONS, UNDO_MS, refusalWords, sameShown,
-  type ActionLogV1, type ActionRecordV1, type BoundAnswerV1, type ShownItemV1, type SpecActionV1,
+  ACTIONS_CHANNEL, MAX_TEXT, SPEC_ACTIONS, UNDO_MS, refusalWords,
+  type ActionLogV1, type ActionRecordV1, type BoundAnswerV1, type SpecActionV1,
 } from "./protocol";
 import type { deckActionsRpcContract } from "./server";
 
@@ -24,30 +24,46 @@ const specActionLabels: Record<SpecActionV1, string> = { pause: "Pause", resume:
 
 const newOperationId = () => `op-${globalThis.crypto.randomUUID()}`;
 
+/** What the person saw of one decision. Private panel bookkeeping: never sent, saved or serialized. */
+interface ShownItem {
+  code: string;
+  question: string;
+  risk: string;
+  options: { id: string; label: string }[];
+}
+const sameShown = (a: ShownItem, b: ShownItem) => a.code === b.code && a.question === b.question && a.risk === b.risk
+  && a.options.length === b.options.length
+  && a.options.every((option, index) => option.id === b.options[index].id && option.label === b.options[index].label);
+
 /** What the person saw for one item; any change while pending cancels. */
-const shownOf = (item: NeedsYouViewItemV1): ShownItemV1 => ({
+const shownOf = (item: NeedsYouViewItemV1): ShownItem => ({
   code: item.code, question: item.question, risk: item.risk,
   options: item.options.map(({ id, label }) => ({ id, label })),
 });
 
 /**
- * One operation this panel submitted, kept by its own id until a backend record settles it.
- * `pending`: the RPC has not answered. `unknown`: the answer was lost; it may have reached the
- * backend, so it is shown as unresolved and never submitted again under a new id.
+ * One operation this panel submitted, kept with its message under its own id until a resolving
+ * backend outcome (sent, queued, uncertain or cancelled) exists. `pending`: the RPC has not
+ * answered. `dispatching`: the backend's record says it is still sending. `unknown`: the answer
+ * was lost and no record has been read yet. None of these settle it, and it is never submitted
+ * again under a new id.
  */
 interface Outstanding {
   operationId: string;
   kind: ActionRecordV1["kind"];
   label: string;
-  state: "pending" | "unknown";
-  /** For answers: the proposal shown, so its row stays answered while this is unresolved. */
-  answer: { itemId: string; shown: ShownItemV1 } | null;
+  state: "pending" | "dispatching" | "unknown";
+  /** For answers: the item, so its row can say an earlier answer is unresolved. */
+  answer: { itemId: string } | null;
 }
 
 const outstandingWords: Record<Outstanding["state"], string> = {
   pending: "Sending…",
+  dispatching: "Sending… the backend has it and is still waiting for the host.",
   unknown: "Outcome unknown · WizDeck lost the backend's answer. It may have arrived; it is not resent. Check the orchestrator.",
 };
+
+const resolved = (record: ActionRecordV1) => record.state !== "dispatching";
 
 export function stateWords(record: Pick<ActionRecordV1, "state" | "detail">): string {
   switch (record.state) {
@@ -60,12 +76,15 @@ export function stateWords(record: Pick<ActionRecordV1, "state" | "detail">): st
 }
 
 interface Pending {
-  operationId: string;
+  /** This choice, locally, for race checks. Binding allocates no send operation. */
+  token: number;
+  /** Allocated only when the backend has bound the choice and the Undo window starts. */
+  operationId: string | null;
   projectKey: string;
   itemId: string;
   optionId: string;
   optionLabel: string;
-  shown: ShownItemV1;
+  shown: ShownItem;
   phase: "binding" | "waiting" | "dispatching";
   bound: BoundAnswerV1 | null;
   deadline: number | null;
@@ -86,19 +105,33 @@ export function DeckActions({ projectKey, view, open }: { projectKey: string; vi
   const [busy, setBusy] = useState(false);
   /** Operations submitted from this panel that no backend record has settled yet. */
   const [outstanding, setOutstanding] = useState<Outstanding[]>([]);
+  /** Resolving records by operation id, from RPC answers and applied log reads. */
+  const settled = useRef(new Map<string, ActionRecordV1>());
+  const [, setSettledCount] = useState(0);
   const [draft, setDraft] = useState("");
   const [spec, setSpec] = useState<string>("");
   const [now, setNow] = useState(() => Date.now());
 
+  // Overlapping log reads: only a response newer than the last one applied is used.
+  const logRequested = useRef(0);
+  const logApplied = useRef(0);
   const loadLog = useCallback(async () => {
+    const mine = ++logRequested.current;
     try {
       const next = await rpc.call("deckActionLog", { projectKey });
+      if (mine <= logApplied.current) return; // An older, overlapping response.
+      logApplied.current = mine;
       setLog(next);
       setLogError(null);
-      // The backend's record of the same operation settles it; nothing else does.
-      const recorded = new Set(next.records.map((record) => record.operationId));
-      setOutstanding((all) => all.filter((entry) => !recorded.has(entry.operationId)));
+      // Only a resolving record settles an operation; `dispatching` updates what is known,
+      // and a read without the operation changes nothing.
+      const byId = new Map(next.records.map((record) => [record.operationId, record]));
+      for (const record of next.records) if (resolved(record)) settled.current.set(record.operationId, record);
+      setOutstanding((all) => all
+        .filter((entry) => !(byId.has(entry.operationId) && resolved(byId.get(entry.operationId)!)))
+        .map((entry) => byId.has(entry.operationId) ? { ...entry, state: "dispatching" } : entry));
     } catch (caught) {
+      if (mine <= logApplied.current) return;
       setLogError(caught instanceof Error ? caught.message : "The action log could not be read.");
     }
   }, [rpc, projectKey]);
@@ -144,19 +177,20 @@ export function DeckActions({ projectKey, view, open }: { projectKey: string; vi
     const ticker = setInterval(() => setNow(Date.now()), 1_000);
     const timer = setTimeout(() => {
       const ready = pendingRef.current;
-      if (!ready || ready.operationId !== pending.operationId || ready.phase !== "waiting" || !ready.bound) return;
+      if (!ready || ready.token !== pending.token || ready.phase !== "waiting" || !ready.bound || !ready.operationId) return;
+      const operationId = ready.operationId;
       if (!current) return cancelPending(refusalWords["orchestrator-unverified"]);
       const dispatching = { ...ready, phase: "dispatching" as const };
       pendingRef.current = dispatching;
       setPending(dispatching);
       const { itemId, optionId, fingerprint, queueRevision } = ready.bound;
       const mine: Outstanding = {
-        operationId: ready.operationId, kind: "answer", label: `Answer ${ready.shown.code} · ${ready.optionLabel}`,
-        state: "pending", answer: { itemId, shown: ready.shown },
+        operationId, kind: "answer", label: `Answer ${ready.shown.code} · ${ready.optionLabel}`,
+        state: "pending", answer: { itemId },
       };
       setOutstanding((all) => [mine, ...all]);
       void rpc.call("deckSteer", {
-        operationId: ready.operationId, projectKey: ready.projectKey,
+        operationId, projectKey: ready.projectKey,
         orchestratorThreadId: current.orchestrator.threadId ?? "", kind: "answer", text: null,
         answer: { itemId, optionId, fingerprint, queueRevision }, specAction: null,
       }).then(
@@ -165,20 +199,21 @@ export function DeckActions({ projectKey, view, open }: { projectKey: string; vi
           if (record.state === "cancelled") setNotes((all) => ({ ...all, [itemId]: stateWords(record) }));
         },
         // The call may have reached the backend: unresolved under its own id, never retried.
-        () => markUnknown(ready.operationId),
+        () => markUnknown(operationId),
       ).finally(() => {
-        if (pendingRef.current?.operationId === ready.operationId) { pendingRef.current = null; setPending(null); }
+        if (pendingRef.current?.token === ready.token) { pendingRef.current = null; setPending(null); }
         void loadLog();
       });
     }, Math.max(0, pending.deadline - Date.now()));
     return () => { clearTimeout(timer); clearInterval(ticker); };
-  }, [pending?.operationId, pending?.phase]);
+  }, [pending?.token, pending?.phase]);
 
+  const choices = useRef(0);
   const choose = async (item: NeedsYouViewItemV1, optionId: string) => {
     if (pendingRef.current || !canSend) return;
     const option = item.options.find((candidate) => candidate.id === optionId)!;
     const next: Pending = {
-      operationId: newOperationId(), projectKey, itemId: item.id, optionId, optionLabel: option.label,
+      token: ++choices.current, operationId: null, projectKey, itemId: item.id, optionId, optionLabel: option.label,
       shown: shownOf(item), phase: "binding", bound: null, deadline: null,
     };
     pendingRef.current = next;
@@ -190,24 +225,29 @@ export function DeckActions({ projectKey, view, open }: { projectKey: string; vi
     } catch {
       result = { ok: false, reason: "queue-unavailable", detail: "WizDeck could not check the question." };
     }
-    if (pendingRef.current?.operationId !== next.operationId) return; // Undone or cancelled meanwhile.
+    if (pendingRef.current?.token !== next.token || projectKey !== next.projectKey) return; // Undone, cancelled or superseded meanwhile.
     if (!result.ok) return cancelPending(result.detail);
-    const waiting: Pending = { ...next, phase: "waiting", bound: result.bound, deadline: Date.now() + UNDO_MS };
+    // The backend's current proposal identity: it must be the item and option asked about.
+    if (result.bound.itemId !== item.id || result.bound.optionId !== optionId) return cancelPending(refusalWords["proposal-changed"]);
+    const waiting: Pending = { ...next, operationId: newOperationId(), phase: "waiting", bound: result.bound, deadline: Date.now() + UNDO_MS };
     pendingRef.current = waiting;
     setPending(waiting);
     setNow(Date.now());
   };
 
-  /** A settled RPC answer: show the backend's record until the log carries it. */
-  const settled = useRef(new Map<string, ActionRecordV1>());
-  const [, setSettledCount] = useState(0);
+  /** An RPC answer: a resolving record settles its operation; `dispatching` only updates it. */
   function settle(record: ActionRecordV1) {
+    if (!resolved(record)) {
+      setOutstanding((all) => all.map((entry) => entry.operationId === record.operationId ? { ...entry, state: "dispatching" } : entry));
+      return;
+    }
     settled.current.set(record.operationId, record);
     setSettledCount((count) => count + 1);
     setOutstanding((all) => all.filter((entry) => entry.operationId !== record.operationId));
   }
   function markUnknown(operationId: string) {
-    setOutstanding((all) => all.map((entry) => entry.operationId === operationId ? { ...entry, state: "unknown" } : entry));
+    // A lost answer: keep what is already known (a read may have shown it dispatching).
+    setOutstanding((all) => all.map((entry) => entry.operationId === operationId && entry.state === "pending" ? { ...entry, state: "unknown" } : entry));
   }
 
   const steerNow = async (kind: "tell" | "feedback" | "spec-action", text: string | null, specAction: { spec: string; action: SpecActionV1 } | null) => {
@@ -235,28 +275,31 @@ export function DeckActions({ projectKey, view, open }: { projectKey: string; vi
     }
   };
 
-  // Answered means this exact proposal on screen (code, question, risk and options), from the
-  // backend's own record or an unresolved operation here. A revised proposal can be answered;
-  // the backend's bind and dispatch still refuse a second answer under the same fingerprint.
-  const answeredRecords = [...(current?.records ?? []), ...settled.current.values()];
-  const answered = (item: NeedsYouViewItemV1): { label: string; words: string } | null => {
-    const shown = shownOf(item);
-    const unresolved = outstanding.find((entry) => entry.answer?.itemId === item.id && sameShown(entry.answer.shown, shown));
+  // Which proposal is answered is the backend's call: its bind refuses the same fingerprint
+  // (sent, queued, uncertain or still sending) and accepts a new one. The row only reports the
+  // earlier answer to this item; a tap asks the backend, without Undo or a send operation.
+  const earlier = (item: NeedsYouViewItemV1): { label: string; words: string } | null => {
+    const unresolved = outstanding.find((entry) => entry.answer?.itemId === item.id);
     if (unresolved) return { label: unresolved.label, words: outstandingWords[unresolved.state] };
-    const record = answeredRecords.find((entry) =>
-      entry.state !== "cancelled" && entry.answer?.itemId === item.id && entry.answer.shown && sameShown(entry.answer.shown, shown));
-    return record ? { label: record.label, words: stateWords(record) } : null;
+    const record = [...(current?.records ?? []), ...settled.current.values()]
+      .filter((entry) => entry.state !== "cancelled" && entry.answer?.itemId === item.id)
+      .sort((x, y) => y.createdAt - x.createdAt)[0];
+    return record ? { label: record.label, words: stateWords(settled.current.get(record.operationId) ?? record) } : null;
   };
-  // Unresolved operations first, by their own ids; then the backend's records (newest first).
+  // Every operation by its own id, newest first: a resolving record wins, then what this panel
+  // knows of an unresolved one, then the backend's `dispatching` record.
   const logged = current?.records ?? [];
-  const loggedIds = new Set(logged.map((record) => record.operationId));
-  const recent: { operationId: string; label: string; state: string; words: string }[] = [
-    ...outstanding.filter((entry) => !loggedIds.has(entry.operationId))
-      .map((entry) => ({ operationId: entry.operationId, label: entry.label, state: entry.state, words: outstandingWords[entry.state] })),
-    ...[...settled.current.values()].filter((record) => !loggedIds.has(record.operationId))
-      .map((record) => ({ operationId: record.operationId, label: record.label, state: record.state, words: stateWords(record) })),
-    ...logged.map((record) => ({ operationId: record.operationId, label: record.label, state: record.state, words: stateWords(record) })),
-  ].slice(0, 5);
+  const loggedById = new Map(logged.map((record) => [record.operationId, record]));
+  const outstandingById = new Map(outstanding.map((entry) => [entry.operationId, entry]));
+  const ids = [...new Set([...outstanding.map((entry) => entry.operationId), ...settled.current.keys(), ...logged.map((record) => record.operationId)])];
+  const recent = ids.map((operationId) => {
+    const fromLog = loggedById.get(operationId);
+    const final = fromLog && resolved(fromLog) ? fromLog : settled.current.get(operationId);
+    if (final) return { operationId, label: final.label, state: final.state as string, words: stateWords(final), at: final.createdAt };
+    const local = outstandingById.get(operationId);
+    if (local) return { operationId, label: local.label, state: local.state as string, words: outstandingWords[local.state], at: Number.MAX_SAFE_INTEGER };
+    return { operationId, label: fromLog!.label, state: fromLog!.state as string, words: stateWords(fromLog!), at: fromLog!.createdAt };
+  }).sort((x, y) => y.at - x.at).slice(0, 5);
   const specs = view.board.versions.flatMap((version) => version.specs);
   const selectedSpec = specs.find((candidate) => candidate.ref === spec) ?? specs[0] ?? null;
   const queueState = view.needsYou.view?.state ?? null;
@@ -282,7 +325,7 @@ export function DeckActions({ projectKey, view, open }: { projectKey: string; vi
           <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
             {items.map((item) => {
               const mine = pending?.itemId === item.id ? pending : null;
-              const done = answered(item);
+              const done = earlier(item);
               const gated = item.risk !== "ordinary";
               return (
                 <li key={item.id} data-answer-item={item.id} style={row}>
@@ -292,10 +335,9 @@ export function DeckActions({ projectKey, view, open }: { projectKey: string; vi
                       <span style={muted}>Gated · {item.risk}: decide in the orchestrator.</span>
                       {orchestratorButton("Open orchestrator")}
                     </div>
-                  ) : done ? (
-                    <p role="status" style={{ ...muted, margin: "2px 0 0" }}>{done.label}: {done.words}</p>
                   ) : (
                     <>
+                      {done && <p style={{ ...muted, margin: "2px 0 0" }}>Earlier: {done.label} · {done.words}</p>}
                       <div role="group" aria-label={`Answer ${item.code}`} style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 6 }}>
                         {item.options.map((option) => {
                           const recommended = option.id === item.recommendedOptionId;

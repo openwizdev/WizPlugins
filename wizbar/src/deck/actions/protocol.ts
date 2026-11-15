@@ -20,7 +20,7 @@ export type SpecActionV1 = typeof SPEC_ACTIONS[number];
 /** Why D2 cancelled before any SDK call: C1's refusals plus D2's own checks. */
 export type ActionRefusalV1 =
   | DispatchRefusalV1
-  | "not-configured" | "orchestrator-unverified" | "duplicate" | "invalid" | "not-saved" | "binding-changed";
+  | "not-configured" | "orchestrator-unverified" | "duplicate" | "invalid" | "not-saved";
 
 /**
  * One operation's record. `dispatching` is saved before the SDK call; a
@@ -40,11 +40,8 @@ export interface ActionRecordV1 {
   detail: string | null;
   createdAt: number;
   settledAt: number | null;
-  /**
-   * For answers: the proposal answered, so every tab can tell it from a revised one. `shown`
-   * is the code, question, risk and options as the backend read them at dispatch.
-   */
-  answer: { itemId: string; fingerprint: string; shown: ShownItemV1 } | null;
+  /** For answers: what was bound, so another tab sees the item as answered. */
+  answer: { itemId: string; fingerprint: string; question: string } | null;
 }
 
 /**
@@ -57,19 +54,6 @@ export const NO_REPLY_CORRELATION: ReplyV1 = {
   status: "link-only",
   reason: "The host gives no turn for a sent message, so WizDeck cannot tell which reply is this one's. Read it in the orchestrator.",
 };
-
-/** What a person sees of one decision: any difference is a different proposal on screen. */
-export interface ShownItemV1 {
-  code: string;
-  question: string;
-  risk: string;
-  options: { id: string; label: string }[];
-}
-
-export function sameShown(a: ShownItemV1, b: ShownItemV1): boolean {
-  return a.code === b.code && a.question === b.question && a.risk === b.risk && a.options.length === b.options.length
-    && a.options.every((option, index) => option.id === b.options[index].id && option.label === b.options[index].label);
-}
 
 export interface ActionLogV1 {
   projectKey: string;
@@ -110,5 +94,4 @@ export const refusalWords: Record<ActionRefusalV1, string> = {
   duplicate: "This was already sent; WizDeck does not send it twice.",
   invalid: "That request is not valid.",
   "not-saved": "WizDeck could not record the operation first, so nothing was sent.",
-  "binding-changed": "The factory's settings changed before sending, so nothing was sent. Check the orchestrator and try again.",
 };

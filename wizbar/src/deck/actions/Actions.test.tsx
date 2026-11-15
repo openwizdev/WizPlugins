@@ -214,7 +214,7 @@ describe("five-second Undo for ordinary answers", () => {
     const t = mount({
       log: (input) => log(records)(input),
       steer: (input) => {
-        const made = record({ operationId: input.operationId, kind: "answer", state, label: "Answer N-12 · Short headline", answer: { itemId: "n12", fingerprint: "fp-n12-1", shown: { code: ordinary.code, question: ordinary.question, risk: ordinary.risk, options: ordinary.options } } });
+        const made = record({ operationId: input.operationId, kind: "answer", state, label: "Answer N-12 · Short headline", answer: { itemId: "n12", fingerprint: "fp-n12-1", question: ordinary.question } });
         records = [made];
         return made;
       },
@@ -225,12 +225,15 @@ describe("five-second Undo for ordinary answers", () => {
     await advance(UNDO_MS);
     await flush();
     expect(t.answerRow().textContent).toContain("Uncertain · it may have arrived. WizDeck will not resend it");
-    expect(within(t.answerRow()).queryAllByRole("button")).toHaveLength(0);
+    // The row reports the earlier answer; whether the shown proposal is the same one is the
+    // backend's bind check (proved with the real handlers in review-round1.test.tsx, R2).
+    expect(t.answerRow().textContent).toContain("Earlier: Answer N-12 · Short headline");
+    expect(within(t.answerRow()).queryByRole("button", { name: "Undo" })).toBeNull();
     await advance(UNDO_MS * 6);
     expect(t.calls("deckSteer")).toHaveLength(1);
 
     state = "queued";
-    records = [record({ kind: "answer", state: "queued", label: "Answer N-12 · Short headline", answer: { itemId: "n12", fingerprint: "fp-n12-1", shown: { code: ordinary.code, question: ordinary.question, risk: ordinary.risk, options: ordinary.options } } })];
+    records = [record({ kind: "answer", state: "queued", label: "Answer N-12 · Short headline", answer: { itemId: "n12", fingerprint: "fp-n12-1", question: ordinary.question } })];
     await t.slot.behavior.emitRealtime("wizdeck-actions", {});
     expect(t.answerRow().textContent).toContain("Waiting · queued by the host, not steered yet.");
   });
