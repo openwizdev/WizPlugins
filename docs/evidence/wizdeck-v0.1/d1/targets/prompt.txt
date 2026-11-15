@@ -1,0 +1,91 @@
+Tool/route: built-in image_gen.imagegen (functions tools.image_gen__imagegen); no API key; new image generation.
+
+DESKTOP EXACT PROMPT:
+Use case: ui-mockup. Create a precise high-fidelity UI design target, a flat screen capture style image. WizDeck is a plugin tab inside a dark desktop coding-agent app's RIGHT side panel. Style Ledger: near-black #0b0b0c background, light grey text, compact dense rows, thin 1px grey separators, small section headings with thin rule extending right. Restrained lime #c6f432 ONLY for progress fills and small accents. System/Inter-like sans-serif. Underlined issue/PR links. No heavy shadows, gradients, emoji, credit or cost numbers, real names, people, companies, URLs, or extra sections. Synthetic content only, exactly as supplied.
+Panel content in this exact order:
+Tab strip: "WizDeck".
+Header: large "Home" left, small outlined dropdown pill "Example factory ▾" right.
+Small muted dismissible note: "WizDeck reads your factory's GitHub plan and its Needs-you file. Read-only in this version.  Got it"
+Section heading "Needs you · 2" with extending rule.
+First compact row: bold "N-12 · 1.4 · Release notes wording"; muted "Which changelog headline ships with 1.4?"; muted "Options: Short headline (rec) · Long headline"; outlined "Open" button right.
+Second row: bold "N-13 · 2.0 · Sync retries"; muted "Retry failed syncs automatically?"; muted "Options: Yes (rec) · No"; outlined "Open" button right. Never filled lime answer buttons.
+Big-number row three columns with thin vertical separators: "—" over "Running · unavailable"; "3" over "Merges today"; "—" over "Stalls · unavailable". Numbers 28px.
+Section "Versions".
+Version heading "1.4 · 2/3 specs".
+Indented spec rows with thin left rule:
+A: bold "Search filters", small muted "acme/app#41"; three lines "Now: Building T2–T3", "Next: Review T2, then merge", "When: Today ~16:00 UTC"; progress bar 40% lime, label "2/5"; underneath underlined "#41 · PR #52 · PR #55", outlined "Open".
+B: bold "Offline drafts", small muted "acme/app#44"; "Now: Waiting on you (N-12)", "Next: 3 tickets to builders", "When: Not estimated"; empty grey progress bar label "0/3"; underlined "#44", outlined "Open".
+Version heading "2.0 · 0/1 specs".
+C: bold "Sync engine", small muted "acme/sync#7"; muted "Status unavailable · When: Not estimated"; progress bar 25% lime label "1/4"; small grey tag "partial · page limit"; underlined "#7 · PR #9", outlined "Open".
+Footer muted "Updated 12s ago · refreshes every 60 s · Refresh".
+All copy spelled exactly, crisp legible text. No additional invented labels.
+DESKTOP TARGET: exact 1440 x 900 px landscape canvas showing entire app window edge-to-edge. Left sidebar width about 340px: plain list "Example factory orchestrator", "Search filters builder", "Offline drafts review". Middle chat column about 540px: blurred generic grey text lines only. Right focus panel 560px at x=880, sharp legible text, 24px horizontal padding, compact 12-14px body text. Fit ALL panel content comfortably in 900px height, with tab top and footer bottom. Need rows about 78px each. Progress bars on right of each spec's Now/Next/When lines. No perspective, no physical screen frame.
+
+PHONE EXACT PROMPT:
+Use case: ui-mockup. Create a precise high-fidelity UI design target, a flat screen capture style image. WizDeck is a plugin tab inside a dark desktop coding-agent app's RIGHT side panel. Style Ledger: near-black #0b0b0c background, light grey text, compact dense rows, thin 1px grey separators, small section headings with thin rule extending right. Restrained lime #c6f432 ONLY for progress fills and small accents. System/Inter-like sans-serif. Underlined issue/PR links. No heavy shadows, gradients, emoji, credit or cost numbers, real names, people, companies, URLs, or extra sections. Synthetic content only, exactly as supplied.
+Panel content in this exact order:
+Tab strip: "WizDeck".
+Header: large "Home" left, small outlined dropdown pill "Example factory ▾" right.
+Small muted dismissible note: "WizDeck reads your factory's GitHub plan and its Needs-you file. Read-only in this version.  Got it"
+Section heading "Needs you · 2" with extending rule.
+First compact row: bold "N-12 · 1.4 · Release notes wording"; muted "Which changelog headline ships with 1.4?"; muted "Options: Short headline (rec) · Long headline"; outlined "Open" button right.
+Second row: bold "N-13 · 2.0 · Sync retries"; muted "Retry failed syncs automatically?"; muted "Options: Yes (rec) · No"; outlined "Open" button right. Never filled lime answer buttons.
+Big-number row three columns with thin vertical separators: "—" over "Running · unavailable"; "3" over "Merges today"; "—" over "Stalls · unavailable". Numbers 28px.
+Section "Versions".
+Version heading "1.4 · 2/3 specs".
+Indented spec rows with thin left rule:
+A: bold "Search filters", small muted "acme/app#41"; three lines "Now: Building T2–T3", "Next: Review T2, then merge", "When: Today ~16:00 UTC"; progress bar 40% lime, label "2/5"; underneath underlined "#41 · PR #52 · PR #55", outlined "Open".
+B: bold "Offline drafts", small muted "acme/app#44"; "Now: Waiting on you (N-12)", "Next: 3 tickets to builders", "When: Not estimated"; empty grey progress bar label "0/3"; underlined "#44", outlined "Open".
+Version heading "2.0 · 0/1 specs".
+C: bold "Sync engine", small muted "acme/sync#7"; muted "Status unavailable · When: Not estimated"; progress bar 25% lime label "1/4"; small grey tag "partial · page limit"; underlined "#7 · PR #9", outlined "Open".
+Footer muted "Updated 12s ago · refreshes every 60 s · Refresh".
+All copy spelled exactly, crisp legible text. No additional invented labels.
+PHONE TARGET: exact 390 x 844 px portrait canvas. Phone status bar top with simple signal/battery glyphs; below it full-screen WizDeck panel, no other app columns or physical device bezel. Adapt layout genuinely to 390px width, horizontal padding 16px, body 12-13px. Header and dropdown fit one row. Note wraps. Both Needs you rows wrap naturally, outlined Open buttons with 44px touch targets. Numbers row compact; unavailable labels can wrap. Show at least header, note, BOTH Needs you items, numbers, version "1.4 · 2/3 specs", and ENTIRE first Search filters spec row. Spec Now/Next/When on separate lines, then full-width progress bar with 2/5 at right, then underlined links and outlined Open on their own line with 44px touch targets. Remaining content continues below fold; can show start of Offline drafts near bottom if space permits. Do not cram entire desktop content into phone. No invented visible copy.
+
+DESKTOP RETRY 1 EXACT PROMPT:
+Use case: ui-mockup. Create a precise high-fidelity UI design target, a flat screen capture style image. WizDeck is a plugin tab inside a dark desktop coding-agent app's RIGHT side panel. Style Ledger: near-black #0b0b0c background, light grey text, compact dense rows, thin 1px grey separators, small section headings with thin rule extending right. Restrained lime #c6f432 ONLY for progress fills and small accents. System/Inter-like sans-serif. Underlined issue/PR links. No heavy shadows, gradients, emoji, credit or cost numbers, real names, people, companies, URLs, or extra sections. Synthetic content only, exactly as supplied.
+Panel content in this exact order:
+Tab strip: "WizDeck".
+Header: large "Home" left, small outlined dropdown pill "Example factory ▾" right.
+Small muted dismissible note: "WizDeck reads your factory's GitHub plan and its Needs-you file. Read-only in this version.  Got it"
+Section heading "Needs you · 2" with extending rule.
+First compact row: bold "N-12 · 1.4 · Release notes wording"; muted "Which changelog headline ships with 1.4?"; muted "Options: Short headline (rec) · Long headline"; outlined "Open" button right.
+Second row: bold "N-13 · 2.0 · Sync retries"; muted "Retry failed syncs automatically?"; muted "Options: Yes (rec) · No"; outlined "Open" button right. Never filled lime answer buttons.
+Big-number row three columns with thin vertical separators: "—" over "Running · unavailable"; "3" over "Merges today"; "—" over "Stalls · unavailable". Numbers 28px.
+Section "Versions".
+Version heading "1.4 · 2/3 specs".
+Indented spec rows with thin left rule:
+A: bold "Search filters", small muted "acme/app#41"; three lines "Now: Building T2–T3", "Next: Review T2, then merge", "When: Today ~16:00 UTC"; progress bar 40% lime, label "2/5"; underneath underlined "#41 · PR #52 · PR #55", outlined "Open".
+B: bold "Offline drafts", small muted "acme/app#44"; "Now: Waiting on you (N-12)", "Next: 3 tickets to builders", "When: Not estimated"; empty grey progress bar label "0/3"; underlined "#44", outlined "Open".
+Version heading "2.0 · 0/1 specs".
+C: bold "Sync engine", small muted "acme/sync#7"; muted "Status unavailable · When: Not estimated"; progress bar 25% lime label "1/4"; small grey tag "partial · page limit"; underlined "#7 · PR #9", outlined "Open".
+Footer muted "Updated 12s ago · refreshes every 60 s · Refresh".
+All copy spelled exactly, crisp legible text. No additional invented labels.
+DESKTOP TARGET: exact 1440 x 900 px landscape canvas showing entire app window edge-to-edge. Left sidebar width about 340px: plain list "Example factory orchestrator", "Search filters builder", "Offline drafts review". Middle chat column about 540px: blurred generic grey text lines only. Right focus panel 560px at x=880, sharp legible text, 24px horizontal padding, compact 12-14px body text. Fit ALL panel content comfortably in 900px height, with tab top and footer bottom. Need rows about 78px each. Progress bars on right of each spec's Now/Next/When lines. No perspective, no physical screen frame.
+CORRECTIONS: The A:, B:, C: markers in this prompt are structural instructions ONLY. Render spec titles exactly 'Search filters', 'Offline drafts', 'Sync engine', without any letter prefixes. Canvas must be landscape 1440:900 aspect ratio (1.6:1). Left divider x=340 and RIGHT PANEL begins x=880, width=560. Do not make right panel half the screen. Keep all exact required text. Links under each whole spec row, not alongside body lines. Single solid background, no vignette or texture.
+
+PHONE RETRY 1 EXACT PROMPT:
+Use case: ui-mockup. Create a precise high-fidelity UI design target, a flat screen capture style image. WizDeck is a plugin tab inside a dark desktop coding-agent app's RIGHT side panel. Style Ledger: near-black #0b0b0c background, light grey text, compact dense rows, thin 1px grey separators, small section headings with thin rule extending right. Restrained lime #c6f432 ONLY for progress fills and small accents. System/Inter-like sans-serif. Underlined issue/PR links. No heavy shadows, gradients, emoji, credit or cost numbers, real names, people, companies, URLs, or extra sections. Synthetic content only, exactly as supplied.
+Panel content in this exact order:
+Tab strip: "WizDeck".
+Header: large "Home" left, small outlined dropdown pill "Example factory ▾" right.
+Small muted dismissible note: "WizDeck reads your factory's GitHub plan and its Needs-you file. Read-only in this version.  Got it"
+Section heading "Needs you · 2" with extending rule.
+First compact row: bold "N-12 · 1.4 · Release notes wording"; muted "Which changelog headline ships with 1.4?"; muted "Options: Short headline (rec) · Long headline"; outlined "Open" button right.
+Second row: bold "N-13 · 2.0 · Sync retries"; muted "Retry failed syncs automatically?"; muted "Options: Yes (rec) · No"; outlined "Open" button right. Never filled lime answer buttons.
+Big-number row three columns with thin vertical separators: "—" over "Running · unavailable"; "3" over "Merges today"; "—" over "Stalls · unavailable". Numbers 28px.
+Section "Versions".
+Version heading "1.4 · 2/3 specs".
+Indented spec rows with thin left rule:
+A: bold "Search filters", small muted "acme/app#41"; three lines "Now: Building T2–T3", "Next: Review T2, then merge", "When: Today ~16:00 UTC"; progress bar 40% lime, label "2/5"; underneath underlined "#41 · PR #52 · PR #55", outlined "Open".
+B: bold "Offline drafts", small muted "acme/app#44"; "Now: Waiting on you (N-12)", "Next: 3 tickets to builders", "When: Not estimated"; empty grey progress bar label "0/3"; underlined "#44", outlined "Open".
+Version heading "2.0 · 0/1 specs".
+C: bold "Sync engine", small muted "acme/sync#7"; muted "Status unavailable · When: Not estimated"; progress bar 25% lime label "1/4"; small grey tag "partial · page limit"; underlined "#7 · PR #9", outlined "Open".
+Footer muted "Updated 12s ago · refreshes every 60 s · Refresh".
+All copy spelled exactly, crisp legible text. No additional invented labels.
+PHONE TARGET: exact 390 x 844 px portrait canvas. Phone status bar top with simple signal/battery glyphs; below it full-screen WizDeck panel, no other app columns or physical device bezel. Adapt layout genuinely to 390px width, horizontal padding 16px, body 12-13px. Header and dropdown fit one row. Note wraps. Both Needs you rows wrap naturally, outlined Open buttons with 44px touch targets. Numbers row compact; unavailable labels can wrap. Show at least header, note, BOTH Needs you items, numbers, version "1.4 · 2/3 specs", and ENTIRE first Search filters spec row. Spec Now/Next/When on separate lines, then full-width progress bar with 2/5 at right, then underlined links and outlined Open on their own line with 44px touch targets. Remaining content continues below fold; can show start of Offline drafts near bottom if space permits. Do not cram entire desktop content into phone. No invented visible copy.
+IMPORTANT CORRECTION: Portrait aspect ratio MUST be 390:844 (0.462:1), tall narrow phone, not a wide tablet. Render at 390 x 844, or 780 x 1688 for 2x density. Narrow layout wraps Needs-you question/options across multiple lines. Open buttons touch height 44 CSS px, including each Needs-you Open button. Fit first spec by compact top spacing. Footer belongs BELOW all remaining content and must NOT appear before Offline drafts and Sync engine finish; omit footer from visible phone crop. Use flat solid near-black fill, no texture, no lighting. All exact wording from prior instructions preserved.
+
+SELECTED: desktop retry 1; phone retry 1.
+Export: standard-library PNG decode and bilinear resampling only to requested dimensions. All UI imagery generated with built-in image_gen.imagegen, no API key, no HTML.
+Inspection: no observed spelling defects, no credits/costs, no extra sections. Layout limitations: phone Open buttons do not consistently reach 44 CSS px; full content was fitted onto phone canvas. Desktop right panel is slightly wider than requested (~620 rather than ~560 CSS px); Now/Next/When sit beside titles.
