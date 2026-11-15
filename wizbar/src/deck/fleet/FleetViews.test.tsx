@@ -49,6 +49,19 @@ const freshQueue = {
     expiresAt: "2026-11-15T21:00:00Z", complete: true, gaps: [], items: [queueItem] as never }, sha256: "x" }),
   detail: null, nextRefreshAt: fxNow + 55_000, refreshing: false,
 };
+/** One factory's answer: its queue still loading, fresh with n12, or missing. */
+function resultFor(projectKey: string, queue: "loading" | "fresh" | "missing"): DeckWatchResultV1 {
+  const fresh = { ...freshQueue, snapshot: { ...freshQueue.snapshot, data: { ...freshQueue.snapshot.data, queue: { ...freshQueue.snapshot.data.queue, project: projectKey } } } };
+  return {
+    projects: [{ projectKey: "sample-factory", cloudroomProjectId: "prj_a" }, { projectKey: "other-factory", cloudroomProjectId: "prj_b" }],
+    projectKey, setup: null,
+    view: buildHomeView({
+      projectKey, timeZone: "UTC", now: fxNow, authenticated: true,
+      queue: queue === "loading" ? null : queue === "fresh" ? fresh : { snapshot: { status: "unavailable", reason: "missing", lastGood: null }, detail: "No file.", nextRefreshAt: null, refreshing: false },
+      boards: [{ snapshot: ready(board), detail: null, nextRefreshAt: fxNow + 55_000, refreshing: false }],
+    }),
+  };
+}
 const result = (withQueue = false): DeckWatchResultV1 => ({
   projects: [{ projectKey: "sample-factory", cloudroomProjectId: "prj_a" }, { projectKey: "other-factory", cloudroomProjectId: "prj_b" }],
   projectKey: "sample-factory", setup: null,
@@ -144,17 +157,22 @@ describe("WizDeck Home live insertion", () => {
     expect(screen.getByRole("region", { name: "Fleet" })).toBeTruthy();
   });
 
-  // Bug caught: the backend sends work links but Home never passes them on, so nothing is placed.
-  it("places threads from the backend's fleetLinks and opens that spec's fleet page", async () => {
+  // R1 (final). Bug caught: the project's anchor remote taken as every checkout's repository, so a
+  // thread whose own source is unknown (another source host or a remote override) lands under a spec.
+  it("receives the backend's fleetLinks but places nothing by branch without per-checkout provenance", async () => {
     const slot = mountHome(fxRunning, true);
     await flush();
     const fleet = screen.getByRole("region", { name: "Fleet" });
     expect(within(fleet).queryByText(/Work links were not sent/)).toBeNull();
-    expect(within(fleet).getByText(/4 running · 6 threads/)).toBeTruthy();
-    expect(within(fleet).getByText(/2 threads · no verified spec link/)).toBeTruthy();
-    fireEvent.click(within(fleet).getByRole("button", { name: "View fleet for Search filters for the sample catalogue" }));
-    expect([...document.querySelectorAll<HTMLElement>(".wizdeck-fleet-row")].map((row) => row.dataset.thread)).toEqual(["thr_mgr", "thr_b2", "thr_rev", "thr_ghost", "thr_b3", "thr_help"]);
-    expect(screen.getByRole("heading", { name: "Merged tickets · 2" })).toBeTruthy();
+    expect(within(fleet).queryByRole("button", { name: /View fleet for/ })).toBeNull();
+    expect(within(fleet).getByText(/no supported source proves which repository each thread's checkout belongs to/i)).toBeTruthy();
+    expect(within(fleet).getByText(/Unplaced/)).toBeTruthy();
+    fireEvent.click(within(fleet).getByRole("button", { name: "View unplaced threads" }));
+    const rows = [...document.querySelectorAll<HTMLElement>(".wizdeck-fleet-row")];
+    expect(rows.map((row) => row.dataset.thread).sort()).toEqual(["thr_b2", "thr_b3", "thr_ghost", "thr_help", "thr_mgr", "thr_orphan", "thr_rev", "thr_titled"]);
+    const b2 = within(rows.find((row) => row.dataset.thread === "thr_b2")!);
+    expect(b2.getByText(/not placed: no supported source proves this checkout's repository/)).toBeTruthy();
+    expect(slot.inspection.sdkCalls.filter((call) => String(call).startsWith("projects"))).toEqual([]);
     expect(slot.inspection.navigateCalls).toEqual([]);
   });
 
@@ -194,6 +212,56 @@ describe("R4: an explicit Needs-you focus from a fleet page", () => {
     expect(document.activeElement).toBe(item);
     expect(scroll).not.toHaveBeenCalled();
     expect(slot.inspection.navigateCalls).toEqual([]);
+  });
+});
+
+describe("R6: a deferred Needs-you focus stays with its factory and its own Home", () => {
+  const panelParams = (itemId: string) => ({ focus: { kind: "needs-you", projectKey: "sample-factory", itemId } }) as never;
+  /** Deck answers by factory: A's queue still loading, B's fresh with the same queue-local id. */
+  const byFactory = (input: { projectKey: string | null; currentProjectId: string | null }) => {
+    const key = input.projectKey ?? (input.currentProjectId === "prj_b" ? "other-factory" : "sample-factory");
+    return resultFor(key, key === "sample-factory" ? "loading" : "fresh");
+  };
+  const mountPanel = (projectId: string, params: unknown = null) => renderSlot({ component: WizDeckPanel }, { threadId: "thr_any", params: params as never }, {
+    rpc: { deckWatch: byFactory, deckRelease: () => ({ ok: true }) } as never,
+    context: { projectId, threadId: "thr_any" }, sidebarThreads: sidebar(fxRunning) as never, sdk: hostProject,
+  });
+
+  // Bug caught: the request survives a factory switch and steals focus from the picker to B's same-id decision.
+  it("cancels on a manual switch from loading A to B; focus stays on the picker", async () => {
+    const other = mountPanel("prj_a"); // A second mounted Home on A, whose queue is still loading.
+    const slot = mountPanel("prj_a");
+    await flush();
+    const mine = within(slot.container);
+    fireEvent.click(mine.getByRole("button", { name: "View unplaced threads" }));
+    slot.lifecycle.rerender(<WizDeckPanel threadId="thr_any" params={panelParams("n12")} />);
+    await flush();
+    const picker = mine.getByRole("combobox", { name: "Factory" }) as HTMLSelectElement;
+    picker.focus();
+    fireEvent.change(picker, { target: { value: "other-factory" } });
+    await flush(); await flush();
+    expect(slot.container.querySelector('[id="wizdeck-need-n12"]')).not.toBeNull(); // B's queue, with the same id, is mounted here.
+    expect(document.activeElement).toBe(picker);
+    expect(other.container.contains(document.activeElement)).toBe(false);
+  });
+
+  // Bug caught: a document-wide lookup focuses another mounted Home's item with the same id.
+  it("focuses its own Home's item when another mounted Home shows the same id", async () => {
+    const other = renderSlot({ component: WizDeckPanel }, { threadId: "thr_any", params: null as never }, {
+      rpc: { deckWatch: () => result(true), deckRelease: () => ({ ok: true }) } as never,
+      context: { projectId: "prj_a", threadId: "thr_any" }, sidebarThreads: sidebar(fxRunning) as never, sdk: hostProject,
+    });
+    const slot = renderSlot({ component: WizDeckPanel }, { threadId: "thr_any", params: null as never }, {
+      rpc: { deckWatch: () => result(true), deckRelease: () => ({ ok: true }) } as never,
+      context: { projectId: "prj_a", threadId: "thr_any" }, sidebarThreads: sidebar(fxRunning) as never, sdk: hostProject,
+    });
+    await flush();
+    fireEvent.click(within(slot.container).getByRole("button", { name: "View unplaced threads" }));
+    slot.lifecycle.rerender(<WizDeckPanel threadId="thr_any" params={panelParams("n12")} />);
+    await flush(); await flush();
+    expect(document.activeElement?.id).toBe("wizdeck-need-n12");
+    expect(slot.container.contains(document.activeElement)).toBe(true);
+    expect(other.container.contains(document.activeElement)).toBe(false);
   });
 });
 

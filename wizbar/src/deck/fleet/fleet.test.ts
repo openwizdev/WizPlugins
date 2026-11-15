@@ -12,11 +12,16 @@ const read = (pullRequests = fxPullRequests, complete = true, coverage: Record<s
   ({ status: "read", pullRequests, complete, stale: false, gaps: [], coverage });
 /** The project's repository, as the host's project record states it (R1). */
 const verified: RepositoryProvenanceV1 = { status: "verified", repository: REPO };
+/**
+ * Per-thread repository provenance is a seam: no supported source exists in
+ * SDK 0.6.33 (R1), so placement tests supply a fixture lookup explicitly.
+ * (`repository` is the round-1 field, kept so the red run at dc045d8 sees the same inputs.)
+ */
 const model = (links: FleetLinkSourceV1 = read(), threads = fxThreads, host: { runningThreads?: unknown } = { runningThreads: fxRunning }, repository: RepositoryProvenanceV1 = verified): FleetModelV1 =>
   buildFleet({
-    projectId: "prj_a", threads, repository,
+    projectId: "prj_a", threads, repository, provenance: () => repository,
     health: liveHealth({ inventory: readHostInventory(host), projectId: "prj_a", now: fxNow }), links,
-  });
+  } as Parameters<typeof buildFleet>[0]);
 const ids = (rows: { id: string }[]) => rows.map((row) => row.id);
 const everyRow = (m: FleetModelV1) => [...m.groups.flatMap((group) => group.rows), ...m.unplaced.rows];
 
@@ -135,9 +140,58 @@ describe("fleet placement", () => {
     expect(everyRow(model(read(fxPullRequests, false, {}))).find((row) => row.id === "thr_b3")?.link).toEqual({ status: "no-pull-request", branch: "room/t3", complete: false });
   });
 
+  // R2 (final). Bug caught: an unproved row (truncated closing tickets) acquires its proved parent's spec,
+  // or makes its parent a manager, and so enters specOfThread/threadsOfSpec.
+  it("never gives unproved work a spec through its parent or its descendants", () => {
+    const proved = { ...fxPullRequests[1], ref: `${REPO}#70`, url: `https://github.com/${REPO}/pull/70`, headRefName: "room/p1", state: "open" as const, mergedAt: null };
+    const truncated = { ...fxPullRequests[0], ticketsComplete: false };
+    const threads = [
+      fxThread({ id: "thr_parent", title: "Proved builder", branch: "room/p1", created: 1 }),
+      fxThread({ id: "thr_child", title: "Truncated child", parent: "thr_parent", branch: "room/t2", created: 2 }),
+      fxThread({ id: "thr_lead", title: "Lead over unproved", branch: "room/lead", created: 3 }),
+      fxThread({ id: "thr_only", title: "Only unproved child", parent: "thr_lead", branch: "room/t2", created: 4 }),
+    ];
+    const m = model(read([proved, truncated]), threads, { runningThreads: [] });
+    const child = everyRow(m).find((row) => row.id === "thr_child")!;
+    expect(child.link).toMatchObject({ status: "unproved", pullRequest: { ref: `${REPO}#52` }, tickets: [{ ref: `${REPO}#43` }] });
+    expect([child.spec, child.placement]).toEqual([null, "none"]);
+    expect(specOfThread(m, "thr_parent")).toBe(SPEC);
+    expect(specOfThread(m, "thr_child")).toBeNull();
+    expect(threadsOfSpec(m, SPEC)).toEqual(["thr_parent"]);
+    // Descendants: a lead whose only linked-looking child is unproved is not a manager of that spec.
+    expect(specOfThread(m, "thr_lead")).toBeNull();
+    expect(specOfThread(m, "thr_only")).toBeNull();
+  });
+
   it("lists tickets closed by merged pull requests under their spec, once", () => {
     const merged = model().mergedTickets.get(SPEC) ?? [];
     expect(merged.map(({ ticket, pullRequest }) => [ticket.ref, pullRequest.ref])).toEqual([[`${REPO}#42`, `${REPO}#50`], [`${REPO}#45`, `${REPO}#51`]]);
+  });
+});
+
+describe("coverage at the fleetLinkSource boundary (R2)", () => {
+  // Bug caught: a link read whose coverage booleans are missing or not booleans counts as complete,
+  // so an open match is placed although competing pull requests may be unread.
+  it("treats missing or unknown coverage as unread, through the real fleetLinkSource", () => {
+    const view = (data: Record<string, unknown>) => ({
+      snapshot: { status: "ready" as const, data: { repository: REPO, pullRequests: fxPullRequests, ...data } as never, fetchedAt: fxNow, stale: false, complete: true, gaps: [] },
+      detail: null, nextRefreshAt: null, refreshing: false,
+    });
+    const placed = (data: Record<string, unknown>) => threadsOfSpec(model(fleetLinkSource([view(data)])), SPEC).includes("thr_b2");
+    expect(placed({ openComplete: true, mergedComplete: true })).toBe(true);
+    for (const openComplete of [undefined, null, "true", 1]) {
+      expect(placed({ openComplete, mergedComplete: true })).toBe(false);
+      expect(everyRow(model(fleetLinkSource([view({ openComplete, mergedComplete: true })]))).find((row) => row.id === "thr_b2")?.link)
+        .toMatchObject({ status: "unproved", pullRequest: { ref: `${REPO}#52` } });
+    }
+    // Control: an unrelated merged bound does not unseat a verified open match.
+    expect(placed({ openComplete: true, mergedComplete: false })).toBe(true);
+    // A merged-only match with unknown merged coverage stays unproved.
+    const mergedOnly = [fxThread({ id: "thr_m", title: "Merged work", branch: "room/t1", created: 9 })];
+    for (const mergedComplete of [undefined, "yes"]) {
+      const m = model(fleetLinkSource([view({ openComplete: true, mergedComplete })]), mergedOnly, { runningThreads: [] });
+      expect(m.unplaced.rows[0].link).toMatchObject({ status: "unproved", pullRequest: { ref: `${REPO}#50` } });
+    }
   });
 });
 
