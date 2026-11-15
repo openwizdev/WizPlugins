@@ -70,9 +70,12 @@ export function readNeedsYouQueue(content: string, context: QueueReadContextV1):
 export function validateNeedsYouQueue(raw: unknown, context: QueueReadContextV1): QueueReadV1 {
   const fail = (reason: UnavailableReasonV1): QueueReadV1 => ({ ok: false, reason });
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return fail("malformed");
+  if ((raw as { schema?: unknown }).schema !== needsYouSchemaId) return fail("unknown-schema");
   const parsed = needsYouQueueSchema.safeParse(raw);
   if (!parsed.success) return fail("malformed");
   const queue = parsed.data;
+  if (queue.project !== context.projectKey) return fail("wrong-project");
+  if (new Set(queue.items.map((item) => item.id)).size !== queue.items.length) return fail("duplicate-item");
   for (const item of queue.items) {
     const optionIds = item.options.map((option) => option.id);
     if (new Set(optionIds).size !== optionIds.length) return fail("malformed");
@@ -82,6 +85,8 @@ export function validateNeedsYouQueue(raw: unknown, context: QueueReadContextV1)
   }
   if (Date.parse(queue.updatedAt) > Date.parse(queue.expiresAt)) return fail("malformed");
   if (!queue.complete && queue.gaps.length === 0) return fail("malformed");
+  if (context.previousRevision !== undefined && queue.revision < context.previousRevision) return fail("stale-revision");
+  if (Date.parse(queue.expiresAt) <= context.now) return fail("expired");
   return { ok: true, queue };
 }
 
@@ -97,13 +102,16 @@ export function checkSteerDispatch(
   const refuse = (reason: DispatchRefusalV1) => ({ ok: false as const, reason });
   if (request.projectKey !== binding.projectKey) return refuse("wrong-project");
   if (request.orchestratorThreadId !== binding.orchestratorThreadId) return refuse("wrong-target");
-  if (request.kind !== "answer") return request.answer === null ? { ok: true } : refuse("item-gone");
+  // Tell, spec actions and feedback carry no decision: project and target are their whole check.
+  if (request.kind !== "answer") return { ok: true };
   if (!current.ok) return refuse("queue-unavailable");
   if (current.queue.project !== binding.projectKey) return refuse("wrong-project");
   const answer = request.answer;
   if (!answer) return refuse("item-gone");
+  if (answer.queueRevision !== current.queue.revision) return refuse("revision-changed");
   const item = current.queue.items.find((candidate) => candidate.id === answer.itemId);
   if (!item) return refuse("item-gone");
+  if (item.fingerprint !== answer.fingerprint) return refuse("proposal-changed");
   if (!item.options.some((option) => option.id === answer.optionId)) return refuse("unknown-option");
   if (item.risk !== "ordinary") return refuse("gated-risk");
   return { ok: true };
@@ -131,7 +139,7 @@ export function needsYouViewStub(read: QueueReadV1): NeedsYouViewV1 {
   return {
     state: "ready",
     complete: queue.complete,
-    count: queue.items.length,
+    count: queue.complete ? queue.items.length : null,
     gaps: [...queue.gaps],
     items: queue.items.map((item) => ({
       id: item.id, code: item.code, question: item.question,

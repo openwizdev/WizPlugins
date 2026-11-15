@@ -37,7 +37,7 @@ function dedupe(values: unknown[]): InventoryThreadV1[] | "malformed" | "conflic
  * rows, so their total is null until a verified complete child read (#158).
  */
 export function readHostInventory(state: HostInventoryInputV1): HostInventoryV1 {
-  if (state.runningThreads === undefined) state = { ...state, runningThreads: [] };
+  if (state.runningThreads === undefined) return { status: "absent" };
   if (!Array.isArray(state.runningThreads)) return { status: "incomplete", reason: "malformed" };
   const running = dedupe(state.runningThreads);
   if (typeof running === "string") return { status: "incomplete", reason: running };

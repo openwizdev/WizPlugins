@@ -23,13 +23,14 @@ export function parseSpecStatus(body: string): SpecStatusV1 {
   }
   const [now, next, when, updated] = ["Now", "Next", "When", "Updated"].map((key) => fields.get(key) ?? "");
   if (!now || !next || !when || !isoUtc.test(updated) || Number.isNaN(Date.parse(updated))) return unavailable("malformed");
+  if (when !== notEstimated && !hasZone.test(when)) return unavailable("malformed");
   return { status: "ready", now, next, when, updated };
 }
 
 /** Select the one marker comment by the configured writer. None or several is unavailable. */
 export function readSpecStatus(comments: readonly { authorLogin: string; body: string }[], writerLogin: string): SpecStatusV1 {
   const marked = comments.filter((comment) =>
-    firstLine(comment.body) === specStatusMarker);
+    comment.authorLogin === writerLogin && firstLine(comment.body) === specStatusMarker);
   if (marked.length === 0) return unavailable("missing");
   if (marked.length > 1) return unavailable("ambiguous");
   return parseSpecStatus(marked[0].body);

@@ -35,7 +35,7 @@ export function steerOutcome(requestId: string, settled: PromiseSettledResult<un
     return { requestId, delivery: "uncertain", message: reason instanceof Error ? reason.message : "Send result unknown." };
   }
   const value = settled.value as { ok?: unknown; delivery?: unknown; queuedMessage?: { id?: unknown } } | null;
-  if (value && value.ok === true && (value.delivery === "sent" || value.delivery === "queued")) return { requestId, delivery: "sent" };
+  if (value && value.ok === true && value.delivery === "sent") return { requestId, delivery: "sent" };
   if (value && value.ok === true && value.delivery === "queued" && typeof value.queuedMessage?.id === "string") {
     return { requestId, delivery: "queued", queuedMessageId: value.queuedMessage.id };
   }

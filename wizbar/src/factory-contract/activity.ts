@@ -56,16 +56,8 @@ export function readTimelineActivity(response: TimelineReadInputV1, fetchedAt: n
   if (!walk(response.rows, facts)) return { status: "unavailable", reason: "malformed" };
   return {
     status: "read", fetchedAt, activeTurnId: facts.pendingTurn,
-    pendingOperations: 0, lastActivityAt: latestRowTime(response.rows),
+    pendingOperations: facts.pendingOperations, lastActivityAt: null,
   };
-}
-
-function latestRowTime(rows: unknown): number {
-  let max = 0;
-  for (const row of rows as { createdAt: number; completedAt?: number | null; children?: unknown }[]) {
-    max = Math.max(max, row.createdAt, row.completedAt ?? 0, row.children ? latestRowTime(row.children) : 0);
-  }
-  return max;
 }
 
 export interface StallInputV1 {
@@ -80,8 +72,10 @@ export interface StallInputV1 {
 export function stallStatus({ running, activity, threshold, now }: StallInputV1): StallV1 {
   if (!running) return { status: "not-running" };
   if (activity.status !== "read") return { status: "unavailable", reason: "no-activity-evidence" };
+  if (now - activity.fetchedAt > activityFreshnessMs) return { status: "unavailable", reason: "stale-observation" };
   if (activity.pendingOperations > 0) return { status: "operation-pending" };
-  const thresholdMs = threshold.source === "factory" ? threshold.thresholdMs : 30 * 60_000;
+  if (threshold.source !== "factory") return { status: "unavailable", reason: "no-threshold" };
+  if (activity.lastActivityAt === null) return { status: "unavailable", reason: "no-activity-clock" };
   const idleMs = Math.max(0, now - activity.lastActivityAt);
-  return { status: idleMs >= thresholdMs ? "stalled" : "ok", idleMs, thresholdMs };
+  return { status: idleMs >= threshold.thresholdMs ? "stalled" : "ok", idleMs, thresholdMs: threshold.thresholdMs };
 }
