@@ -97,12 +97,13 @@ describe("fleet work links in the shared cache", () => {
     const view = firstLinks(await t.watch("desk-tab"));
     expect(view.snapshot).toMatchObject({ status: "unavailable", reason: "rate-limited", lastGood: { data: { pullRequests: [{ ref: "example-org/sample-app#52" }] } } });
     expect(t.linkCalls()).toHaveLength(2); // No retry before the reset.
-    // The deadline is the real one: still held just before it, read again once it passes.
-    for (let at = 4 * REFRESH_MS; at < 9 * REFRESH_MS; at += 30_000) { await t.watch("desk-tab"); await vi.advanceTimersByTimeAsync(30_000); }
-    expect(t.linkCalls()).toHaveLength(2);
+    // The deadline is the real one: GitHub's reset, 10 minutes in. Held up to 30 s before it…
     t.setLinks((call) => ({ status: 200, body: links(`${call.variables?.owner}/${call.variables?.name}`) }));
-    for (let at = 9 * REFRESH_MS; at < 12 * REFRESH_MS; at += 30_000) { await t.watch("desk-tab"); await vi.advanceTimersByTimeAsync(30_000); }
-    expect(t.linkCalls().length).toBeGreaterThanOrEqual(3);
+    for (let at = 4 * REFRESH_MS; at < 10 * REFRESH_MS - 30_000; at += 30_000) { await t.watch("desk-tab"); await vi.advanceTimersByTimeAsync(30_000); }
+    expect(t.linkCalls()).toHaveLength(2);
+    // …then exactly one read once it passes.
+    await t.watch("desk-tab"); await vi.advanceTimersByTimeAsync(30_000);
+    expect(t.linkCalls()).toHaveLength(3);
     expect(firstLinks(await t.watch("desk-tab")).snapshot).toMatchObject({ status: "ready", stale: false });
   });
 
