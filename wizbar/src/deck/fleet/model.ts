@@ -22,13 +22,18 @@ export type FleetLinkSourceV1 =
   | { status: "read"; pullRequests: FleetPullRequestV1[]; complete: boolean; stale: boolean; gaps: string[]; coverage: LinkCoverageV1 };
 
 /**
- * The repository the project's threads work in, from the host's project
- * record (`projects.get(...).gitRemoteUrl`). Without it, a branch name proves
- * nothing: the same name can exist in any configured repository.
+ * The repository one thread's checkout belongs to. A project's anchor remote
+ * does not prove it: Cloudroom projects can have sources on several hosts, a
+ * clone remote override, or an inspected local source (review R1). SDK 0.6.33
+ * gives a plugin no per-checkout repository evidence, so today every thread is
+ * `unverified` and no branch places anything: an explicit capability gap. A
+ * future supported source plugs in through `CheckoutProvenanceV1`.
  */
 export type RepositoryProvenanceV1 =
   | { status: "verified"; repository: string }
-  | { status: "unverified"; reason: "loading" | "unreadable" | "no-remote" | "unrecognised-remote" };
+  | { status: "unverified"; reason: "no-supported-source" };
+export type CheckoutProvenanceV1 = (thread: PluginSidebarThread) => RepositoryProvenanceV1;
+export const noCheckoutProvenance: CheckoutProvenanceV1 = () => ({ status: "unverified", reason: "no-supported-source" });
 
 const repoKey = (repository: string) => repository.toLowerCase();
 const repoOf = (ref: string) => ref.slice(0, ref.lastIndexOf("#"));
@@ -54,6 +59,11 @@ export function fleetLinkSource(views: readonly CacheView<FleetLinksV1>[] | unde
   }
   if (read === 0) return loading ? { status: "loading" } : { status: "unavailable", detail: gaps.join(" ") || "Work links could not be read." };
   return { status: "read", pullRequests, complete, stale, gaps, coverage };
+}
+
+/** True when some thread has a branch but no supported source proves its checkout's repository. */
+export function provenanceGap(model: FleetModelV1): boolean {
+  return [...model.groups.flatMap((group) => group.rows), ...model.unplaced.rows].some((row) => row.link.status === "repository-unverified");
 }
 
 // ---- Rows ----------------------------------------------------------------------
@@ -142,15 +152,27 @@ function resolveLink(branch: string | null, links: FleetLinkSourceV1, repository
   return { status: "no-spec", branch, pullRequest, tickets: pullRequest.tickets };
 }
 
+const noProvenanceRow: RepositoryProvenanceV1 = { status: "unverified", reason: "no-supported-source" };
+
+/**
+ * A link that leaves the thread's own work unknown: it may belong to another
+ * spec, so the row neither takes a spec from its relatives nor lends one (R2).
+ */
+function uncertain(link: WorkLinkV1): boolean {
+  return link.status === "unproved" || link.status === "ambiguous" || link.status === "repository-unverified" ||
+    link.status === "links-unavailable" || (link.status === "no-pull-request" && !link.complete);
+}
+
 export function buildFleet(input: {
   projectId: string;
   threads: readonly PluginSidebarThread[];
   health: LiveHealthV1;
   links: FleetLinkSourceV1;
-  /** The project's repository from the host; branches match only within it. */
-  repository: RepositoryProvenanceV1;
+  /** Each thread's checkout repository; branches match only within it. Default: no supported source. */
+  provenance?: CheckoutProvenanceV1;
 }): FleetModelV1 {
-  const { projectId, health, links, repository } = input;
+  const { projectId, health, links } = input;
+  const provenance = input.provenance ?? noCheckoutProvenance;
   const running = health.running;
   const runningIds = running.status === "ready" ? new Set(running.rows.map((row) => row.id)) : null;
 
@@ -163,7 +185,7 @@ export function buildFleet(input: {
     isHidden: thread?.isHidden ?? false,
     running: runningIds ? runningIds.has(id) : null,
     stall: health.stalls.get(id),
-    link: resolveLink(thread?.environment?.branchName ?? null, links, repository),
+    link: resolveLink(thread?.environment?.branchName ?? null, links, thread ? provenance(thread) : noProvenanceRow),
     spec: null, placement: "none", role: null, depth: 0, parentNote: null,
     createdAt: thread?.createdAt ?? Number.MAX_SAFE_INTEGER,
   });
@@ -205,6 +227,7 @@ export function buildFleet(input: {
   const resolving = new Set<string>();
   const place = (row: FleetRowV1): SpecRefV1 | null => {
     if (row.placement !== "none" || resolving.has(row.id)) return row.spec;
+    if (uncertain(row.link)) return null;
     resolving.add(row.id);
     const mine = own(row);
     const fromChildren = descendantSpecs(row);

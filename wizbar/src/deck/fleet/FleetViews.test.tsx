@@ -99,9 +99,12 @@ function mountHome(runningThreads?: unknown, withLinks = false, withQueue = fals
   });
 }
 
+/** Seam only: a fixture per-checkout repository, which no supported host source gives today (R1). */
+const fixtureProvenance = () => ({ status: "verified" as const, repository: REPO });
+
 /** The fleet page and Home section with work links connected, as the backend lease will supply them. */
 function LinkedFleet() {
-  const fleet = useLiveFleet("prj_a", linkViews, fxNow)!;
+  const fleet = useLiveFleet("prj_a", linkViews, fxNow, fixtureProvenance)!;
   const selection = useSelection();
   const [page, setPage] = useState<SpecRefV1 | null | undefined>(undefined);
   const view = result().view!;
@@ -196,7 +199,7 @@ describe("R4: an explicit Needs-you focus from a fleet page", () => {
     Element.prototype.scrollIntoView = scroll;
     const slot = mountHome(fxRunning, true, true);
     await flush();
-    fireEvent.click(screen.getByRole("button", { name: /View fleet for/ }));
+    fireEvent.click(screen.getByRole("button", { name: "View unplaced threads" }));
     const search = screen.getByPlaceholderText("Search threads, branches, #refs");
     search.focus();
     expect(document.activeElement).toBe(search);

@@ -9,7 +9,7 @@ import type { HomeViewV1 } from "../data/home";
 import { LIME, SectionHeading, UrlButton, tapTarget } from "../home/sections";
 import { setSelection } from "../selection/selection";
 import { stallLabel } from "../live/health";
-import { specOfThread, viewGroup, type FleetGroupV1, type FleetModelV1, type FleetRowV1, type FleetSortV1, type WorkLinkV1 } from "./model";
+import { provenanceGap, specOfThread, viewGroup, type FleetGroupV1, type FleetModelV1, type FleetRowV1, type FleetSortV1, type WorkLinkV1 } from "./model";
 
 const AMBER = "var(--wizdeck-amber, #f5a524)";
 const muted: CSSProperties = { color: "var(--muted-foreground)" };
@@ -50,7 +50,7 @@ function linkWords(link: WorkLinkV1): string {
     case "no-spec": return "no spec linked to its ticket";
     case "ambiguous": return `link ambiguous: ${link.detail}`;
     case "unproved": return `not placed: ${link.detail}`;
-    case "repository-unverified": return "not placed: the project's repository is not known from the host";
+    case "repository-unverified": return "not placed: no supported source proves this checkout's repository";
     case "no-pull-request": return link.complete ? "no pull request for its branch" : "no pull request found in what was read";
     case "no-branch": return "no work link: no branch";
     case "links-unavailable": return "work links unavailable";
@@ -59,6 +59,9 @@ function linkWords(link: WorkLinkV1): string {
 
 function linksNote(model: FleetModelV1): string | null {
   const links = model.links;
+  if (links.status === "read" && provenanceGap(model)) {
+    return "Not placed under specs: no supported source proves which repository each thread's checkout belongs to (a host capability gap).";
+  }
   if (links.status === "not-connected") return "Work links were not sent by the backend, so no thread can be placed under a spec.";
   if (links.status === "loading") return "Reading work links…";
   if (links.status === "unavailable") return `Work links unavailable: ${links.detail}`;

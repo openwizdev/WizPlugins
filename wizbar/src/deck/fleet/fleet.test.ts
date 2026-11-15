@@ -10,18 +10,17 @@ import { buildFleet, fleetLinkSource, specOfThread, threadsOfSpec, viewGroup, ty
 /** A link read; `coverage` says which repositories' open and merged pull requests were read in full. */
 const read = (pullRequests = fxPullRequests, complete = true, coverage: Record<string, { open: boolean; merged: boolean }> = { [REPO]: { open: complete, merged: true } }): FleetLinkSourceV1 =>
   ({ status: "read", pullRequests, complete, stale: false, gaps: [], coverage });
-/** The project's repository, as the host's project record states it (R1). */
+/** A fixture checkout provenance (seam only: no supported source exists in SDK 0.6.33). */
 const verified: RepositoryProvenanceV1 = { status: "verified", repository: REPO };
 /**
  * Per-thread repository provenance is a seam: no supported source exists in
  * SDK 0.6.33 (R1), so placement tests supply a fixture lookup explicitly.
- * (`repository` is the round-1 field, kept so the red run at dc045d8 sees the same inputs.)
  */
 const model = (links: FleetLinkSourceV1 = read(), threads = fxThreads, host: { runningThreads?: unknown } = { runningThreads: fxRunning }, repository: RepositoryProvenanceV1 = verified): FleetModelV1 =>
   buildFleet({
-    projectId: "prj_a", threads, repository, provenance: () => repository,
+    projectId: "prj_a", threads, provenance: () => repository,
     health: liveHealth({ inventory: readHostInventory(host), projectId: "prj_a", now: fxNow }), links,
-  } as Parameters<typeof buildFleet>[0]);
+  });
 const ids = (rows: { id: string }[]) => rows.map((row) => row.id);
 const everyRow = (m: FleetModelV1) => [...m.groups.flatMap((group) => group.rows), ...m.unplaced.rows];
 
@@ -107,7 +106,7 @@ describe("fleet placement", () => {
     expect(m.groups).toEqual([]); // Nor are its manager and helpers placed through it.
     expect(threadsOfSpec(m, SPEC)).toEqual([]);
 
-    const unknown = model(read(), fxThreads, { runningThreads: fxRunning }, { status: "unverified", reason: "no-remote" });
+    const unknown = model(read(), fxThreads, { runningThreads: fxRunning }, { status: "unverified", reason: "no-supported-source" });
     expect(unknown.groups).toEqual([]);
     expect(everyRow(unknown).find((row) => row.id === "thr_b2")?.link).toMatchObject({ status: "repository-unverified", branch: "room/t2" });
     expect(threadsOfSpec(unknown, SPEC)).toEqual([]);

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useBbContext, useBbNavigate } from "@get-bb/plugin-sdk/app";
 import type { FocusRequestV1 } from "../../factory-contract";
 // F1 (#75) live/fleet insertion.
+import { useRef } from "react";
 import type { SpecRefV1 } from "../../factory-contract";
 import { useSelection } from "../selection/selection";
 import { useLiveFleet } from "../live/useLiveFleet";
@@ -51,17 +52,23 @@ export function Home({ focus }: { focus: FocusRequestV1 | null }) {
 
   // F1 (#75): an explicit Needs-you focus leaves a fleet page for Home, where the item is.
   // The item is not in the DOM while the fleet page is shown, so it is focused
-  // once Home has mounted it; a read Needs-you list without it ends the wait.
-  const [refocus, setRefocus] = useState<string | null>(null);
+  // once this Home has mounted it. The request belongs to its factory and to
+  // this Home instance: a factory switch cancels it, and only this Home's own
+  // mounted item is looked up. A read Needs-you list without it ends the wait.
+  const [refocus, setRefocus] = useState<{ projectKey: string; itemId: string } | null>(null);
+  const homeAnchor = useRef<HTMLSpanElement>(null);
   useEffect(() => {
-    if (focusedItemId && fleetPage) { setFleetPage(null); setRefocus(focusedItemId); }
+    if (focusedItemId && fleetPage && projectKey) { setFleetPage(null); setRefocus({ projectKey, itemId: focusedItemId }); }
   }, [focusedItemId]);
+  useEffect(() => { setRefocus((pending) => pending && pending.projectKey !== projectKey ? null : pending); }, [projectKey]);
   useEffect(() => {
-    if (!refocus || fleetPage) return;
-    const item = document.getElementById(`wizdeck-need-${refocus}`);
+    if (!refocus || fleetPage || refocus.projectKey !== projectKey || !view || view.projectKey !== refocus.projectKey) return;
+    const home = homeAnchor.current?.closest(".wizdeck-home");
+    const id = `wizdeck-need-${refocus.itemId}`.replace(/["\\]/g, "\\$&");
+    const item = home?.querySelector<HTMLElement>(`[id="${id}"]`) ?? null;
     if (item) item.focus();
-    if (item || (view && view.needsYou.freshness !== "loading")) setRefocus(null);
-  }, [refocus, fleetPage, view]);
+    if (item || view.needsYou.freshness !== "loading") setRefocus(null);
+  }, [refocus, fleetPage, view, projectKey]);
 
   useEffect(() => {
     if (!focusedItemId || !view) return;
@@ -117,6 +124,7 @@ export function Home({ focus }: { focus: FocusRequestV1 | null }) {
             ? <LiveHealthRow model={fleet} mergesToday={view.health.mergesToday} mergesTodayDetail={view.health.mergesTodayDetail} />
             : <HealthRow health={view.health} />}
           {/* F1 slot: running agents and the live fleet tree. */}
+          <span ref={homeAnchor} hidden />
           {fleet && projectKey && (
             <FleetSection model={fleet} board={view.board} actions={fleetActions} selection={selection} projectKey={projectKey}
               onView={(spec) => setFleetPage({ projectKey, spec })} />
