@@ -39,12 +39,22 @@ const board: BoardV1 = {
   merges: { since: "2026-11-14T18:30:00Z", complete: true, pullRequests: [] },
 };
 const ready = <T,>(data: T) => ({ status: "ready" as const, data, fetchedAt: fxNow - 5_000, stale: false, complete: true, gaps: [] });
-const result = (): DeckWatchResultV1 => ({
+const queueItem = {
+  id: "n12", code: "N-12", question: "Which changelog headline ships?",
+  options: [{ id: "short", label: "Short headline" }, { id: "long", label: "Long headline" }], recommendedOptionId: "short",
+  sourceUrl: "https://example.com/sample/n12", spec: null, risk: "ordinary", fingerprint: "fp", createdAt: "2026-11-15T20:00:00Z", updatedAt: "2026-11-15T20:00:00Z",
+};
+const freshQueue = {
+  snapshot: ready({ queue: { schema: "openwiz.needs-you.v1" as const, project: "sample-factory", revision: 2, updatedAt: "2026-11-15T20:20:00Z",
+    expiresAt: "2026-11-15T21:00:00Z", complete: true, gaps: [], items: [queueItem] as never }, sha256: "x" }),
+  detail: null, nextRefreshAt: fxNow + 55_000, refreshing: false,
+};
+const result = (withQueue = false): DeckWatchResultV1 => ({
   projects: [{ projectKey: "sample-factory", cloudroomProjectId: "prj_a" }, { projectKey: "other-factory", cloudroomProjectId: "prj_b" }],
   projectKey: "sample-factory", setup: null,
   view: buildHomeView({
     projectKey: "sample-factory", timeZone: "UTC", now: fxNow, authenticated: true,
-    queue: { snapshot: { status: "unavailable", reason: "missing", lastGood: null }, detail: "No file.", nextRefreshAt: null, refreshing: false },
+    queue: withQueue ? freshQueue : { snapshot: { status: "unavailable", reason: "missing", lastGood: null }, detail: "No file.", nextRefreshAt: null, refreshing: false },
     boards: [{ snapshot: ready(board), detail: null, nextRefreshAt: fxNow + 55_000, refreshing: false }],
   }),
 });
@@ -64,9 +74,9 @@ const sidebar = (runningThreads?: unknown) => {
   return { status: "ready" as const, threads: fxThreads };
 };
 
-function mountHome(runningThreads?: unknown, withLinks = false) {
+function mountHome(runningThreads?: unknown, withLinks = false, withQueue = false) {
   return renderSlot({ component: WizDeckPanel }, { threadId: "thr_any", params: null as never }, {
-    rpc: { deckWatch: () => ({ ...result(), ...(withLinks ? { fleetLinks: linkViews } : {}) }), deckRelease: () => ({ ok: true }) } as never,
+    rpc: { deckWatch: () => ({ ...result(withQueue), ...(withLinks ? { fleetLinks: linkViews } : {}) }), deckRelease: () => ({ ok: true }) } as never,
     context: { projectId: "prj_a", threadId: "thr_any" },
     sidebarThreads: sidebar(runningThreads) as never,
   });
@@ -154,6 +164,32 @@ describe("WizDeck Home live insertion", () => {
     await flush();
     expect(screen.queryByRole("heading", { name: "Unplaced work" })).toBeNull();
     expect(screen.getByRole("region", { name: "Fleet" })).toBeTruthy();
+  });
+});
+
+describe("R4: an explicit Needs-you focus from a fleet page", () => {
+  // Bug caught: Home returns but focus stays on the document body, not the requested decision.
+  it("focuses the requested queue item once Home is back, and later highlights or refreshes move nothing", async () => {
+    const scroll = vi.fn();
+    Element.prototype.scrollIntoView = scroll;
+    const slot = mountHome(fxRunning, true, true);
+    await flush();
+    fireEvent.click(screen.getByRole("button", { name: /View fleet for/ }));
+    const search = screen.getByPlaceholderText("Search threads, branches, #refs");
+    search.focus();
+    expect(document.activeElement).toBe(search);
+    slot.lifecycle.rerender(<WizDeckPanel threadId="thr_any" params={{ focus: { kind: "needs-you", projectKey: "sample-factory", itemId: "n12" } } as never} />);
+    await flush(); await flush();
+    expect(document.activeElement?.id).toBe("wizdeck-need-n12");
+
+    // Ordinary selection and a realtime refresh afterwards never move focus, scroll or navigate.
+    const item = document.activeElement;
+    act(() => setSelection({ kind: "thread", projectKey: "sample-factory", threadId: "thr_b2" }));
+    await slot.behavior.emitRealtime("wizdeck", {});
+    await flush();
+    expect(document.activeElement).toBe(item);
+    expect(scroll).not.toHaveBeenCalled();
+    expect(slot.inspection.navigateCalls).toEqual([]);
   });
 });
 

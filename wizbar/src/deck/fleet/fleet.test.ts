@@ -5,12 +5,16 @@ import { GitHubReadFailed, type GitHubReader } from "../data/github";
 import { liveHealth } from "../live/health";
 import { fxNow, fxPullRequests, fxRunning, fxThread, fxThreads, OTHER_SPEC, REPO, SPEC } from "./fixtures";
 import { FLEET_LINK_LIMITS, loadFleetLinks } from "./links";
-import { buildFleet, fleetLinkSource, specOfThread, threadsOfSpec, viewGroup, type FleetLinkSourceV1, type FleetModelV1 } from "./model";
+import { buildFleet, fleetLinkSource, specOfThread, threadsOfSpec, viewGroup, type FleetLinkSourceV1, type FleetModelV1, type RepositoryProvenanceV1 } from "./model";
 
-const read = (pullRequests = fxPullRequests, complete = true): FleetLinkSourceV1 => ({ status: "read", pullRequests, complete, stale: false, gaps: [] });
-const model = (links: FleetLinkSourceV1 = read(), threads = fxThreads, host: { runningThreads?: unknown } = { runningThreads: fxRunning }): FleetModelV1 =>
+/** A link read; `coverage` says which repositories' open and merged pull requests were read in full. */
+const read = (pullRequests = fxPullRequests, complete = true, coverage: Record<string, { open: boolean; merged: boolean }> = { [REPO]: { open: complete, merged: true } }): FleetLinkSourceV1 =>
+  ({ status: "read", pullRequests, complete, stale: false, gaps: [], coverage });
+/** The project's repository, as the host's project record states it (R1). */
+const verified: RepositoryProvenanceV1 = { status: "verified", repository: REPO };
+const model = (links: FleetLinkSourceV1 = read(), threads = fxThreads, host: { runningThreads?: unknown } = { runningThreads: fxRunning }, repository: RepositoryProvenanceV1 = verified): FleetModelV1 =>
   buildFleet({
-    projectId: "prj_a", threads,
+    projectId: "prj_a", threads, repository,
     health: liveHealth({ inventory: readHostInventory(host), projectId: "prj_a", now: fxNow }), links,
   });
 const ids = (rows: { id: string }[]) => rows.map((row) => row.id);
@@ -67,7 +71,7 @@ describe("fleet placement", () => {
 
   // Bug caught: a branch shared by two pull requests, or a PR spanning two specs, silently picks one.
   it("leaves ambiguous links unplaced", () => {
-    const twin = { ...fxPullRequests[0], ref: "example-org/second-app#9" };
+    const twin = { ...fxPullRequests[0], ref: `${REPO}#99`, url: `https://github.com/${REPO}/pull/99` };
     expect(model(read([...fxPullRequests, twin])).groups[0]?.rows.find((row) => row.id === "thr_b2")).toBeUndefined();
     const split = { ...fxPullRequests[0], tickets: [...fxPullRequests[0].tickets, { ...fxPullRequests[0].tickets[0], ref: `${REPO}#61` as const, spec: OTHER_SPEC }] };
     const m = model(read([split, ...fxPullRequests.slice(1)]));
@@ -87,6 +91,48 @@ describe("fleet placement", () => {
     expect(threadsOfSpec(m, SPEC).sort()).toEqual(["thr_b2", "thr_b3", "thr_ghost", "thr_help", "thr_mgr", "thr_rev"]);
     expect(threadsOfSpec(m, OTHER_SPEC)).toEqual([]);
     expect(threadsOfSpec(model({ status: "not-connected" }), SPEC)).toEqual([]);
+  });
+
+  // R1. Bug caught: a branch name alone links a thread to another repository's pull request.
+  it("matches a branch only within the thread's verified repository, and places nothing without that provenance", () => {
+    const foreign = [{ ...fxPullRequests[0], ref: "example-org/other-app#9", url: "https://github.com/example-org/other-app/pull/9" }, ...fxPullRequests.slice(1)];
+    const coverage = { [REPO]: { open: true, merged: true }, "example-org/other-app": { open: true, merged: true } };
+    const m = model(read(foreign, true, coverage));
+    expect(everyRow(m).find((row) => row.id === "thr_b2")?.link).toEqual({ status: "no-pull-request", branch: "room/t2", complete: true });
+    expect(m.groups).toEqual([]); // Nor are its manager and helpers placed through it.
+    expect(threadsOfSpec(m, SPEC)).toEqual([]);
+
+    const unknown = model(read(), fxThreads, { runningThreads: fxRunning }, { status: "unverified", reason: "no-remote" });
+    expect(unknown.groups).toEqual([]);
+    expect(everyRow(unknown).find((row) => row.id === "thr_b2")?.link).toMatchObject({ status: "repository-unverified", branch: "room/t2" });
+    expect(threadsOfSpec(unknown, SPEC)).toEqual([]);
+  });
+
+  // R2. Bug caught: a single spec asserted when the pull request closes more tickets than were read.
+  it("keeps the known links but withholds placement when closing tickets were truncated", () => {
+    const truncated = [{ ...fxPullRequests[0], ticketsComplete: false }, ...fxPullRequests.slice(1)];
+    const m = model(read(truncated));
+    const b2 = everyRow(m).find((row) => row.id === "thr_b2")!;
+    expect(b2.link).toMatchObject({ status: "unproved", pullRequest: { ref: `${REPO}#52` }, tickets: [{ ref: `${REPO}#43` }] });
+    expect(b2.spec).toBeNull();
+    expect(threadsOfSpec(m, SPEC)).toEqual([]);
+  });
+
+  // R2. Bug caught: a match treated as unique while a competing pull request may sit in an unread page.
+  it("withholds placement when the relevant pull requests were not all read, but not for unrelated merged bounds", () => {
+    const openPartial = model(read(fxPullRequests, false, { [REPO]: { open: false, merged: true } }));
+    expect(everyRow(openPartial).find((row) => row.id === "thr_b2")?.link).toMatchObject({ status: "unproved", pullRequest: { ref: `${REPO}#52` } });
+    expect(openPartial.groups).toEqual([]);
+    // An open match is unique among open pull requests; the merged list's bound is unrelated to it.
+    const mergedPartial = model(read(fxPullRequests, false, { [REPO]: { open: true, merged: false } }));
+    expect(threadsOfSpec(mergedPartial, SPEC)).toContain("thr_b2");
+    // A merged-only match needs both lists read in full.
+    const mergedOnly = [fxThread({ id: "thr_m", title: "Merged work", branch: "room/t1", created: 9 })];
+    const shipped = model(read(fxPullRequests, false, { [REPO]: { open: true, merged: false } }), mergedOnly, { runningThreads: [] });
+    expect(shipped.unplaced.rows[0].link).toMatchObject({ status: "unproved", pullRequest: { ref: `${REPO}#50` } });
+    expect(model(read(), mergedOnly, { runningThreads: [] }).groups[0]?.rows.map((row) => row.id)).toEqual(["thr_m"]);
+    // A repository whose links were never read proves nothing.
+    expect(everyRow(model(read(fxPullRequests, false, {}))).find((row) => row.id === "thr_b3")?.link).toEqual({ status: "no-pull-request", branch: "room/t3", complete: false });
   });
 
   it("lists tickets closed by merged pull requests under their spec, once", () => {
@@ -158,6 +204,16 @@ describe("work-link reader", () => {
     expect(result.data.pullRequests.map((pr) => pr.headRefName)).toEqual(["a", "b"]);
     expect(result.complete).toBe(false);
     expect(result.gaps).toHaveLength(2);
+  });
+
+  // R3. Bug caught: a cancelled continuation reported as partial data instead of cancellation.
+  it("still propagates cancellation during a continuation", async () => {
+    const controller = new AbortController();
+    const reader = { graphql: async (query: string) => {
+      if (/WizDeckFleetOpen/.test(query)) { controller.abort(); throw new DOMException("aborted", "AbortError"); }
+      return { repository: { open: conn([raw(1, "a")], true), merged: conn([]) } };
+    } } as unknown as GitHubReader;
+    await expect(loadFleetLinks({ reader, repository: REPO }, controller.signal)).rejects.toMatchObject({ name: "AbortError" });
   });
 
   it("refuses a malformed answer", async () => {

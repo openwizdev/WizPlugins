@@ -1,0 +1,223 @@
+
+ RUN  v4.1.10 wizbar
+
+ ❯ |bb-plugin-wizbar| src/deck/fleet/fleet-server.test.ts (9 tests | 3 failed) 262ms
+       × on first load, a 503 continuation leaves the first page and merged list as partial links 23ms
+       × a rate-limited continuation keeps the first page and holds reads until GitHub's reset 39ms
+       × a continuation failure that echoes the token keeps the rows and discloses nothing 26ms
+ ❯ |bb-plugin-wizbar| src/deck/fleet/fleet.test.ts (19 tests | 3 failed) 26ms
+     × matches a branch only within the thread's verified repository, and places nothing without that provenance 6ms
+     × keeps the known links but withholds placement when closing tickets were truncated 2ms
+     × withholds placement when the relevant pull requests were not all read, but not for unrelated merged bounds 1ms
+ ❯ |bb-plugin-wizbar| src/deck/fleet/FleetViews.test.tsx (9 tests | 1 failed) 763ms
+     × focuses the requested queue item once Home is back, and later highlights or refreshes move nothing 77ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 7 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/fleet/FleetViews.test.tsx > R4: an explicit Needs-you focus from a fleet page > focuses the requested queue item once Home is back, and later highlights or refreshes move nothing
+AssertionError: expected '' to be 'wizdeck-need-n12' // Object.is equality
+
+- Expected
++ Received
+
+- wizdeck-need-n12
+
+ ❯ src/deck/fleet/FleetViews.test.tsx:183:40
+    181|     slot.lifecycle.rerender(<WizDeckPanel threadId="thr_any" params={{…
+    182|     await flush(); await flush();
+    183|     expect(document.activeElement?.id).toBe("wizdeck-need-n12");
+       |                                        ^
+    184|
+    185|     // Ordinary selection and a realtime refresh afterwards never move…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/7]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/fleet/fleet-server.test.ts > fleet work links in the shared cache > a failed continuation keeps what was read > on first load, a 503 continuation leaves the first page and merged list as partial links
+AssertionError: expected { status: 'unavailable', …(2) } to deeply equal [ …(2) ]
+
+- Expected:
+[
+  "example-org/sample-app#52 open",
+  "example-org/sample-app#50 merged",
+]
+
++ Received:
+{
+  "lastGood": null,
+  "reason": "unreadable",
+  "status": "unavailable",
+}
+
+ ❯ src/deck/fleet/fleet-server.test.ts:140:28
+    138|       await t.watch("desk-tab"); await vi.advanceTimersByTimeAsync(0);
+    139|       const result = await t.watch("desk-tab");
+    140|       expect(refs(result)).toEqual(["example-org/sample-app#52 open", …
+       |                            ^
+    141|       expect(firstLinks(result).snapshot).toMatchObject({ status: "rea…
+    142|       expect(t.linkCalls()).toHaveLength(2);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/7]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/fleet/fleet-server.test.ts > fleet work links in the shared cache > a failed continuation keeps what was read > a rate-limited continuation keeps the first page and holds reads until GitHub's reset
+AssertionError: expected { status: 'unavailable', …(2) } to deeply equal [ …(2) ]
+
+- Expected:
+[
+  "example-org/sample-app#52 open",
+  "example-org/sample-app#50 merged",
+]
+
++ Received:
+{
+  "lastGood": null,
+  "reason": "rate-limited",
+  "status": "unavailable",
+}
+
+ ❯ src/deck/fleet/fleet-server.test.ts:152:47
+    150|         : { status: 200, body: firstPage(`${call.variables?.owner}/${c…
+    151|       await t.watch("desk-tab"); await vi.advanceTimersByTimeAsync(0);
+    152|       expect(refs(await t.watch("desk-tab"))).toEqual(["example-org/sa…
+       |                                               ^
+    153|       for (let at = 0; at < 5 * REFRESH_MS - 30_000; at += 30_000) { a…
+    154|       expect(t.linkCalls()).toHaveLength(2); // Nothing before the res…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/7]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/fleet/fleet-server.test.ts > fleet work links in the shared cache > a failed continuation keeps what was read > a continuation failure that echoes the token keeps the rows and discloses nothing
+AssertionError: expected { status: 'unavailable', …(2) } to deeply equal [ …(2) ]
+
+- Expected:
+[
+  "example-org/sample-app#52 open",
+  "example-org/sample-app#50 merged",
+]
+
++ Received:
+{
+  "lastGood": null,
+  "reason": "unreadable",
+  "status": "unavailable",
+}
+
+ ❯ src/deck/fleet/fleet-server.test.ts:167:28
+    165|       await t.watch("desk-tab"); await vi.advanceTimersByTimeAsync(0);
+    166|       const result = await t.watch("desk-tab");
+    167|       expect(refs(result)).toEqual(["example-org/sample-app#52 open", …
+       |                            ^
+    168|       expect(JSON.stringify(result)).not.toContain("synthetic-token");
+    169|       expect(JSON.stringify(t.host.harness.inspection.realtimeSignals)…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/7]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/fleet/fleet.test.ts > fleet placement > matches a branch only within the thread's verified repository, and places nothing without that provenance
+AssertionError: expected { status: 'linked', …(4) } to deeply equal { status: 'no-pull-request', …(2) }
+
+- Expected
++ Received
+
+  {
+    "branch": "room/t2",
+-   "complete": true,
+-   "status": "no-pull-request",
++   "pullRequest": {
++     "headRefName": "room/t2",
++     "mergedAt": null,
++     "ref": "example-org/other-app#9",
++     "state": "open",
++     "tickets": [
++       {
++         "ref": "example-org/sample-app#43",
++         "spec": "example-org/sample-app#41",
++         "state": "open",
++         "title": "Filter chips",
++         "url": "https://github.com/example-org/sample-app/issues/43",
++       },
++     ],
++     "ticketsComplete": true,
++     "url": "https://github.com/example-org/other-app/pull/9",
++   },
++   "spec": "example-org/sample-app#41",
++   "status": "linked",
++   "tickets": [
++     {
++       "ref": "example-org/sample-app#43",
++       "spec": "example-org/sample-app#41",
++       "state": "open",
++       "title": "Filter chips",
++       "url": "https://github.com/example-org/sample-app/issues/43",
++     },
++   ],
+  }
+
+ ❯ src/deck/fleet/fleet.test.ts:101:66
+     99|     const coverage = { [REPO]: { open: true, merged: true }, "example-…
+    100|     const m = model(read(foreign, true, coverage));
+    101|     expect(everyRow(m).find((row) => row.id === "thr_b2")?.link).toEqu…
+       |                                                                  ^
+    102|     expect(m.groups).toEqual([]); // Nor are its manager and helpers p…
+    103|     expect(threadsOfSpec(m, SPEC)).toEqual([]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/7]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/fleet/fleet.test.ts > fleet placement > keeps the known links but withholds placement when closing tickets were truncated
+AssertionError: expected { status: 'linked', …(4) } to match object { status: 'unproved', …(2) }
+(2 matching properties omitted from actual)
+
+- Expected
++ Received
+
+@@ -1,10 +1,10 @@
+  {
+    "pullRequest": {
+      "ref": "example-org/sample-app#52",
+    },
+-   "status": "unproved",
++   "status": "linked",
+    "tickets": [
+      {
+        "ref": "example-org/sample-app#43",
+      },
+    ],
+
+ ❯ src/deck/fleet/fleet.test.ts:116:21
+    114|     const m = model(read(truncated));
+    115|     const b2 = everyRow(m).find((row) => row.id === "thr_b2")!;
+    116|     expect(b2.link).toMatchObject({ status: "unproved", pullRequest: {…
+       |                     ^
+    117|     expect(b2.spec).toBeNull();
+    118|     expect(threadsOfSpec(m, SPEC)).toEqual([]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/7]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/fleet/fleet.test.ts > fleet placement > withholds placement when the relevant pull requests were not all read, but not for unrelated merged bounds
+AssertionError: expected { status: 'linked', …(4) } to match object { status: 'unproved', …(1) }
+(3 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "pullRequest": {
+      "ref": "example-org/sample-app#52",
+    },
+-   "status": "unproved",
++   "status": "linked",
+  }
+
+ ❯ src/deck/fleet/fleet.test.ts:124:76
+    122|   it("withholds placement when the relevant pull requests were not all…
+    123|     const openPartial = model(read(fxPullRequests, false, { [REPO]: { …
+    124|     expect(everyRow(openPartial).find((row) => row.id === "thr_b2")?.l…
+       |                                                                            ^
+    125|     expect(openPartial.groups).toEqual([]);
+    126|     // An open match is unique among open pull requests; the merged li…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/7]⎯
+
+
+ Test Files  3 failed (3)
+      Tests  7 failed | 30 passed (37)
+   Start at  19:57:39
+   Duration  1.62s (transform 289ms, setup 0ms, import 620ms, tests 1.05s, environment 489ms)
+

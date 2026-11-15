@@ -120,6 +120,56 @@ describe("fleet work links in the shared cache", () => {
     expect(heads(await t.watch("desk-tab"))).toEqual(["example-org/sample-app#52"]);
   });
 
+  // R3. Bug caught: a failed second open-PR page throws away the first page and the merged list, even on first load.
+  describe("a failed continuation keeps what was read", () => {
+    const firstPage = (repo: string) => ({ data: { repository: {
+      open: { pageInfo: { hasNextPage: true, endCursor: "c1" }, nodes: [pr(repo, 52, "room/sample-app")] },
+      merged: { pageInfo: { hasNextPage: false, endCursor: null }, nodes: [{ ...pr(repo, 50, "room/shipped"), mergedAt: "2026-11-15T10:00:00Z" }] },
+    } } });
+    const isPage2 = (call: FakeGitHubCall) => /query WizDeckFleetOpen/.test(call.body ?? "");
+    const refs = (result: DeckWatchResultV1) => {
+      const snapshot = firstLinks(result).snapshot;
+      return snapshot?.status === "ready" ? snapshot.data.pullRequests.map((p) => `${p.ref} ${p.state}`) : snapshot;
+    };
+
+    it("on first load, a 503 continuation leaves the first page and merged list as partial links", async () => {
+      const t = setup();
+      t.setLinks((call) => isPage2(call) ? { status: 503 } : { status: 200, body: firstPage(`${call.variables?.owner}/${call.variables?.name}`) });
+      await t.watch("desk-tab"); await vi.advanceTimersByTimeAsync(0);
+      const result = await t.watch("desk-tab");
+      expect(refs(result)).toEqual(["example-org/sample-app#52 open", "example-org/sample-app#50 merged"]);
+      expect(firstLinks(result).snapshot).toMatchObject({ status: "ready", complete: false, data: { openComplete: false, mergedComplete: true } });
+      expect(t.linkCalls()).toHaveLength(2);
+    });
+
+    it("a rate-limited continuation keeps the first page and holds reads until GitHub's reset", async () => {
+      const t = setup();
+      const resetAt = Math.floor((dxNow + 5 * REFRESH_MS) / 1000);
+      t.setLinks((call) => isPage2(call)
+        ? { status: 403, headers: { "x-ratelimit-remaining": "0", "x-ratelimit-reset": String(resetAt) } }
+        : { status: 200, body: firstPage(`${call.variables?.owner}/${call.variables?.name}`) });
+      await t.watch("desk-tab"); await vi.advanceTimersByTimeAsync(0);
+      expect(refs(await t.watch("desk-tab"))).toEqual(["example-org/sample-app#52 open", "example-org/sample-app#50 merged"]);
+      for (let at = 0; at < 5 * REFRESH_MS - 30_000; at += 30_000) { await t.watch("desk-tab"); await vi.advanceTimersByTimeAsync(30_000); }
+      expect(t.linkCalls()).toHaveLength(2); // Nothing before the reset…
+      await t.watch("desk-tab"); await vi.advanceTimersByTimeAsync(30_000);
+      expect(t.linkCalls()).toHaveLength(4); // …then one fresh read (first page and its continuation).
+    });
+
+    it("a continuation failure that echoes the token keeps the rows and discloses nothing", async () => {
+      const t = setup();
+      t.github.state.override = (call) => {
+        if (isPage2(call)) throw new Error("Authorization: Bearer synthetic-token");
+        return isLinks(call) ? { status: 200, body: firstPage(`${call.variables?.owner}/${call.variables?.name}`) } : null;
+      };
+      await t.watch("desk-tab"); await vi.advanceTimersByTimeAsync(0);
+      const result = await t.watch("desk-tab");
+      expect(refs(result)).toEqual(["example-org/sample-app#52 open", "example-org/sample-app#50 merged"]);
+      expect(JSON.stringify(result)).not.toContain("synthetic-token");
+      expect(JSON.stringify(t.host.harness.inspection.realtimeSignals)).not.toContain("synthetic-token");
+    });
+  });
+
   // Bug caught: the GitHub token reaches a panel through a link-read failure.
   it("never returns the token in a work-link failure", async () => {
     const t = setup();
