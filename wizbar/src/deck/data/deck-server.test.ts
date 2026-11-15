@@ -275,6 +275,31 @@ describe("factory selection and setup", () => {
     expect(t.read).not.toHaveBeenCalled();
   });
 
+  // Bug caught: credential disclosure through failure details. A transport or
+  // GitHub error that echoes the request's Authorization header was copied
+  // verbatim into the board's detail, which the RPC returns to every panel.
+  it.each([
+    ["a transport error echoing the request", () => { throw new Error("connect failed: authorization: Bearer synthetic-token"); }],
+    ["an unexpected loader error", () => ({ status: 200, body: { data: { repository: { milestones: "synthetic-token" } } } })],
+  ] as const)("never returns the token in failure details: %s", async (_name, failure) => {
+    const t = setup();
+    t.github.state.override = (call) => {
+      if (call.kind !== "board") return null;
+      const outcome = failure();
+      return outcome as { status: number; body: unknown };
+    };
+    await t.watch("desk-tab"); await t.settle();
+    const watched = await t.watch("desk-tab");
+    vi.setSystemTime(dxNow + REFRESH_MS);
+    const refreshed = await t.refresh("desk-tab"); await t.settle();
+    const after = await t.watch("desk-tab");
+    // The failure is still reported, in words, as unavailable.
+    expect(after.view!.board.freshness).toBe("unavailable");
+    expect(after.view!.board.detail).toBeTruthy();
+    for (const answer of [watched, refreshed, after]) expect(JSON.stringify(answer)).not.toContain("synthetic-token");
+    expect(JSON.stringify(t.host.harness.inspection.realtimeSignals)).not.toContain("synthetic-token");
+  });
+
   // Bug caught: the panel can trigger a GitHub write, or the token leaves the backend.
   it("makes only GitHub reads and never returns the token", async () => {
     const t = setup();
