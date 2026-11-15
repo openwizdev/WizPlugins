@@ -13,10 +13,11 @@ import type { RunningRowsV4 } from "./running";
 const LIME = "#c6f432";
 export const popoverCss = `@keyframes wizbar-running-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .wizbar-running-spinner { animation: none !important; } }
-.wizbar-running-pop { position: absolute; bottom: calc(100% + 6px); left: 0; width: min(320px, calc(100vw - 24px)); max-height: min(60vh, 420px); overflow-y: auto; }
+.wizbar-running-pop { position: absolute; bottom: calc(100% + 6px); left: 0; width: min(272px, calc(100vw - 24px)); max-height: min(60vh, 420px); overflow-y: auto; }
+.wizbar-running-pop.wizbar-pop-end { left: auto; right: 0; }
 .wizbar-running-row { min-height: 28px; }
 @media (max-width: 480px) {
-  .wizbar-running-pop { position: fixed; left: 0; right: 0; bottom: 0; width: auto; max-height: 70vh; border-radius: 12px 12px 0 0 !important; }
+  .wizbar-running-pop, .wizbar-running-pop.wizbar-pop-end { position: fixed; left: 0; right: 0; bottom: 0; width: auto; max-height: 70vh; border-radius: 12px 12px 0 0 !important; }
   .wizbar-running-row, .wizbar-running-close { min-height: 44px; }
 }`;
 
@@ -106,7 +107,7 @@ export function RunningPopover({ running, className, onNavigate, tagsFor }: {
         </button>
       </span>
       {open ? (
-        <div id={popId} role="dialog" aria-label={`${count} running threads`} className="wizbar-running-pop" style={{
+        <div id={popId} role="dialog" aria-label={`${count} running threads`} className="wizbar-running-pop wizbar-pop-end" style={{
           zIndex: 50, padding: "6px 0", borderRadius: 6, fontSize: 12, lineHeight: "16px",
           background: "var(--popover)", color: "var(--popover-foreground)", border: "1px solid var(--border)",
         }}>
