@@ -322,3 +322,33 @@ describe("through the real plugin entry", () => {
     expect(seen).not.toContain("wizdeckGithubToken");
   });
 });
+
+describe("review round 1", () => {
+  // R3. Bug caught: the binding read before verification is used for the send after the
+  // factory's orchestrator was replaced, so the superseded orchestrator still receives it.
+  it("R3: a binding changed during orchestrator verification cancels with zero sends", async () => {
+    let releaseGet!: () => void;
+    const t = setup({ get: () => new Promise((resolve) => { releaseGet = () => resolve(orchestratorThread()); }) });
+    const pending = t.steer({ operationId: "op-test-binding-moved" });
+    for (let turn = 0; turn < 100 && t.get.mock.calls.length === 0; turn += 1) await vi.advanceTimersByTimeAsync(0);
+    expect(t.get).toHaveBeenCalledTimes(1);
+    await t.host.harness.behavior.setSettings({ wizdeckFactories: JSON.stringify([{ ...dxFactory, orchestratorThreadId: "thr_d2_replacement" }]) });
+    releaseGet();
+    const record = await pending;
+    expect(record).toMatchObject({ state: "cancelled", reason: "binding-changed" });
+    expect(t.send).not.toHaveBeenCalled();
+    const log = await t.rpc<ActionLogV1>("deckActionLog", { projectKey: "sample-factory" });
+    expect(log.records.find((entry) => entry.operationId === "op-test-binding-moved")?.state).toBe("cancelled");
+  });
+
+  it("R3: a factory removed during verification cancels with zero sends", async () => {
+    let releaseGet!: () => void;
+    const t = setup({ get: () => new Promise((resolve) => { releaseGet = () => resolve(orchestratorThread()); }) });
+    const pending = t.steer({ operationId: "op-test-binding-gone" });
+    for (let turn = 0; turn < 100 && t.get.mock.calls.length === 0; turn += 1) await vi.advanceTimersByTimeAsync(0);
+    await t.host.harness.behavior.setSettings({ wizdeckFactories: null });
+    releaseGet();
+    expect(await pending).toMatchObject({ state: "cancelled", reason: "binding-changed" });
+    expect(t.send).not.toHaveBeenCalled();
+  });
+});

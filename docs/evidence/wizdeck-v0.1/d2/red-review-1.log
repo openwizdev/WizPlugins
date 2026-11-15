@@ -1,0 +1,176 @@
+# D2 (#74) review round 1 red: R1-R4 regressions against the reviewed head e6143f5, nothing planted
+# cmd: (cd wizbar && npx vitest run src/deck/actions/review-round1.test.tsx src/deck/actions/actions-server.test.ts -t 'R[1-4]')
+
+ RUN  v4.1.10 wizbar
+
+ ❯ |bb-plugin-wizbar| src/deck/actions/actions-server.test.ts (23 tests | 2 failed | 21 skipped) 23ms
+     × R3: a binding changed during orchestrator verification cancels with zero sends 18ms
+     × R3: a factory removed during verification cancels with zero sends 3ms
+ ❯ |bb-plugin-wizbar| src/deck/actions/review-round1.test.tsx (5 tests | 4 failed) 391ms
+     × keeps the same operation, reconciles it from the real backend, and sends once 210ms
+     × keeps an unresolved operation uncertain while no log can settle it 52ms
+     × revision 2 → 3 with new options offers the new choices 38ms
+     × shows this operation's pending delivery before the RPC answers, then its real outcome 43ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/actions/actions-server.test.ts > review round 1 > R3: a binding changed during orchestrator verification cancels with zero sends
+AssertionError: expected { …(10) } to match object { state: 'cancelled', …(1) }
+(8 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "reason": "binding-changed",
+-   "state": "cancelled",
++   "reason": null,
++   "state": "sent",
+  }
+
+ ❯ src/deck/actions/actions-server.test.ts:338:20
+    336|     releaseGet();
+    337|     const record = await pending;
+    338|     expect(record).toMatchObject({ state: "cancelled", reason: "bindin…
+       |                    ^
+    339|     expect(t.send).not.toHaveBeenCalled();
+    340|     const log = await t.rpc<ActionLogV1>("deckActionLog", { projectKey…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/actions/actions-server.test.ts > review round 1 > R3: a factory removed during verification cancels with zero sends
+AssertionError: expected { …(10) } to match object { state: 'cancelled', …(1) }
+(8 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "reason": "binding-changed",
+-   "state": "cancelled",
++   "reason": null,
++   "state": "sent",
+  }
+
+ ❯ src/deck/actions/actions-server.test.ts:351:27
+    349|     await t.host.harness.behavior.setSettings({ wizdeckFactories: null…
+    350|     releaseGet();
+    351|     expect(await pending).toMatchObject({ state: "cancelled", reason: …
+       |                           ^
+    352|     expect(t.send).not.toHaveBeenCalled();
+    353|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/actions/review-round1.test.tsx > R1: a lost response never becomes a second effect > keeps the same operation, reconciles it from the real backend, and sends once
+AssertionError: expected 'Hold new builds until Monday.' to be '' // Object.is equality
+
+- Expected
++ Received
+
++ Hold new builds until Monday.
+
+ ❯ src/deck/actions/review-round1.test.tsx:105:23
+    103|
+    104|     // A fresh submission of the same instruction is not offered; the …
+    105|     expect(box.value).toBe("");
+       |                       ^
+    106|     expect((screen.getByRole("button", { name: "Send" }) as HTMLButton…
+    107|     const rows = document.querySelectorAll(`[data-operation="${sentId}…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/6]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/actions/review-round1.test.tsx > R1: a lost response never becomes a second effect > keeps an unresolved operation uncertain while no log can settle it
+TypeError: Cannot read properties of null (reading 'textContent')
+ ❯ src/deck/actions/review-round1.test.tsx:131:17
+    129|     const id = (t.calls("deckSteer")[0].input as { operationId: string…
+    130|     const row = () => document.querySelector(`[data-operation="${id}"]…
+    131|     expect(row().textContent).toContain("Outcome unknown");
+       |                 ^
+    132|     logFails = false;
+    133|     await t.slot.behavior.emitRealtime("wizdeck-actions", {});
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/6]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/actions/review-round1.test.tsx > R2: a revised proposal can be answered > revision 2 → 3 with new options offers the new choices
+TestingLibraryElementError: Unable to find an accessible element with the role "button" and name "Plain headline"
+
+Here are the accessible roles:
+
+  paragraph:
+
+  Name "":
+  <p
+    style="margin: 0px; font-weight: 600;"
+  />
+
+  --------------------------------------------------status:
+
+  Name "":
+  <p
+    role="status"
+    style="color: var(--muted-foreground); margin: 2px 0px 0px;"
+  />
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+<li
+  data-answer-item="n12"
+  style="padding: 8px 0px; border-bottom: 1px solid var(--border);"
+>
+  <p
+    style="margin: 0px; font-weight: 600;"
+  >
+    N-12
+     · 
+    Which changelog headline ships?
+  </p>
+  <p
+    role="status"
+    style="color: var(--muted-foreground); margin: 2px 0px 0px;"
+  >
+    Answer N-12 · Short headline
+    : 
+    Sent · steered. The orchestrator checks it and records the decision.
+  </p>
+</li>
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/deck/actions/review-round1.test.tsx:160:26
+    158|     await act(async () => { await vi.advanceTimersByTimeAsync(30_000);…
+    159|     await flush(2);
+    160|     expect(within(row()).getByRole("button", { name: "Plain headline" …
+       |                          ^
+    161|     expect(row().textContent).not.toContain("Sent · steered.");
+    162|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/6]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/actions/review-round1.test.tsx > R4: delivery state shows at once > shows this operation's pending delivery before the RPC answers, then its real outcome
+AssertionError: expected null to be truthy
+
+- Expected:
+true
+
++ Received:
+null
+
+ ❯ src/deck/actions/review-round1.test.tsx:190:17
+    188|     const id = (t.calls("deckSteer")[0].input as { operationId: string…
+    189|     const row = document.querySelector(`[data-operation="${id}"]`) as …
+    190|     expect(row).toBeTruthy();
+       |                 ^
+    191|     expect(row.getAttribute("data-state")).toBe("pending");
+    192|     expect(within(row).getByRole("status").textContent).toContain("Sen…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/6]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  6 failed | 1 passed | 21 skipped (28)
+   Start at  19:57:04
+   Duration  1.62s (transform 1.20s, setup 0ms, import 1.51s, tests 414ms, environment 494ms)
+
