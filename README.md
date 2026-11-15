@@ -14,6 +14,15 @@ styling; this is not an installed-app screenshot. v0.3's behaviour is proved by
 fixture tests in CI; on a real host it awaits the live check in
 [#9](https://github.com/openwizdev/WizPlugins/issues/9).
 
+## Map
+
+<picture>
+  <source media="(max-width: 600px)" srcset="docs/images/map-phone.png">
+  <img alt="WizPlugins' parts: WizBar, WizDeck, their contracts, the marketplace entry, the docs and the changelog lines" src="docs/images/map.png" width="560">
+</picture>
+
+WizPlugins holds the factory's eyes inside Cloudroom: WizBar in the sidebar and WizDeck in the right panel. The [org map](https://github.com/openwizdev) shows how it fits with the other repos.
+
 ## Install
 
 **BB Marketplace (BB app and Cloudroom): not listed yet.** Publication waits for
