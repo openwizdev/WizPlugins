@@ -101,7 +101,7 @@ export class GitHubReader {
     this.checkRate(response);
     if (response.status === 304 && stored) return stored.page;
     if (response.status !== 200) throw new GitHubReadFailed(`GitHub answered ${response.status}.`, response.status);
-    const page: RestPage = { data: await response.json(), next: nextLink(response.headers.get("link")) };
+    const page: RestPage = { data: await readBody(response, signal), next: nextLink(response.headers.get("link")) };
     const etag = response.headers.get("etag");
     if (etag) this.etags.set(url, { etag, page });
     return page;
@@ -124,13 +124,29 @@ export class GitHubReader {
     }
     this.checkRate(response);
     if (response.status !== 200) throw new GitHubReadFailed(`GitHub answered ${response.status}.`, response.status);
-    const body = await response.json() as { data?: unknown; errors?: { type?: string }[] };
+    const body = await readBody(response, signal) as { data?: unknown; errors?: { type?: string }[] } | null;
+    if (body === null || typeof body !== "object") throw new GitHubReadFailed("GitHub GraphQL returned an unreadable body.");
     if (body.errors?.some((error) => error.type === "RATE_LIMITED")) {
       this.blockedUntil = Math.max(this.blockedUntil, this.now() + DEFAULT_BACKOFF_MS);
       throw new GitHubRateLimited(this.blockedUntil);
     }
     if (body.errors?.length || body.data === undefined || body.data === null) throw new GitHubReadFailed("GitHub GraphQL returned errors.");
     return body.data;
+  }
+}
+
+/**
+ * Read a response body. A body that fails after the headers arrived (a
+ * connection cut mid-body, or JSON that does not parse) is a failed read with
+ * fixed wording, never the transport's own text. A cancelled request keeps
+ * its original error, so cancellation still propagates.
+ */
+async function readBody(response: Awaited<ReturnType<Fetch>>, signal?: AbortSignal): Promise<unknown> {
+  try {
+    return await response.json();
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    throw new GitHubReadFailed("GitHub's response was cut off or unreadable.");
   }
 }
 
