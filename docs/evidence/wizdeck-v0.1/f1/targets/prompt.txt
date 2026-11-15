@@ -1,0 +1,101 @@
+Tool route: OpenAI built-in image_gen.imagegen, using the matching d1 target and screenshot as style references. No API key or HTML rendering.
+Selected: desktop attempt 2; phone attempt 2. Both resized to requested dimensions with Python standard library.
+Reference roles: d1 target and screenshot for the same viewport, used for visual style only.
+
+Visible defects in selected images:
+Desktop: panel begins around x=810 after resizing rather than x=880; the generated source aspect ratio required nonuniform resizing. Open buttons are approximately 38px tall, below 44px. Tree rules include small horizontal connectors beyond the specified left rules. Progress fill is approximately 41%, rather than precisely 40%. No misspelling or invented label identified.
+Phone: Open buttons are approximately 41px tall after resizing, below 44px. Progress fill is approximately 41%, rather than precisely 40%. Search and sort controls are approximately 31px tall, below 44px. No misspelling or invented label identified. Content below Build T3 is intentionally omitted as allowed.
+Both: visual mockups cannot establish real interactive hit target sizes.
+
+DESKTOP ATTEMPT 1 (exact prompt):
+Use case: ui-mockup. Precise high-fidelity flat UI design target, screen-capture style. WizDeck is a plugin tab in a dark coding-agent app's RIGHT side panel. Ledger style: near-black #0b0b0c background, light grey text, compact dense rows, thin 1px grey separators, small section headings with a thin rule extending right. Restrained lime #c6f432 ONLY for the progress fill and a thin selected-row highlight outline. System/Inter-like sans-serif. Underlined issue/PR links. Outlined 44px "Open" buttons. No shadows, gradients, emoji, credits, costs, real names, people, companies or real URLs. No amber anywhere. Synthetic text exactly as supplied.
+
+Panel content, top to bottom (exact text):
+1. Tab strip: "WizDeck".
+2. Underlined text link "← Home".
+3. Wrapping bold title (two lines on phone): "Search filters for the sample catalogue"; small muted "acme/app#41".
+4. Fleet summary big-number row, three columns separated by thin vertical rules: "3" over "Running"; "6" over "Threads"; "—" over "Stalls · unavailable".
+5. Lines "Now: Building T2 and T3", "Next: Review T2, then merge", "When: Today ~16:00 UTC". Then a progress bar 40% lime with label "2/5 tickets merged".
+6. A row with a search box placeholder "Search threads, branches, #refs" and an outlined select "Sort: Plan order ▾".
+7. Section heading "Fleet" with rule.
+   Row (manager, not indented): bold "Fleet manager for Search filters"; muted line "manager · running · no work link"; outlined "Open".
+   Row (builder, indented one step 16px with thin left rule): bold "Build T2 filter chips"; muted line "builder · running · stall unavailable"; underlined links "#43  PR #52"; outlined "Open". This row has the thin lime selected outline.
+   Row (indented two steps 32px): "Review PR #52"; muted "helper/reviewer · idle · no work link"; outlined "Open".
+   Row (builder, indented one step): "Build T3 saved filters"; muted "builder · running · tool running"; underlined "#44"; muted "PR: none yet"; outlined "Open".
+   Row (indented two steps): "Search helper"; muted "helper/reviewer · hidden · idle"; outlined "Open".
+8. Section heading "Unplaced · 1" with rule. Row: "Untitled thread"; muted "no verified work link · parent not in this project"; outlined "Open".
+9. Section heading "Merged tickets · 2" with rule. Two compact rows: underlined "#42" then "Filter model", right muted underlined "PR #50"; underlined "#45" then "Facet counts", right muted underlined "PR #51".
+
+DESKTOP: exact 1440x900 landscape. Left sidebar 300px plain thread list ("Example factory orchestrator", "Fleet manager for Search filters", "Build T2 filter chips"); middle chat column blurred grey lines only; right panel starts x=880, width 560, 24px padding, 13-14px body. Fit content; rows roomier than phone. Title on one line.
+Use the supplied desktop target and screenshot as style references for the same product, not as content to copy. Produce a single flat screen capture, no device frame. Prioritize exact legible text and hierarchy.
+
+DESKTOP ATTEMPT 2 (exact prompt):
+Use case: ui-mockup. Precise high-fidelity flat UI design target, screen-capture style. WizDeck is a plugin tab in a dark coding-agent app's RIGHT side panel. Ledger style: near-black #0b0b0c background, light grey text, compact dense rows, thin 1px grey separators, small section headings with a thin rule extending right. Restrained lime #c6f432 ONLY for the progress fill and a thin selected-row highlight outline. System/Inter-like sans-serif. Underlined issue/PR links. Outlined 44px "Open" buttons. No shadows, gradients, emoji, credits, costs, real names, people, companies or real URLs. No amber anywhere. Synthetic text exactly as supplied.
+
+Panel content, top to bottom (exact text):
+1. Tab strip: "WizDeck".
+2. Underlined text link "← Home".
+3. Wrapping bold title (two lines on phone): "Search filters for the sample catalogue"; small muted "acme/app#41".
+4. Fleet summary big-number row, three columns separated by thin vertical rules: "3" over "Running"; "6" over "Threads"; "—" over "Stalls · unavailable".
+5. Lines "Now: Building T2 and T3", "Next: Review T2, then merge", "When: Today ~16:00 UTC". Then a progress bar 40% lime with label "2/5 tickets merged".
+6. A row with a search box placeholder "Search threads, branches, #refs" and an outlined select "Sort: Plan order ▾".
+7. Section heading "Fleet" with rule.
+   Row (manager, not indented): bold "Fleet manager for Search filters"; muted line "manager · running · no work link"; outlined "Open".
+   Row (builder, indented one step 16px with thin left rule): bold "Build T2 filter chips"; muted line "builder · running · stall unavailable"; underlined links "#43  PR #52"; outlined "Open". This row has the thin lime selected outline.
+   Row (indented two steps 32px): "Review PR #52"; muted "helper/reviewer · idle · no work link"; outlined "Open".
+   Row (builder, indented one step): "Build T3 saved filters"; muted "builder · running · tool running"; underlined "#44"; muted "PR: none yet"; outlined "Open".
+   Row (indented two steps): "Search helper"; muted "helper/reviewer · hidden · idle"; outlined "Open".
+8. Section heading "Unplaced · 1" with rule. Row: "Untitled thread"; muted "no verified work link · parent not in this project"; outlined "Open".
+9. Section heading "Merged tickets · 2" with rule. Two compact rows: underlined "#42" then "Filter model", right muted underlined "PR #50"; underlined "#45" then "Facet counts", right muted underlined "PR #51".
+
+DESKTOP: exact 1440x900 landscape. Left sidebar 300px plain thread list ("Example factory orchestrator", "Fleet manager for Search filters", "Build T2 filter chips"); middle chat column blurred grey lines only; right panel starts x=880, width 560, 24px padding, 13-14px body. Fit content; rows roomier than phone. Title on one line.
+Use the supplied desktop target and screenshot as style references for the same product, not as content to copy. Produce a single flat screen capture, no device frame. Prioritize exact legible text and hierarchy.
+
+Retry: correct the previous draft. Each Open button must visibly measure at least 44 pixels high in the final 1440×900 design. Do not use a lime tab underline: lime occurs only in the progress fill and selected-row outline. Keep all requested content visible and exact. Preserve the same dense Ledger composition.
+
+PHONE ATTEMPT 1 (exact prompt):
+Use case: ui-mockup. Precise high-fidelity flat UI design target, screen-capture style. WizDeck is a plugin tab in a dark coding-agent app's RIGHT side panel. Ledger style: near-black #0b0b0c background, light grey text, compact dense rows, thin 1px grey separators, small section headings with a thin rule extending right. Restrained lime #c6f432 ONLY for the progress fill and a thin selected-row highlight outline. System/Inter-like sans-serif. Underlined issue/PR links. Outlined 44px "Open" buttons. No shadows, gradients, emoji, credits, costs, real names, people, companies or real URLs. No amber anywhere. Synthetic text exactly as supplied.
+
+Panel content, top to bottom (exact text):
+1. Tab strip: "WizDeck".
+2. Underlined text link "← Home".
+3. Wrapping bold title (two lines on phone): "Search filters for the sample catalogue"; small muted "acme/app#41".
+4. Fleet summary big-number row, three columns separated by thin vertical rules: "3" over "Running"; "6" over "Threads"; "—" over "Stalls · unavailable".
+5. Lines "Now: Building T2 and T3", "Next: Review T2, then merge", "When: Today ~16:00 UTC". Then a progress bar 40% lime with label "2/5 tickets merged".
+6. A row with a search box placeholder "Search threads, branches, #refs" and an outlined select "Sort: Plan order ▾".
+7. Section heading "Fleet" with rule.
+   Row (manager, not indented): bold "Fleet manager for Search filters"; muted line "manager · running · no work link"; outlined "Open".
+   Row (builder, indented one step 16px with thin left rule): bold "Build T2 filter chips"; muted line "builder · running · stall unavailable"; underlined links "#43  PR #52"; outlined "Open". This row has the thin lime selected outline.
+   Row (indented two steps 32px): "Review PR #52"; muted "helper/reviewer · idle · no work link"; outlined "Open".
+   Row (builder, indented one step): "Build T3 saved filters"; muted "builder · running · tool running"; underlined "#44"; muted "PR: none yet"; outlined "Open".
+   Row (indented two steps): "Search helper"; muted "helper/reviewer · hidden · idle"; outlined "Open".
+8. Section heading "Unplaced · 1" with rule. Row: "Untitled thread"; muted "no verified work link · parent not in this project"; outlined "Open".
+9. Section heading "Merged tickets · 2" with rule. Two compact rows: underlined "#42" then "Filter model", right muted underlined "PR #50"; underlined "#45" then "Facet counts", right muted underlined "PR #51".
+
+PHONE: exact 390x844 portrait (0.462:1), phone status bar, then full-width panel, 16px padding, 13px body, title wraps to two lines, search box full width with Sort select below it, rows wrap, Open buttons 44px tall at right of each row. Show at least items 1-7 down to "Build T3 saved filters"; the rest may continue below the fold (omit).
+Use the supplied phone target and screenshot as style references for the same product, not as content to copy. Produce a single flat screen capture, no device frame. Prioritize exact legible text and hierarchy.
+
+PHONE ATTEMPT 2 (exact prompt):
+Use case: ui-mockup. Precise high-fidelity flat UI design target, screen-capture style. WizDeck is a plugin tab in a dark coding-agent app's RIGHT side panel. Ledger style: near-black #0b0b0c background, light grey text, compact dense rows, thin 1px grey separators, small section headings with a thin rule extending right. Restrained lime #c6f432 ONLY for the progress fill and a thin selected-row highlight outline. System/Inter-like sans-serif. Underlined issue/PR links. Outlined 44px "Open" buttons. No shadows, gradients, emoji, credits, costs, real names, people, companies or real URLs. No amber anywhere. Synthetic text exactly as supplied.
+
+Panel content, top to bottom (exact text):
+1. Tab strip: "WizDeck".
+2. Underlined text link "← Home".
+3. Wrapping bold title (two lines on phone): "Search filters for the sample catalogue"; small muted "acme/app#41".
+4. Fleet summary big-number row, three columns separated by thin vertical rules: "3" over "Running"; "6" over "Threads"; "—" over "Stalls · unavailable".
+5. Lines "Now: Building T2 and T3", "Next: Review T2, then merge", "When: Today ~16:00 UTC". Then a progress bar 40% lime with label "2/5 tickets merged".
+6. A row with a search box placeholder "Search threads, branches, #refs" and an outlined select "Sort: Plan order ▾".
+7. Section heading "Fleet" with rule.
+   Row (manager, not indented): bold "Fleet manager for Search filters"; muted line "manager · running · no work link"; outlined "Open".
+   Row (builder, indented one step 16px with thin left rule): bold "Build T2 filter chips"; muted line "builder · running · stall unavailable"; underlined links "#43  PR #52"; outlined "Open". This row has the thin lime selected outline.
+   Row (indented two steps 32px): "Review PR #52"; muted "helper/reviewer · idle · no work link"; outlined "Open".
+   Row (builder, indented one step): "Build T3 saved filters"; muted "builder · running · tool running"; underlined "#44"; muted "PR: none yet"; outlined "Open".
+   Row (indented two steps): "Search helper"; muted "helper/reviewer · hidden · idle"; outlined "Open".
+8. Section heading "Unplaced · 1" with rule. Row: "Untitled thread"; muted "no verified work link · parent not in this project"; outlined "Open".
+9. Section heading "Merged tickets · 2" with rule. Two compact rows: underlined "#42" then "Filter model", right muted underlined "PR #50"; underlined "#45" then "Facet counts", right muted underlined "PR #51".
+
+PHONE: exact 390x844 portrait (0.462:1), phone status bar, then full-width panel, 16px padding, 13px body, title wraps to two lines, search box full width with Sort select below it, rows wrap, Open buttons 44px tall at right of each row. Show at least items 1-7 down to "Build T3 saved filters"; the rest may continue below the fold (omit).
+Use the supplied phone target and screenshot as style references for the same product, not as content to copy. Produce a single flat screen capture, no device frame. Prioritize exact legible text and hierarchy.
+
+Retry: correct the previous draft. Each Open button must be at least 44 CSS pixels tall in the final 390×844 design: use generous vertical height, compact the surrounding content enough to show the Build T3 row. Do not use a lime tab underline: lime occurs only in the progress fill and selected-row outline. The sort control has exactly one dropdown arrow. Keep all requested visible text exact.
+
