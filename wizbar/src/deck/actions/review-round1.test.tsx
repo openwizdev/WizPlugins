@@ -138,37 +138,140 @@ describe("R1: a lost response never becomes a second effect", () => {
   });
 });
 
-describe("R2: a revised proposal can be answered", () => {
-  const answered = (state: ActionRecordV1["state"]): ActionRecordV1 => ({
-    operationId: "op-test-earlier", kind: "answer", projectKey: "sample-factory", label: "Answer N-12 · Short headline",
-    state, reason: null, detail: null, createdAt: NOW - 60_000, settledAt: NOW - 60_000,
-    answer: { itemId: "n12", fingerprint: "fp-n12-2", question: item(2).question, shown: { code: "N-12", question: item(2).question, risk: "ordinary", options: item(2).options } } as never,
+/** The real action handlers on the SDK's fake host, with a mutable queue file and fake SDK send. */
+function realBackend(send: () => Promise<unknown>) {
+  let queueText = dxQueue();
+  const sendFn = vi.fn(send);
+  const host = createFakePluginHost({
+    pluginId: "wizbar", settings: dxSettings(),
+    sdk: {
+      files: { read: vi.fn(async ({ path }: { path: string }) => ({ content: queueText, contentEncoding: "utf8", path, sha256: createHash("sha256").update(queueText).digest("hex"), sizeBytes: queueText.length })) },
+      threads: { get: vi.fn(async () => ({ id: ORCH, projectId: dxFactory.cloudroomProjectId, archivedAt: null, deletedAt: null, title: null, titleFallback: null })), send: sendFn },
+    } as never,
   });
+  hosts.push(host);
+  registerDeckActions(host.bb, { settings: host.bb.settings.define(deckSettingDescriptors) });
+  const call = (name: string, input: unknown) => host.harness.behavior.callRpc(name, input);
+  return {
+    host, call,
+    sends: () => sendFn.mock.calls as unknown as [{ input: { text: string }[] }][],
+    setQueue: (revision: number, fingerprint: string) => { queueText = dxQueue({ revision, items: [{ ...JSON.parse(dxQueue()).items[0], fingerprint }] }); },
+  };
+}
 
-  // Bug caught: an earlier answer to revision 2 hides the controls of revision 3, which keeps
-  // the item id and question but offers different choices under a new fingerprint.
-  it("revision 2 → 3 with new options offers the new choices", async () => {
-    let revision: 2 | 3 = 2;
-    mount({ deckWatch: () => watchResult([item(revision)], revision), deckActionLog: verifiedLog([answered("sent")]) });
+describe("R2: answers follow the backend's current proposal identity", () => {
+  // The fixture queue's item, as the panel shows it; revision 3 keeps every shown field.
+  const shownItem = (fingerprint: string) => ({ ...JSON.parse(dxQueue()).items[0], fingerprint });
+
+  // Bug caught: an earlier answer hides the controls of a new proposal whose shown fields are
+  // identical but whose backend identity (fingerprint, revision 3) is new.
+  it("identical shown fields with a new backend fingerprint offer the choices and send one new answer", async () => {
+    const backend = realBackend(async () => ({ ok: true, delivery: "sent" }));
+    let fingerprint = "fp-n12-1"; let revision = 2;
+    const t = mount({
+      deckWatch: () => watchResult([shownItem(fingerprint)], revision),
+      deckActionLog: (input) => backend.call("deckActionLog", input),
+      deckBindAnswer: (input) => backend.call("deckBindAnswer", input),
+      deckSteer: (input) => backend.call("deckSteer", input),
+    });
     await flush(3);
     const row = () => document.querySelector('[data-answer-item="n12"]') as HTMLElement;
-    expect(row().textContent).toContain("Sent · steered.");
-    expect(within(row()).queryByRole("button", { name: "Long headline" })).toBeNull();
-    revision = 3;
-    await act(async () => { await vi.advanceTimersByTimeAsync(30_000); });
-    await flush(2);
-    expect(within(row()).getByRole("button", { name: "Plain headline" })).toBeTruthy();
-    expect(row().textContent).not.toContain("Sent · steered.");
+    fireEvent.click(within(row()).getByRole("button", { name: "Short headline (rec)" }));
+    await flush(3);
+    await act(async () => { await vi.advanceTimersByTimeAsync(UNDO_MS); });
+    await flush(5);
+    expect(backend.sends()).toHaveLength(1);
+
+    fingerprint = "fp-n12-3"; revision = 3;
+    backend.setQueue(3, "fp-n12-3");
+    await t.slot.behavior.emitRealtime("wizdeck", {});
+    await flush(3);
+    fireEvent.click(within(row()).getByRole("button", { name: "Long headline" }));
+    await flush(3);
+    expect(within(row()).getByRole("button", { name: "Undo" })).toBeTruthy();
+    await act(async () => { await vi.advanceTimersByTimeAsync(UNDO_MS); });
+    await flush(5);
+    expect(backend.sends()).toHaveLength(2);
+    expect(backend.sends()[1][0].input[0].text).toContain("fingerprint fp-n12-3 · queue revision 3");
   });
 
-  it("the unchanged proposal stays suppressed after a sent or uncertain answer", async () => {
-    for (const state of ["sent", "uncertain"] as const) {
-      mount({ deckWatch: () => watchResult([item(2)]), deckActionLog: verifiedLog([answered(state)]) });
+  // Bug caught: the unchanged proposal answered again after a sent or uncertain answer, or an
+  // eligibility check that starts Undo or allocates a send operation.
+  for (const outcome of ["sent", "uncertain"] as const) {
+    it(`the unchanged proposal stays protected after a ${outcome} answer: no Undo, no operation, no send`, async () => {
+      const backend = realBackend(async () => { if (outcome === "uncertain") throw new Error("socket closed"); return { ok: true, delivery: "sent" }; });
+      const t = mount({
+        deckWatch: () => watchResult([shownItem("fp-n12-1")]),
+        deckActionLog: (input) => backend.call("deckActionLog", input),
+        deckBindAnswer: (input) => backend.call("deckBindAnswer", input),
+        deckSteer: (input) => backend.call("deckSteer", input),
+      });
       await flush(3);
-      const row = document.querySelector('[data-answer-item="n12"]') as HTMLElement;
-      expect(within(row).queryAllByRole("button")).toHaveLength(0);
-      cleanup();
-    }
+      const row = () => document.querySelector('[data-answer-item="n12"]') as HTMLElement;
+      fireEvent.click(within(row()).getByRole("button", { name: "Short headline (rec)" }));
+      await flush(3);
+      await act(async () => { await vi.advanceTimersByTimeAsync(UNDO_MS); });
+      await flush(5);
+      expect(backend.sends()).toHaveLength(1);
+      expect(row().textContent).toContain("Earlier: Answer N-12 · Short headline");
+
+      fireEvent.click(within(row()).getByRole("button", { name: "Long headline" }));
+      await flush(5);
+      expect(within(row()).queryByRole("button", { name: "Undo" })).toBeNull();
+      expect(row().textContent).toContain("This was already sent; WizDeck does not send it twice.");
+      await act(async () => { await vi.advanceTimersByTimeAsync(UNDO_MS * 2); });
+      expect(t.calls("deckSteer")).toHaveLength(1);
+      expect(backend.sends()).toHaveLength(1);
+    });
+  }
+});
+
+describe("R1 final: overlapping log responses never drop an unresolved operation", () => {
+  // Bug caught: after a lost response, the newer log shows the send still dispatching; an older,
+  // overlapping log response without it then arrives and the operation and its state vanish.
+  it("newer dispatching then older empty response keeps the same operation until the backend settles it", async () => {
+    let releaseSend!: () => void;
+    const backend = realBackend(() => new Promise((resolve) => { releaseSend = () => resolve({ ok: true, delivery: "sent" }); }));
+    let holdNextLog = false;
+    let releaseOldLog!: () => void;
+    const t = mount({
+      deckWatch: () => watchResult([item(2)]),
+      deckActionLog: async (input) => {
+        const snapshot = await backend.call("deckActionLog", input); // Read now: the older, empty log.
+        if (!holdNextLog) return snapshot;
+        holdNextLog = false;
+        return new Promise((resolve) => { releaseOldLog = () => resolve(snapshot); });
+      },
+      deckSteer: async (input) => {
+        void backend.call("deckSteer", input); // Accepted; the SDK send stays pending.
+        for (let turn = 0; turn < 50 && backend.sends().length === 0; turn += 1) await Promise.resolve();
+        throw new Error("connection reset"); // The panel never hears back.
+      },
+    });
+    await flush(3);
+    holdNextLog = true;
+    await t.slot.behavior.emitRealtime("wizdeck-actions", {}); // The older read starts and is held.
+    await flush();
+    fireEvent.change(screen.getByRole("textbox", { name: "Message to the orchestrator" }), { target: { value: "Hold new builds until Monday." } });
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    await flush(10);
+    const id = (t.calls("deckSteer")[0].input as { operationId: string }).operationId;
+    const row = () => document.querySelector(`[data-operation="${id}"]`) as HTMLElement | null;
+    expect(row()?.textContent).toContain("Sending…");
+
+    releaseOldLog();
+    await flush(5);
+    expect(row()).toBeTruthy();
+    expect(row()!.textContent).toContain("Hold new builds until Monday.");
+    expect(row()!.textContent).toContain("Sending…");
+
+    releaseSend();
+    await flush(5);
+    await t.slot.behavior.emitRealtime("wizdeck-actions", {});
+    await flush(5);
+    expect(row()!.textContent).toContain("Sent · steered.");
+    expect(backend.sends()).toHaveLength(1);
+    expect(new Set(t.calls("deckSteer").map((call) => (call.input as { operationId: string }).operationId))).toEqual(new Set([id]));
   });
 });
 
