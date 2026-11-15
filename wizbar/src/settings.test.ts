@@ -29,11 +29,14 @@ describe("N1: actual WizBar settings declarations and persistent reload", () => 
     const descriptors = host.harness.inspection.registrations.settingsDescriptors;
     expect(Object.keys(descriptors).sort()).toEqual([
       "childrenChipEnabled", "footerCountEnabled", "machineIconsEnabled", "parentChipEnabled",
+      "wizdeckFactories", "wizdeckGithubToken",
     ]);
     expect(descriptors.footerCountEnabled).toMatchObject({ type: "boolean", label: "Footer count", default: true });
     expect(descriptors.machineIconsEnabled).toMatchObject({ type: "boolean", label: "Cloud/Local row icons", default: true });
     expect(descriptors.childrenChipEnabled).toMatchObject({ type: "boolean", label: "Children chip in thread header", default: false });
     expect(descriptors.parentChipEnabled).toMatchObject({ type: "boolean", label: "Parent chip in thread header", default: true });
+    expect(descriptors.wizdeckGithubToken).toMatchObject({ type: "string", secret: true });
+    expect(descriptors.wizdeckFactories).toMatchObject({ type: "string", experimental_multiline: true });
   });
 
   // WZ17: a missing header-chip key must read its declared default from the

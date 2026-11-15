@@ -18,12 +18,14 @@ the parent's children chip is off by default and the child's chip back to its
 parent stays on by default. They use the same declaration, store and read rule
 as the keys above; each gates only its own chip, and neither supplies data.
 
+WizDeck 0.1 (#73) declares two more keys in its own `deckSettingDescriptors` (`src/deck/data/binding.ts`): `wizdeckFactories`, the private factory binding list (factory-view.v1.md section 1), and `wizdeckGithubToken`, a secret read token that stays on the backend. They gate no WizBar feature.
+
 Defaults preserve the existing features' visibility policy; they never enable a
 data source. In particular an enabled footer still renders nothing without a
 verified source. Missing keys use these defaults. Present non-boolean values
 fail closed to false; strings such as `"true"` are not booleans.
 
-`wizbarSettingDescriptors` in `src/settings.ts` is the single declaration. It is
+`wizbarSettingDescriptors` in `src/settings.ts` is the single declaration of WizBar's switches. It is
 registered with `bb.settings.define` in the existing backend factory (approved by the
 2026-11-10 orchestrator ruling on #25). No manifest-only settings API is assumed.
 The host persists non-secret values in its plugin settings store, scoped to this

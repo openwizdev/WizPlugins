@@ -3,7 +3,7 @@
 // entry. Nothing in the UI polls GitHub or the host: it renews a lease, and
 // this cache alone decides when a read happens.
 import type { ReadSnapshotV1, UnavailableReasonV1 } from "../../factory-contract";
-import { GitHubRateLimited } from "./github";
+import { GitHubRateLimited, GitHubReadFailed } from "./github";
 
 /** The shared refresh interval and the manual refresh's minimum spacing. */
 export const REFRESH_MS = 60_000;
@@ -171,7 +171,10 @@ export class SharedReadCache {
         const lastGood = !entry.keepLastGood || previous === null ? null
           : previous.status === "ready" ? { data: previous.data, fetchedAt: previous.fetchedAt } : previous.lastGood;
         entry.snapshot = { status: "unavailable", reason, lastGood };
-        entry.detail = error instanceof Error && error.message ? error.message : reason;
+        // Only this module's own fixed wording reaches a panel; any other error's
+        // text (which may echo a request or a credential) is replaced.
+        const known = error instanceof GitHubRateLimited || error instanceof GitHubReadFailed || error instanceof ReadUnavailable;
+        entry.detail = known && error.message ? error.message : "The read failed.";
       } finally {
         entry.inflight = null;
       }

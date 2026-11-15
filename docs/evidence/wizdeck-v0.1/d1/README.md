@@ -11,6 +11,14 @@ All values are synthetic. Fixture and rendered-harness results prove no installa
 | Only verified merged PRs advance progress; timezone merges-today derives from cached merge timestamps | A ticket counts only when closed and closed by a merged PR in a configured repository; merges today is computed per viewer time zone from one cached read | `deck-server.test.ts` "counts only closed tickets with a merged PR…" and "derives each viewer's local day…" | Now |
 | Queue/status unavailable and complete empty are distinct; no GitHub mutation or host send occurs | Offline host, missing file, forbidden root, malformed JSON, stale producer, project mismatch, hash mismatch and a different returned file are unavailable with answers disabled; a fresh complete empty queue is the only zero; only GitHub GETs and GraphQL queries are made; `files.write` is never called; the token never leaves the backend | `deck-server.test.ts` "Needs-you queue host read" and "makes only GitHub reads and never returns the token"; `Home.test.tsx` "keeps a missing queue unavailable…" | Synthetic now; live queue acceptance open (below) |
 
+## Secret boundary (J81, revision 3)
+
+The GitHub read token is the secret setting `wizdeckGithubToken`; the host keeps it out of panel settings. `secret: true` alone is not the proof. The behaviour proof is `deck-server.test.ts` "never returns the token in failure details": with the synthetic token `synthetic-token` configured, a board read fails (a transport error whose text echoes the request's `Authorization` header, and an unexpected malformed response), and the test checks `deckWatch` and `deckRefresh` answers and every realtime signal, which are all that reaches a panel. The failure is still reported in words. "makes only GitHub reads and never returns the token" covers the successful path.
+
+Bug caught: credential disclosure through failure details. Before the fix, the reader copied a transport error's text into the board's `detail`, which the RPC returns to every panel. Now a transport failure has fixed wording, and the cache passes on only its own error classes' fixed wording; any other error becomes "The read failed.". `red-secret.log` (commit `4ca33d0`) shows the transport case failing on its assertion against the unmodified implementation. The unexpected-error case already passed there; it guards the generic path.
+
+Settings: `settings.test.ts` now expects WizBar's four switches plus `wizdeckFactories` (string, multi-line) and `wizdeckGithubToken` (string, secret), with the four existing assertions unchanged. `contracts/settings.v1.md` gains the approved paragraph. `changes/73.md` holds the approved line (no new test: the changelog is prose and adds no behaviour).
+
 ## Queue-host access
 
 Every read is `bb.sdk.files.read({ hostId, rootPath, path: ".openwiz/needs-you.v1.json" })` with the binding's explicit host and root; there is no call without a `hostId`. The root must be absolute and normal (no `.`, `..`, empty or `~` segment, not a filesystem root, no trailing separator); anything else is refused before the SDK call. The returned path must be that file, and the SHA-256 of the returned bytes must equal the host's reported `sha256`. No credential, mount or file-write route was added.
@@ -34,6 +42,8 @@ Comparison with the targets: same order (Home and factory picker, first-open not
 One swarm, one helper: image generator (Codex Sol 6.1, medium, shared sandbox), slice "target pictures", base commit `1107b4b`. Result: two targets; used both, with the recorded defects not copied. No-push check: clean.
 
 ## Not tested
+
+- A real GitHub token or account: none was provisioned or used.
 
 - Installed-host behaviour: panel placement, the real phone panel, host fonts and colours, `openUrl` and `openThreadPanel` acceptance.
 - A live GitHub account read and real rate-limit headers.

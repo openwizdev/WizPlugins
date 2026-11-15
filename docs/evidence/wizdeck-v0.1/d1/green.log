@@ -1,0 +1,4 @@
+# D1 checks at the hand-back commit (from wizbar/): npm run typecheck -> passed; npx vitest run --config vitest.config.ts --maxWorkers=2
+ Test Files  26 passed (26)
+      Tests  842 passed (842)
+   Duration  17.82s (transform 756ms, setup 0ms, import 4.73s, tests 22.03s, environment 5.49s)

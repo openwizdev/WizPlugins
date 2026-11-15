@@ -94,8 +94,9 @@ export class GitHubReader {
     let response: Awaited<ReturnType<Fetch>>;
     try {
       response = await this.fetch(url, { method: "GET", headers: this.headers(stored ? { "if-none-match": stored.etag } : {}), signal });
-    } catch (error) {
-      throw new GitHubReadFailed(error instanceof Error ? error.message : "Network error.");
+    } catch {
+      // Never copy a transport error's text: it can echo the request, token included.
+      throw new GitHubReadFailed("GitHub could not be reached.");
     }
     this.checkRate(response);
     if (response.status === 304 && stored) return stored.page;
@@ -117,8 +118,9 @@ export class GitHubReader {
         method: "POST", headers: this.headers({ "content-type": "application/json" }),
         body: JSON.stringify({ query, variables }), signal,
       });
-    } catch (error) {
-      throw new GitHubReadFailed(error instanceof Error ? error.message : "Network error.");
+    } catch {
+      // Never copy a transport error's text: it can echo the request, token included.
+      throw new GitHubReadFailed("GitHub could not be reached.");
     }
     this.checkRate(response);
     if (response.status !== 200) throw new GitHubReadFailed(`GitHub answered ${response.status}.`, response.status);
