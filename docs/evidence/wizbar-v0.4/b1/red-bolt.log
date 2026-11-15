@@ -1,0 +1,51 @@
+
+ RUN  v4.1.10 /code/work/WizPlugins/wizbar
+
+ ❯ |bb-plugin-wizbar| src/FooterCounter.test.tsx (18 tests | 1 failed | 16 skipped) 242ms
+     × registers no footer bolt, disclosure, action or icon 7ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/FooterCounter.test.tsx > N4: approved observable footer route > registers no footer bolt, disclosure, action or icon
+AssertionError: expected [ { id: 'stats', …(6) } ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   {
++     "component": [Function StatsPanel],
++     "icon": "Zap",
++     "id": "stats",
++     "kind": "disclosure",
++     "label": "WizBar stats",
++     "runtime": SidebarFooterItemRuntime {
++       "acknowledgeCommand": [Function acknowledgeCommand],
++       "getSnapshot": [Function getSnapshot],
++       "listeners": Set {},
++       "snapshot": {
++         "command": null,
++       },
++       "subscribe": [Function subscribe],
++     },
++     "source": "experimental_sidebarFooter",
++   },
++ ]
+
+ ❯ src/FooterCounter.test.tsx:123:48
+    121|   // offers a second, differently scoped running number.
+    122|   it("registers no footer bolt, disclosure, action or icon", () => {
+    123|     expect(app.experimentalSidebarFooterItems).toEqual([]);
+       |                                                ^
+    124|     expect(app.sidebarFooterActions).toEqual([]);
+    125|     expect(app.icons).toEqual([]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 1 passed | 16 skipped (18)
+   Start at  19:34:02
+   Duration  1.49s (transform 332ms, setup 0ms, import 642ms, tests 242ms, environment 501ms)
+

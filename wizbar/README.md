@@ -42,6 +42,8 @@ are in the [v0.3 sidebar contract](contracts/sidebar-v3.v1.md).
 - **Settings.** Switches for the list-bottom count, Cloud/Local row icons and
   the two header chips.
 
+Development toward WizBar 0.4 (#76) replaces the footer bolt with a running-count popover. The v0.3 description below remains historical; StatsPanel and wizbar stats keep their existing calculations, but StatsPanel has no registered footer route after #76. This development work is not a published release or installed-host verification and remains merge-gated on Cloudroom #160 and #158.
+
 ## Install
 
 **From the BB Marketplace: not listed yet.** Publication waits for Jake's

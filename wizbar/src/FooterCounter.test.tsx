@@ -116,20 +116,24 @@ describe("W3: synthetic footer artwork through the SDK rendering harness", () =>
 // gap passes its own copy, as a host would hand over a new snapshot.
 describe("N4: approved observable footer route", () => {
   const icon = line;
-  // WZ20 (#41): one disclosure with a named host icon and a fixed label
-  // replaces the no-op action and its count artwork icon.
-  it("registers one fixed-label disclosure on the host's bolt icon and no count artwork", () => {
+  // B1 (#76): the WZ20 bolt is gone. Bug caught: an obsolete footer bolt (or
+  // its stats disclosure) left registered beside the new count, so the footer
+  // offers a second, differently scoped running number.
+  it("registers no footer bolt, disclosure, action or icon", () => {
+    expect(app.experimentalSidebarFooterItems).toEqual([]);
     expect(app.sidebarFooterActions).toEqual([]);
     expect(app.icons).toEqual([]);
-    expect(app.experimentalSidebarFooterItems).toHaveLength(1);
-    // The harness adds its own `runtime` and `source`; the rest is the registration.
-    const { runtime: _runtime, source: _source, ...item } = app.experimentalSidebarFooterItems[0]! as typeof app.experimentalSidebarFooterItems[0] & { source?: string };
-    expect(item).toEqual({ id: "stats", kind: "disclosure", label: "WizBar stats", icon: "Zap", component: expect.any(Function) });
-    renderSlot({ component: item.kind === "disclosure" ? item.component : () => null }, { dismiss() {} }, {
-      sidebarThreads: { status: "ready", threads: v3Threads },
-    });
-    expect(app.experimentalSidebarFooterItems).toHaveLength(1);
-    expect(app.experimentalSidebarFooterItems[0]!.label).toBe("WizBar stats");
+  });
+
+  // B1 (#76): the count's route is the registered thread list itself. Bug
+  // caught: a count with no way to reach the threads it counts.
+  it("reaches the counted rows from the registered thread list's count", () => {
+    renderSlot(app.threadLists[0]!, {
+      activeThreadId: null, activeProjectId: null, isCompactViewport: false, searchQuery: "", onNavigate() {},
+    }, { sidebarThreads: { status: "ready", threads: [...positiveThreads] }, rpc: { listLifecycle: () => ({ rows: [] }) } });
+    fireEvent.click(screen.getByRole("button", { name: "2 running" }));
+    expect(within(screen.getByRole("dialog")).getAllByRole("link").map((link) => link.getAttribute("data-thread-id")).sort())
+      .toEqual(["sample-child", "sample-parent"]);
   });
 
   it("reads raw observable projects/children and publishes unverified coverage", () => {

@@ -1,9 +1,11 @@
 // @vitest-environment jsdom
 // WZ22 (#44), V5: the CLI parity test (contracts/sidebar-v3.v1.md sections 1
 // and 7). Every UI action has a `wizbar` command that takes `--json`; each
-// command does what its UI action does on the same rows; and `children` and
-// `stats` JSON equal what the hover panel and the footer panel show for the
-// same fixtures. Every row is synthetic (src/fixtures/v3.ts).
+// command does what its UI action does on the same rows; and `children` JSON
+// equals what the hover panel shows for the same fixtures. Since B1 (#76)
+// removed the footer bolt, `stats` has no registered UI route: its JSON is
+// compared with the unregistered `StatsPanel` component only (component
+// parity, not UI parity). Every row is synthetic (src/fixtures/v3.ts).
 import { createElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, screen, within } from "@testing-library/react";
@@ -23,8 +25,14 @@ const uiActions = {
   settle: "settle", unsettle: "unsettle", snooze: "snooze", unsnooze: "unsnooze",
   mute: "mute", unmute: "unmute", listLifecycle: "list",
   pin: "pin", unpin: "unpin", move: "move",
-  childrenPanel: "children", statsPanel: "stats",
+  childrenPanel: "children",
 } as const;
+/**
+ * Commands with no registered UI route. `stats`: B1 (#76) removed the footer
+ * bolt that opened the stats panel; the CLI and the unregistered `StatsPanel`
+ * component still compute the same numbers (compared below).
+ */
+const componentOnlyCommands = { stats: "StatsPanel component, unregistered since #76" } as const;
 /** RPC methods that only feed a UI action, never an action of their own. */
 const actionInputs = {
   cardModels: "model and effort for cards and the children panel; `children` JSON carries them",
@@ -111,7 +119,6 @@ const cases: Record<keyof typeof uiActions, { argv: string[]; rpc?: [string, unk
   unpin: { argv: ["thr_v3_pinned_idle"], rpc: ["unpin", { threadId: "thr_v3_pinned_idle" }] },
   move: { argv: ["thr_v3_parent_one", "--first"], rpc: ["move", { threadId: "thr_v3_parent_one", position: { first: true } }] },
   childrenPanel: { argv: ["thr_v3_parent_many"] },
-  statsPanel: { argv: [] },
 };
 
 beforeEach(() => {
@@ -137,6 +144,7 @@ describe("V5: every UI action has a wizbar command with --json", () => {
     const names = cli.commands.map((c) => c.name);
     expect(names.sort()).toEqual([...wizbarOperationsV3].sort());
     expect(names).toEqual(expect.arrayContaining(Object.values(uiActions)));
+    expect(names).toEqual(expect.arrayContaining(Object.keys(componentOnlyCommands)));
     for (const command of cli.commands) expect(command.usage, command.name).toMatch(/\[--json\]$/);
   });
 
@@ -233,13 +241,13 @@ describe("V5: children and stats JSON equal the UI for the same fixtures", () =>
       ({ id: c.id, label: `Open child: ${c.title}, ${c.status}, ${ages[c.id]}` })));
   });
 
-  it("stats: the CLI's numbers are the footer panel's", async () => {
+  it("stats: the CLI's numbers are the StatsPanel component's (component parity; no footer route since #76)", async () => {
     const cli = await server().run(["stats", "--json"]);
     expect(cli).toEqual({ exitCode: 0, json: v3Stats });
-    const item = app.experimentalSidebarFooterItems.find(({ id }) => id === "stats");
-    expect(item?.kind).toBe("disclosure");
-    if (item?.kind !== "disclosure") return;
-    renderSlot({ component: item.component }, { dismiss() {} }, { sidebarThreads: { status: "ready", threads: [...v3Threads] } });
+    // Truthful scope: the panel is no longer registered, so this is not UI parity.
+    expect(app.experimentalSidebarFooterItems.find(({ id }) => id === "stats")).toBeUndefined();
+    const { StatsPanel } = await import("./StatsPanel");
+    renderSlot({ component: StatsPanel }, { dismiss() {} }, { sidebarThreads: { status: "ready", threads: [...v3Threads] } });
     const lines = [...screen.getByRole("region", { name: "WizBar stats" }).querySelectorAll("p")].map((p) => p.textContent ?? "");
     const number = (pattern: RegExp) => {
       const found = lines.join("\n").match(pattern);

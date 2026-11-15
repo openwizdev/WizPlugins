@@ -8,22 +8,14 @@ import { definePluginApp } from "@get-bb/plugin-sdk/app";
 import { ThreadInbox } from "./src/ThreadInbox";
 import { ParentChip } from "./src/ParentChip";
 import { SubagentsChip } from "./src/SubagentsChip";
-import { StatsPanel } from "./src/StatsPanel";
 import { SettingsPage } from "./src/SettingsPage";
 import { WizDeckNewThreadPanel, WizDeckPanel } from "./src/deck/home/Panel";
 import { WIZDECK_ACTION_ID } from "./src/deck/selection/selection";
 
 export default definePluginApp((app) => {
   app.slots.settingsSection({ id: "wizbar-settings", component: SettingsPage });
-  // WZ20 (#41): one disclosure on the host's own bolt icon, with a fixed
-  // label. The live number stays in the list-bottom "N running" line.
-  app.experimental_sidebarFooter.register({
-    id: "stats",
-    kind: "disclosure",
-    label: "WizBar stats",
-    icon: "Zap",
-    component: StatsPanel,
-  });
+  // B1 (#76): the WZ20 footer bolt (stats disclosure) is removed. The
+  // list-bottom running count opens a popover of the threads it counts.
 
   app.slots.experimental_threadList({
     id: "inbox",
