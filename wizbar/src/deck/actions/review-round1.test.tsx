@@ -302,3 +302,98 @@ describe("R4: delivery state shows at once", () => {
     expect(settled.textContent).toContain("Waiting · queued by the host, not steered yet.");
   });
 });
+
+describe("#92: reconciliation keeps a confirmed delivery", () => {
+  /** Answer N-12 through the real panel and backend; returns the panel and the answer's rows. */
+  async function answerOnce(backend: ReturnType<typeof realBackend>, deckActionLog?: (input: any) => unknown) {
+    const t = mount({
+      deckWatch: () => watchResult([item(2)]),
+      deckActionLog: deckActionLog ?? ((input) => backend.call("deckActionLog", input)),
+      deckBindAnswer: (input) => backend.call("deckBindAnswer", input),
+      deckSteer: (input) => backend.call("deckSteer", input),
+    });
+    await flush(3);
+    const answerRow = () => document.querySelector('[data-answer-item="n12"]') as HTMLElement;
+    fireEvent.click(within(answerRow()).getByRole("button", { name: "Short headline (rec)" }));
+    await flush(3);
+    await act(async () => { await vi.advanceTimersByTimeAsync(UNDO_MS); });
+    await flush(5);
+    const ids = () => new Set(t.calls("deckSteer").map((call) => (call.input as { operationId: string }).operationId));
+    const id = [...ids()][0];
+    const logRow = () => document.querySelector(`[data-operation="${id}"]`) as HTMLElement;
+    return { t, id, ids, answerRow, logRow };
+  }
+  const words = { sent: "Sent · steered.", queued: "Waiting · queued by the host, not steered yet." } as const;
+  const confirmation = { sent: { ok: true, delivery: "sent" }, queued: { ok: true, delivery: "queued", queuedMessage: { id: "qm-sample-1" } } } as const;
+
+  for (const outcome of ["sent", "queued"] as const) {
+    // Bug caught: the SDK confirms delivery but the final record write fails; the retained
+    // `dispatching` record reads back as uncertain and every later log read, including an
+    // older overlapping one, replaces the confirmed outcome in the panel's memory and rows.
+    it(`a ${outcome} confirmation stays ${outcome} when the final record write fails and recovery reads uncertain`, async () => {
+      const backend = realBackend(async () => confirmation[outcome]);
+      const kv = backend.host.bb.storage.kv;
+      const save = kv.set.bind(kv);
+      const rejected: string[] = [];
+      vi.spyOn(kv, "set").mockImplementation(async (name: string, value: unknown) => {
+        const state = (value as ActionRecordV1).state;
+        if (state === "sent" || state === "queued") { rejected.push(state); throw new Error("storage full"); } // Only the final write.
+        return save(name, value as never);
+      });
+      let hold = false;
+      const held: (() => void)[] = [];
+      const { t, id, ids, answerRow, logRow } = await answerOnce(backend, async (input) => {
+        const snapshot = await backend.call("deckActionLog", input);
+        if (!hold) return snapshot;
+        return new Promise((resolve) => { held.push(() => resolve(snapshot)); });
+      });
+      expect(rejected).toEqual([outcome]);
+      // The setup reaches the claim: the backend's own recovery read is fallback uncertainty.
+      const stored = await backend.call("deckActionLog", { projectKey: "sample-factory" }) as ActionLogV1;
+      expect(stored.records.map((record) => [record.operationId, record.state])).toEqual([[id, "uncertain"]]);
+
+      await t.slot.behavior.emitRealtime("wizdeck-actions", {});
+      await flush(5);
+      // Two overlapping reads, the older answering last.
+      hold = true;
+      await t.slot.behavior.emitRealtime("wizdeck-actions", {});
+      await t.slot.behavior.emitRealtime("wizdeck-actions", {});
+      await flush(3);
+      hold = false;
+      held[1](); await flush(3);
+      held[0](); await flush(3);
+
+      expect.soft(logRow().getAttribute("data-state")).toBe(outcome);
+      expect.soft(logRow().textContent).toContain(words[outcome]);
+      expect.soft(logRow().textContent).not.toContain("Uncertain");
+      expect.soft(answerRow().textContent).toContain(`Earlier: Answer N-12 · Short headline · ${words[outcome]}`);
+      expect.soft(answerRow().textContent).not.toContain("Uncertain");
+      expect(ids()).toEqual(new Set([id]));
+      expect(t.calls("deckSteer")).toHaveLength(1);
+      expect(backend.sends()).toHaveLength(1);
+    });
+
+    // Bug caught: an uncertain answer (no host answer within the wait) never shows the host's
+    // actual later confirmation, or reconciliation resends or allocates a new operation for it.
+    it(`an uncertain answer upgrades to ${outcome} when the actual confirmation arrives later`, async () => {
+      let confirm!: () => void;
+      const backend = realBackend(() => new Promise((resolve) => { confirm = () => resolve(confirmation[outcome]); }));
+      const { t, id, ids, answerRow, logRow } = await answerOnce(backend);
+      await act(async () => { await vi.advanceTimersByTimeAsync(30_000); });
+      await flush(5);
+      expect(logRow().getAttribute("data-state")).toBe("uncertain");
+      expect(answerRow().textContent).toContain("Uncertain ·");
+
+      confirm();
+      await flush(5);
+      await t.slot.behavior.emitRealtime("wizdeck-actions", {});
+      await flush(5);
+      expect(logRow().getAttribute("data-state")).toBe(outcome);
+      expect(logRow().textContent).toContain(words[outcome]);
+      expect(answerRow().textContent).toContain(`Earlier: Answer N-12 · Short headline · ${words[outcome]}`);
+      expect(ids()).toEqual(new Set([id]));
+      expect(t.calls("deckSteer")).toHaveLength(1);
+      expect(backend.sends()).toHaveLength(1);
+    });
+  }
+});
