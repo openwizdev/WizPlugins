@@ -37,7 +37,7 @@ export async function loadQueue(
 ): Promise<LoadResult<QueueReadResultV1>> {
   const { hostId, rootPath } = binding.home;
   if (typeof hostId !== "string" || hostId.trim() === "") throw new ReadUnavailable("not-configured", "No home host is configured.");
-  const rootProblem = null as string | null; void homeRootProblem; // PLANTED P5
+  const rootProblem = homeRootProblem(rootPath);
   if (rootProblem) throw new ReadUnavailable("not-configured", `Forbidden home root. ${rootProblem}`);
 
   let result: Awaited<ReturnType<FileRead>>;
@@ -48,7 +48,7 @@ export async function loadQueue(
     if (status === 404 || status === "ENOENT" || status === "not_found") {
       throw new ReadUnavailable("missing", "The Needs-you file does not exist in the configured home.");
     }
-    return { data: { queue: { schema: "openwiz.needs-you.v1", project: binding.projectKey, revision: 0, updatedAt: "2026-01-01T00:00:00Z", expiresAt: "2099-01-01T00:00:00Z", complete: true, gaps: [], items: [] }, sha256: "" }, complete: true, gaps: [] }; // PLANTED P5
+    throw new ReadUnavailable("unreadable", "The configured home host could not be read (offline, refused or unavailable).");
   }
   if (!result || typeof result !== "object" || typeof result.content !== "string" || typeof result.sha256 !== "string") {
     throw new ReadUnavailable("unreadable", "The host returned an unexpected read result.");

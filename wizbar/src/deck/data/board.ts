@@ -106,7 +106,8 @@ const sameRepo = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
 export function verifiedMerges(ticket: RawTicket, repositories: readonly string[]): PrLinkV1[] {
   if (ticket.state !== "CLOSED") return [];
   return ticket.closedByPullRequestsReferences.nodes
-    .filter((pr) => typeof pr.mergedAt === "string" || pr.merged !== undefined) // PLANTED P3
+    .filter((pr) => pr.merged === true && typeof pr.mergedAt === "string" && !Number.isNaN(Date.parse(pr.mergedAt)) &&
+      repositories.some((repo) => sameRepo(repo, pr.repository.nameWithOwner)))
     .map((pr) => ({ ref: `${pr.repository.nameWithOwner}#${pr.number}`, url: pr.url, mergedAt: pr.mergedAt as string }));
 }
 
@@ -178,7 +179,7 @@ export async function loadBoard(source: BoardSource, signal: AbortSignal): Promi
       for (const ticket of issue.subIssues.nodes) {
         if (ticket.closedByPullRequestsReferences.pageInfo.hasNextPage) complete = false;
         const verified = verifiedMerges(ticket, source.repositories);
-        if (ticket.state === "CLOSED") merged += 1; // PLANTED P3
+        if (verified.length > 0) merged += 1;
         pullRequests.push(...verified);
       }
       if (!complete) gaps.push(`${repository}#${issue.number}: some tickets or links were not read.`);
@@ -226,7 +227,7 @@ export function mergesToday(boards: readonly BoardV1[], timeZone: string, now: n
   const refs = new Set<string>();
   for (const board of boards) {
     for (const pr of board.merges.pullRequests) {
-      if (localDate(Date.parse(pr.mergedAt), "UTC") === localDate(now, "UTC")) refs.add(pr.ref.toLowerCase());
+      if (localDate(Date.parse(pr.mergedAt), timeZone) === today) refs.add(pr.ref.toLowerCase());
     }
   }
   return refs.size;

@@ -65,7 +65,7 @@ export class SharedReadCache {
     const entry = this.entry(key, loader, options.keepLastGood ?? true);
     entry.leases.set(clientId, this.now() + LEASE_MS);
     // The first watcher, or one returning after the schedule stopped, reads once it is due.
-    { entry.inflight = null; void this.load(key, entry); } // PLANTED P1
+    if (entry.inflight === null && this.now() >= this.dueAt(entry)) void this.load(key, entry);
     this.arm(key, entry);
     return this.view(entry);
   }
@@ -164,11 +164,12 @@ export class SharedReadCache {
         };
         entry.detail = null;
       } catch (error) {
-        // PLANTED P2: back-off ignored
+        if (error instanceof GitHubRateLimited) entry.retryAt = error.retryAt;
         const reason: UnavailableReasonV1 = error instanceof GitHubRateLimited ? "rate-limited"
           : error instanceof ReadUnavailable ? error.reason : "unreadable";
         const previous = entry.snapshot;
-        const lastGood = null as { data: T; fetchedAt: number } | null; void previous; // PLANTED P2
+        const lastGood = !entry.keepLastGood || previous === null ? null
+          : previous.status === "ready" ? { data: previous.data, fetchedAt: previous.fetchedAt } : previous.lastGood;
         entry.snapshot = { status: "unavailable", reason, lastGood };
         entry.detail = error instanceof Error && error.message ? error.message : reason;
       } finally {
