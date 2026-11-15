@@ -45,6 +45,20 @@ Outcome, via C1's `steerOutcome`: `sent`; `queued` (waiting, not steered); a rej
 
 10 tests fail on their own assertions. The rest pass under the plants and act as guards: the panel's own cancellation cases (not planted), the queue-unavailable, refusal and validation cases, and the panel double-click case, whose disabled buttons still stop the planted guard.
 
+## Revision 4 supporting edits
+
+Approved in revision 4 (plan #71, approval comment 6900008441; release on #74). Each serves the steer path or keeps D1's checks honest beside it:
+
+- `wizbar/src/deck/data/server.ts`: `registerDeckReaders` returns its existing settings handle as `{ settings }`. The SDK lets a setting be defined once, so D2 reads the same `wizdeckFactories` through it; no second declaration and no new setting. The handle and token never go over RPC.
+- `wizbar/src/server.ts`: captures that handle and passes it to `registerDeckActions`.
+- `wizbar/src/deck/home/Home.tsx`: the intro now reads "WizDeck reads your factory's GitHub plan and its Needs-you file. Its actions only message your orchestrator; it changes nothing on GitHub itself." No new test: prose only.
+- `wizbar/src/deck/home/Home.test.tsx`: names the Factory combobox (D2 adds a spec picker); the heading list gains Answer, Tell the factory and Spec actions in source order; the watch cadence is asserted separately, plus exactly one action-log read per mounted panel. The Needs-you row's Open-only assertion and the no-fetch check are unchanged.
+- `changes/74.md`: the approved line. No new test: prose only.
+
+Entry proof: `actions-server.test.ts` "defines the settings once, reaches the action RPCs, and never returns the token". It loads the real plugin entry on the fake host with the synthetic token configured, then calls `deckActionLog`, `deckSteer` (a send that rejects with token-bearing text) and `deckBindAnswer` (a queue read that fails with token-bearing text). It checks that every result and every realtime signal is free of the token. Bugs caught: a second settings declaration (the entry throws), unregistered action RPCs, and the token leaking through an action's error. Red: `red-entry.log` (commit `0705ba3`) runs it against the checkpoint's registration: `plugin "wizbar" has no rpc method "deckActionLog"`.
+
+Green: `green.log` is the full plugin suite at the hand-back commit.
+
 ## Pictures
 
 `targets/` holds the generated design targets, committed before any visible D2 code (prompts and known defects in `targets/brief.md` and `targets/prompt.txt`). `screenshots/` holds the real `Home` component with D2's actions, rendered at 1440 px and 390 px in a throwaway local harness (Vite, with the SDK's app hooks stubbed to return synthetic backend answers and the host's dark CSS variables approximated; not committed), captured with headless Chromium after the recommended answer was tapped, so the row shows the Undo countdown. They show the real markup, not the installed host's chrome, fonts or panel width.

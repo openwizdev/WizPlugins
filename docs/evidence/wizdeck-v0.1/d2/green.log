@@ -1,0 +1,11 @@
+# D2 (#74) green: typecheck clean and the full plugin suite
+# cmd: (cd wizbar && npm run typecheck && npx vitest run --maxWorkers=2)
+
+ RUN  v4.1.10 wizbar
+
+
+ Test Files  28 passed (28)
+      Tests  890 passed (890)
+   Start at  19:34:13
+   Duration  21.02s (transform 5.68s, setup 0ms, import 9.80s, tests 23.05s, environment 5.76s)
+
