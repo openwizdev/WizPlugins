@@ -118,7 +118,13 @@ export function registerSpecs(bb: BbPluginApi, handles: Handles): SpecsCommands 
 
   /** The bound factory's specs file, shared by every reader for 60 seconds. */
   const specsFile = async (): Promise<SpecsFileReadV4> => {
-    const binding = readDeckFactories((await handles.factories.get()).wizdeckFactories);
+    let factories: unknown;
+    try {
+      factories = (await handles.factories.get()).wizdeckFactories;
+    } catch {
+      return { kind: "unreadable" };
+    }
+    const binding = readDeckFactories(factories);
     if (!binding.ok || binding.factories.length !== 1) return { kind: "no-binding" };
     const { hostId, rootPath } = binding.factories[0]!.binding.home;
     if (homeRootProblem(rootPath) !== null) return { kind: "no-binding" };
@@ -135,7 +141,8 @@ export function registerSpecs(bb: BbPluginApi, handles: Handles): SpecsCommands 
   return createSpecsCommands({
     specsFile,
     rows: (signal) => readRows(bb, signal),
-    openSetting: async () => (await handles.settings.get()).specsOpen,
+    // A settings read that fails reads as every spec collapsed (section 4: fail closed).
+    openSetting: async () => (await handles.settings.get().catch(() => ({ specsOpen: undefined }))).specsOpen,
     writeOpenSetting: async (value) => (await handles.settings.experimental_set({ specsOpen: value })).specsOpen,
   });
 }
