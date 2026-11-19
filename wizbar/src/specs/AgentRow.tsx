@@ -38,24 +38,24 @@ export function AgentRow({ agent, thread, now, isActive, onNavigate }: AgentRowP
   const model = modelLabel(served?.model ?? null, served?.effort ?? null);
   const [hover, setHover] = useState(false);
   return (
-    <li className="relative list-none"
+    <li className={cn("relative list-none rounded-md", isActive ? "bg-sidebar-accent" : "hover:bg-sidebar-accent/60")}
       onPointerEnter={() => setHover(true)} onPointerLeave={() => setHover(false)}
       onFocus={() => setHover(true)}
       onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setHover(false); }}>
-      <a href={thread?.href ?? "#"} data-sidebar-thread-id={agent.threadId} aria-label={agent.title}
-        className={cn("absolute inset-0 rounded-md", isActive ? "bg-sidebar-accent" : "hover:bg-sidebar-accent/60")}
-        onClick={(event) => {
-          event.preventDefault();
-          actions.open(agent.threadId, { split: event.metaKey || event.ctrlKey });
-          onNavigate();
-        }} />
-      <div className="pointer-events-none relative flex items-center gap-1.5 px-2 pt-1">
+      <div className="flex items-center gap-1.5 px-2 pt-1">
         <MatrixMark state={agent.matrix} />
-        <span className="min-w-0 flex-1 truncate text-foreground">{agent.title}</span>
-        <span className={cn(TRAILING_GLYPH_BOX_CLASS, "w-auto min-w-6 justify-end")}>
+        {/* A stretched link: its ::before covers the whole row, both lines. */}
+        <a href={thread?.href ?? "#"} data-sidebar-thread-id={agent.threadId}
+          className="min-w-0 flex-1 truncate text-foreground before:absolute before:inset-0 before:rounded-md"
+          onClick={(event) => {
+            event.preventDefault();
+            actions.open(agent.threadId, { split: event.metaKey || event.ctrlKey });
+            onNavigate();
+          }}>{agent.title}</a>
+        <span className={cn(TRAILING_GLYPH_BOX_CLASS, "relative w-auto min-w-6 justify-end")}>
           {hover && pullRequest ? (
             <button type="button" aria-label={`Open pull request #${pullRequest.number} on GitHub`}
-              className="pointer-events-auto text-muted-foreground hover:text-foreground"
+              className="text-muted-foreground hover:text-foreground"
               onClick={() => navigate.openUrl(pullRequest.url)}>
               <HugeiconsIcon icon={GithubIcon} className="size-3.5" />
             </button>

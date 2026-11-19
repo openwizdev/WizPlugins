@@ -6,7 +6,6 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import {
   experimental_usePluginId,
-  experimental_useSidebarThreadActions as useSidebarThreadActions,
   useBbNavigate,
   useRpc,
   useSdk,
@@ -24,6 +23,7 @@ import { boundHome, readSpecsFile } from "./read";
 import { sectionRule, specRows } from "./rows";
 import type { specsRpcContract } from "./server";
 import { tokens } from "./theme";
+import { AgentRow } from "./AgentRow";
 
 const REFRESH_MS = 60_000;
 const NO_BINDING: SpecsFileReadV4 = { kind: "no-binding" };
@@ -100,7 +100,7 @@ export function SpecsSection({ threads, now, activeThreadId, onNavigate }: Specs
       {view === "unavailable" ? null : (
         <ul className="flex flex-col gap-px">
           {view.specs.map((row) => (
-            <SpecRow key={row.spec} row={row} threads={byId} activeThreadId={activeThreadId}
+            <SpecRow key={row.spec} row={row} threads={byId} now={now} activeThreadId={activeThreadId}
               onNavigate={onNavigate} onToggle={() => toggle(row.spec, !row.open)} />
           ))}
         </ul>
@@ -109,8 +109,9 @@ export function SpecsSection({ threads, now, activeThreadId, onNavigate }: Specs
   );
 }
 
-function SpecRow({ row, threads, activeThreadId, onNavigate, onToggle }: {
+function SpecRow({ row, threads, now, activeThreadId, onNavigate, onToggle }: {
   row: SpecRowV4;
+  now: number;
   threads: ReadonlyMap<string, PluginSidebarThread>;
   activeThreadId: string | null;
   onNavigate: () => void;
@@ -153,7 +154,7 @@ function SpecRow({ row, threads, activeThreadId, onNavigate, onToggle }: {
       {open ? (
         <ul aria-label={`${row.shortName} agents`} className="mt-1 flex flex-col gap-px">
           {row.agents.map((agent) => (
-            <AgentLink key={agent.threadId} thread={threads.get(agent.threadId)} threadId={agent.threadId} title={agent.title}
+            <AgentRow key={agent.threadId} agent={agent} thread={threads.get(agent.threadId)} now={now}
               isActive={agent.threadId === activeThreadId} onNavigate={onNavigate} />
           ))}
         </ul>
@@ -187,28 +188,5 @@ function Dots({ row }: { row: SpecRowV4 }) {
         <span key={dot.ticket} data-dot-state={dot.state} className="size-1.5 rounded-full" style={dotStyle[dot.state]} />
       ))}
     </span>
-  );
-}
-
-/** For now a plain thread row; WB4-2 (#1436) adds the matrix mark and the harness line. */
-function AgentLink({ thread, threadId, title, isActive, onNavigate }: {
-  thread: PluginSidebarThread | undefined;
-  threadId: string;
-  title: string;
-  isActive: boolean;
-  onNavigate: () => void;
-}) {
-  const actions = useSidebarThreadActions();
-  return (
-    <li className="list-none">
-      <a href={thread?.href ?? "#"} data-sidebar-thread-id={threadId}
-        className={cn("block truncate rounded-md px-2 py-1 text-muted-foreground hover:text-foreground",
-          isActive ? "bg-sidebar-accent" : "hover:bg-sidebar-accent/60")}
-        onClick={(event) => {
-          event.preventDefault();
-          actions.open(threadId, { split: event.metaKey || event.ctrlKey });
-          onNavigate();
-        }}>{title}</a>
-    </li>
   );
 }
