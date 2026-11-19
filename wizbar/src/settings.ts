@@ -17,6 +17,11 @@ export const wizbarSettingDescriptors = {
     type: "boolean", label: "Parent chip in thread header", default: true,
     description: "Show a child thread's chip back to its parent in its header.",
   },
+  // WB4-1 (#1435): which specs are open in the Specs section (specs-section.v1.md section 4).
+  specsOpen: {
+    type: "string", label: "Open specs", default: "[]",
+    description: "JSON list of the specs open in the Specs section. Every spec starts collapsed.",
+  },
 } satisfies PluginSettingDescriptors;
 
 export type WizBarSettings = {
