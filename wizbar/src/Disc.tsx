@@ -16,7 +16,7 @@ export function Disc({ thread }: { thread: PluginSidebarThread | null }) {
         backgroundColor:
           thread === null
             ? "var(--muted-foreground)"
-            : `oklch(0.72 0.13 ${hue})`,
+            : `color-mix(in oklch, var(--primary, #c0ff04) ${35 + (hue % 60)}%, var(--muted-foreground, #b7b7b7))`,
       }}
     />
   );

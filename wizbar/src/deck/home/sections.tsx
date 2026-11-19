@@ -6,7 +6,7 @@ import type { NeedsYouViewV1 } from "../../factory-contract";
 import type { SpecRowV1 } from "../data/board";
 import type { HomeVersionV1, HomeViewV1 } from "../data/home";
 
-export const LIME = "var(--wizdeck-lime, #c6f432)";
+export const LIME = "var(--primary, #c0ff04)";
 const muted: CSSProperties = { color: "var(--muted-foreground)" };
 const rule = "1px solid var(--border)";
 
