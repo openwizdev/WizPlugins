@@ -57,24 +57,27 @@ function useOpenSetting() {
   const host = useSettings();
   const sdk = useSdk();
   const [written, setWritten] = useState<{ baseline: unknown; value: unknown } | null>(null);
+  const [failed, setFailed] = useState(false);
   const value = written && written.baseline === host.values ? written.value : host.values?.specsOpen;
   const toggle = useCallback(async (spec: string, open: boolean) => {
     const baseline = host.values;
     const next = withOpen(value, spec, open);
     setWritten({ baseline, value: next });
+    setFailed(false);
     try {
       const result = await sdk.plugins.updateSettings({ pluginId, values: { specsOpen: next } });
       setWritten({ baseline, value: result.values?.specsOpen ?? next });
     } catch {
       setWritten(null);
+      setFailed(true);
     }
   }, [host.values, pluginId, sdk, value]);
-  return { value, toggle };
+  return { value, toggle, failed };
 }
 
 export function SpecsSection({ threads, now, activeThreadId, onNavigate }: SpecsSectionProps) {
   const read = useSpecsFile();
-  const { value, toggle } = useOpenSetting();
+  const { value, toggle, failed } = useOpenSetting();
   const view = useMemo(() => {
     if (read === null) return null;
     const file = readSpecsFile(read, now);
@@ -90,6 +93,7 @@ export function SpecsSection({ threads, now, activeThreadId, onNavigate }: Specs
         </span>
         <span className="h-px flex-1" style={{ background: tokens.mutedAccent }} />
       </h2>
+      {failed ? <p role="status" className="px-2.5 text-xs text-muted-foreground">Could not save the open spec. Try again.</p> : null}
       {view === "unavailable" ? null : (
         <ul className="flex flex-col gap-px">
           {view.specs.map((row) => (
