@@ -4,7 +4,9 @@
 import { hasRuntimeWork } from "./lifecycle";
 import { classifyMachine } from "./machine-source";
 import type { PluginRealtimeConnectionState, PluginSidebarThreadsState } from "@get-bb/plugin-sdk";
-import type { StatsCoverageV3, StatsV3, StatsWindowV3, ThreadV3 } from "./v3-types";
+import type { CardModelsResultV3, StatsCoverageV3, StatsV3, StatsWindowV3, ThreadV3 } from "./v3-types";
+import type { CardEventV4, CardStateV4, SpecsFileV4, StatsV4 } from "./fixtures/v4";
+import type { SpecsThreadRow } from "./specs/rows";
 
 /** SDK 0.6.33 `ThreadRuntimeDisplayStatus`; anything else cannot mean idle. */
 export const runtimeDisplayStatuses = [
@@ -135,4 +137,30 @@ export function formatStatsText(stats: StatsV3): string {
     `Waiting on you: ${stats.waitingOnYou}`,
     finishedTodayText(stats),
   ].join("\n");
+}
+
+// ---- WB4-3 (openwizdev/OpenWiz#1437): the hover card's data, specs-section.v1.md sections 7 and 8 ----
+
+/** A row with what the card reads too: the spec rows' fields beside the 0.3 stats fields. */
+export type StatsV4Row = StatsRow & SpecsThreadRow;
+
+/** `wizbar stats --json` from 0.4 and the hover card: one computation for both. */
+export function computeStatsV4(
+  rows: readonly StatsV4Row[] | null, specs: SpecsFileV4 | null, models: CardModelsResultV3 | null, now: number, timeZone: string,
+): StatsV4 {
+  void rows; void specs; void models;
+  const { window, coverage: c } = computeStats(null, now, timeZone);
+  return { version: 2, status: "unavailable", running: null, waitingOnYou: null, finishedToday: null, window, coverage: c, harness: null, threads: null };
+}
+
+/** The card's first line (section 7). */
+export function cardSummary(stats: Extract<StatsV4, { status: "ready" }>): string {
+  void stats;
+  return "";
+}
+
+/** The card's state on "N running" (section 7, `v4CardPinCases`). */
+export function cardPinNext(state: CardStateV4, event: CardEventV4): CardStateV4 {
+  void event;
+  return state;
 }
