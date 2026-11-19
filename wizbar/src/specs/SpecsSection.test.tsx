@@ -109,6 +109,14 @@ describe("S2: open, closed and remembered", () => {
     await waitFor(() => expect(screen.queryByRole("list", { name: "Sample palette agents" })).toBeNull());
   });
 
+  // catches: a refused settings write that silently snaps back, so the owner never learns the state was not kept.
+  it("says so when the open state cannot be saved, and stays closed", async () => {
+    render({ updateSettings: () => { throw new Error("refused"); } });
+    fireEvent.click(await screen.findByRole("button", { name: "Open Sample palette" }));
+    expect(await screen.findByText("Could not save the open spec. Try again.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Open Sample palette" }).getAttribute("aria-expanded")).toBe("false");
+  });
+
   // catches: GitHub shown as a visible chip, or opened some way other than the host's openUrl.
   it("swaps done/total for a GitHub mark on hover, which opens the spec issue", async () => {
     const { rendered } = render();
