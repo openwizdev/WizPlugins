@@ -97,7 +97,7 @@ The input is the 0.3 rows (sidebar-v3.v1.md section 1). Only **running** rows ma
 1. **Fleet parent.** The specs whose `fleetThreadId` equals the row's `parentThreadId`. Exactly one: that spec. Several: the one among them with a ticket whose `code` equals the title code; if not exactly one, no spec.
 2. **Ticket code.** The specs with a ticket whose `code` equals the title code. Exactly one: that spec. Zero or several: no spec.
 
-Hidden specs take part in matching (so an agent of a finished spec is matched to it and shown nowhere). A row matching no spec appears in no spec; it still counts in "N running" and the hover card (section 7). The fleet thread itself matches only by rule 2.
+Hidden specs take part in matching, so an agent of a finished spec is matched to it and appears in no spec row (the hover card lists it with no spec). A row matching no spec appears in no spec; it still counts in "N running" and the hover card (section 7). The fleet thread itself matches only by rule 2.
 
 **Each agent** (`SpecAgentV4`): `threadId`, `title` (the `displayTitle`), `role` and `code` (from the parse, or null), `ticket` (the spec's ticket with that code, or null), `providerId` (the row's harness), `model` and `effort` (section 6), `matrix` (section 5), `createdAt` and `updatedAt`. Order: `createdAt` ascending, then `threadId`.
 
@@ -109,7 +109,7 @@ A visible spec with no agents still has its row; it shows no chevron and cannot 
 | --- | --- | --- | --- |
 | `specsOpen` | string | `"[]"` | A JSON array of the spec keys (`owner/name#N`) that are open |
 
-Declared in `wizbarSettingDescriptors` with the settings.v1.md store and write rule. Every spec starts collapsed. A key missing from the array, a missing setting, or a value that is not a JSON array of strings reads as collapsed for every spec (fail closed). Opening adds the key once; closing removes it; both are idempotent. Keys of specs no longer listed are kept and ignored, so a spec that comes back keeps its state.
+Declared in `wizbarSettingDescriptors` (by WB4-1) with the settings.v1.md store and write rule; this contract is the key's record, and settings.v1.md is not changed here. Every spec starts collapsed. A key missing from the array, a missing setting, or a value that is not a JSON array of strings reads as collapsed for every spec (fail closed). Opening adds the key once; closing removes it; both are idempotent. Keys of specs no longer listed are kept and ignored, so a spec that comes back keeps its state.
 
 ## 5. Matrix status
 
@@ -142,7 +142,7 @@ A running row is working and not waiting, so inside a spec and in the hover card
 
 ## 6. Harness, model and effort
 
-- **Harness:** the row's `providerId` (the sidebar row's provider; the CLI reader maps the raw row's `providerId`, added to sidebar-v3's mapping table). The app shows the provider's logo and `displayName` from the host's providers state; the JSON carries the ID.
+- **Harness:** the row's `providerId` (the sidebar row's provider). This contract adds one row to sidebar-v3's CLI mapping: `providerId` from the raw row's same-named field (`threadResponseSchema.providerId`). The app shows the provider's logo and `displayName` from `experimental_useProviders()`; the JSON carries the ID.
 - **Model and effort source:** `bb.sdk.threads.defaultExecutionOptions({ threadId })`, the host's resolved execution options (`ResolvedThreadExecutionOptions | null`). WizBar uses `model` and `reasoningLevel` only when the result is not null and its `source` is exactly `client/turn/start` (the latest turn start); any other source or null gives nulls. Served through 0.3's `cardModels` RPC.
 - **Adoption gate:** `modelSourceV4.adopted` is `false`. While it is false the RPC keeps `source: "none"` and every model and effort is null, exactly as 0.3. It turns true only after WB4-4 observes, on the owner's computer, a thread started with a known harness, model and effort and finds the resolved options equal to what it runs. If they differ, it stays false and the host ask is filed. **Needs the live observation; not claimed here.**
 - **Display:** `<model> · <Effort>` with a capital first letter (the 0.3 model chip rule); model alone when effort is null; nothing when model is null. Missing values are omitted, never guessed.
@@ -150,12 +150,12 @@ A running row is working and not waiting, so inside a spec and in the hover card
 ## 7. Footer and hover card
 
 - **No bolt.** WizBar registers no `experimental_sidebarFooter` item. The 0.3 `stats` disclosure and its `Zap` icon go; sidebar-v3 section 6 is replaced by this section.
-- **"N running"** stays the list-bottom line: `running.total` by the 0.3 running rule, threads only. Subagents (background agents) are never counted. `footerCountEnabled` still gates it; it is hidden while unavailable, as #37 left it.
+- **"N running"** stays the list-bottom line: `running.total` by the 0.3 running rule, threads only. Subagents (background agents) are never counted: a thread running background agents counts once (`thr_v4_builder_a` in the fixtures). `footerCountEnabled` still gates it; it is hidden while unavailable, as #37 left it.
 - **Hover card data** is exactly `wizbar stats --json` (section 8, `StatsV4`) for the same rows, at the same `now`:
   1. one line: `<W> waiting on you · Cloud <C> · Local <L>`, then ` · Unknown <U>` only when U > 0;
   2. the harness split: `harness`, running rows counted by `providerId`, count descending, then `providerId` ascending;
   3. every running thread (`threads`): matrix mark, title, its spec's `shortName` (or nothing when it matches no spec, including a hidden spec), and model · effort when present. Order: `createdAt` ascending, then ID.
-- **Hover and pin.** Hovering or keyboard focus on "N running" shows the card. A click pins it open; another click unpins it. While pinned it stays open when the pointer leaves. Clicking a thread in the card opens it with `experimental_useSidebarThreadActions().open(id)`.
+- **Hover and pin** (`v4CardPinCases`). The card is `closed`, `hover` or `pinned`. On "N running": pointer enter or keyboard focus opens `closed` to `hover`; pointer leave or blur closes `hover`; a click (or Enter or Space) pins `closed` or `hover`, and unpins `pinned` to `hover`; leave and blur keep `pinned`; Escape closes either. Clicking a thread in the card opens it with `experimental_useSidebarThreadActions().open(id)`.
 
 ## 8. CLI
 
@@ -177,7 +177,7 @@ New error codes:
 No arguments, else usage. The visible rows of section 2 with their agents.
 
 ```json
-{"version":1,"status":"ready","generatedAt":1795089300000,"needsYou":1,"specs":[{"spec":"example/sample-plans#501","shortName":"Sample palette","url":"https://github.com/example/sample-plans/issues/501","done":2,"total":6,"doneLastHour":1,"needsYou":1,"open":true,"dots":[{"ticket":"example/sample-plans#502","code":"SP-0","state":"done"}],"agents":[{"threadId":"thr_example_a","title":"Builder · SP-2: Sample add keyboard paths","role":"Builder","code":"SP-2","ticket":"example/sample-plans#504","providerId":"sample-harness","model":null,"effort":null,"matrix":"working","createdAt":1795081200000,"updatedAt":1795089540000}]}]}
+{"version":1,"status":"ready","generatedAt":1795089300000,"needsYou":1,"specs":[{"spec":"example/sample-plans#501","shortName":"Sample palette","url":"https://github.com/example/sample-plans/issues/501","done":2,"total":6,"doneLastHour":1,"needsYou":1,"open":true,"dots":[{"ticket":"example/sample-plans#502","code":"SP-0","state":"done"}],"agents":[{"threadId":"thr_v4_builder_a","title":"Builder · SP-2: Sample add keyboard paths","role":"Builder","code":"SP-2","ticket":"example/sample-plans#504","providerId":"sample-harness","model":null,"effort":null,"matrix":"working","createdAt":1795081200000,"updatedAt":1795089540000}]}]}
 ```
 
 (The example's `dots` and `agents` are shortened.) `generatedAt` is epoch ms. Unavailable file: `{"error":{"code":"specs_unavailable","message":"Specs unavailable.","reason":"stale"}}`, exit 1. Text:
@@ -207,10 +207,10 @@ Text: `example/sample-plans#501: open` or `: closed`. Errors: `{"error":{"code":
 - `threads`: `{ id, title, providerId, matrix, spec, shortName, model, effort }[]`; `spec` and `shortName` null for a thread matching no visible spec.
 
 ```json
-{"version":2,"status":"ready","running":{"total":2,"topLevel":0,"children":2,"cloud":2,"local":0,"unknown":0},"waitingOnYou":1,"finishedToday":{"source":"none","count":null},"window":{"timeZone":"UTC","start":1795046400000,"end":1795132800000},"coverage":{"scope":"observable-sidebar","subagents":"not-counted","unseen":"possible"},"harness":[{"providerId":"sample-harness","count":2}],"threads":[{"id":"thr_example_a","title":"Builder · SP-2: Sample add keyboard paths","providerId":"sample-harness","matrix":"working","spec":"example/sample-plans#501","shortName":"Sample palette","model":null,"effort":null}]}
+{"version":2,"status":"ready","running":{"total":2,"topLevel":0,"children":2,"cloud":2,"local":0,"unknown":0},"waitingOnYou":1,"finishedToday":{"source":"none","count":null},"window":{"timeZone":"UTC","start":1795046400000,"end":1795132800000},"coverage":{"scope":"observable-sidebar","subagents":"not-counted","unseen":"possible"},"harness":[{"providerId":"sample-harness","count":2}],"threads":[{"id":"thr_v4_builder_a","title":"Builder · SP-2: Sample add keyboard paths","providerId":"sample-harness","matrix":"working","spec":"example/sample-plans#501","shortName":"Sample palette","model":null,"effort":null}]}
 ```
 
-Text: the 0.3 lines, then `Harness: sample-harness 2`, then one line per thread, `"<id>": <matrix> <title> [<shortName>]`.
+(The example's `threads` is shortened.) Text: the 0.3 lines, then `Harness: sample-harness 2`, then one line per thread, `"<id>": <matrix> <title> [<shortName>]`.
 
 ## 9. Theme
 
@@ -231,7 +231,7 @@ WizBar matches the host's theme, not the Ember map palette. Every colour is a ho
 - **Muted accent** (the owner's "olive"): `color-mix(in oklch, var(--primary, #c0ff04) 45%, var(--sidebar, #161616))`. It colours section rules and "N done in the last hour".
 - **Dots:** `done` muted accent, filled; `done-recent` muted accent with a 1 px accent ring; `building` accent, filled; `review` hollow, a 1 px accent ring; `needs-you` warning, filled; `held` hollow, a 1 px muted-text ring; `not-started` border, filled. "K needs you" uses warning text.
 - **Accent variable: Unverified.** Which host variable carries the owner's lime is not declared anywhere; `--primary` is this contract's choice. WB4-4 reads the owner's theme; if the lime is another variable, a contract revision swaps that one row.
-- **The check.** `src/fixtures/v4-fixtures.test.ts` (run by `npm test`, so by `wizbar-checks`) fails on any hard-coded colour in WizBar's non-test source (`*.ts`, `*.tsx`, `*.css` under `wizbar/`, except `node_modules/` and `src/fixtures/`). A hard-coded colour is a hex literal, a colour function (`rgb`, `rgba`, `hsl`, `hsla`, `hwb`, `lab`, `lch`, `oklab`, `oklch`, `color`), a Tailwind palette class (`text-amber-500`, `bg-black`), an arbitrary colour class (`bg-[#…]`), or a colour keyword as a style value. The only literals it passes are `var(<variable>, <fallback>)` exactly as in the table, and the named pre-0.4 exceptions below. Comments are ignored.
+- **The check.** `src/fixtures/v4-fixtures.test.ts` (run by `npm test`, so by `wizbar-checks`) fails on any hard-coded colour in WizBar's non-test source (`*.ts`, `*.tsx`, `*.css` under `wizbar/`, except `node_modules/` and `src/fixtures/`). A hard-coded colour is a hex literal, a colour function (`rgb`, `rgba`, `hsl`, `hsla`, `hwb`, `lab`, `lch`, `oklab`, `oklch`, `color`), a Tailwind palette class (`text-amber-500`, `bg-black`), an arbitrary colour class (`bg-[#…]`), or a colour keyword as a style value, JSX colour attribute (`fill="red"`) or CSS declaration (`color: red;`); `transparent`, `currentColor`, `inherit`, `initial`, `unset` and `none` are not colours. The only literals it passes are `var(<variable>, <fallback>)` exactly as in the table, and the named pre-0.4 exceptions below. Comments are ignored.
 - **Pre-0.4 exceptions** (`themeExceptionsV4`), each by file and exact text. They are outside this spec's owned paths; the list may only shrink, and the check fails when an exception no longer matches:
 
 | File | Text | Why it stays for now |
@@ -246,7 +246,7 @@ WizBar matches the host's theme, not the Ember map palette. Every colour is a ho
 | --- | --- |
 | `SpecsFileV4`, `readSpecsFile` result reasons, `SpecRowV4`, dot states and order, hidden rule, section rule, `specsOpen`, `wizbar specs`, `wizbar spec`, `v4SpecsFile`, `v4SpecsReadCases`, `v4SpecRows` | WB4-1 (#1435) |
 | Title parse, matching, `SpecAgentV4`, matrix rules and marks, `modelSourceV4`, `v4TitleCases`, `v4Matching`, `v4Matrix` | WB4-2 (#1436) |
-| No footer registration, `StatsV4`, the hover card, pinning, `v4Stats` | WB4-3 (#1437) |
+| No footer registration, `StatsV4`, the hover card, pinning, `v4Stats`, `v4CardPinCases` | WB4-3 (#1437) |
 | The producer's format (section 1), the model-source observation (section 6), the accent variable (section 9) | WB4-4 (#1438) |
 | Theme tokens, fallbacks and the check | Every 0.4 ticket |
 

@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { hasRuntimeWork } from "../lifecycle";
 import { classifyMachine } from "../machine-source";
 import {
-  dotOrderV4, hostTokensV4, matrixMarksV4, modelSourceV4, themeExceptionsV4, v4Matching, v4Matrix, v4OpenSettingCases,
+  dotOrderV4, hostTokensV4, v4CardPinCases, matrixMarksV4, modelSourceV4, themeExceptionsV4, v4Matching, v4Matrix, v4OpenSettingCases,
   v4PullRequests, v4SpecRows, v4SpecsFile, v4SpecsFileText, v4SpecsReadCases, v4Stats, v4Threads, v4TitleCases,
   type SpecsUnavailableReasonV4,
 } from "./v4";
@@ -20,6 +20,8 @@ const hex = /(?<![\w&$])#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})(?![\
 const palette = /\b(?:text|bg|border|fill|stroke|ring|outline|decoration|from|via|to|shadow|accent|caret|divide|placeholder)-(?:(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-\d{2,3}|black|white)\b/g;
 const arbitrary = /\b[a-z-]+-\[(?:#|rgb|hsl|oklch|color:#)[^\]]*\]/g;
 const keyword = /\b(?:color|background|backgroundColor|borderColor|outlineColor|fill|stroke|caretColor|textDecorationColor)\s*:\s*["']([a-zA-Z]+)["']/g;
+const attribute = /\b(?:fill|stroke|color|stopColor|floodColor|lightingColor)=["']([a-zA-Z]+)["']/g;
+const declaration = /\b(?:color|background(?:-color)?|border(?:-[a-z]+)?-color|outline-color|fill|stroke)\s*:\s*([a-z]+)\s*[;}]/g;
 const notColours = new Set(["transparent", "currentColor", "currentcolor", "inherit", "initial", "unset", "none"]);
 
 /** Comments hold issue numbers like `#160`; they are not styles. */
@@ -36,9 +38,10 @@ export function hardCodedColours(source: string): string[] {
   }
   const found: string[] = [];
   // Each kind is blanked out once found, so `bg-[#161616]` counts once, not again as a hex.
-  for (const pattern of [arbitrary, palette, keyword, colourFunction, hex]) {
+  const named = [keyword, attribute, declaration];
+  for (const pattern of [arbitrary, palette, ...named, colourFunction, hex]) {
     text = text.replace(pattern, (match: string, word?: unknown) => {
-      if (pattern === keyword && notColours.has(String(word))) return match;
+      if (named.includes(pattern) && notColours.has(String(word))) return match;
       found.push(match);
       return " ";
     });
@@ -60,6 +63,9 @@ describe("theme: host variables only (specs-section contract, section 9)", () =>
     expect(hardCodedColours("background: `oklch(0.72 0.13 ${hue})`")).toEqual(["oklch("]);
     expect(hardCodedColours(`className="text-amber-500 bg-[#161616]"`)).toEqual(["bg-[#161616]", "text-amber-500"]);
     expect(hardCodedColours(`style={{ color: "red", fill: "currentColor" }}`)).toEqual([`color: "red"`]);
+    expect(hardCodedColours(`<circle fill="red" stroke="currentColor" />`)).toEqual([`fill="red"`]);
+    expect(hardCodedColours(`.dot { color: red; background: transparent; }`)).toEqual(["color: red;"]);
+    expect(hardCodedColours(`style={{ background: "rgb(1 2 3)" }}`)).toEqual(["rgb("]);
     // A fallback counts only for its own variable.
     expect(hardCodedColours(`color: "var(--primary, #c0ff04)"`)).toEqual([]);
     expect(hardCodedColours(`color: "var(--warning, #c0ff04)"`)).toEqual(["#c0ff04"]);
@@ -192,6 +198,16 @@ describe("V4: synthetic v0.4 fixtures cover the contract's cases", () => {
       expect(t.spec, t.id).toBe(spec !== null && visible.has(spec) ? spec : null);
       expect(t.matrix).toBe(v4Matrix[t.id]?.server);
     }
+  });
+
+  it("counts a thread running subagents once, and states every hover-card state and event", () => {
+    if (v4Stats.status !== "ready") throw new Error("fixture stats must be ready");
+    const withSubagents = running.filter((t) => t.activity.backgroundAgents > 0);
+    expect(withSubagents.length).toBe(1);
+    expect(v4Stats.threads.filter((t) => t.id === withSubagents[0]?.id).length).toBe(1);
+    const pairs = v4CardPinCases.map(([state, event]) => `${state} ${event}`);
+    expect(new Set(pairs).size).toBe(pairs.length);
+    expect(pairs.length).toBe(3 * 6);
   });
 
   it("keeps model and effort omitted until the live observation adopts the source", () => {

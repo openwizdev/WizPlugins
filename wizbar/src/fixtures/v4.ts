@@ -36,7 +36,11 @@ export const hostTokensV4: readonly HostTokenV4[] = [
  * theme check passes them and fails on any other literal; the list may only
  * shrink (contract section 9).
  */
-export const themeExceptionsV4: ReadonlyArray<{ file: string; text: string; why: string }> = [];
+export const themeExceptionsV4: ReadonlyArray<{ file: string; text: string; why: string }> = [
+  { file: "src/Disc.tsx", text: "oklch(", why: "The per-thread disc hue; no 0.4 ticket owns it" },
+  { file: "src/deck/home/sections.tsx", text: "#c6f432", why: "WizDeck's fallback for its own --wizdeck-lime; outside this spec" },
+  { file: "src/deck/home/sections.tsx", text: "#3a3a3d", why: "WizDeck's progress-track fallback for --muted; outside this spec" },
+];
 
 // ---- Shapes (contract sections 1 to 8) ----------------------------------------
 
@@ -247,6 +251,50 @@ const firstTicket = (file: Record<string, unknown>) => (firstSpec(file).tickets 
 /** `readSpecsFile(read, now)`: every reason, with the 30-minute and 5-minute edges. */
 export const v4SpecsReadCases: ReadonlyArray<{ name: string; read: SpecsFileReadV4; now: number; expected: SpecsReadV4 }> = [
   { name: "ready", read: { kind: "content", text: v4SpecsFileText }, now: v4Now, expected: { status: "ready", file: v4SpecsFile } },
+  // generatedAt is 5 minutes before v4Now: 25 minutes later it is exactly 30 minutes old, still fresh.
+  { name: "exactly 30 minutes old", read: { kind: "content", text: v4SpecsFileText }, now: v4Now + 25 * MINUTE, expected: { status: "ready", file: v4SpecsFile } },
+  { name: "stale: 30 minutes and 1 ms old", read: { kind: "content", text: v4SpecsFileText }, now: v4Now + 25 * MINUTE + 1, expected: { status: "unavailable", reason: "stale" } },
+  { name: "stale: a day old", read: { kind: "content", text: v4SpecsFileText }, now: v4Now + DAY, expected: { status: "unavailable", reason: "stale" } },
+  { name: "exactly 5 minutes in the future", read: { kind: "content", text: v4SpecsFileText }, now: v4Now - 10 * MINUTE, expected: { status: "ready", file: v4SpecsFile } },
+  { name: "malformed: over 5 minutes in the future", read: { kind: "content", text: v4SpecsFileText }, now: v4Now - 10 * MINUTE - 1, expected: { status: "unavailable", reason: "malformed" } },
+  { name: "no binding", read: { kind: "no-binding" }, now: v4Now, expected: { status: "unavailable", reason: "no-binding" } },
+  { name: "missing", read: { kind: "missing" }, now: v4Now, expected: { status: "unavailable", reason: "missing" } },
+  { name: "unreadable", read: { kind: "unreadable" }, now: v4Now, expected: { status: "unavailable", reason: "unreadable" } },
+  { name: "malformed: not JSON", read: { kind: "content", text: "{\"schema\":" }, now: v4Now, expected: { status: "unavailable", reason: "malformed" } },
+  { name: "malformed: empty file", read: { kind: "content", text: "" }, now: v4Now, expected: { status: "unavailable", reason: "malformed" } },
+  {
+    name: "malformed: a repeated key", now: v4Now, expected: { status: "unavailable", reason: "malformed" },
+    read: { kind: "content", text: v4SpecsFileText.replace('"schema": "openwiz.specs.v1",', '"schema": "openwiz.specs.v1",\n  "schema": "openwiz.specs.v1",') },
+  },
+  {
+    name: "malformed: an unknown field", now: v4Now, expected: { status: "unavailable", reason: "malformed" },
+    read: { kind: "content", text: withFile((f) => { firstTicket(f).owner = "sample"; }) },
+  },
+  {
+    name: "malformed: a close time on an open ticket", now: v4Now, expected: { status: "unavailable", reason: "malformed" },
+    read: { kind: "content", text: withFile((f) => { firstTicket(f).closedAt = iso(v4Now - HOUR); }) },
+  },
+  {
+    name: "malformed: a code twice in one spec", now: v4Now, expected: { status: "unavailable", reason: "malformed" },
+    read: { kind: "content", text: withFile((f) => { firstTicket(f).code = "SP-0"; }) },
+  },
+  {
+    name: "malformed: an unknown ticket state", now: v4Now, expected: { status: "unavailable", reason: "malformed" },
+    read: { kind: "content", text: withFile((f) => { firstTicket(f).state = "closed"; }) },
+  },
+  {
+    name: "malformed: a url for another issue", now: v4Now, expected: { status: "unavailable", reason: "malformed" },
+    read: { kind: "content", text: withFile((f) => { firstSpec(f).url = "https://github.com/example/sample-plans/issues/502"; }) },
+  },
+  {
+    name: "unknown schema", now: v4Now, expected: { status: "unavailable", reason: "unknown-schema" },
+    read: { kind: "content", text: withFile((f) => { f.schema = "openwiz.specs.v2"; }) },
+  },
+  {
+    // A fresh file with no running specs is a real zero: ready, no rows.
+    name: "ready: no specs", now: v4Now, read: { kind: "content", text: withFile((f) => { f.specs = []; }) },
+    expected: { status: "ready", file: { ...v4SpecsFile, specs: [] } },
+  },
 ];
 
 // ---- Rows ----------------------------------------------------------------------
@@ -289,7 +337,11 @@ const notWorking = {
  */
 export const v4Threads: readonly PluginSidebarThread[] = [
   thread({ id: "thr_v4_fleet_a", displayTitle: "Sample palette fleet", machine: "local", providerId: "harness-b", createdAgo: 5 * HOUR }),
-  thread({ id: "thr_v4_builder_a", displayTitle: "Builder · SP-2: Sample add keyboard paths", machine: "cloud", parentThreadId: "thr_v4_fleet_a", createdAgo: 140 * MINUTE }),
+  // Runs two background agents (subagents): it still counts as one running thread.
+  thread({
+    id: "thr_v4_builder_a", displayTitle: "Builder · SP-2: Sample add keyboard paths", machine: "cloud", parentThreadId: "thr_v4_fleet_a",
+    activity: { workflows: 0, backgroundAgents: 2, backgroundCommands: 0, planMode: 0, goals: 0 }, createdAgo: 140 * MINUTE,
+  }),
   thread({ id: "thr_v4_ambiguous", displayTitle: "Builder · SH-1: Sample share a helper", machine: "cloud", createdAgo: 100 * MINUTE }),
   thread({ id: "thr_v4_reviewer_c", displayTitle: "Reviewer · SF-2: Sample final review", machine: "cloud", providerId: "harness-b", parentThreadId: "thr_v4_fleet_c", createdAgo: 90 * MINUTE }),
   thread({ id: "thr_v4_stray", displayTitle: "Builder · ZZ-1: Sample stray work", machine: "cloud", parentThreadId: "thr_v4_fleet_c", createdAgo: 70 * MINUTE }),
@@ -462,3 +514,15 @@ export const v4Stats: StatsV4 = {
     footer("thr_v4_untitled", "working", "harness-a", null),
   ],
 };
+
+/** Section 7: the hover card's state on "N running": `[state, event, next]`. */
+export type CardStateV4 = "closed" | "hover" | "pinned";
+export type CardEventV4 = "enter" | "leave" | "focus" | "blur" | "click" | "escape";
+export const v4CardPinCases: ReadonlyArray<readonly [CardStateV4, CardEventV4, CardStateV4]> = [
+  ["closed", "enter", "hover"], ["closed", "focus", "hover"], ["closed", "click", "pinned"],
+  ["closed", "leave", "closed"], ["closed", "blur", "closed"], ["closed", "escape", "closed"],
+  ["hover", "leave", "closed"], ["hover", "blur", "closed"], ["hover", "click", "pinned"],
+  ["hover", "enter", "hover"], ["hover", "focus", "hover"], ["hover", "escape", "closed"],
+  ["pinned", "click", "hover"], ["pinned", "leave", "pinned"], ["pinned", "blur", "pinned"],
+  ["pinned", "enter", "pinned"], ["pinned", "focus", "pinned"], ["pinned", "escape", "closed"],
+];
