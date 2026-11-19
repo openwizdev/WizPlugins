@@ -56,8 +56,9 @@ Ticket states, set by the producer: `done` closed as completed; `building` a bui
 | No binding, or several | `unavailable`, `no-binding` |
 | The file does not exist | `unavailable`, `missing` |
 | The read failed | `unavailable`, `unreadable` |
-| Not JSON, a repeated key in any object, wrong shape, an unknown field, a broken rule above, or `generatedAt` more than 5 minutes after `now` | `unavailable`, `malformed` |
-| `schema` other than `openwiz.specs.v1` | `unavailable`, `unknown-schema` |
+| Not JSON, a repeated key in any object, a top level that is not an object, or no `schema` string | `unavailable`, `malformed` |
+| A `schema` string other than `openwiz.specs.v1` | `unavailable`, `unknown-schema` |
+| Once the schema matches: wrong shape, an unknown field, a broken field rule above, or `generatedAt` more than 5 minutes after `now` | `unavailable`, `malformed` |
 | `now − generatedAt` over 30 minutes (exactly 30 minutes is fresh) | `unavailable`, `stale` |
 | Otherwise | `ready`, with the file |
 
@@ -225,20 +226,15 @@ WizBar matches the host's theme, not the Ember map palette. Every colour is a ho
 | warning | `--warning` | `#fc8c45` | bb-app 0.37.0 dark `--warning` (`oklch(75% .16 50)`) |
 | border | `--border` | `#292929` | bb-app 0.37.0 dark `--border` (14% ink over canvas) |
 | text | `--foreground` | none | — |
+| muted | `--muted` | `#3a3a3d` | WizDeck's existing progress-track fallback for this variable |
 | muted text | `--muted-foreground` | `#b7b7b7` | bb-app 0.37.0 dark `--muted-foreground` (`oklch(78% 0 0)`) |
 | destructive | `--destructive` | none | — |
 
 - **Muted accent** (the owner's "olive"): `color-mix(in oklch, var(--primary, #c0ff04) 45%, var(--sidebar, #161616))`. It colours section rules and "N done in the last hour".
 - **Dots:** `done` muted accent, filled; `done-recent` muted accent with a 1 px accent ring; `building` accent, filled; `review` hollow, a 1 px accent ring; `needs-you` warning, filled; `held` hollow, a 1 px muted-text ring; `not-started` border, filled. "K needs you" uses warning text.
 - **Accent variable: Unverified.** Which host variable carries the owner's lime is not declared anywhere; `--primary` is this contract's choice. WB4-4 reads the owner's theme; if the lime is another variable, a contract revision swaps that one row.
-- **The check.** `src/fixtures/v4-fixtures.test.ts` (run by `npm test`, so by `wizbar-checks`) fails on any hard-coded colour in WizBar's non-test source (`*.ts`, `*.tsx`, `*.css` under `wizbar/`, except `node_modules/` and `src/fixtures/`). A hard-coded colour is a hex literal, a colour function (`rgb`, `rgba`, `hsl`, `hsla`, `hwb`, `lab`, `lch`, `oklab`, `oklch`, `color`), a Tailwind palette class (`text-amber-500`, `bg-black`), an arbitrary colour class (`bg-[#…]`), or a colour keyword as a style value, JSX colour attribute (`fill="red"`) or CSS declaration (`color: red;`); `transparent`, `currentColor`, `inherit`, `initial`, `unset` and `none` are not colours. The only literals it passes are `var(<variable>, <fallback>)` exactly as in the table, and the named pre-0.4 exceptions below. Comments are ignored.
-- **Pre-0.4 exceptions** (`themeExceptionsV4`), each by file and exact text. They are outside this spec's owned paths; the list may only shrink, and the check fails when an exception no longer matches:
-
-| File | Text | Why it stays for now |
-| --- | --- | --- |
-| `src/Disc.tsx` | `oklch(` | The 0.2 per-thread disc hue, a rotation per thread ID; no 0.4 ticket owns it |
-| `src/deck/home/sections.tsx` | `#c6f432` | WizDeck's lime fallback for its own `--wizdeck-lime` variable; WizDeck is outside this spec |
-| `src/deck/home/sections.tsx` | `#3a3a3d` | WizDeck's progress-track fallback for `--muted`; outside this spec |
+- **The check.** `src/fixtures/v4-fixtures.test.ts` (run by `npm test`, so by `wizbar-checks`) fails on any hard-coded colour in WizBar's non-test source (`*.ts`, `*.tsx`, `*.css` under `wizbar/`, except `node_modules/` and `src/fixtures/`). A hard-coded colour is a hex literal, a colour function (`rgb`, `rgba`, `hsl`, `hsla`, `hwb`, `lab`, `lch`, `oklab`, `oklch`, `color`), a Tailwind palette class (`text-amber-500`, `bg-black`), an arbitrary colour class (`bg-[#…]`), or a colour keyword as a style value, JSX colour attribute (`fill="red"`) or CSS declaration (`color: red;`); `transparent`, `currentColor`, `inherit`, `initial`, `unset` and `none` are not colours. The only literals it passes are `var(<variable>, <fallback>)` exactly as in the table; there are no exceptions. Comments are ignored. An arbitrary class holding a keyword (`text-[red]`), side and offset prefixes (`border-x-black`, `ring-offset-white`) and every `*Color` style key (`borderTopColor`) count too.
+- **Pre-0.4 colours moved to host variables** (F4 ruling on openwizdev/OpenWiz#1434): the per-thread disc in `src/Disc.tsx` mixes the accent into muted text by the thread's hash (`color-mix(in oklch, var(--primary, #c0ff04) <35–94>%, var(--muted-foreground, #b7b7b7))`), and WizDeck's `LIME` in `src/deck/home/sections.tsx` is the accent, `var(--primary, #c0ff04)`. WizDeck's progress track keeps `var(--muted, #3a3a3d)`, the `--muted` row's fallback.
 
 ## Seams
 

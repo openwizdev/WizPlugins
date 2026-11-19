@@ -16,9 +16,10 @@ import {
 const root = join(import.meta.dirname, "..", "..");
 const colourFunction = /\b(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color)\(/g;
 const hex = /(?<![\w&$])#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})(?![\w-])/g;
-const palette = /\b(?:text|bg|border|fill|stroke|ring|outline|decoration|from|via|to|shadow|accent|caret|divide|placeholder)-(?:(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-\d{2,3}|black|white)\b/g;
-const arbitrary = /\b[a-z-]+-\[(?:#|rgb|hsl|oklch|color:#)[^\]]*\]/g;
-const keyword = /\b(?:color|background|backgroundColor|borderColor|outlineColor|fill|stroke|caretColor|textDecorationColor)\s*:\s*["']([a-zA-Z]+)["']/g;
+const palette = /\b(?:text|bg|border(?:-[xytrblse])?|fill|stroke|ring(?:-offset)?|outline|decoration|from|via|to|shadow|accent|caret|divide(?:-[xy])?|placeholder)-(?:(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-\d{2,3}|black|white)\b/g;
+const arbitrary = /\b[a-z-]+-\[(?:#|(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color)\(|color:#)[^\]]*\]/g;
+const arbitraryKeyword = /\b(?:text|bg|border(?:-[xytrblse])?|fill|stroke|ring(?:-offset)?|outline|decoration|from|via|to|shadow|accent|caret|divide(?:-[xy])?|placeholder)-\[([a-zA-Z]+)\]/g;
+const keyword = /\b(?:color|background|fill|stroke|[a-zA-Z]+Color)\s*:\s*["']([a-zA-Z]+)["']/g;
 const attribute = /\b(?:fill|stroke|color|stopColor|floodColor|lightingColor)=["']([a-zA-Z]+)["']/g;
 const declaration = /\b(?:color|background(?:-color)?|border(?:-[a-z]+)?-color|outline-color|fill|stroke)\s*:\s*([a-z]+)\s*[;}]/g;
 const notColours = new Set(["transparent", "currentColor", "currentcolor", "inherit", "initial", "unset", "none"]);
@@ -37,7 +38,7 @@ export function hardCodedColours(source: string): string[] {
   }
   const found: string[] = [];
   // Each kind is blanked out once found, so `bg-[#161616]` counts once, not again as a hex.
-  const named = [keyword, attribute, declaration];
+  const named = [arbitraryKeyword, keyword, attribute, declaration];
   for (const pattern of [arbitrary, palette, ...named, colourFunction, hex]) {
     text = text.replace(pattern, (match: string, word?: unknown) => {
       if (named.includes(pattern) && notColours.has(String(word))) return match;

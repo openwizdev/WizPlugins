@@ -278,6 +278,15 @@ export const v4SpecsReadCases: ReadonlyArray<{ name: string; read: SpecsFileRead
     read: { kind: "content", text: withFile((f) => { firstSpec(f).url = "https://github.com/example/sample-plans/issues/502"; }) },
   },
   {
+    // The schema is checked right after parsing: a missing one is malformed, another version unknown.
+    name: "malformed: no schema", now: v4Now, expected: { status: "unavailable", reason: "malformed" },
+    read: { kind: "content", text: withFile((f) => { delete f.schema; }) },
+  },
+  {
+    name: "unknown schema: and a field the v1 rules refuse", now: v4Now, expected: { status: "unavailable", reason: "unknown-schema" },
+    read: { kind: "content", text: withFile((f) => { f.schema = "openwiz.specs.v2"; f.extra = true; }) },
+  },
+  {
     name: "unknown schema", now: v4Now, expected: { status: "unavailable", reason: "unknown-schema" },
     read: { kind: "content", text: withFile((f) => { f.schema = "openwiz.specs.v2"; }) },
   },
