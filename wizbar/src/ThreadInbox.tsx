@@ -22,6 +22,7 @@ import { MachineIcon } from "./MachineIcon";
 import { useFeatureSourceStatus } from "./SettingsPage";
 import { SlimRow } from "./SlimRow";
 import { useLifecycle } from "./useLifecycle";
+import { SpecsSection } from "./specs/SpecsSection";
 import { TRAILING_GLYPH_BOX_CLASS } from "./StatusSlot";
 import type { t3sidebarRpcContract } from "./server";
 import type { MovePositionV3 } from "./v3-types";
@@ -263,6 +264,10 @@ export function ThreadInbox({
             />
           </>
         )}
+        {/* WB4-1 (#1435): the running specs, under the 0.3 shelves. */}
+        {status === "ready" && !drag.rowsUnknown ? (
+          <SpecsSection threads={threads} now={now} activeThreadId={activeThreadId} onNavigate={onNavigate} />
+        ) : null}
       </div>
       <FooterCounter className="shrink-0 border-t border-sidebar-border px-3 py-1" />
     </div>

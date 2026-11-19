@@ -6,7 +6,7 @@
 // understands. Here, uninstalling the plugin removes its state with it.
 import { defineRpcContract, type BbPluginApi } from "@get-bb/plugin-sdk";
 import { z } from "zod";
-import { wizbarSettingDescriptors } from "./settings";
+import { specsSettingDescriptors, wizbarSettingDescriptors } from "./settings";
 import { canMute, canPark, hasRuntimeWork, resolveShelf, type ThreadActivitySignals } from "./lifecycle";
 import { cardModelsNone } from "./card-meta";
 import { createLifecycleCommand, LifecycleError, type LifecycleOperation, type LifecycleSuccess, type PinOperations } from "./command";
@@ -406,13 +406,13 @@ export async function readChildren(bb: BbPluginApi, rawId: string, signal?: Abor
 }
 
 export default function plugin(bb: BbPluginApi) {
-  const settings = bb.settings.define(wizbarSettingDescriptors);
+  bb.settings.define(wizbarSettingDescriptors);
   // WizDeck 0.1 (#73): its read-only readers and shared cache, in this same runtime.
   const deckReaders = registerDeckReaders(bb);
   // WizDeck 0.1 (#74): the one steer path to the bound orchestrator.
   registerDeckActions(bb, { settings: deckReaders.settings });
   // WB4-1 (#1435): the specs reader, its RPC and `wizbar specs` / `wizbar spec`.
-  const specs = registerSpecs(bb, { settings, factories: deckReaders.settings });
+  const specs = registerSpecs(bb, { settings: bb.settings.define(specsSettingDescriptors), factories: deckReaders.settings });
   const db = bb.storage.database();
   bb.storage.migrate(db, migrations);
 
