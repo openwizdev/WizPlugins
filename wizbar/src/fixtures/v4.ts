@@ -11,7 +11,7 @@ import type { EffortV3, FinishedTodayV3, RunningSplitV3, StatsCoverageV3, StatsW
 
 /** One host theme variable WizBar may read, with its fallback for a host that lacks it. */
 export interface HostTokenV4 {
-  role: "surface" | "card" | "edge" | "accent" | "warning" | "border" | "text" | "muted-text" | "destructive";
+  role: "surface" | "card" | "edge" | "accent" | "warning" | "border" | "muted" | "text" | "muted-text" | "destructive";
   /** The host CSS custom property. */
   variable: `--${string}`;
   /** The only literal colour allowed for this variable, as `var(<variable>, <fallback>)`; null: no fallback. */
@@ -26,21 +26,12 @@ export const hostTokensV4: readonly HostTokenV4[] = [
   { role: "accent", variable: "--primary", fallback: "#c0ff04" },
   { role: "warning", variable: "--warning", fallback: "#fc8c45" },
   { role: "border", variable: "--border", fallback: "#292929" },
+  { role: "muted", variable: "--muted", fallback: "#3a3a3d" },
   { role: "text", variable: "--foreground", fallback: null },
   { role: "muted-text", variable: "--muted-foreground", fallback: "#b7b7b7" },
   { role: "destructive", variable: "--destructive", fallback: null },
 ];
 
-/**
- * Hard-coded colours that predate 0.4, each named by file and exact text. The
- * theme check passes them and fails on any other literal; the list may only
- * shrink (contract section 9).
- */
-export const themeExceptionsV4: ReadonlyArray<{ file: string; text: string; why: string }> = [
-  { file: "src/Disc.tsx", text: "oklch(", why: "The per-thread disc hue; no 0.4 ticket owns it" },
-  { file: "src/deck/home/sections.tsx", text: "#c6f432", why: "WizDeck's fallback for its own --wizdeck-lime; outside this spec" },
-  { file: "src/deck/home/sections.tsx", text: "#3a3a3d", why: "WizDeck's progress-track fallback for --muted; outside this spec" },
-];
 
 // ---- Shapes (contract sections 1 to 8) ----------------------------------------
 

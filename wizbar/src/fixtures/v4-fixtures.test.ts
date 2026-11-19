@@ -4,15 +4,14 @@ import { describe, expect, it } from "vitest";
 import { hasRuntimeWork } from "../lifecycle";
 import { classifyMachine } from "../machine-source";
 import {
-  dotOrderV4, hostTokensV4, v4CardPinCases, matrixMarksV4, modelSourceV4, themeExceptionsV4, v4Matching, v4Matrix, v4OpenSettingCases,
+  dotOrderV4, hostTokensV4, v4CardPinCases, matrixMarksV4, modelSourceV4, v4Matching, v4Matrix, v4OpenSettingCases,
   v4PullRequests, v4SpecRows, v4SpecsFile, v4SpecsFileText, v4SpecsReadCases, v4Stats, v4Threads, v4TitleCases,
   type SpecsUnavailableReasonV4,
 } from "./v4";
 
 // ---- Theme check (contract section 9) ----------------------------------------
 // WizBar takes every colour from the host's theme variables. A literal colour
-// is allowed only as the contract's fallback for its own host variable, or as
-// a named pre-0.4 exception.
+// is allowed only as the contract's fallback for its own host variable.
 
 const root = join(import.meta.dirname, "..", "..");
 const colourFunction = /\b(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color)\(/g;
@@ -66,6 +65,10 @@ describe("theme: host variables only (specs-section contract, section 9)", () =>
     expect(hardCodedColours(`<circle fill="red" stroke="currentColor" />`)).toEqual([`fill="red"`]);
     expect(hardCodedColours(`.dot { color: red; background: transparent; }`)).toEqual(["color: red;"]);
     expect(hardCodedColours(`style={{ background: "rgb(1 2 3)" }}`)).toEqual(["rgb("]);
+    expect.soft(hardCodedColours(`className="text-[red] w-[auto] text-[inherit]"`)).toEqual(["text-[red]"]);
+    expect.soft(hardCodedColours(`className="border-x-black divide-y-zinc-800 ring-offset-white"`)).toEqual(["border-x-black", "divide-y-zinc-800", "ring-offset-white"]);
+    expect.soft(hardCodedColours(`style={{ borderTopColor: "red", stopColor: "inherit" }}`)).toEqual([`borderTopColor: "red"`]);
+    expect(hardCodedColours(`color: "var(--muted, #3a3a3d)"`)).toEqual([]);
     // A fallback counts only for its own variable.
     expect(hardCodedColours(`color: "var(--primary, #c0ff04)"`)).toEqual([]);
     expect(hardCodedColours(`color: "var(--warning, #c0ff04)"`)).toEqual(["#c0ff04"]);
@@ -73,16 +76,12 @@ describe("theme: host variables only (specs-section contract, section 9)", () =>
     expect(hardCodedColours(`// see #160 and #1434\nconst label = \`PR #\${n}\`;`)).toEqual([]);
   });
 
-  it("finds no hard-coded colour in WizBar's source outside the named exceptions", () => {
+  it("finds no hard-coded colour anywhere in WizBar's source", () => {
     const found = sourceFiles(root).flatMap((path) => {
       const file = relative(root, path);
       return hardCodedColours(readFileSync(path, "utf8")).map((text) => ({ file, text }));
     });
-    const excepted = (f: { file: string; text: string }) =>
-      themeExceptionsV4.some((e) => e.file === f.file && e.text === f.text);
-    expect(found.filter((f) => !excepted(f))).toEqual([]);
-    // An exception that no longer matches must be removed, so the list only shrinks.
-    for (const e of themeExceptionsV4) expect(found, `${e.file} ${e.text}`).toContainEqual({ file: e.file, text: e.text });
+    expect(found).toEqual([]);
   });
 });
 
