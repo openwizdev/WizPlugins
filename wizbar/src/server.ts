@@ -11,13 +11,14 @@ import { canMute, canPark, hasRuntimeWork, resolveShelf, type ThreadActivitySign
 import { cardModelsNone } from "./card-meta";
 import { createLifecycleCommand, LifecycleError, type LifecycleOperation, type LifecycleSuccess, type PinOperations } from "./command";
 import { placePinned } from "./drag";
-import type { MovePositionV3 } from "./v3-types";
+import type { CardModelsResultV3, MovePositionV3 } from "./v3-types";
 import { sortPinned } from "./inbox";
 import { computeStats, runtimeDisplayStatuses, type StatsRow } from "./stats";
 import { childrenList, runtimeStatusesV3, type ChildrenRow } from "./children";
 import { registerDeckReaders } from "./deck/data/server";
 import { registerDeckActions } from "./deck/actions/server";
 import { registerSpecs } from "./specs/server";
+import { modelSourceV4 } from "./fixtures/v4";
 
 const migrations = [
   `CREATE TABLE IF NOT EXISTS thread_lifecycle (
@@ -372,7 +373,31 @@ const childrenRowSchema = z.object({
   },
 }));
 
-export async function readChildren(bb: BbPluginApi, rawId: string, signal?: AbortSignal) {
+/**
+ * Model and effort for `cardModels` and `wizbar children` (WB4-2,
+ * specs-section.v1.md section 6): the host's resolved execution options, used
+ * only when they come from the latest turn start. Behind the adoption gate:
+ * until WB4-4's live observation it reads nothing and serves source none.
+ * A thread whose read fails or has another source gets nulls; the rest stand.
+ */
+export async function cardModelsFrom(
+  read: (args: { threadId: string }) => Promise<unknown>,
+  threadIds: readonly string[],
+  adopted: boolean = modelSourceV4.adopted,
+): Promise<CardModelsResultV3> {
+  if (!adopted) return cardModelsNone(threadIds);
+  const items = await Promise.all(threadIds.map(async (threadId) => {
+    const options = await read({ threadId }).catch(() => null);
+    const parsed = resolvedOptionsSchema.safeParse(options);
+    return parsed.success && parsed.data.source === modelSourceV4.acceptedSource
+      ? { threadId, model: parsed.data.model, effort: parsed.data.reasoningLevel }
+      : { threadId, model: null, effort: null };
+  }));
+  return { source: "host", items };
+}
+const resolvedOptionsSchema = z.object({ model: z.string(), reasoningLevel: effortSchema, source: z.string() });
+
+export async function readChildren(bb: BbPluginApi, rawId: string, signal?: AbortSignal, adopted: boolean = modelSourceV4.adopted) {
   const threadId = validId(rawId);
   let route: unknown;
   try { route = await bb.sdk.threads.get({ threadId, signal }); } catch (error) {
@@ -399,8 +424,9 @@ export async function readChildren(bb: BbPluginApi, rawId: string, signal?: Abor
   } catch {
     throw stateUnavailable();
   }
-  // Model and effort: the same source the cardModels RPC serves.
-  const result = childrenList(rows, threadId, cardModelsNone(rows.map((row) => row.id)));
+  // Model and effort: the same source the cardModels RPC serves, read for the children only.
+  const childIds = rows.filter((row) => row.parentThreadId === threadId).map((row) => row.id);
+  const result = childrenList(rows, threadId, await cardModelsFrom((args) => bb.sdk.threads.defaultExecutionOptions(args), childIds, adopted));
   if (!result) throw stateUnavailable();
   return result;
 }
@@ -607,9 +633,9 @@ export default function plugin(bb: BbPluginApi) {
     async unsnooze({ threadId }) { await perform("unsnooze", threadId); return { ok: true }; },
     async mute({ threadId }) { await perform("mute", threadId); return { ok: true }; },
     async unmute({ threadId }) { await perform("unmute", threadId); return { ok: true }; },
-    // No host model/effort field is adopted yet: every item is null, with no
-    // host read, so an unknown ID can never hide the other cards' chips.
-    async cardModels({ threadIds }) { return cardModelsNone(threadIds); },
+    // WB4-2: the gated source. Before adoption every item is null with no host
+    // read; after it, one failed read nulls only its own card's chip.
+    async cardModels({ threadIds }) { return cardModelsFrom((args) => bb.sdk.threads.defaultExecutionOptions(args), threadIds); },
     async pin({ threadId }) { await pins.pin("pin", threadId); return { ok: true }; },
     async unpin({ threadId }) { await pins.pin("unpin", threadId); return { ok: true }; },
     async move({ threadId, position }) { await pins.place(threadId, position); return { ok: true }; },
