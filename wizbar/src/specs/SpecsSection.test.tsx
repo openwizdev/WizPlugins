@@ -12,15 +12,18 @@ import { v4Now, v4OpenSetting, v4SpecRows, v4SpecsFileText, v4Threads, type Spec
 import { SpecsSection, type SpecsSectionProps } from "./SpecsSection";
 import { rawRow } from "./testing";
 
+const binding = JSON.stringify([{ projectKey: "sample-factory", cloudroomProjectId: "prj_v4_atlas", repositories: ["example/sample-plans"],
+  home: { hostId: "hst_v4_home", rootPath: "/synthetic/home" }, orchestratorThreadId: "thr_v4_orchestrator", statusWriterLogin: "sample-manager" }]);
 const props: SpecsSectionProps = { threads: v4Threads, now: v4Now, activeThreadId: null, onNavigate() {} };
 const ready: SpecsFileReadV4 = { kind: "content", text: v4SpecsFileText };
 
 function render(options: { read?: () => SpecsFileReadV4; settings?: Record<string, string>; now?: number; updateSettings?: (args: unknown) => unknown } = {}) {
   const updates: unknown[] = [];
+  options = { ...options, settings: { wizdeckFactories: binding, ...options.settings } };
   const rendered = renderSlot({ component: SpecsSection }, { ...props, now: options.now ?? v4Now }, {
     pluginId: "wizbar",
     rpc: { specsFile: options.read ?? (() => ready) },
-    ...(options.settings ? { settings: options.settings } : {}),
+    settings: options.settings,
     sdk: { plugins: { updateSettings: (async (args: { values: Record<string, string> }) => {
       updates.push(args);
       return options.updateSettings?.(args) ?? { values: { ...options.settings, ...args.values } };
@@ -75,6 +78,17 @@ describe("S1: the section shows one row per running spec", () => {
     expect(within(region).queryByText(/^Specs \d/)).toBeNull();
     expect(region.querySelectorAll("[data-spec]").length).toBe(0);
   });
+});
+
+describe("S1: no bound factory", () => {
+  // catches: the section asking the server for a file when no factory is bound, which the 0.3 list's exact-call tests forbid.
+  it.each([["no setting", {}], ["two factories", { wizdeckFactories: JSON.stringify([...JSON.parse(binding), { ...JSON.parse(binding)[0], projectKey: "other-factory" }]) }]] as const)(
+    "shows Specs unavailable without a read: %s", async (_name, settings) => {
+      const rendered = renderSlot({ component: SpecsSection }, props, { pluginId: "wizbar", rpc: { specsFile: () => ready }, settings: { ...settings } });
+      const region = await section();
+      expect(within(region).getByText("Specs unavailable")).toBeTruthy();
+      expect(rendered.rpcCalls).toEqual([]);
+    });
 });
 
 describe("S2: open, closed and remembered", () => {
@@ -158,7 +172,7 @@ describe("parity: wizbar specs --json is what the section shows", () => {
     renderSlot(app.threadLists[0]!, {
       activeThreadId: null, activeProjectId: null, isCompactViewport: true, onNavigate() {}, searchQuery: "",
     }, {
-      pluginId: "wizbar", settings: { specsOpen: v4OpenSetting },
+      pluginId: "wizbar", settings: { specsOpen: v4OpenSetting, wizdeckFactories: binding },
       sidebarThreads: { status: "ready", threads: [...v4Threads] },
       rpc: { listLifecycle: () => ({ rows: [] }), specsFile: () => served,
         cardModels: (input: unknown) => ({ source: "none",
