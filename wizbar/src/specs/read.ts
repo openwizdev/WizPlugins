@@ -2,6 +2,7 @@
 // section 1. Pure: the server does the file read and hands the result here,
 // so the app and the CLI judge the same read at their own `now`.
 import { z } from "zod";
+import { homeRootProblem, readDeckFactories } from "../deck/data/binding";
 import type { SpecsFileReadV4, SpecsFileV4, SpecsReadV4 } from "../fixtures/v4";
 
 /** Where the specs file lives, relative to the bound factory's home root. */
@@ -9,6 +10,18 @@ export const specsRelativePath = ".openwiz/specs.v1.json";
 export const specsSchemaId = "openwiz.specs.v1";
 
 const MINUTE = 60_000;
+
+/**
+ * The home of the one factory bound in `wizdeckFactories`, or null (no-binding):
+ * none, several, or a forbidden root. The server reads the file under it; the
+ * app uses it only to skip the read when there is nothing to read.
+ */
+export function boundHome(wizdeckFactories: unknown): { hostId: string; rootPath: string } | null {
+  const binding = readDeckFactories(wizdeckFactories);
+  if (!binding.ok || binding.factories.length !== 1) return null;
+  const { hostId, rootPath } = binding.factories[0]!.binding.home;
+  return homeRootProblem(rootPath) === null ? { hostId, rootPath } : null;
+}
 const issueKey = /^([A-Za-z0-9][A-Za-z0-9-]*)\/([A-Za-z0-9._-]+)#([1-9][0-9]*)$/;
 const utc = z.iso.datetime();
 const key = z.string().refine((value) => {

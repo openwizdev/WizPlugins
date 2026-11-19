@@ -20,12 +20,13 @@ import { cn } from "../lib/utils";
 import { TRAILING_GLYPH_BOX_CLASS } from "../StatusSlot";
 import type { DotStateV4, SpecRowV4, SpecsFileReadV4 } from "../fixtures/v4";
 import { readOpenKeys, withOpen } from "./open-state";
-import { readSpecsFile } from "./read";
+import { boundHome, readSpecsFile } from "./read";
 import { sectionRule, specRows } from "./rows";
 import type { specsRpcContract } from "./server";
 import { tokens } from "./theme";
 
 const REFRESH_MS = 60_000;
+const NO_BINDING: SpecsFileReadV4 = { kind: "no-binding" };
 
 export interface SpecsSectionProps {
   threads: readonly PluginSidebarThread[];
@@ -34,11 +35,12 @@ export interface SpecsSectionProps {
   onNavigate: () => void;
 }
 
-/** The server's specs file read, asked for on mount and once a minute; a failed call is unreadable. */
-function useSpecsFile(): SpecsFileReadV4 | null {
+/** The server's specs file read, asked for on mount and once a minute while a factory is bound; a failed call is unreadable. */
+function useSpecsFile(bound: boolean): SpecsFileReadV4 | null {
   const rpc = useRpc<typeof specsRpcContract>();
   const [read, setRead] = useState<SpecsFileReadV4 | null>(null);
   useEffect(() => {
+    if (!bound) return;
     let live = true;
     const load = () => rpc.call("specsFile", {}).then(
       (result) => { if (live) setRead(result); },
@@ -47,8 +49,9 @@ function useSpecsFile(): SpecsFileReadV4 | null {
     void load();
     const timer = setInterval(load, REFRESH_MS);
     return () => { live = false; clearInterval(timer); };
-  }, [rpc]);
-  return read;
+  }, [bound, rpc]);
+  // With no bound factory there is nothing to read (section 1: no-binding).
+  return bound ? read : NO_BINDING;
 }
 
 /** `specsOpen` from plugin settings, with the last write shown until the host's values catch up. */
@@ -72,12 +75,12 @@ function useOpenSetting() {
       setFailed(true);
     }
   }, [host.values, pluginId, sdk, value]);
-  return { value, toggle, failed };
+  return { value, toggle, failed, bound: boundHome(host.values?.wizdeckFactories) !== null };
 }
 
 export function SpecsSection({ threads, now, activeThreadId, onNavigate }: SpecsSectionProps) {
-  const read = useSpecsFile();
-  const { value, toggle, failed } = useOpenSetting();
+  const { value, toggle, failed, bound } = useOpenSetting();
+  const read = useSpecsFile(bound);
   const view = useMemo(() => {
     if (read === null) return null;
     const file = readSpecsFile(read, now);

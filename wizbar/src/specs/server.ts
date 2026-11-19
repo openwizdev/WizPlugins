@@ -7,11 +7,10 @@
 import { createHash } from "node:crypto";
 import { defineRpcContract, type BbPluginApi } from "@get-bb/plugin-sdk";
 import { z } from "zod";
-import { homeRootProblem, readDeckFactories } from "../deck/data/binding";
 import { runtimeStatusesV3 } from "../children";
 import type { SpecsFileReadV4 } from "../fixtures/v4";
 import { createSpecsCommands, type SpecsCommands } from "./cli";
-import { specsRelativePath } from "./read";
+import { boundHome, specsRelativePath } from "./read";
 import type { SpecsThreadRow } from "./rows";
 
 const REFRESH_MS = 60_000;
@@ -124,10 +123,9 @@ export function registerSpecs(bb: BbPluginApi, handles: Handles): SpecsCommands 
     } catch {
       return { kind: "unreadable" };
     }
-    const binding = readDeckFactories(factories);
-    if (!binding.ok || binding.factories.length !== 1) return { kind: "no-binding" };
-    const { hostId, rootPath } = binding.factories[0]!.binding.home;
-    if (homeRootProblem(rootPath) !== null) return { kind: "no-binding" };
+    const home = boundHome(factories);
+    if (home === null) return { kind: "no-binding" };
+    const { hostId, rootPath } = home;
     const key = `${hostId}|${rootPath}`;
     const now = Date.now();
     if (!cached || cached.key !== key || now - cached.at >= REFRESH_MS || now < cached.at) {
