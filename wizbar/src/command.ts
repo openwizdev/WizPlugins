@@ -3,6 +3,7 @@ import { z } from "zod";
 import { resolveSnoozePresets, type ThreadShelf } from "./lifecycle";
 import { formatStatsText } from "./stats";
 import type { ChildrenResultV3, MovePositionV3, MoveResultV3, PinResultV3, StatsV3 } from "./v3-types";
+import type { SpecsCommands } from "./specs/cli";
 
 export type LifecycleOperation = "settle" | "unsettle" | "snooze" | "unsnooze" | "mute" | "unmute" | "list";
 export interface LifecycleSuccess {
@@ -22,7 +23,7 @@ export class LifecycleError extends Error {
 
 type Execute = (operation: LifecycleOperation, threadId: string, until?: number, signal?: AbortSignal) => Promise<LifecycleSuccess>;
 const operations = ["settle", "unsettle", "snooze", "unsnooze", "mute", "unmute", "list"] as const;
-const usage = "wizbar <settle|unsettle|snooze|unsnooze|mute|unmute|list|pin|unpin|move> <id>... [--until <absolute-time|hour|evening|tomorrow|next-week>] [--before <id>|--after <id>|--first|--last] [--json] | wizbar stats [--json] | wizbar children <id> [--json]";
+const usage = "wizbar <settle|unsettle|snooze|unsnooze|mute|unmute|list|pin|unpin|move> <id>... [--until <absolute-time|hour|evening|tomorrow|next-week>] [--before <id>|--after <id>|--first|--last] [--json] | wizbar stats [--json] | wizbar children <id> [--json] | wizbar specs [--json] | wizbar spec <n> (--open | --close) [--json]";
 
 /** WZ21: the host's pins, through WizBar's server (sidebar-v3.v1.md section 7). */
 export interface PinOperations {
@@ -122,7 +123,7 @@ function wakeTime(value: string, now: number): number {
 /** WZ20 (#41): reads every row and computes stats; an unavailable read gives `status: "unavailable"`. */
 type ReadStats = (signal?: AbortSignal) => Promise<StatsV3>;
 
-export function createLifecycleCommand(execute: Execute, readStats: ReadStats, pins?: PinOperations, children?: ReadChildren): PluginCliRegistration {
+export function createLifecycleCommand(execute: Execute, readStats: ReadStats, pins?: PinOperations, children?: ReadChildren, specs?: SpecsCommands): PluginCliRegistration {
   return {
     name: "wizbar",
     summary: "List or change WizBar thread shelves.",
@@ -135,6 +136,10 @@ export function createLifecycleCommand(execute: Execute, readStats: ReadStats, p
         { name: "move", summary: "move one pinned thread", usage: "move <id> (--before <id> | --after <id> | --first | --last) [--json]" },
       ] : []),
       ...(children ? [{ name: "children", summary: "list one thread's children", usage: "children <id> [--json]" }] : []),
+      ...(specs ? [
+        { name: "specs", summary: "the running specs the Specs section shows", usage: "specs [--json]" },
+        { name: "spec", summary: "open or close one spec in the Specs section", usage: "spec <n> (--open | --close) [--json]" },
+      ] : []),
     ],
     async run(argv, ctx): Promise<PluginCliResult> {
       const endOfOptions = argv.indexOf("--");
@@ -155,6 +160,7 @@ export function createLifecycleCommand(execute: Execute, readStats: ReadStats, p
         return { exitCode: 0, stdout: (json ? JSON.stringify(stats) : formatStatsText(stats)) + "\n" };
       }
       if (children && operation === "children") return await runChildren(argv, json, children, ctx.signal) ?? failUsage();
+      if (specs && (operation === "specs" || operation === "spec")) return await specs.run(argv, json, ctx.signal) ?? failUsage();
       if (pins && pinOperations.includes(operation as never)) {
         return await runPins(argv, json, pins, ctx.signal) ?? failUsage();
       }

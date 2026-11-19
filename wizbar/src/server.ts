@@ -6,7 +6,7 @@
 // understands. Here, uninstalling the plugin removes its state with it.
 import { defineRpcContract, type BbPluginApi } from "@get-bb/plugin-sdk";
 import { z } from "zod";
-import { wizbarSettingDescriptors } from "./settings";
+import { specsSettingDescriptors, wizbarSettingDescriptors } from "./settings";
 import { canMute, canPark, hasRuntimeWork, resolveShelf, type ThreadActivitySignals } from "./lifecycle";
 import { cardModelsNone } from "./card-meta";
 import { createLifecycleCommand, LifecycleError, type LifecycleOperation, type LifecycleSuccess, type PinOperations } from "./command";
@@ -17,6 +17,7 @@ import { computeStats, runtimeDisplayStatuses, type StatsRow } from "./stats";
 import { childrenList, runtimeStatusesV3, type ChildrenRow } from "./children";
 import { registerDeckReaders } from "./deck/data/server";
 import { registerDeckActions } from "./deck/actions/server";
+import { registerSpecs } from "./specs/server";
 
 const migrations = [
   `CREATE TABLE IF NOT EXISTS thread_lifecycle (
@@ -410,6 +411,8 @@ export default function plugin(bb: BbPluginApi) {
   const deckReaders = registerDeckReaders(bb);
   // WizDeck 0.1 (#74): the one steer path to the bound orchestrator.
   registerDeckActions(bb, { settings: deckReaders.settings });
+  // WB4-1 (#1435): the specs reader, its RPC and `wizbar specs` / `wizbar spec`.
+  const specs = registerSpecs(bb, { settings: bb.settings.define(specsSettingDescriptors), factories: deckReaders.settings });
   const db = bb.storage.database();
   bb.storage.migrate(db, migrations);
 
@@ -614,7 +617,7 @@ export default function plugin(bb: BbPluginApi) {
   });
   bb.cli.register(createLifecycleCommand(perform, async (signal) =>
     computeStats(await readStatsRows(bb, signal), Date.now(), Intl.DateTimeFormat().resolvedOptions().timeZone), pins,
-    (threadId, signal) => readChildren(bb, threadId, signal)));
+    (threadId, signal) => readChildren(bb, threadId, signal), specs));
 
   bb.events.on("interaction.pending", ({ thread }) => breakMute(thread.id));
   bb.events.on("thread.failed", ({ thread }) => breakMute(thread.id));

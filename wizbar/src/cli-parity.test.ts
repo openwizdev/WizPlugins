@@ -13,6 +13,7 @@ import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import plugin, { t3sidebarRpcContract } from "./server";
 import { v3Children, v3Now, v3Stats, v3Threads } from "./fixtures/v3";
 import { wizbarOperationsV3 } from "./v3-types";
+import { wizbarOperationsV4 } from "./fixtures/v4";
 
 /**
  * The UI's actions, by the RPC method the sidebar calls for each (every
@@ -135,7 +136,7 @@ describe("V5: every UI action has a wizbar command with --json", () => {
   it("registers each action's command, and every command's usage offers --json", () => {
     const cli = server().host.harness.registrations.cli!;
     const names = cli.commands.map((c) => c.name);
-    expect(names.sort()).toEqual([...wizbarOperationsV3].sort());
+    expect(names.sort()).toEqual([...wizbarOperationsV4].sort());
     expect(names).toEqual(expect.arrayContaining(Object.values(uiActions)));
     for (const command of cli.commands) expect(command.usage, command.name).toMatch(/\[--json\]$/);
   });

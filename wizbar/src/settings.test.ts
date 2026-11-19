@@ -28,7 +28,7 @@ describe("N1: actual WizBar settings declarations and persistent reload", () => 
     const { host } = setup();
     const descriptors = host.harness.inspection.registrations.settingsDescriptors;
     expect(Object.keys(descriptors).sort()).toEqual([
-      "childrenChipEnabled", "footerCountEnabled", "machineIconsEnabled", "parentChipEnabled",
+      "childrenChipEnabled", "footerCountEnabled", "machineIconsEnabled", "parentChipEnabled", "specsOpen",
       "wizdeckFactories", "wizdeckGithubToken",
     ]);
     expect(descriptors.footerCountEnabled).toMatchObject({ type: "boolean", label: "Footer count", default: true });

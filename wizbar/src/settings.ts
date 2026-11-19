@@ -19,6 +19,19 @@ export const wizbarSettingDescriptors = {
   },
 } satisfies PluginSettingDescriptors;
 
+/**
+ * WB4-1 (#1435): which specs are open in the Specs section (specs-section.v1.md
+ * section 4). Not a switch, so it stays out of `wizbarSettingDescriptors`, which
+ * the settings page renders as switches (settings.v1.md); the same store and
+ * write rule apply.
+ */
+export const specsSettingDescriptors = {
+  specsOpen: {
+    type: "string", label: "Open specs", default: "[]",
+    description: "JSON list of the specs open in the Specs section. Every spec starts collapsed.",
+  },
+} satisfies PluginSettingDescriptors;
+
 export type WizBarSettings = {
   footerCountEnabled: boolean; machineIconsEnabled: boolean;
   childrenChipEnabled: boolean; parentChipEnabled: boolean;
