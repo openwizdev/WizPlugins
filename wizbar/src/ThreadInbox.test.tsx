@@ -589,6 +589,7 @@ describe("pull request badge", () => {
           url: "https://github.com/o/r/pull/412",
           state,
           attention,
+          experimental_checks: { state: "passing" },
         } as never,
       },
     });
