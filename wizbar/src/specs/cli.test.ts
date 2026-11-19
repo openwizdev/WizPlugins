@@ -109,6 +109,33 @@ describe("wizbar specs (section 8)", () => {
     expect(cli.read).toHaveBeenCalledTimes(2);
   });
 
+  // catches: a failed settings read crashing the command instead of failing closed.
+  it("reads a failed binding read as unreadable, and a failed open-state read as all collapsed", async () => {
+    const read = vi.fn(contentRead(v4SpecsFileText));
+    const host = createFakePluginHost({ pluginId: "wizbar", sdk: { files: { read }, threads: { list: vi.fn(async () => v4Threads.map(rawRow)), get: vi.fn() } } as never });
+    hosts.push(host);
+    const define = host.bb.settings.define.bind(host.bb.settings);
+    let failing: "wizdeckFactories" | "specsOpen" = "wizdeckFactories";
+    vi.spyOn(host.bb.settings, "define").mockImplementation(((descriptors: Record<string, unknown>) => {
+      const handle = define(descriptors as never);
+      const get = handle.get.bind(handle);
+      handle.get = async () => { if (failing in descriptors) throw new Error("settings offline"); return get(); };
+      return handle;
+    }) as BbPluginApi["settings"]["define"]);
+    plugin(host.bb);
+    await host.harness.behavior.setSettings({ wizdeckFactories: JSON.stringify([factory]), specsOpen: v4OpenSetting });
+    const specs = async () => {
+      const result = await host.harness.behavior.runCli(["specs", "--json"]);
+      return { exitCode: result.exitCode, body: JSON.parse(result.stdout!) };
+    };
+    expect(await specs()).toEqual({ exitCode: 1, body: { error: { code: "specs_unavailable", message: "Specs unavailable.", reason: "unreadable" } } });
+    failing = "specsOpen";
+    vi.setSystemTime(v4Now + 60_000);
+    const result = await specs();
+    expect(result.exitCode).toBe(0);
+    expect(result.body.specs.map((s: { open: boolean }) => s.open)).toEqual([false, false]);
+  });
+
   // catches: extra arguments or a repeated --json accepted silently.
   it.each([["specs", "extra"], ["specs", "--json", "--json"], ["specs", "--bogus"]])("treats %j as a usage error", async (...argv) => {
     const cli = await setup();
