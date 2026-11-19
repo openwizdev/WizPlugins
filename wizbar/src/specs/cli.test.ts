@@ -5,10 +5,10 @@
 import { createHash } from "node:crypto";
 import { createFakePluginHost, type FakePluginHost } from "@get-bb/plugin-sdk/testing";
 import type { BbPluginApi } from "@get-bb/plugin-sdk";
-import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import plugin from "../server";
 import { v4Now, v4OpenSetting, v4SpecRows, v4SpecsFile, v4SpecsFileText, v4Threads } from "../fixtures/v4";
+import { rawRow } from "./testing";
 
 const factory = {
   projectKey: "sample-factory", cloudroomProjectId: "prj_v4_atlas", repositories: ["example/sample-plans"],
@@ -16,22 +16,6 @@ const factory = {
   statusWriterLogin: "sample-manager",
 };
 const sha = (text: string) => createHash("sha256").update(text).digest("hex");
-
-/** `threads.list` rows for the fixture, by sidebar-v3's raw-to-row table plus `providerId`. */
-export const rawRow = (t: PluginSidebarThread) => ({
-  id: t.id, projectId: t.projectId, parentThreadId: t.parentThreadId, archivedAt: null, deletedAt: null,
-  title: t.title, titleFallback: t.titleFallback, providerId: t.providerId, createdAt: t.createdAt, updatedAt: t.updatedAt,
-  lastReadAt: t.lastReadAt, latestAttentionAt: t.latestAttentionAt, hasPendingInteraction: t.hasPendingInteraction,
-  queuedWork: t.queuedWork, status: t.status, pinnedAt: t.pinnedAt, pinSortKey: t.pinSortKey,
-  runtime: { displayStatus: t.runtimeStatus, hostReconnectGraceExpiresAt: null },
-  activity: {
-    activeWorkflowCount: t.activity.workflows, activeBackgroundAgentCount: t.activity.backgroundAgents,
-    activeBackgroundCommandCount: t.activity.backgroundCommands, activePlanModeCount: t.activity.planMode,
-    activeGoalCount: t.activity.goals,
-  },
-  environmentId: t.environment?.id ?? null, environmentBranchName: t.environment?.branchName ?? null,
-  environmentProviderId: t.environment?.providerId ?? null, environmentHostId: t.host?.id ?? null,
-});
 
 type Read = (args: { path: string; hostId?: string; rootPath?: string }) => Promise<unknown>;
 const contentRead = (text: string): Read => async ({ path }) =>
