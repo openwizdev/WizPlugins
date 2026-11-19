@@ -11,7 +11,7 @@ import { canMute, canPark, hasRuntimeWork, resolveShelf, type ThreadActivitySign
 import { cardModelsNone } from "./card-meta";
 import { createLifecycleCommand, LifecycleError, type LifecycleOperation, type LifecycleSuccess, type PinOperations } from "./command";
 import { placePinned } from "./drag";
-import type { MovePositionV3 } from "./v3-types";
+import type { CardModelsResultV3, MovePositionV3 } from "./v3-types";
 import { sortPinned } from "./inbox";
 import { computeStats, runtimeDisplayStatuses, type StatsRow } from "./stats";
 import { childrenList, runtimeStatusesV3, type ChildrenRow } from "./children";
@@ -372,7 +372,14 @@ const childrenRowSchema = z.object({
   },
 }));
 
-export async function readChildren(bb: BbPluginApi, rawId: string, signal?: AbortSignal) {
+/** Section 6 of specs-section.v1.md: stub. */
+export async function cardModelsFrom(
+  _read: unknown, threadIds: readonly string[], _adopted: boolean = false,
+): Promise<CardModelsResultV3> {
+  return cardModelsNone(threadIds);
+}
+
+export async function readChildren(bb: BbPluginApi, rawId: string, signal?: AbortSignal, _adopted = false) {
   const threadId = validId(rawId);
   let route: unknown;
   try { route = await bb.sdk.threads.get({ threadId, signal }); } catch (error) {
