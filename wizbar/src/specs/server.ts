@@ -28,7 +28,7 @@ export const specsRpcContract = defineRpcContract({
 
 interface Handles {
   settings: {
-    get(): Promise<{ specsOpen?: unknown }>;
+    get(): Promise<{ specsOpen?: unknown; specsSort?: unknown }>;
     experimental_set(values: { specsOpen?: string | null }): Promise<{ specsOpen?: unknown }>;
   };
   factories: { get(): Promise<{ wizdeckFactories?: unknown }> };
@@ -148,6 +148,8 @@ export function registerSpecs(bb: BbPluginApi, handles: Handles): SpecsCommands 
     rows: (signal) => readRows(bb, signal),
     // A failed read rejects: the display shows every spec collapsed, a mutation fails before writing.
     openSetting: async () => (await handles.settings.get()).specsOpen,
+    // S1 (#184): `wizbar specs` without `--sort` uses the saved sort.
+    sortSetting: async () => (await handles.settings.get()).specsSort,
     writeOpenSetting: async (value) => (await handles.settings.experimental_set({ specsOpen: value })).specsOpen,
   });
   // WB4-3 (#1437): `wizbar stats` reads the same cached file.

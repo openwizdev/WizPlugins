@@ -7,6 +7,8 @@ import {
   dotOrderV4, type DotStateV4, type MatrixStateV4, type SpecAgentV4, type SpecEntryV4, type SpecKeyV4,
   type SpecRowV4, type SpecsFileV4, type SpecsResultV4, type TicketEntryV4,
 } from "../fixtures/v4";
+import type { SpecEntryV6, SpecsFileV6 } from "../fixtures/v6";
+import type { SpecsSort } from "../settings";
 import type { CardModelsResultV3 } from "../v3-types";
 
 /** The row fields the spec rows read; the app's rows and the CLI reader both supply them. */
@@ -159,14 +161,19 @@ function agentOf(spec: SpecEntryV4, row: SpecsThreadRow, models: CardModelsResul
   };
 }
 
-/** Sections 2 and 3: the visible rows, in file order, with their running agents. */
-export function specRows(file: SpecsFileV4, rows: readonly SpecsThreadRow[], openKeys: readonly string[], now: number, models: CardModelsResultV3 | null = null): SpecsResultV4 {
+/** Sections 2, 3 and 11: the visible rows with their running agents, in `sort` (`newest`, the file's order, by default). */
+export function specRows(
+  file: SpecsFileV6, rows: readonly SpecsThreadRow[], openKeys: readonly string[], now: number,
+  models: CardModelsResultV3 | null = null, sort: SpecsSort = "newest",
+): SpecsResultV4 {
   const agents = new Map<SpecEntryV4, SpecAgentV4[]>();
   for (const row of rows) {
     const spec = matchEntry(file, row, rows);
     if (spec) agents.set(spec, [...(agents.get(spec) ?? []), agentOf(spec, row, models)]);
   }
-  const specs = file.specs.filter((spec) => !isHidden(spec)).map((spec): SpecRowV4 => {
+  const activity = new Map<string, number | null>();
+  const unsorted = file.specs.filter((spec) => !isHidden(spec)).map((spec): SpecRowV4 => {
+    activity.set(spec.spec, activityAt(spec, agents.get(spec) ?? []));
     const order = spec.tickets.map((ticket, index) => ({ ticket, index, state: dotState(ticket, now) }));
     order.sort((a, b) => dotOrderV4.indexOf(a.state) - dotOrderV4.indexOf(b.state) || a.index - b.index);
     return {
@@ -181,6 +188,8 @@ export function specRows(file: SpecsFileV4, rows: readonly SpecsThreadRow[], ope
       agents: (agents.get(spec) ?? []).sort((a, b) => a.createdAt - b.createdAt || (a.threadId < b.threadId ? -1 : a.threadId > b.threadId ? 1 : 0)),
     };
   });
+  const specs = sortSpecs(unsorted.map((row) => ({ ...row, activityAt: activity.get(row.spec)! })), sort)
+    .map(({ activityAt: _activityAt, ...row }): SpecRowV4 => row);
   return {
     version: 1, status: "ready", generatedAt: Date.parse(file.generatedAt),
     needsYou: specs.reduce((sum, row) => sum + row.needsYou, 0),
@@ -211,4 +220,37 @@ export function needsYouWords(result: SpecsResultV4): { full: string; short: str
 export function sectionRule(result: SpecsResultV4): string {
   const words = needsYouWords(result);
   return `Specs ${result.specs.length}${words ? ` · ${words.full}` : ""}`;
+}
+
+/** What a sort reads of a spec (section 11). */
+export interface SortableSpec { spec: string; done: number; total: number; needsYou: number; activityAt: number | null }
+
+/**
+ * Section 10: a spec's activity time, the newest of its tickets' `updatedAt` and
+ * `closedAt` and its running agents' `updatedAt`; null when none gives a time.
+ */
+export function activityAt(spec: SpecEntryV6, agents: readonly { updatedAt: number }[]): number | null {
+  const times = [
+    ...spec.tickets.flatMap((t) => [t.updatedAt, t.closedAt ?? undefined].filter((at) => at !== undefined).map((at) => Date.parse(at))),
+    ...agents.map((agent) => agent.updatedAt),
+  ].filter((at) => Number.isFinite(at));
+  return times.length > 0 ? Math.max(...times) : null;
+}
+
+/** Newest first; a null time after every time. */
+const byActivity = (a: SortableSpec, b: SortableSpec) =>
+  a.activityAt === b.activityAt ? 0 : a.activityAt === null ? 1 : b.activityAt === null ? -1 : b.activityAt - a.activityAt;
+/** `needs-you`'s groups: due now, the other unfinished specs, then finished. */
+const group = (row: SortableSpec) => (row.needsYou > 0 ? 0 : row.done < row.total ? 1 : 2);
+const compare: Record<SpecsSort, (a: SortableSpec, b: SortableSpec) => number> = {
+  "needs-you": (a, b) => group(a) - group(b) || byActivity(a, b),
+  recent: byActivity,
+  // The done share highest first, compared as cross products, never floats; then fewer left.
+  closest: (a, b) => b.done * a.total - a.done * b.total || (a.total - a.done) - (b.total - b.done),
+  newest: () => 0,
+};
+
+/** Section 11: the rows in the chosen sort. The sort is stable, so ties keep the rows' (file) order. */
+export function sortSpecs<T extends SortableSpec>(rows: readonly T[], sort: SpecsSort): T[] {
+  return [...rows].sort(compare[sort]);
 }

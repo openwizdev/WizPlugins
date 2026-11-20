@@ -7,8 +7,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { createFakePluginHost, type FakePluginHost } from "@get-bb/plugin-sdk/testing";
 import { loadPluginApp, renderSlot } from "@get-bb/plugin-sdk/testing/app";
+import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import plugin from "../server";
 import { v4Now, v4OpenSetting, v4SpecOpenCases, v4SpecRows, v4SpecRowsV2, v4SpecsFileText, v4SpecsFileV2Text, v4Threads, type SpecsFileReadV4 } from "../fixtures/v4";
+import { specsSortsV6, type SpecsSortV6, v6Activity, v6Agents, v6Now, v6SortOrders, v6SpecsFileText } from "../fixtures/v6";
 import { strictRead } from "../testing/strict-files";
 import { SpecsSection, type SpecsSectionProps } from "./SpecsSection";
 import { effectiveOpen, readOpenKeys } from "./open-state";
@@ -634,6 +636,82 @@ describe("S1: the Specs section collapses", () => {
     const lastCard = screen.getAllByRole("link").filter((link) => !region.contains(link)).at(-1)!;
     expect(before(lastCard, region)).toBe(true);
     expect(before(region, screen.getByRole("status", { name: /^\d+ running$/ }))).toBe(true);
+  });
+});
+
+// S1 (#184): the Specs section's order and its picker (specs-section.v1.md section 11).
+describe("S1: the Specs sort", () => {
+  const v6Threads: PluginSidebarThread[] = Object.values(v6Agents).flat().map((agent) => {
+    const role = agent.matrix === "reviewing" ? "Reviewer" : "Builder";
+    const title = `${role} · SS${agent.ticket!.slice(agent.ticket!.lastIndexOf("#") + 1)}: Sample work`;
+    return { ...v4Threads[2]!, id: agent.threadId, title, displayTitle: title, parentThreadId: null, createdAt: agent.updatedAt - 60_000, updatedAt: agent.updatedAt };
+  });
+  // 0.5's hidden rule still hides a finished spec until S2 (#185) shows it as quiet.
+  const finished = new Set(v6Activity.filter((c) => c.done === c.total).map((c) => c.spec));
+  const expected = (sort: keyof typeof v6SortOrders) => v6SortOrders[sort].filter((key) => !finished.has(key));
+  const v6Read = (): SpecsFileReadV4 => ({ kind: "content", text: v6SpecsFileText });
+  function renderV6(settings: Record<string, string> = {}, updateSettings?: (args: unknown) => unknown) {
+    vi.setSystemTime(v6Now);
+    const updates: unknown[] = [];
+    const stored = { wizdeckFactories: binding, ...settings };
+    const rendered = renderSlot({ component: SpecsSection }, { ...props, threads: v6Threads, now: v6Now }, {
+      pluginId: "wizbar", rpc: { specsFile: v6Read }, settings: stored,
+      sdk: { plugins: { updateSettings: (async (args: { values: Record<string, string> }) => {
+        updates.push(args);
+        return updateSettings ? updateSettings(args) : { values: { ...stored, ...args.values } };
+      }) as never } },
+    });
+    return { rendered, updates };
+  }
+  const order = (region: HTMLElement) => [...region.querySelectorAll("[data-spec]")].map((el) => el.getAttribute("data-spec"));
+  const picker = (region: HTMLElement) => within(region).getByRole("combobox", { name: "Sort specs" }) as HTMLSelectElement;
+
+  // catches: the section still in the file's order, or a stored sort ignored on a fresh mount.
+  const cases: [string, SpecsSortV6 | undefined, SpecsSortV6][] = [["no stored sort", undefined, "needs-you"], ...specsSortsV6.map((sort) => [`a stored ${sort}`, sort, sort] as [string, SpecsSortV6, SpecsSortV6])];
+  it.each(cases)(
+    "shows the rows in the sort for %s", async (_name, stored, sort) => {
+      renderV6(stored === undefined ? {} : { specsSort: stored });
+      const region = await section();
+      await waitFor(() => expect(order(region)).toEqual(expected(sort)));
+      expect(picker(region).value).toBe(sort);
+    });
+
+  // catches: a picker offering other sorts, or one inside the rule's heading so its text joins the heading's.
+  it("offers exactly the four sorts, beside the rule and outside its heading", async () => {
+    renderV6();
+    const region = await section();
+    await waitFor(() => expect(order(region).length).toBeGreaterThan(0));
+    expect([...picker(region).options].map((o) => [o.value, o.textContent])).toEqual([
+      ["needs-you", "Needs you first"], ["recent", "Recently active"], ["closest", "Closest to done"], ["newest", "Newest"],
+    ]);
+    expect(within(region).getByRole("heading").contains(picker(region))).toBe(false);
+  });
+
+  // catches: a picker out of the tab order, a choice that waits for the save to show, or a write touching other keys.
+  it("is reachable by keyboard, reorders at once, and remembers the choice in specsSort only", async () => {
+    const { updates } = renderV6();
+    const region = await section();
+    await waitFor(() => expect(order(region)).toEqual(expected("needs-you")));
+    const select = picker(region);
+    expect(select.tabIndex).toBe(0);
+    expect(select.disabled).toBe(false);
+    select.focus();
+    expect(document.activeElement).toBe(select);
+    fireEvent.change(select, { target: { value: "closest" } });
+    expect(order(region)).toEqual(expected("closest"));
+    await waitFor(() => expect(updates).toEqual([{ pluginId: "wizbar", values: { specsSort: "closest" } }]));
+    expect(picker(region).value).toBe("closest");
+  });
+
+  // catches: a failed save leaving the unsaved order on screen as if it were remembered.
+  it("says so when the sort cannot be saved, and goes back to the stored sort", async () => {
+    renderV6({ specsSort: "recent" }, () => { throw new Error("refused"); });
+    const region = await section();
+    await waitFor(() => expect(order(region)).toEqual(expected("recent")));
+    fireEvent.change(picker(region), { target: { value: "newest" } });
+    expect(await within(region).findByText("Could not save the sort. Try again.")).toBeTruthy();
+    expect(order(region)).toEqual(expected("recent"));
+    expect(picker(region).value).toBe("recent");
   });
 });
 

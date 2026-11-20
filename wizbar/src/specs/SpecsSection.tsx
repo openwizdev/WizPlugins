@@ -5,7 +5,7 @@
 // `specRows`, the same computation `wizbar specs` prints. The round-5 look
 // (0.5 C, #112): a leading chevron, notes on the right, dots below, and an
 // open spec raised into one card panel with its agents.
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import {
   experimental_usePluginId,
   useBbNavigate,
@@ -24,6 +24,7 @@ import { boundHome, readSpecsFile } from "./read";
 import { needsYouWords, sectionRule, specRows } from "./rows";
 import type { specsRpcContract } from "./server";
 import { tokens } from "./theme";
+import { readSpecsSort, type SpecsSort } from "../settings";
 import { AgentRow } from "./AgentRow";
 import { dotBreathes, nameMuted, useBreath, useBreathMode, type BreathMode } from "./breath";
 
@@ -107,16 +108,49 @@ function useOpenSetting() {
   return { value, toggle, failed, home: home === null ? null : JSON.stringify([home.hostId, home.rootPath]) };
 }
 
+/**
+ * S1 (#184): `specsSort`, the Specs section's order. A choice shows at once and
+ * saves one at a time, the newest winning, like the open state; a failed save
+ * goes back to the stored sort and says so.
+ */
+function useSortSetting() {
+  const pluginId = experimental_usePluginId();
+  const host = useSettings();
+  const sdk = useSdk();
+  const [written, setWritten] = useState<{ baseline: unknown; value: SpecsSort; saving: boolean } | null>(null);
+  const [failed, setFailed] = useState(false);
+  const sort = written && (written.saving || written.baseline === host.values) ? written.value : readSpecsSort(host.values?.specsSort);
+  const latest = useRef({ hostValues: host.values, seq: 0 });
+  latest.current.hostValues = host.values;
+  const queue = useRef<Promise<void>>(Promise.resolve());
+  const choose = useCallback((next: SpecsSort) => {
+    const seq = ++latest.current.seq;
+    setWritten({ baseline: latest.current.hostValues, value: next, saving: true });
+    setFailed(false);
+    queue.current = queue.current.then(async () => {
+      if (seq !== latest.current.seq) return;
+      try {
+        const result = await sdk.plugins.updateSettings({ pluginId, values: { specsSort: next } });
+        if (seq === latest.current.seq) setWritten({ baseline: latest.current.hostValues, value: readSpecsSort(result.values?.specsSort ?? next), saving: false });
+      } catch {
+        if (seq === latest.current.seq) { setWritten(null); setFailed(true); }
+      }
+    });
+  }, [pluginId, sdk]);
+  return { sort, choose, failed };
+}
+
 export function SpecsSection({ threads, now, activeThreadId, onNavigate, collapsed = false, onToggleCollapsed, collapseFailed = false }: SpecsSectionProps) {
   const { value, toggle, failed, home } = useOpenSetting();
+  const sorting = useSortSetting();
   const read = useSpecsFile(home);
   // A1 (#186): one breath mode for every dot in the section.
   const [breath, sectionRef] = useBreathMode();
   const view = useMemo(() => {
     if (read === null) return null;
     const file = readSpecsFile(read, now);
-    return file.status === "ready" ? specRows(file.file, threads, readOpenKeys(value), now) : "unavailable" as const;
-  }, [now, read, threads, value]);
+    return file.status === "ready" ? specRows(file.file, threads, readOpenKeys(value), now, null, sorting.sort) : "unavailable" as const;
+  }, [now, read, threads, value, sorting.sort]);
   if (view === null) return null;
   const byId = new Map(threads.map((thread) => [thread.id, thread]));
   return (
@@ -126,8 +160,10 @@ export function SpecsSection({ threads, now, activeThreadId, onNavigate, collaps
           <span className="text-muted-foreground">Specs unavailable</span>
           <span data-rule-line="" className="h-px flex-1" style={{ background: tokens.rule }} />
         </h2>
-      ) : <SpecsRule result={view} collapsed={collapsed} onToggle={onToggleCollapsed} />}
+      ) : <SpecsRule result={view} collapsed={collapsed} onToggle={onToggleCollapsed}
+        picker={<SortPicker sort={sorting.sort} onChoose={sorting.choose} />} />}
       {failed ? <p role="status" className="px-2.5 text-xs text-muted-foreground">Could not save the open spec. Try again.</p> : null}
+      {sorting.failed ? <p role="status" className="px-2.5 text-xs text-muted-foreground">Could not save the sort. Try again.</p> : null}
       {collapseFailed ? <p role="status" className="px-2.5 text-xs text-muted-foreground">Could not save the collapsed section. Try again.</p> : null}
       {view === "unavailable" || collapsed ? null : (
         <ul className="flex flex-col gap-px">
@@ -149,7 +185,7 @@ const RULE_RESERVE = 8 + 16;
  * fit on one line. The full sentence is always the rule's accessible name and tooltip. An invisible copy
  * gives the full sentence's natural width, so the choice never flips on its own result.
  */
-function SpecsRule({ result, collapsed, onToggle }: { result: SpecsResultV4; collapsed: boolean; onToggle?: () => void }) {
+function SpecsRule({ result, collapsed, onToggle, picker }: { result: SpecsResultV4; collapsed: boolean; onToggle?: () => void; picker?: ReactNode }) {
   const words = needsYouWords(result);
   const sentence = sectionRule(result);
   const rule = useRef<HTMLHeadingElement>(null);
@@ -186,9 +222,9 @@ function SpecsRule({ result, collapsed, onToggle }: { result: SpecsResultV4; col
     </>
   );
   return (
-    <div className="relative">
+    <div className="relative flex items-end">
       <h2 ref={rule} aria-label={sentence} title={sentence}
-        className="flex items-center gap-2 px-2.5 pb-1 pt-3 text-[11.5px] font-medium">
+        className={cn("flex min-w-0 flex-1 items-center gap-2 px-2.5 pb-1 pt-3 text-[11.5px] font-medium", picker && "pr-1")}>
         {/* S1 (#169): with a toggle, the whole line is the collapse button, named by the full sentence. */}
         {onToggle ? (
           <button type="button" aria-expanded={!collapsed} aria-label={sentence} onClick={onToggle}
@@ -202,7 +238,35 @@ function SpecsRule({ result, collapsed, onToggle }: { result: SpecsResultV4; col
         className="pointer-events-none invisible absolute left-0 top-0 whitespace-nowrap text-[11.5px] font-medium">
         {label(words?.full ?? null)}
       </span>
+      {/* S1 (#184): outside the heading, so its options never join the rule's words or name. */}
+      {picker}
     </div>
+  );
+}
+
+const sortLabels: Record<SpecsSort, string> = {
+  "needs-you": "Needs you first", recent: "Recently active", closest: "Closest to done", newest: "Newest",
+};
+
+/**
+ * S1 (#184): the Specs sort, a small sort-lines mark and chevron at the rule's right, faint until hovered
+ * or focused. A native select lies over it, so the keyboard, a screen reader and the host's menu all work.
+ */
+function SortPicker({ sort, onChoose }: { sort: SpecsSort; onChoose: (sort: SpecsSort) => void }) {
+  return (
+    <span data-sort-picker="" title={`Sort: ${sortLabels[sort]}`}
+      className="relative mb-1 mr-2 flex h-[18px] shrink-0 items-center gap-px rounded px-1 text-muted-foreground opacity-50 hover:bg-sidebar-accent/60 hover:opacity-100 focus-within:opacity-100">
+      <svg aria-hidden viewBox="0 0 12 12" className="size-3" fill="none" stroke="currentColor" strokeWidth={1.3} strokeLinecap="round">
+        <path d="M2 3.5h8M3.5 6h5M5 8.5h2" />
+      </svg>
+      <svg aria-hidden viewBox="0 0 10 10" className="size-2.5" fill="none" stroke="currentColor" strokeWidth={1.4}>
+        <path d="M2.5 4 5 6.5 7.5 4" />
+      </svg>
+      <select aria-label="Sort specs" value={sort} onChange={(event) => onChoose(event.currentTarget.value as SpecsSort)}
+        className="absolute inset-0 cursor-pointer appearance-none opacity-0">
+        {(Object.keys(sortLabels) as SpecsSort[]).map((key) => <option key={key} value={key}>{sortLabels[key]}</option>)}
+      </select>
+    </span>
   );
 }
 
