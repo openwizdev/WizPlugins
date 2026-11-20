@@ -28,13 +28,14 @@ describe("N1: actual WizBar settings declarations and persistent reload", () => 
     const { host } = setup();
     const descriptors = host.harness.inspection.registrations.settingsDescriptors;
     expect(Object.keys(descriptors).sort()).toEqual([
-      "childrenChipEnabled", "footerCountEnabled", "machineIconsEnabled", "parentChipEnabled", "specsOpen",
-      "wizdeckFactories", "wizdeckGithubToken",
+      "childrenChipEnabled", "footerCountEnabled", "machineIconsEnabled", "parentChipEnabled", "sectionsCollapsed",
+      "specsOpen", "wizdeckFactories", "wizdeckGithubToken",
     ]);
     expect(descriptors.footerCountEnabled).toMatchObject({ type: "boolean", label: "Footer count", default: true });
     expect(descriptors.machineIconsEnabled).toMatchObject({ type: "boolean", label: "Cloud/Local row icons", default: true });
     expect(descriptors.childrenChipEnabled).toMatchObject({ type: "boolean", label: "Children chip in thread header", default: false });
     expect(descriptors.parentChipEnabled).toMatchObject({ type: "boolean", label: "Parent chip in thread header", default: true });
+    expect(descriptors.sectionsCollapsed).toMatchObject({ type: "string", default: "[]" });
     expect(descriptors.wizdeckGithubToken).toMatchObject({ type: "string", secret: true });
     expect(descriptors.wizdeckFactories).toMatchObject({ type: "string", experimental_multiline: true });
   });
@@ -66,6 +67,30 @@ describe("N1: actual WizBar settings declarations and persistent reload", () => 
     expect(await fixture.readSettings()).toEqual({
       footerCountEnabled: true, machineIconsEnabled: false, childrenChipEnabled: false, parentChipEnabled: true,
     });
+  });
+
+  // S1 (#169): a collapsed section must come back after a reload, and the CLI's write must change no other key.
+  it("keeps sectionsCollapsed across a server reload, and section writes change no other key", async () => {
+    let read: () => Promise<Record<string, unknown>> = async () => ({});
+    const factory = (bb: BbPluginApi) => {
+      const definition = vi.spyOn(bb.settings, "define");
+      plugin(bb);
+      const handles = definition.mock.results.map((result) => result.value as { get(): Promise<Record<string, unknown>> });
+      read = async () => Object.assign({}, ...await Promise.all(handles.map((handle) => handle.get())));
+    };
+    let host = createFakePluginHost({ pluginId: "wizbar" });
+    hosts.push(host);
+    factory(host.bb);
+    await host.harness.behavior.setSettings({ footerCountEnabled: false, specsOpen: "[\"example/sample#1\"]" });
+    const before = await read();
+    expect(before.sectionsCollapsed).toBe("[]");
+    expect((await host.harness.behavior.runCli(["section", "inbox", "--collapse", "--json"])).exitCode).toBe(0);
+    host = await host.harness.lifecycle.reload(factory);
+    hosts.push(host);
+    expect(await read()).toEqual({ ...before, sectionsCollapsed: "[\"inbox\"]" });
+    expect(JSON.parse((await host.harness.behavior.runCli(["section", "specs", "--collapse", "--json"])).stdout!))
+      .toEqual({ section: "specs", collapsed: true });
+    expect(await read()).toEqual({ ...before, sectionsCollapsed: "[\"inbox\",\"specs\"]" });
   });
 
   it("rejects wrong types and unknown keys without changing saved settings", async () => {

@@ -141,7 +141,8 @@ describe("V5: every UI action has a wizbar command with --json", () => {
     const cli = server().host.harness.registrations.cli!;
     const names = cli.commands.map((c) => c.name);
     // #156: `models` is a read-only diagnostic of the model source, no UI action of its own.
-    expect(names.sort()).toEqual([...wizbarOperationsV4, "models"].sort());
+    // S1 (#169): `section` collapses a sidebar section, the agent-first route to a header click.
+    expect(names.sort()).toEqual([...wizbarOperationsV4, "models", "section"].sort());
     expect(names).toEqual(expect.arrayContaining(Object.values(uiActions)));
     for (const command of cli.commands) expect(command.usage, command.name).toMatch(/\[--json\]$/);
   });
@@ -276,4 +277,41 @@ describe("V5: children and stats JSON equal the UI for the same fixtures", () =>
       threads: cli.threads.map((t: { id: string; matrix: string; shortName: string | null }) => ({ id: t.id, matrix: t.matrix, shortName: t.shortName })),
     });
   });
+});
+
+// S1 (#169): `wizbar section <pinned|inbox|specs> --collapse|--expand --json` does what a header click does.
+describe("V5: section --json matches the sidebar's collapsible headers", () => {
+  // catches: the CLI and a header click storing different values, or the CLI's answer disagreeing with what the sidebar then shows.
+  it.each([["inbox", "--collapse", "[]"], ["pinned", "--expand", "[\"pinned\",\"inbox\"]"]] as const)(
+    "%s %s from %s", async (section, flag, start) => {
+      const host = createFakePluginHost({ pluginId: "wizbar" });
+      hosts.push(host);
+      // The real handle the server declares, to read what the command stored.
+      const define = vi.spyOn(host.bb.settings, "define");
+      plugin(host.bb);
+      const handle = define.mock.results.find((r, i) => "sectionsCollapsed" in define.mock.calls[i]![0])!.value;
+      await host.harness.behavior.setSettings({ sectionsCollapsed: start });
+      const result = await host.harness.behavior.runCli(["section", section, flag, "--json"]);
+      const collapsed = flag === "--collapse";
+      expect({ exitCode: result.exitCode, json: JSON.parse(result.stdout!) }).toEqual({ exitCode: 0, json: { section, collapsed } });
+      const stored = (await handle.get()).sectionsCollapsed;
+      // The same change through the UI: a header click on a sidebar mounted on the same stored value.
+      const updates: { values: Record<string, unknown> }[] = [];
+      const name = section === "inbox" ? "Inbox" : "Pinned";
+      renderSlot(app.threadLists[0]!, {
+        activeThreadId: null, activeProjectId: null, isCompactViewport: true, onNavigate() {}, searchQuery: "",
+      }, {
+        pluginId: "wizbar", settings: { sectionsCollapsed: start },
+        sidebarThreads: { status: "ready", threads: [...v3Threads] },
+        rpc: { listLifecycle: () => ({ rows: [] }), cardModels: (input: unknown) => ({ source: "none",
+          items: (input as { threadIds: string[] }).threadIds.map((id) => ({ threadId: id, model: null, effort: null })) }) },
+        sdk: { plugins: { updateSettings: (async (args: { values: Record<string, unknown> }) => {
+          updates.push(args); return { values: { sectionsCollapsed: start, ...args.values } };
+        }) as never } },
+      });
+      const header = () => within(screen.getByRole("region", { name })).getByRole("button", { name: new RegExp(`^${name}`) });
+      fireEvent.click(header());
+      await waitFor(() => expect(header().getAttribute("aria-expanded")).toBe(String(!collapsed)));
+      expect(updates.map((u) => u.values)).toEqual([{ sectionsCollapsed: stored }]);
+    });
 });

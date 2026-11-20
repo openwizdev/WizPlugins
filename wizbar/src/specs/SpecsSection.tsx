@@ -34,6 +34,12 @@ export interface SpecsSectionProps {
   now: number;
   activeThreadId: string | null;
   onNavigate: () => void;
+  /** S1 (#169): the section's own collapse, kept by the sidebar in `sectionsCollapsed`; independent of `specsOpen`. */
+  collapsed?: boolean;
+  /** With this, the rule is a button that collapses and expands the section. */
+  onToggleCollapsed?: () => void;
+  /** The collapse could not be saved. */
+  collapseFailed?: boolean;
 }
 
 /**
@@ -100,7 +106,7 @@ function useOpenSetting() {
   return { value, toggle, failed, home: home === null ? null : JSON.stringify([home.hostId, home.rootPath]) };
 }
 
-export function SpecsSection({ threads, now, activeThreadId, onNavigate }: SpecsSectionProps) {
+export function SpecsSection({ threads, now, activeThreadId, onNavigate, collapsed = false, onToggleCollapsed, collapseFailed = false }: SpecsSectionProps) {
   const { value, toggle, failed, home } = useOpenSetting();
   const read = useSpecsFile(home);
   const view = useMemo(() => {
@@ -117,9 +123,10 @@ export function SpecsSection({ threads, now, activeThreadId, onNavigate }: Specs
           <span className="text-muted-foreground">Specs unavailable</span>
           <span data-rule-line="" className="h-px flex-1" style={{ background: tokens.rule }} />
         </h2>
-      ) : <SpecsRule result={view} />}
+      ) : <SpecsRule result={view} collapsed={collapsed} onToggle={onToggleCollapsed} />}
       {failed ? <p role="status" className="px-2.5 text-xs text-muted-foreground">Could not save the open spec. Try again.</p> : null}
-      {view === "unavailable" ? null : (
+      {collapseFailed ? <p role="status" className="px-2.5 text-xs text-muted-foreground">Could not save the collapsed section. Try again.</p> : null}
+      {view === "unavailable" || collapsed ? null : (
         <ul className="flex flex-col gap-px">
           {view.specs.map((row) => (
             <SpecRow key={row.spec} row={row} threads={byId} now={now} activeThreadId={activeThreadId}
@@ -139,7 +146,7 @@ const RULE_RESERVE = 8 + 16;
  * fit on one line. The full sentence is always the rule's accessible name and tooltip. An invisible copy
  * gives the full sentence's natural width, so the choice never flips on its own result.
  */
-function SpecsRule({ result }: { result: SpecsResultV4 }) {
+function SpecsRule({ result, collapsed, onToggle }: { result: SpecsResultV4; collapsed: boolean; onToggle?: () => void }) {
   const words = needsYouWords(result);
   const sentence = sectionRule(result);
   const rule = useRef<HTMLHeadingElement>(null);
@@ -169,12 +176,23 @@ function SpecsRule({ result }: { result: SpecsResultV4 }) {
       {after !== null ? <>{" "}<span style={{ color: tokens.warning }}>· {after}</span></> : null}
     </>
   );
+  const line = (
+    <>
+      <span data-rule-text="" className="shrink-0 whitespace-nowrap">{label(words === null ? null : fits ? words.full : words.short)}</span>
+      <span data-rule-line="" className="h-px flex-1" style={{ background: tokens.rule }} />
+    </>
+  );
   return (
     <div className="relative">
       <h2 ref={rule} aria-label={sentence} title={sentence}
         className="flex items-center gap-2 px-2.5 pb-1 pt-3 text-[11.5px] font-medium">
-        <span data-rule-text="" className="shrink-0 whitespace-nowrap">{label(words === null ? null : fits ? words.full : words.short)}</span>
-        <span data-rule-line="" className="h-px flex-1" style={{ background: tokens.rule }} />
+        {/* S1 (#169): with a toggle, the whole line is the collapse button, named by the full sentence. */}
+        {onToggle ? (
+          <button type="button" aria-expanded={!collapsed} aria-label={sentence} onClick={onToggle}
+            className="flex min-w-0 flex-1 items-center gap-2 text-left">
+            {line}
+          </button>
+        ) : line}
       </h2>
       {/* Outside the heading, so its text and name stay the shown words; same size and weight as the rule. */}
       <span ref={measure} data-rule-measure="" aria-hidden="true"

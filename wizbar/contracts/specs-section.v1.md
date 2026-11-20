@@ -130,6 +130,8 @@ Declared in `wizbarSettingDescriptors` (by WB4-1) with the settings.v1.md store 
 
 **Changing it.** Each change reads the stored array, then writes it back with only that spec's key added or removed, one change at a time on the server, so overlapping changes keep each other's key. A settings read that fails never becomes a write: a change fails with `settings_failed` and the stored array is unchanged. Only display falls back to every spec collapsed.
 
+**The section's own collapse** (S1, #169) is a different setting, `sectionsCollapsed` (sidebar-v3.v1.md section 9). Collapsing the Specs section hides its rows but keeps its whole rule; it never reads or writes `specsOpen`, and expanding it shows each spec in its stored open state.
+
 ## 5. Matrix status
 
 A small 3 × 3 dot mark on each running thread inside an open spec, on the footer's running line and in its hover card. Thread cards no longer show one (0.5). Inputs: the row, and in the app only, the row's pull request (`experimental_useSidebarThreadPullRequest(id).pullRequest`; the server has no pull request, so it passes null). First match wins:

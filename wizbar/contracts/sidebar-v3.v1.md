@@ -243,6 +243,35 @@ Two new boolean keys in [settings.v1.md](settings.v1.md), declared in `wizbarSet
 
 Read with the existing rule: a missing key reads its default; exactly `true` is on; any other present value is off. Each switch changes only its own chip (#43). The host's settings store validates and persists them, as for the existing keys.
 
+## 9. Collapsible sections (S1, #169)
+
+The **Pinned**, **Inbox** and **Specs** section headers collapse and expand, like the parked shelves (Snoozed, Muted, Settled) and each spec row.
+
+- **Toggle.** The whole header line is one native button with `aria-expanded`, named by the section: `Pinned`, `Inbox`, or for Specs its full rule sentence. A click, or Enter or Space with it focused, toggles it.
+- **Collapsed.** The header and its rule line stay; the section's rows hide. Pinned and Inbox show their count, faint like `Settled 4`: `Pinned 3`, `Inbox 12`. Specs keeps its whole rule (`Specs 24 · 5 tickets need you (3 specs)`, or the narrow form), so what needs the owner stays visible.
+- **Inbox header.** Shown whenever the Inbox section exists, with or without Pinned, so the Inbox can always be collapsed and expanded (#170 R1).
+- **Unchanged.** Order and placement: Specs stays under the shelves and the "N running" footer at the bottom. Each spec's open state (`specsOpen`, specs-section.v1.md section 4) is independent of the Specs section being collapsed.
+- **Drag to pin.** A collapsed Pinned is still the drop zone (section 5): a card dropped on its header is pinned at the end. Alt+Up and Alt+Down work as before.
+- **Search.** While the host's search query is non-empty, a collapsed Pinned or Inbox with matches shows them, expanded, for that search only; nothing is stored. Meanwhile the Pinned and Inbox headers do not toggle: they are `aria-disabled` with the title `Clear the search to collapse`, and a click or key writes nothing, so clearing the search restores the stored choice (#170 R2). Specs is not searched and stays as stored.
+
+**The setting.**
+
+| Key | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `sectionsCollapsed` | string | `"[]"` | A JSON array of collapsed section keys: `pinned`, `inbox`, `specs` |
+
+Declared in `sectionsSettingDescriptors` (`wizbar/src/settings.ts`), not a switch, so it stays off the settings page; settings.v1.md's store and write rule apply. A missing setting, or a value that is not a JSON array of strings, collapses nothing (fail open: no thread is hidden by a bad value). Collapsing adds the key once; expanding removes it; unknown keys are kept. The sidebar saves it the way the Specs section saves `specsOpen`: the change shows at once, saves run one at a time and the newest wins, and only `sectionsCollapsed` is written. A failed save keeps the on-screen state and shows `Could not save the collapsed section. Try again.`
+
+### `wizbar section <pinned|inbox|specs> (--collapse | --expand) [--json]`
+
+Exactly one known section and exactly one of `--collapse` / `--expand`, else usage (exit 2). The same change as a header click: read `sectionsCollapsed`, write it back with only that key added or removed, one change at a time. A read that fails never becomes a write.
+
+```json
+{"section":"inbox","collapsed":true}
+```
+
+`collapsed` is read back from the stored value. Text: `inbox: collapsed` or `inbox: expanded`. A failed read or write: `{"error":{"code":"settings_failed","message":"The settings read failed."}}` (or `write`), exit 1. Parity with the sidebar is tested in `cli-parity.test.ts`.
+
 ## Seams
 
 | Seam | For |
