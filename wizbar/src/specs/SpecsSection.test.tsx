@@ -207,7 +207,7 @@ describe("0.5 C: the rule, the spec rows and the open panel", () => {
     expect(name.contains(line.querySelector("[data-needs-you]"))).toBe(false);
     expect(name.className).toContain("flex-1");
     expect((line.querySelector("[data-needs-you]") as HTMLElement).style.color).toBe(tokens.warning);
-    expect((line.querySelector("[data-done-last-hour]") as HTMLElement).style.color).toBe(tokens.mutedAccent);
+    expect((line.querySelector("[data-done-last-hour]") as HTMLElement).style.color).toBe(tokens.doneNote);
     // The dots sit on the line below, outside the name line.
     expect(line.querySelector("[data-dot-state]")).toBeNull();
     expect(rowOf("Sample palette").querySelectorAll("[data-dot-state]").length).toBe(10);
@@ -236,8 +236,9 @@ describe("0.5 C: the rule, the spec rows and the open panel", () => {
     expect(tokens.brightOlive).not.toBe(tokens.mutedAccent);
   });
 
-  // catches (0.5 P, #130): a lime-green rule or done olive, drawn from the accent and sidebar alone without the warning's warmth.
-  it("draws the rule, done dots and the last-hour note in the accent warmed by the warning, on the sidebar", async () => {
+  // catches (0.5 P, #130): a lime-green rule or done olive, drawn from the accent and sidebar alone without the warning's warmth;
+  // or the last-hour note left on the quieter done-dot olive, which reads below 4.5:1 on the open card and bb's bundled themes (#131 R1).
+  it("draws the rule, done dots and the brighter last-hour note in the accent warmed by the warning, on the sidebar", async () => {
     render();
     await screen.findByText("Sample palette");
     const heading = screen.getByRole("region", { name: "Specs" });
@@ -246,9 +247,10 @@ describe("0.5 C: the rule, the spec rows and the open panel", () => {
       (rowOf("Sample palette").querySelector("[data-done-last-hour]") as HTMLElement).style.color,
       (rowOf("Sample palette").querySelector('[data-dot-state="done"]') as HTMLElement).style.background,
     ];
-    expect(shown).toEqual([tokens.rule, tokens.mutedAccent, tokens.mutedAccent]);
+    expect(shown).toEqual([tokens.rule, tokens.doneNote, tokens.mutedAccent]);
+    expect(tokens.doneNote).not.toBe(tokens.mutedAccent);
     const variables = (value: string) => [...new Set(value.match(/var\(--[a-z-]+/g))].sort();
-    for (const value of [tokens.rule, tokens.mutedAccent]) {
+    for (const value of [tokens.rule, tokens.mutedAccent, tokens.doneNote]) {
       expect(variables(value)).toEqual(["var(--primary", "var(--sidebar", "var(--warning"]);
     }
   });
