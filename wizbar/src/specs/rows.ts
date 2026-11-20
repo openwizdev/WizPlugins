@@ -15,12 +15,38 @@ export type SpecsThreadRow = Pick<PluginSidebarThread,
   "hasPendingInteraction" | "activity" | "createdAt" | "updatedAt">;
 
 const HOUR = 60 * 60_000;
-const titlePattern = /^(.+?) · ([A-Z][A-Z0-9]*-[0-9]+): (.+)$/;
+// `Role · CODE: what`; codes may have no hyphen (0.5.0 A).
+const titlePattern = /^(.+?) · ([A-Z][A-Z0-9]*-?[0-9]+): (.+)$/;
+// Real fleet titles (0.5.0 A): a builder, a reviewer and a spec's fleet thread.
+const builderPattern = /^#([1-9][0-9]*): (.+)$/;
+const reviewPattern = /^Review #([1-9][0-9]*) at [0-9a-f]{7,40}(?: .*)?$/;
+const fleetPattern = /^Fleet #([1-9][0-9]*): (.+)$/;
 
-/** `Role · CODE: what it does` (section 3); nulls when the title does not parse. */
+/** What a title names (section 3): a ticket code, a ticket's issue, a pull under review, or a spec's fleet. */
+type TitleRef =
+  | { kind: "code"; role: string; code: string }
+  | { kind: "issue"; role: "Builder"; number: number }
+  | { kind: "pull"; role: "Reviewer"; number: number }
+  | { kind: "fleet"; role: null; number: number }
+  | { kind: "none"; role: null };
+
+/** The anchored real forms come first, so free text holding ` · CODE:` never turns them into the old form. */
+function titleRef(title: string): TitleRef {
+  let match = fleetPattern.exec(title);
+  if (match) return { kind: "fleet", role: null, number: Number(match[1]) };
+  if ((match = builderPattern.exec(title))) return { kind: "issue", role: "Builder", number: Number(match[1]) };
+  if ((match = reviewPattern.exec(title))) return { kind: "pull", role: "Reviewer", number: Number(match[1]) };
+  if ((match = titlePattern.exec(title))) return { kind: "code", role: match[1]!, code: match[2]! };
+  return { kind: "none", role: null };
+}
+
+/**
+ * `Role · CODE: what it does`, `#N: …` (Builder) or `Review #P at <sha>` (Reviewer)
+ * (section 3). The code comes from the title's own form only; nulls when it names none.
+ */
 export function parseTitle(title: string): { role: string | null; code: string | null } {
-  const match = titlePattern.exec(title);
-  return match ? { role: match[1]!, code: match[2]! } : { role: null, code: null };
+  const ref = titleRef(title);
+  return { role: ref.role, code: ref.kind === "code" ? ref.code : null };
 }
 
 /** The 0.3 shared working fact (sidebar-v3.v1.md section 1). */
@@ -46,21 +72,52 @@ export function matrixState(row: SpecsThreadRow, pullRequest: PluginSidebarPullR
   return "idle";
 }
 
-const hasCode = (spec: SpecEntryV4, code: string | null) => code !== null && spec.tickets.some((t) => t.code === code);
+const issueNumber = (key: string) => Number(key.slice(key.lastIndexOf("#") + 1));
 const only = <T>(items: readonly T[]): T | null => (items.length === 1 ? items[0]! : null);
 
-function matchEntry(file: SpecsFileV4, row: SpecsThreadRow): SpecEntryV4 | null {
+/** The spec's tickets the title names: by code, issue number or pull. */
+function ticketsOf(spec: SpecEntryV4, ref: TitleRef): TicketEntryV4[] {
+  switch (ref.kind) {
+    case "code": return spec.tickets.filter((t) => t.code === ref.code);
+    case "issue": return spec.tickets.filter((t) => issueNumber(t.ticket) === ref.number);
+    case "pull": return spec.tickets.filter((t) => t.pulls?.includes(ref.number) === true);
+    default: return [];
+  }
+}
+/** The row's one ticket, or null: a pull closing two tickets still names its spec, but no single ticket. */
+const ticketOf = (spec: SpecEntryV4, ref: TitleRef) => only(ticketsOf(spec, ref));
+const hasTicket = (spec: SpecEntryV4, ref: TitleRef) => ticketsOf(spec, ref).length > 0;
+/** Among several candidate specs, the one holding the title's ticket. */
+const byTicket = (specs: readonly SpecEntryV4[], ref: TitleRef) => only(specs.filter((s) => hasTicket(s, ref)));
+
+function matchEntry(file: SpecsFileV4, row: SpecsThreadRow, rows: readonly SpecsThreadRow[]): SpecEntryV4 | null {
   if (!isRunning(row)) return null;
-  const { code } = parseTitle(row.displayTitle);
-  const byParent = row.parentThreadId === null ? [] : file.specs.filter((s) => s.fleetThreadId === row.parentThreadId);
-  if (byParent.length === 1) return byParent[0]!;
-  if (byParent.length > 1) return only(byParent.filter((s) => hasCode(s, code)));
-  return only(file.specs.filter((s) => hasCode(s, code)));
+  const ref = titleRef(row.displayTitle);
+  // A spec's fleet thread is never one of its agents.
+  if (ref.kind === "fleet") return null;
+  if (row.parentThreadId !== null) {
+    // 1. The fleet parent: the file's fleet thread id, else a parent titled `Fleet #S: …`.
+    const byParent = file.specs.filter((s) => s.fleetThreadId === row.parentThreadId);
+    if (byParent.length === 1) return byParent[0]!;
+    if (byParent.length > 1) return byTicket(byParent, ref);
+    const parent = rows.find((r) => r.id === row.parentThreadId);
+    const fleet = parent ? titleRef(parent.displayTitle) : null;
+    if (fleet?.kind === "fleet") {
+      const bySpec = file.specs.filter((s) => issueNumber(s.spec) === fleet.number);
+      if (bySpec.length === 1) return bySpec[0]!;
+      if (bySpec.length > 1) return byTicket(bySpec, ref);
+    }
+  }
+  // 2. The title's ticket: its code, its issue number, or its pull request.
+  return byTicket(file.specs, ref);
 }
 
-/** The spec a running row belongs to (section 3), hidden specs included; null for none. */
-export function matchSpec(file: SpecsFileV4, row: SpecsThreadRow): SpecKeyV4 | null {
-  return matchEntry(file, row)?.spec ?? null;
+/**
+ * The spec a running row belongs to (section 3), hidden specs included; null for none.
+ * `rows` are every sidebar row, so a child of a `Fleet #S:` thread finds spec S.
+ */
+export function matchSpec(file: SpecsFileV4, row: SpecsThreadRow, rows: readonly SpecsThreadRow[] = []): SpecKeyV4 | null {
+  return matchEntry(file, row, rows)?.spec ?? null;
 }
 
 function dotState(ticket: TicketEntryV4, now: number): DotStateV4 {
@@ -75,12 +132,26 @@ export function isHidden(spec: SpecEntryV4): boolean {
   return spec.tickets.every((ticket) => ticket.state === "done");
 }
 
+/** The ticket title without its version and code (`0.1.0 KN3: the reader` → `the reader`). */
+function taskOf(ticket: TicketEntryV4): string {
+  const colon = ticket.title.indexOf(": ");
+  if (ticket.code === null || colon < 0) return ticket.title;
+  const head = ticket.title.slice(0, colon).trim().split(/\s+/);
+  const task = ticket.title.slice(colon + 2).trim();
+  return head[head.length - 1] === ticket.code && task.length > 0 ? task : ticket.title;
+}
+
 function agentOf(spec: SpecEntryV4, row: SpecsThreadRow, models: CardModelsResultV3 | null): SpecAgentV4 {
   const served = models?.source === "host" ? models.items.find((item) => item.threadId === row.id) : undefined;
-  const { role, code } = parseTitle(row.displayTitle);
+  const ref = titleRef(row.displayTitle);
+  const ticket = ticketOf(spec, ref);
+  const code = ref.kind === "code" ? ref.code : ticket?.code ?? null;
+  // A real title (`#N:`, `Review #P at`) shows `<Role> · <code>: <task>`; the old form shows as written.
+  const real = (ref.kind === "issue" || ref.kind === "pull") && ticket !== null;
+  const title = real ? `${ref.role} · ${code ?? `#${issueNumber(ticket.ticket)}`}: ${taskOf(ticket)}` : row.displayTitle;
   return {
-    threadId: row.id, title: row.displayTitle, role, code,
-    ticket: spec.tickets.find((t) => code !== null && t.code === code)?.ticket ?? null,
+    threadId: row.id, title, role: ref.role, code,
+    ticket: ticket?.ticket ?? null,
     providerId: row.providerId,
     // The shared model source (section 6): null until WB4-4 adopts it; missing values are omitted, never guessed.
     model: served?.model ?? null, effort: served?.model ? served.effort : null,
@@ -92,7 +163,7 @@ function agentOf(spec: SpecEntryV4, row: SpecsThreadRow, models: CardModelsResul
 export function specRows(file: SpecsFileV4, rows: readonly SpecsThreadRow[], openKeys: readonly string[], now: number, models: CardModelsResultV3 | null = null): SpecsResultV4 {
   const agents = new Map<SpecEntryV4, SpecAgentV4[]>();
   for (const row of rows) {
-    const spec = matchEntry(file, row);
+    const spec = matchEntry(file, row, rows);
     if (spec) agents.set(spec, [...(agents.get(spec) ?? []), agentOf(spec, row, models)]);
   }
   const specs = file.specs.filter((spec) => !isHidden(spec)).map((spec): SpecRowV4 => {

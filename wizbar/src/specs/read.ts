@@ -31,10 +31,13 @@ const key = z.string().refine((value) => {
 
 const ticketSchema = z.object({
   ticket: key,
-  code: z.string().regex(/^[A-Z][A-Z0-9]*-[0-9]+$/).nullable(),
+  // 0.5.0 A: real codes may have no hyphen (`KN3`, `AP11`); the old `WB4-1` form still reads.
+  code: z.string().regex(/^[A-Z][A-Z0-9]*-?[0-9]+$/).nullable(),
   title: z.string().refine((title) => title.trim().length > 0),
   state: z.enum(["done", "building", "review", "needs-you", "held", "not-started"]),
   closedAt: utc.nullable(),
+  // Additive (0.5.0 A): the ticket's open pull request numbers, for `Review #P at <sha>` titles.
+  pulls: z.array(z.number().int().positive().refine(Number.isSafeInteger)).optional(),
 }).strict().refine((ticket) => ticket.state === "done" || ticket.closedAt === null);
 
 const specSchema = z.object({
