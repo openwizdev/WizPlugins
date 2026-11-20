@@ -14,6 +14,19 @@ import {
 import { cardPinNext, cardRowLabel, cardRowLabels, cardSummary, computeStatsV4, formatStatsText } from "./stats";
 import { createSpecsCommands } from "./specs/cli";
 
+// R1 (#172): a live host feed. While set, the sidebar hook reads these rows and re-renders when they change,
+// as the host does on every realtime update; unset, the harness's fixed rows stand.
+const liveFeed = vi.hoisted(() => ({ rows: null as readonly unknown[] | null, subs: new Set<() => void>() }));
+vi.mock("@get-bb/plugin-sdk/app", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@get-bb/plugin-sdk/app")>();
+  const { useSyncExternalStore } = await import("react");
+  return { ...actual, experimental_useSidebarThreads: (...args: Parameters<typeof actual.experimental_useSidebarThreads>) => {
+    const rows = useSyncExternalStore((f) => { liveFeed.subs.add(f); return () => { liveFeed.subs.delete(f); }; }, () => liveFeed.rows);
+    const real = actual.experimental_useSidebarThreads(...args);
+    return rows ? { ...real, status: "ready", threads: rows as PluginSidebarThread[] } : real;
+  } };
+});
+
 type Ready = Extract<StatsV4, { status: "ready" }>;
 const ready = v4Stats as Ready;
 const models = (model: string | null, effort: string | null, source: "host" | "none" = "host") =>
@@ -123,7 +136,7 @@ const trigger = () => within(counter()).getByRole("button");
 const card = () => screen.queryByRole("region", { name: "Running threads" });
 
 beforeEach(() => { vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(v4Now); vi.stubEnv("TZ", "UTC"); });
-afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllEnvs(); });
+afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllEnvs(); liveFeed.rows = null; liveFeed.subs.clear(); });
 
 describe("S4: no bolt; N running with its hover card", () => {
   // catches: the bolt (a footer item) left registered.
@@ -354,5 +367,113 @@ describe("WB4-10: the running card stays reachable", () => {
     await vi.advanceTimersByTimeAsync(60_000);
     await waitFor(() => expect(names()).toContain("Sample palette updated"));
     expect(names()).not.toContain("Sample palette");
+  });
+});
+
+// R1 (#172): the open card updates in place. The owner saw it flash while threads ran; on main a change in
+// the running set blanked every model label until the next answer, a leaving thread's row went and came back
+// each turn, and a brief source gap unmounted the footer and closed the pinned card for good.
+describe("R1 (#172): the open card updates in place, with no flashing", () => {
+  const stop = (row: PluginSidebarThread): PluginSidebarThread =>
+    ({ ...row, status: "idle", runtimeStatus: "idle", indicator: "none", indicatorLabel: null, updatedAt: Date.now() });
+  /** The host hands over a new snapshot: every running row's revision moves on, and `stopped` rows end their turn. */
+  const snapshot = (stopped: readonly string[] = []) => v4Threads.map((row) => stopped.includes(row.id) ? stop(row)
+    : row.runtimeStatus === "idle" ? row : { ...row, updatedAt: Date.now() });
+  const push = (rows: readonly PluginSidebarThread[]) => act(() => { liveFeed.rows = rows; liveFeed.subs.forEach((f) => f()); });
+  const tick = (ms: number) => act(() => vi.advanceTimersByTimeAsync(ms));
+  const rowNode = (id: string) => card()?.querySelector(`[data-thread=${id}]`) ?? null;
+  const modelNodes = () => new Map([...card()!.querySelectorAll("[data-model]")]
+    .map((el) => [el.closest("[data-thread]")!.getAttribute("data-thread")!, el]));
+  async function pinned() {
+    vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout", "setInterval", "clearInterval"] });
+    vi.setSystemTime(v4Now);
+    liveFeed.rows = snapshot();
+    const rendered = renderSlot({ component: FooterCounter }, {}, {
+      pluginId: `synthetic-172-${Math.random()}`, settings: { wizdeckFactories: binding },
+      rpc: { specsFile: () => ({ kind: "content", text: v4SpecsFileText }), cardModels: models("Sample model", "high") } as never,
+    });
+    fireEvent.click(trigger());
+    await tick(10);
+    return rendered;
+  }
+
+  // catches (a) and (c): labels blanked while the next model answer is out, or rows remounted on a row change.
+  it("keeps every row, label and the count's node while rows change every second", async () => {
+    await pinned();
+    const section = card()!, count = counter(), models0 = modelNodes();
+    const rows0 = new Map(ready.threads.map((t) => [t.id, rowNode(t.id)]));
+    expect(models0.size).toBe(9);
+    for (let second = 1; second <= 8; second++) {
+      // thr_v4_code_a ends its turn and starts the next, every second: the running set changes each time.
+      await push(snapshot(second % 2 ? ["thr_v4_code_a"] : []));
+      expect(card(), `card at ${second}s`).toBe(section);
+      expect(counter(), `count at ${second}s`).toBe(count);
+      for (const [id, node] of models0) {
+        expect(modelNodes().get(id), `label ${id} at ${second}s`).toBe(node);
+        expect(node.textContent).toBe("Sample model · High");
+      }
+      for (const [id, node] of rows0) expect(rowNode(id), `row ${id} at ${second}s`).toBe(node);
+      await tick(1000);
+    }
+  });
+
+  // catches: a thread that leaves taken out at once, so a turn boundary flashes its row, or leaves removed one by one.
+  it("removes threads that leave together, at most once per batch window, and moves the count at once", async () => {
+    await pinned();
+    const count = counter();
+    await push(snapshot(["thr_v4_code_a"]));
+    expect(counter()).toBe(count);
+    expect(count.getAttribute("aria-label")).toBe("8 running");
+    expect(rowNode("thr_v4_code_a")?.getAttribute("data-leaving")).toBe("true");
+    await tick(1000);
+    await push(snapshot(["thr_v4_code_a", "thr_v4_stray"]));
+    expect(count.getAttribute("aria-label")).toBe("7 running");
+    await tick(1900);
+    expect([rowNode("thr_v4_code_a"), rowNode("thr_v4_stray")].every((el) => el?.getAttribute("data-leaving") === "true")).toBe(true);
+    await tick(100);
+    expect([rowNode("thr_v4_code_a"), rowNode("thr_v4_stray")]).toEqual([null, null]);
+    // The next leave waits a whole window from that removal.
+    await push(snapshot(["thr_v4_code_a", "thr_v4_stray", "thr_v4_ambiguous"]));
+    await tick(2900);
+    expect(rowNode("thr_v4_ambiguous")?.getAttribute("data-leaving")).toBe("true");
+    await tick(100);
+    expect(rowNode("thr_v4_ambiguous")).toBeNull();
+    // A thread back before its batch is never removed.
+    await push(snapshot(["thr_v4_code_a", "thr_v4_stray", "thr_v4_ambiguous", "thr_v4_builder_a"]));
+    await tick(1000);
+    await push(snapshot(["thr_v4_code_a", "thr_v4_stray", "thr_v4_ambiguous"]));
+    expect(rowNode("thr_v4_builder_a")?.hasAttribute("data-leaving")).toBe(false);
+    await tick(5000);
+    expect(rowNode("thr_v4_builder_a")).not.toBeNull();
+  });
+
+  // catches (b): a brief source gap that unmounts the footer and closes a pinned card, or old numbers kept
+  // as current: past a few seconds the count is marked last known, and closing the card hides it.
+  it("keeps the last card through a brief source gap, then marks it last known", async () => {
+    const rendered = await pinned();
+    const section = card()!, count = counter(), row = rowNode("thr_v4_code_a");
+    await act(() => rendered.setRealtimeConnectionState("reconnecting"));
+    await tick(300);
+    await act(() => rendered.setRealtimeConnectionState("connected"));
+    expect(card()).toBe(section);
+    expect(counter()).toBe(count);
+    expect(rowNode("thr_v4_code_a")).toBe(row);
+    expect(count.hasAttribute("data-stale")).toBe(false);
+    // The reconnect alone does not certify the old rows; a new snapshot does.
+    await push(snapshot());
+    expect(card()).toBe(section);
+    await act(() => rendered.setRealtimeConnectionState("reconnecting"));
+    await tick(4900);
+    expect(count.hasAttribute("data-stale")).toBe(false);
+    await tick(100);
+    expect(card()).toBe(section);
+    expect(count.getAttribute("data-stale")).toBe("true");
+    expect(count.getAttribute("aria-label")).toBe("9 running, last known");
+    fireEvent.keyDown(trigger(), { key: "Escape" });
+    expect(screen.queryByRole("status")).toBeNull();
+    await act(() => rendered.setRealtimeConnectionState("connected"));
+    await push(snapshot(["thr_v4_code_a"]));
+    expect(counter().getAttribute("aria-label")).toBe("8 running");
+    expect(counter().hasAttribute("data-stale")).toBe(false);
   });
 });
