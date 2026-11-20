@@ -152,6 +152,13 @@ export function hasSomethingNew(thread: PluginSidebarThread): boolean {
   return thread.isUnread || thread.hasPendingInteraction || attentionIndicators.has(thread.indicator);
 }
 
+/**
+ * The plugins that start loop runs: a thread whose `originPluginId` is one of these
+ * is a loop run and never shows in Unread. The value is a placeholder until the
+ * live id is read from the owner's host (#188).
+ */
+export const LOOP_ORIGIN_PLUGIN_IDS: ReadonlySet<string> = new Set(["placeholder-loop-plugin-id"]);
+
 /** A fleet wake's title form, the real `Fleet #S: …` title (specs-section section 3). */
 const fleetWakeTitle = /^Fleet #[1-9][0-9]*: /;
 

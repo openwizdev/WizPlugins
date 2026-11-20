@@ -1472,10 +1472,10 @@ describe("E2: Unread", () => {
     thread({ id: "u_agent", title: "Builder · SC-1: Sample borrowed code", displayTitle: "Builder · SC-1: Sample borrowed code", isUnread: true, ...working, createdAt: 20 }),
     thread({ id: "u_stray", title: "Builder · ZZ-9: Sample stray", displayTitle: "Builder · ZZ-9: Sample stray", isUnread: true, ...working, createdAt: 10 }),
   ];
-  function renderUnread(options: { stored?: string; specsFile?: () => unknown } = {}) {
+  function renderUnread(options: { stored?: string; specsFile?: () => unknown; searchQuery?: string } = {}) {
     const updates: unknown[] = [];
     const settings: Record<string, string> = { wizdeckFactories: binding, ...(options.stored === undefined ? {} : { sectionsCollapsed: options.stored }) };
-    const rendered = renderSlot(inbox, listProps, {
+    const rendered = renderSlot(inbox, { ...listProps, searchQuery: options.searchQuery ?? "" }, {
       pluginId: "wizbar", settings,
       sidebarThreads: { status: "ready", threads: rows(), projects: [] },
       rpc: { listLifecycle: () => ({ rows: [] }), specsFile: (options.specsFile ?? (() => ({ kind: "content", text: v4SpecsFileText }))) as never },
@@ -1507,6 +1507,16 @@ describe("E2: Unread", () => {
     renderUnread({ specsFile: () => new Promise((resolve) => { answer = resolve; }) });
     expect(links()).toEqual(["Sample new", "Sample waiting"]);
     await act(async () => answer({ kind: "content", text: v4SpecsFileText }));
+    await waitFor(() => expect(links()).toEqual(["Sample new", "Sample waiting", "Builder · ZZ-9: Sample stray"]));
+  });
+
+  // catches: a search that can no longer find a read thread, a fleet wake or a spec's agent, because
+  // Unread's filter still applies while searching (the 0.5 Inbox found every match).
+  it("shows every matching thread while a search is active, read or not, and filters again once it clears", async () => {
+    const { rendered } = renderUnread({ searchQuery: "Sample" });
+    await waitFor(() => expect(links()).toEqual(["Sample read", "Sample new", "Sample waiting", "Fleet #77: Sample cache",
+      "Builder · SC-1: Sample borrowed code", "Builder · ZZ-9: Sample stray"]));
+    rendered.rerender(createElement(inbox.component, { ...listProps, searchQuery: "" }));
     await waitFor(() => expect(links()).toEqual(["Sample new", "Sample waiting", "Builder · ZZ-9: Sample stray"]));
   });
 

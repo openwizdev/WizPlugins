@@ -9,6 +9,7 @@ import {
   searchThreadsByTitle,
   sortByCreatedAtDescending,
   sortPinned,
+  LOOP_ORIGIN_PLUGIN_IDS,
   threadDisplayTitle,
   unreadThreads,
   visibleInboxThreads,
@@ -270,6 +271,16 @@ describe("unreadThreads", () => {
     ["a title only mentioning a fleet", { isUnread: true, displayTitle: "Sample notes on Fleet #77: later" }, true],
   ] as const)("%s", (_name, changes, shown) => {
     const row = thread({ id: "thr_x", ...(changes as Partial<PluginSidebarThread>) });
+    expect(unreadThreads([row], v4SpecsFile, [row]).map((t) => t.id)).toEqual(shown ? ["thr_x"] : []);
+  });
+
+  // catches: a loop run let into Unread because it is unread, or every plugin-started thread dropped with it.
+  it.each([
+    ["an unread loop run", [...LOOP_ORIGIN_PLUGIN_IDS][0]!, false],
+    ["a loop run waiting on you", [...LOOP_ORIGIN_PLUGIN_IDS][0]!, false],
+    ["an unread thread another plugin started", "sample-other-plugin", true],
+  ] as const)("%s", (name, originPluginId, shown) => {
+    const row = thread({ id: "thr_x", originPluginId, isUnread: !name.includes("waiting"), hasPendingInteraction: name.includes("waiting") });
     expect(unreadThreads([row], v4SpecsFile, [row]).map((t) => t.id)).toEqual(shown ? ["thr_x"] : []);
   });
 
