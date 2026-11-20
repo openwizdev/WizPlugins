@@ -1,19 +1,36 @@
-// The matrix status mark (WB4-2, openwizdev/OpenWiz#1436): a 3 × 3 dot mark
-// per specs-section.v1.md section 5, coloured from host theme variables only
-// (section 9). Idea credited to Conductor's workspace status matrix.
+// The matrix status mark: a quiet 3 × 3 dot mark per specs-section.v1.md
+// section 5, coloured from host theme variables only (section 9). Idea credited
+// to Conductor's workspace status matrix.
 import { useEffect, useState } from "react";
-import { matrixMarksV4, type MatrixStateV4 } from "./fixtures/v4";
+import { matrixMarksV4, matrixRingV4, type MatrixColourV4, type MatrixStateV4 } from "./fixtures/v4";
 import { cn } from "./lib/utils";
 import { tokens } from "./specs/theme";
 
-const colours = {
+const colours: Record<MatrixColourV4, string> = {
   accent: tokens.accent,
   "muted-accent": tokens.mutedAccent,
+  "muted-text": "var(--muted-foreground, #b7b7b7)",
   warning: tokens.warning,
   // The contract names no fallback for destructive.
   destructive: "var(--destructive)",
+  dim: "color-mix(in oklch, var(--muted-foreground, #b7b7b7) 35%, var(--sidebar, #161616))",
   border: tokens.border,
-} as const;
+};
+
+/** One chase step, in ms; every working mark steps together, from the clock. */
+const STEP = 150;
+const ringStep = () => Math.floor(Date.now() / STEP) % matrixRingV4.length;
+/** The ring index lit by the working chase, ticking while `active`. */
+function useChase(active: boolean): number {
+  const [step, setStep] = useState(ringStep);
+  useEffect(() => {
+    if (!active) return;
+    setStep(ringStep());
+    const timer = setInterval(() => setStep(ringStep()), STEP);
+    return () => clearInterval(timer);
+  }, [active]);
+  return step;
+}
 
 export const matrixWords: Record<MatrixStateV4, string> = {
   working: "Working", reviewing: "Reviewing", "checks-running": "Checks running", "needs-you": "Needs you",
@@ -37,19 +54,26 @@ function useReducedMotion(): boolean {
 }
 
 export function MatrixMark({ state, className }: { state: MatrixStateV4; className?: string }) {
-  const { mask, colour, animated } = matrixMarksV4[state];
+  const { mask, colour, motion } = matrixMarksV4[state];
   const reduced = useReducedMotion();
-  const moving = animated && !reduced;
+  const chase = motion === "chase" && !reduced;
+  const pulse = motion === "pulse" && !reduced;
+  const step = useChase(chase);
+  // The chase moves the still mask's one lit dot round the ring.
+  const lit = (index: number) => (chase ? index === matrixRingV4[step] : mask[index] === "1");
   return (
     <span role="img" aria-label={matrixWords[state]} data-matrix={state}
-      className={cn("grid size-2.5 shrink-0 grid-cols-3 gap-px", className)}>
-      {[...mask].map((bit, index) => {
-        const lit = bit === "1";
+      className={cn("grid shrink-0 content-center", className)}
+      style={{ width: "11px", height: "11px", gridTemplateColumns: "repeat(3, 2.6px)", gap: "1.6px" }}>
+      {Array.from({ length: 9 }, (_, index) => {
+        const on = lit(index);
+        const pulsing = pulse && on;
         return (
-          <span key={index} data-animated={moving && lit ? "" : undefined}
-            className={cn("rounded-full", moving && lit && "animate-pulse")}
-            // A diagonal wave: each dot starts a step after the one above or left of it.
-            style={{ background: lit ? colours[colour] : tokens.border, animationDelay: moving && lit ? `${((index % 3) + Math.floor(index / 3)) * 150}ms` : undefined }} />
+          <span key={index} data-animated={(chase && (matrixRingV4 as readonly number[]).includes(index)) || pulsing ? "" : undefined}
+            className={cn("rounded-full", pulsing && "animate-pulse")}
+            style={{ width: "2.6px", height: "2.6px", background: on ? colours[colour] : tokens.border,
+              // The middle row pulses left to right.
+              animationDelay: pulsing ? `${(index % 3) * 200}ms` : undefined }} />
         );
       })}
     </span>
