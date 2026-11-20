@@ -8,6 +8,8 @@ import type { SpecsFileReadV4, SpecsFileV4, SpecsReadV4 } from "../fixtures/v4";
 /** Where the specs file lives, relative to the bound factory's home root. */
 export const specsRelativePath = ".openwiz/specs.v1.json";
 export const specsSchemaId = "openwiz.specs.v1";
+/** v2 (#162) is v1 plus the `yours-later` ticket state; WizBar reads both, whichever the producer writes. */
+export const specsSchemaIdV2 = "openwiz.specs.v2";
 
 const MINUTE = 60_000;
 
@@ -34,7 +36,7 @@ const ticketSchema = z.object({
   // 0.5.0 A: real codes may have no hyphen (`KN3`, `AP11`); the old `WB4-1` form still reads.
   code: z.string().regex(/^[A-Z][A-Z0-9]*-?[0-9]+$/).nullable(),
   title: z.string().refine((title) => title.trim().length > 0),
-  state: z.enum(["done", "building", "review", "needs-you", "held", "not-started"]),
+  state: z.enum(["done", "building", "review", "needs-you", "yours-later", "held", "not-started"]),
   closedAt: utc.nullable(),
   // Additive (0.5.0 A): the ticket's open pull request numbers, for `Review #P at <sha>` titles.
   pulls: z.array(z.number().int().positive().refine(Number.isSafeInteger)).optional(),
@@ -54,10 +56,12 @@ const specSchema = z.object({
 });
 
 const fileSchema = z.object({
-  schema: z.literal(specsSchemaId),
+  schema: z.enum([specsSchemaId, specsSchemaIdV2]),
   generatedAt: utc,
   specs: z.array(specSchema),
-}).strict().refine((file) => distinct(file.specs.map((spec) => spec.spec)));
+}).strict().refine((file) => distinct(file.specs.map((spec) => spec.spec)))
+  // v1 has no later state.
+  .refine((file) => file.schema === specsSchemaIdV2 || file.specs.every((spec) => spec.tickets.every((ticket) => ticket.state !== "yours-later")));
 
 function distinct(values: readonly string[]): boolean {
   return new Set(values).size === values.length;
@@ -109,7 +113,7 @@ export function readSpecsFile(read: SpecsFileReadV4, now: number): SpecsReadV4 {
   if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return malformed;
   const schema = (raw as { schema?: unknown }).schema;
   if (typeof schema !== "string") return malformed;
-  if (schema !== specsSchemaId) return { status: "unavailable", reason: "unknown-schema" };
+  if (schema !== specsSchemaId && schema !== specsSchemaIdV2) return { status: "unavailable", reason: "unknown-schema" };
   const parsed = fileSchema.safeParse(raw);
   if (!parsed.success) return malformed;
   const generatedAt = Date.parse(parsed.data.generatedAt);

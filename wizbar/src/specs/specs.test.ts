@@ -6,7 +6,7 @@ import { createFakePluginHost, type FakePluginHost } from "@get-bb/plugin-sdk/te
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   v4FailedRunningAgent, v4FleetIdMatching, v4FleetIdStats, v4FleetIdThreads, v4Matching, v4Matrix, v4Now, v4OpenSetting,
-  v4OpenSettingCases, v4PullRequests, v4SpecRows, v4SpecsFile, v4SpecsFileText, v4SpecsReadCases, v4Threads, v4TimeZone,
+  v4OpenSettingCases, v4PullRequests, v4SpecRows, v4SpecRowsV2, v4SpecsFile, v4SpecsFileV2, v4SpecsFileText, v4SpecsReadCases, v4Threads, v4TimeZone,
   v4TitleCases,
 } from "../fixtures/v4";
 import plugin from "../server";

@@ -166,6 +166,12 @@ function SpecRow({ row, threads, now, activeThreadId, onNavigate, onToggle }: {
   const notes = (
     <>
       {row.needsYou > 0 ? <span data-needs-you="" className="shrink-0 text-[11.5px]" style={{ color: tokens.warning }}>{row.needsYou} needs you</span> : null}
+      {/* #162: tickets the owner gets once their blockers close, quiet beside the due-now count. */}
+      {row.yoursLater > 0 ? (
+        <span data-yours-later="" className="-ml-1 shrink-0 text-[11.5px] text-muted-foreground">
+          {row.needsYou > 0 ? `· ${row.yoursLater} later` : `${row.yoursLater} later`}
+        </span>
+      ) : null}
       {row.doneLastHour > 0 ? <span data-done-last-hour="" className="shrink-0 text-[11.5px]" style={{ color: tokens.doneNote }}>{row.doneLastHour} done in the last hour</span> : null}
     </>
   );
@@ -216,12 +222,14 @@ const dotStyle: Record<DotStateV4, CSSProperties> = {
   building: ring(tokens.mutedText),
   review: ring(tokens.mutedText),
   "needs-you": { background: tokens.warning },
+  // #162: hollow and quiet, the warning hue only as a ring at partial strength.
+  "yours-later": ring(`color-mix(in oklab, ${tokens.warning} 60%, transparent)`),
   held: ring(tokens.quietRing),
   "not-started": { background: tokens.border },
 };
 const dotWords: Record<DotStateV4, string> = {
   done: "done", "done-recent": "done in the last hour", building: "being built", review: "in review",
-  "needs-you": "needs you", held: "held", "not-started": "not started",
+  "needs-you": "needs you", "yours-later": "later", held: "held", "not-started": "not started",
 };
 
 /** One dot per ticket, in the contract's dot order (section 2). */
