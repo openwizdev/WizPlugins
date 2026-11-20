@@ -1,10 +1,10 @@
 ## A sidebar for a fleet of agent threads
 
-WizBar replaces the thread list with three sections, Pinned, Specs and Unread, in the order you choose: drag a section by the grip on its header, or press Alt+Up and Alt+Down with the header focused. Click a header to collapse it; WizBar remembers both the order and what is collapsed. Snoozed and Muted shelves sit below, and Settled is one quiet link at the very bottom. Threads are cards, newest first, that never re-order themselves.
+WizBar replaces the thread list with three sections, Pinned, Specs and Unread, in the order you choose: drag a section by the grip on its header, or press Alt+Up and Alt+Down with the header focused. Click a header to collapse it; WizBar remembers both the order and what is collapsed. Snoozed and Muted shelves sit below, and Settled is one quiet link at the very bottom. Threads are cards that never re-order themselves: Pinned keeps the host's pinned order, Snoozed is soonest wake first, and Unread, Muted and Settled are newest first.
 
 ## Unread
 
-Unread lists only threads with something new for you (unread, waiting on your input, or marked by the host with an unread result or a failure), on their own or in a child under their chip. A thread working for a spec appears under that spec instead; fleet threads titled `Fleet #<N>: …` and the fleet loop's runs for your bound repositories never appear. A thread with nothing new is out of Unread; search finds it. The host does not mark loop runs, so another loop's run with something new can still appear. While you search, Unread shows every matching unpinned thread.
+Unread lists only threads with something new for you (unread, waiting on your input, or marked by the host with an unread result or a failure), on their own or in a child under their chip. A running agent of a spec appears under that spec instead. Without a search, Unread also leaves out fleet wakes titled `Fleet #<N>: …` and fleet-loop runs titled `launch-fleet <owner>/<repo>`, `launch-fleet wakes <owner>/<repo>` or `launch-fleet #<N> <owner>/<repo>` for a repository you have bound; a fleet loop for a repository you have not bound, or any other loop's run, can appear when it has something new, because the host does not mark loop runs. A thread with nothing new is out of Unread until it has something new. While you search, Unread drops its filter: it shows the matching active, unpinned threads in the current project scope, children, fleet wakes and loop runs included, read or not; matching snoozed, muted and settled threads stay on their own shelves.
 
 ## What each card shows
 
@@ -15,7 +15,7 @@ Unread lists only threads with something new for you (unread, waiting on your in
 
 ## Specs
 
-A rule such as `Specs 24 · 5 tickets need you (3 specs)` (`Specs 24 · 5 for you` when narrow), then one row per spec from your factory's specs file, specs with a ticket due now first, then the most recently active. A small picker at the right of the rule switches to Recently active, Closest to done or Newest, and is remembered. Each ticket is a dot: done, done in the last hour, building, in review, needs you, later, held or not started. The dot of a ticket whose agent is working breathes slowly, every breathing dot in step, still under reduced motion; a spec with nothing running and nothing due now shows its name muted. Finished specs, and specs with nothing moving for more than 3 days, fold into a collapsed `Quiet N` group at the bottom.
+A rule such as `Specs 24 · 5 tickets need you (3 specs)` (`Specs 24 · 5 for you` when narrow), then one row per spec from your factory's specs file, specs with a ticket due now first, then the most recently active. A small picker at the right of the rule switches to Recently active, Closest to done or Newest (the specs file's order: each bound repository's specs newest first, one repository after another), and is remembered. Each ticket is a dot: done, done in the last hour, building, in review, needs you, later, held or not started. The dot of a ticket whose agent is working breathes slowly unless the ticket is done or in review (a review dot keeps its steady ring), every breathing dot in step, still under reduced motion; a spec with nothing running and nothing due now shows its name muted. Finished specs, and specs with nothing moving for more than 3 days, fold into a collapsed `Quiet N` group at the bottom.
 
 Only a ticket labelled `ready-for-human` splits: due now (needs you) when it has no open blockers, later when it has open blockers, a hollow ring counted as `· N later`. Open a spec to see its running builders and reviewers with their model and effort. "Specs unavailable" shows, never zero, when neither specs file is ready (missing, malformed or stale).
 
@@ -31,7 +31,7 @@ Drag a card into Pinned to pin it, out of Pinned to unpin it, or inside Pinned t
 
 ## Agent-first
 
-Every WizBar action in the sidebar is also a `room-cli wizbar` command, and each takes `--json`, except the Specs sort picker and the section order. The row menu's host items (open in split, mark read or unread, archive, delete) are the host's own; the README lists their agent routes.
+`room-cli wizbar` commands cover these sidebar actions, each with `--json`: settle, snooze, mute, pin and move threads and undo them; list a thread's shelf or children; read the running card and the specs (in any sort with `--sort`, without saving it); open or close one spec (a spec shows open only while it has running agents); and collapse or expand Pinned, Specs or Unread. The Specs sort picker, the section order, the Quiet group and the Snoozed, Muted and Settled shelves have no command. The row menu's host items (open in split, mark read or unread, archive, delete) are the host's own; the README lists their agent routes.
 
 ```text
 wizbar settle | unsettle | unsnooze | mute | unmute | list <id>... [--json]

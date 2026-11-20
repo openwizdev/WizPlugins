@@ -1,7 +1,7 @@
 {
   "id": "wizbar",
   "displayName": "WizBar",
-  "description": "An agent-first sidebar for fleets of agent threads. Pinned, Specs and Unread sections reorder by drag; Unread lists only threads with something new. Specs sort by what needs you, with a picker; finished and idle specs fold into Quiet, and active tickets breathe. Cards show the issue or pull request link, children, and model and effort; the footer counts running threads and opens a steady hover card; drag pins and reorders; and wizbar CLI commands with JSON cover the sidebar's actions except the sort picker and section order. Derived from T3 Sidebar.",
+  "description": "An agent-first sidebar for fleets of agent threads. Pinned, Specs and Unread sections reorder by drag; Unread lists only threads with something new. Specs sort by what needs you, with a picker; finished and idle specs fold into Quiet, and a ticket's dot breathes while its agent is working, unless it is done or in review. Cards show the issue or pull request link, children, and model and effort; the footer counts running threads and opens a steady hover card; drag pins and reorders; and wizbar CLI commands with JSON settle, snooze, mute, pin and move threads, read the running card and specs, open or close a spec and collapse a section. Derived from T3 Sidebar.",
   "icon": "Zap",
   "overview": "./overview/wizbar.md",
   "tags": ["sidebar", "threads", "inbox", "agents", "fleet", "cli"],

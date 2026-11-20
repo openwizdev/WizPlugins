@@ -1,10 +1,12 @@
 # WizBar
 
 WizBar is an agent-first Cloudroom sidebar plugin for fleets of agent threads,
-version 0.6.0. It keeps T3 Sidebar's cards, newest first, that never re-order
-themselves, with Pinned, Unread, Snoozed, Muted and Settled shelves.
+version 0.6.0. It keeps T3 Sidebar's cards, which never re-order themselves,
+on Pinned, Unread, Snoozed, Muted and Settled shelves: Pinned in the host's
+pinned order, Snoozed soonest wake first, and Unread, Muted and Settled newest
+first.
 v0.3 added richer cards, children on hover, a live running count, drag to pin,
-and a `wizbar` CLI command with JSON for every sidebar action. v0.4 added a
+and a `wizbar` CLI with JSON for the sidebar's thread actions. v0.4 added a
 Specs section under the list, matrix status marks and a quiet footer with a
 hover card. v0.5 fills the Specs section with live data from a specs producer,
 matches real fleet thread titles to their spec, shows friendly model and effort
@@ -45,16 +47,20 @@ are in the [v0.3 sidebar contract](contracts/sidebar-v3.v1.md) and the
   it. The host does not mark loop runs, so another loop's run with something
   new can still appear. Until the settings and the first specs read are
   known, the list does not fill, so no thread shows and then leaves. While a
-  search is active, Unread shows every matching unpinned thread, children
-  included, read or not. A 0.5 Inbox collapse carries over as an Unread collapse.
+  search is active, Unread drops its filter: it shows the matching active,
+  unpinned threads in the current project scope, children included, read or
+  not; matching snoozed, muted and settled threads stay on their own shelves.
+  A 0.5 Inbox collapse carries over as an Unread collapse.
 - **Settled** is not a section any more: one quiet `Settled N` link at the
   very bottom of the list opens it, and a search shows its matches.
 - **Specs sort by what needs you.** Default order: specs with a ticket due
   now first, then the other unfinished specs, then finished ones, each group
   most recently active first. A small picker at the right of the Specs rule
   offers Needs you first, Recently active, Closest to done (highest done
-  share, then fewest tickets left) and Newest (the producer's order, newest
-  spec first). The choice is saved in `specsSort`. A spec's activity is the
+  share, then fewest tickets left) and Newest (the specs file's order, within
+  the main list and within Quiet: the producer lists each bound repository's specs newest first, one repository
+  after another in the bound order, so across repositories an older spec can
+  come before a newer one). The choice is saved in `specsSort`. A spec's activity is the
   newest of its tickets' last activity, their close times and its running
   agents' updates; a spec with none of these sorts last.
 - **Quiet.** A spec with nothing due now that is finished, or has had no
@@ -62,19 +68,24 @@ are in the [v0.3 sidebar contract](contracts/sidebar-v3.v1.md) and the
   the bottom of the Specs section, in the same order; open it like a spec, and
   its open state is remembered. `Specs N` counts the specs outside Quiet. A
   finished spec is no longer hidden: it is a quiet row, the running card names
-  it, and `wizbar spec` opens and closes it. Only a spec with no tickets is
-  hidden.
+  it, and `wizbar spec` accepts it like any other spec. A spec shows open only
+  while it has running agents, so `wizbar spec <n> --open` on a finished spec
+  with none saves the choice and reports `"open":false`. Only a spec with no
+  tickets is hidden. The Quiet group itself opens from the sidebar only.
 - **What is moving.** The dot of a ticket whose agent is working (not
-  reviewing, not failed) breathes: one soft pulse every 2 seconds, every breathing dot in step. A
-  review dot keeps a steady ring, and a building ticket no agent is working on
-  is a still ring. The breath stops under reduced motion and pauses while the
+  reviewing, not failed) breathes, unless the ticket is done or in review: one
+  soft pulse every 2 seconds, every breathing dot in step. A review dot keeps a
+  steady ring even while a working agent names its ticket, a done dot stays
+  still, and a building ticket no agent is working on is a still ring. The breath stops under reduced motion and pauses while the
   sidebar is hidden or off screen. A spec with no running agents and nothing
   due now shows its name in the muted text colour.
 - **A steady running card.** While the card is open, its rows stay in place,
   keyed by thread. Each thread's model and effort is kept for the session and
-  shows at once; it is read again only for a new thread, a new turn, or a label
-  older than 5 minutes (60 seconds when the card is reopened), and a failed
-  read never replaces a known label. A thread that stops running fades in place,
+  shows at once. It is read again for a thread new to the running list, or
+  when its last read is at least 5 minutes old (60 seconds when the card is
+  reopened). While the card is open, a thread whose last read failed is read
+  again once that read is 30 seconds old; these timed reads go out together,
+  at most one batch a minute. A failed read never replaces a known label. A thread that stops running fades in place,
   and threads that left are removed together at most once every 3 seconds.
   Through a brief gap, `N running` keeps its last count; after 5 seconds it is
   marked last known while the card is open, and hidden once it is closed.
@@ -87,7 +98,8 @@ are in the [v0.3 sidebar contract](contracts/sidebar-v3.v1.md) and the
   (without it, the saved sort), lists quiet rows last, adds `sort` to the JSON
   and `quiet` and `activityAt` to each row, and ends a quiet row's text with
   ` · quiet`. `wizbar section` takes `unread` and still accepts `inbox` as the
-  same section. The sort picker and the section order have no command.
+  same section. The sort picker, the section order, the Quiet group and the
+  Snoozed, Muted and Settled shelves' open state have no command.
 - **Settings kept.** Every 0.5.0 setting reloads into 0.6.0 unchanged; the
   two new keys, `specsSort` and `sectionsOrder`, start at their defaults.
 
@@ -100,7 +112,7 @@ are in the [v0.3 sidebar contract](contracts/sidebar-v3.v1.md) and the
   when the spec has running agents, then its name; on the right, "K needs you",
   `· N later` and "N done in the last hour", then done/total. One dot per ticket
   sits on the line below: done, done in the last hour (a brighter done dot),
-  building (a ring, breathing from 0.6 while an agent works on it), review (a
+  building (a ring, breathing from 0.6 while its agent is working), review (a
   ring), needs you (solid warning), later (a hollow ring), held (a grey ring),
   not started. From 0.6 finished specs are quiet, not hidden. A
   missing, malformed or stale specs file shows "Specs unavailable", never zero
@@ -243,11 +255,16 @@ rows. Separate runtime IDs and data still need live verification.
 
 ## CLI
 
-The registered namespace is `wizbar` (`room-cli wizbar …`). Every WizBar
-action in the sidebar has a command except two 0.6 controls, the Specs sort
-picker and the section order (`wizbar specs --sort` reads in any sort without
-saving it), and every command takes `--json`; the
-[parity test](src/cli-parity.test.ts) checks the commands and `--json`, and that `children` and
+The registered namespace is `wizbar` (`room-cli wizbar …`). The commands
+cover these sidebar actions: settle, unsettle, snooze, unsnooze, mute,
+unmute, pin, unpin and move a thread; list a thread's shelf and its children;
+read the running card (`stats`) and the specs (`specs`, in any sort with
+`--sort`, without saving it); open or close one spec (`spec`); and collapse or
+expand Pinned, Specs or Unread (`section`, with `inbox` as Unread). There is
+no command for the Specs sort picker, the section order, the Quiet group, or
+opening the Snoozed, Muted and Settled shelves. Every command takes `--json`;
+the [parity test](src/cli-parity.test.ts) checks that every WizBar operation
+has a command and `--json`, and that `children` and
 `stats` JSON equal what the hover list and the running line's hover card show
 for the same threads. The row menu's host-owned items are excluded by name (below). Use `--`
 to end options before literal IDs.
@@ -324,8 +341,10 @@ the specs file is ready and the spec is visible. Unreadable thread state prints
 
 **`specs`** prints the visible spec rows with their running agents, in the
 saved sort or the `--sort` given, quiet rows last; the JSON adds `sort`, and
-each row `quiet` and `activityAt` (epoch ms or null). **`spec`** opens or
-closes one spec in the section, finished specs included; an unavailable specs
+each row `quiet` and `activityAt` (epoch ms or null). **`spec`** saves one
+spec's open or closed state, finished specs included, and reports the state the
+sidebar shows: a spec is open only while it has running agents, so `--open` on
+a spec with none prints `"open":false` with exit 0. An unavailable specs
 file prints `{"error":{"code":"specs_unavailable",…,"reason":…}}` with exit 1.
 
 **`section`** collapses or expands one sidebar section, the same as a click
@@ -365,13 +384,13 @@ item that is neither a command nor listed here.
 - Subagents are not counted; threads the sidebar does not see may be missing.
 - Cloud rows carry no branch or pull request in observed host data.
 - The real pinned order, footer placement, the hover card's real look and
-  rollback to T3 Sidebar are unverified until #9.
+  rollback to T3 Sidebar are unverified until #9. PR badges have appeared
+  inconsistently on real hosts; a missing badge alone is not a WizBar regression.
 - 0.6.0 has not been installed on a real host: the breath, section drag,
   Unread's filter on real threads and the steady card are proved by fixture
   tests only.
 - Unread cannot tell another loop's run from a thread you started: the host
-  does not mark loop runs. PR badges have appeared inconsistently on real hosts; a
-  missing badge alone is not a WizBar regression.
+  does not mark loop runs.
 
 ## Credit and licence
 
