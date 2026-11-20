@@ -2,8 +2,9 @@
 // (specs-section.v1.md section 7). It shows exactly `wizbar stats --json`
 // for the same rows: `computeStatsV4` over the sidebar rows, the specs file
 // and the served model source. Colours are host theme variables only.
-import { useEffect, useReducer, useRef, useState } from "react";
+import { useEffect, useReducer, useRef, useState, useSyncExternalStore } from "react";
 import {
+  experimental_usePluginId,
   experimental_useSidebarThreadActions as useSidebarThreadActions,
   useRpc,
   useSettings,
@@ -19,7 +20,7 @@ import { tokens } from "./specs/theme";
 import type { specsRpcContract } from "./specs/server";
 import type { t3sidebarRpcContract } from "./server";
 import type { FooterThreadV4, SpecsFileReadV4 } from "./fixtures/v4";
-import type { CardModelsResultV3 } from "./v3-types";
+import type { CardModelsResultV3, CardModelV3 } from "./v3-types";
 
 const REFRESH_MS = 60_000;
 
@@ -48,36 +49,76 @@ function useSpecsRead(): SpecsFileReadV4 | null {
   return read && read.key === key ? read.read : null;
 }
 
+/** How often one thread's model and effort may be read again (owner steer on #175). */
+export const MODEL_REFRESH_MS = 5 * 60_000;
+
 /**
- * Model and effort for the running threads, from the `cardModels` RPC; null until the first read answers.
- * `revision` (the rows' `updatedAt`) reads again on a newer turn, and a changed running set reads its
- * threads again; the last answer stays meanwhile, so no label blanks (R1 #172), and a late answer for an
- * older read is ignored (#111 R1). Answers are per thread: each thread keeps its last one.
+ * Model and effort per thread for the session, one cache per plugin (like `gapStore`), so it outlives the
+ * card closing. A thread's model almost never changes: a known label shows at once, and only a host
+ * answer with another value changes it; a null, failed or malformed answer never does.
+ */
+interface ModelCache {
+  labels: Map<string, CardModelV3>;
+  /** When each thread was last asked, answered or not. */
+  readAt: Map<string, number>;
+  inFlight: Set<string>;
+  /** The running threads last seen, to tell a new turn (not running, then running). */
+  running: Set<string> | null;
+  version: number;
+  listeners: Set<() => void>;
+}
+const modelCaches = new Map<string, ModelCache>();
+const modelCache = (pluginId: string): ModelCache => {
+  let cache = modelCaches.get(pluginId);
+  if (!cache) modelCaches.set(pluginId, cache = { labels: new Map(), readAt: new Map(), inFlight: new Set(), running: null, version: 0, listeners: new Set() });
+  return cache;
+};
+const label = (item: unknown, asked: ReadonlySet<string>): CardModelV3 | null => {
+  if (!item || typeof item !== "object") return null;
+  const { threadId, model, effort } = item as Record<string, unknown>;
+  if (typeof threadId !== "string" || !asked.has(threadId) || typeof model !== "string" || !model.trim()) return null;
+  if (!(effort === null || typeof effort === "string")) return null;
+  return { threadId, model, effort: effort as CardModelV3["effort"] };
+};
+
+/**
+ * Model and effort for the running threads, from the cache. Reads `cardModels` only for a thread not yet
+ * asked, one that starts a new turn, or one last asked `MODEL_REFRESH_MS` ago; never every thread because
+ * the running set or a revision changed. `revision` only wakes the check.
  */
 function useModels(threadIds: readonly string[], revision: string): CardModelsResultV3 | null {
   const rpc = useRpc<typeof t3sidebarRpcContract>();
-  const [served, setServed] = useState<CardModelsResultV3 | null>(null);
+  const cache = modelCache(experimental_usePluginId());
+  useSyncExternalStore((listener) => { cache.listeners.add(listener); return () => { cache.listeners.delete(listener); }; }, () => cache.version);
   const key = threadIds.join("\n");
   useEffect(() => {
-    let live = true;
-    if (!key) return;
-    const ids = key.split("\n");
-    const batches: string[][] = [];
-    for (let i = 0; i < ids.length; i += 100) batches.push(ids.slice(i, i + 100));
-    Promise.all(batches.map((threadIds) => rpc.call("cardModels", { threadIds }))).then((results) => {
-      if (!live) return;
-      const source = results.every((r) => r.source === "host") ? "host" : "none";
-      const items = results.flatMap((r) => r.items);
-      // Each thread keeps its last answer until a newer one names it (R1 #172).
-      setServed((prior) => {
-        const named = new Set(items.map((item) => item.threadId));
-        const kept = source === "host" && prior?.source === "host" ? prior.items.filter((item) => !named.has(item.threadId)) : [];
-        return { source, items: [...kept, ...items] };
-      });
-    }, () => undefined);
-    return () => { live = false; };
-  }, [rpc, key, revision]);
-  return served;
+    const ids = key ? key.split("\n") : [];
+    const now = Date.now();
+    const due = ids.filter((id) => !cache.inFlight.has(id) && (!cache.readAt.has(id) ||
+      now - cache.readAt.get(id)! >= MODEL_REFRESH_MS || (cache.running !== null && !cache.running.has(id))));
+    cache.running = new Set(ids);
+    for (let i = 0; i < due.length; i += 100) {
+      const batch = due.slice(i, i + 100);
+      const asked = new Set(batch);
+      for (const id of batch) cache.inFlight.add(id);
+      const settle = (items: readonly unknown[]) => {
+        for (const id of batch) { cache.inFlight.delete(id); cache.readAt.set(id, Date.now()); }
+        for (const item of items) {
+          const next = label(item, asked);
+          const known = next && cache.labels.get(next.threadId);
+          if (next && !(known && known.model === next.model && known.effort === next.effort)) cache.labels.set(next.threadId, next);
+        }
+        cache.version++;
+        for (const listener of cache.listeners) listener();
+      };
+      rpc.call("cardModels", { threadIds: batch }).then(
+        (result) => settle(result?.source === "host" && Array.isArray(result.items) ? result.items : []),
+        () => settle([]),
+      );
+    }
+  }, [cache, rpc, key, revision]);
+  const items = threadIds.flatMap((id) => cache.labels.get(id) ?? []);
+  return items.length > 0 ? { source: "host", items } : null;
 }
 
 /**
