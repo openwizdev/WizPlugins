@@ -7,7 +7,7 @@
 
 **Cloudroom plugins for watching an [OpenWiz](https://github.com/openwizdev/OpenWiz) factory.** Optional: OpenWiz 0.1.0 needs no plugin, and these work only in Cloudroom.
 
-**Status:** one plugin, [WizBar](wizbar/README.md). Version 0.3.0 is live-checked and listed in the BB Marketplace; 0.4.0 is on `main`.
+**Status:** one plugin, [WizBar](wizbar/README.md). Version 0.3.0 is live-checked and listed in the BB Marketplace; 0.5.0 is on `main`, not yet published.
 
 ## Quick start
 
@@ -19,7 +19,7 @@ From source: see the [WizBar README](wizbar/README.md).
 
 <img alt="WizBar rendered with synthetic example rows" src="docs/images/wizbar.png" width="480">
 
-WizBar replaces Cloudroom's sidebar with one card per agent thread, newest first: its issue or pull request, its children, and a live "N running" line. Under the list, one row per running spec shows each ticket as a dot: done, building, in review, or needs you. Every WizBar action is also a `room-cli wizbar` command with JSON, so agents can use it too.
+WizBar replaces Cloudroom's sidebar with one card per agent thread, newest first: its issue or pull request, its children, and a live "N running" line. Under the list, one row per running spec shows each ticket as a dot: done, building, in review, or needs you; open a spec to see its running builders and reviewers with their model and effort. A small producer keeps the specs file fresh from GitHub. Every WizBar action is also a `room-cli wizbar` command with JSON, so agents can use it too.
 
 (The picture is the real UI rendered with made-up data.)
 
