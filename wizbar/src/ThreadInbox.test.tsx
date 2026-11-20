@@ -289,7 +289,7 @@ describe("parking threads", () => {
     });
     // The shelf renders once the lifecycle read resolves.
     const shelf = await screen.findByRole("region", { name: "Settled" });
-    expect(within(shelf).getByText(/Settled \(1\)/)).toBeDefined();
+    expect(within(shelf).getByRole("button", { name: "Settled 1" })).toBeDefined();
     // Collapsed by default: parked work is out of the way, never gone.
     expect(screen.queryByText("Finished work")).toBeNull();
     fireEvent.click(within(shelf).getByRole("button"));
@@ -497,12 +497,13 @@ describe("card metadata", () => {
   });
 
   // Status and age share one slot. A row that shows both puts a variable-width
-  // label in the column, and no two rows line up.
-  it("replaces the age label with the status glyph while work runs", async () => {
+  // label in the column, and no two rows line up. (Plain live work, `runtime`,
+  // shows its age instead since round 5 A; see "attention states".)
+  it("replaces the age label with the status glyph while a workflow runs", async () => {
     render([
       thread({
         id: "thr_run",
-        indicator: "runtime",
+        indicator: "workflow",
         indicatorLabel: "Agent is working",
         updatedAt: Date.now() - (3 * 3_600_000 + 60_000),
       }),

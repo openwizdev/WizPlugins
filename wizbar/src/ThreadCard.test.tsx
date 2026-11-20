@@ -148,7 +148,7 @@ for (const shelf of ["Inbox", "Snoozed", "Settled"] as const) {
       expect(markers.map((icon) => icon.getAttribute("aria-label"))).toEqual(marker ? [marker] : []);
       if (shownShelf !== "Inbox") {
         const region = screen.getByRole("region", { name: shelf });
-        fireEvent.click(within(region).getByRole("button", { name: shelf }));
+        fireEvent.click(within(region).getByRole("button", { name: `${shelf} 1` }));
         expect(within(region).queryByRole("listitem")).toBeNull();
         fireEvent.click(within(region).getByRole("button"));
         expect(within(region).queryAllByRole("img", { name: /^(Cloud|Local)$/ })).toHaveLength(marker ? 1 : 0);

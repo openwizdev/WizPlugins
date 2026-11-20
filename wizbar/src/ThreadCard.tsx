@@ -19,8 +19,6 @@ import { resolveSnoozePresets } from "./lifecycle";
 import { cardLinkText, cardMeta, childCountLabel, modelLabel } from "./card-meta";
 import type { t3sidebarRpcContract } from "./server";
 import type { CardModelV3 } from "./v3-types";
-import { MatrixMark } from "./MatrixMark";
-import { matrixState } from "./specs/rows";
 
 /**
  * One thread as a three-line card: project and status, title, then model,
@@ -62,8 +60,6 @@ export function ThreadCard({
   const served = useCardModel(thread.id);
   const meta = cardMeta(thread, threads, pullRequest, served);
   const model = modelLabel(meta.model, meta.effort);
-  // WB4-2: the matrix mark (specs-section.v1.md section 5); idle cards stay as 0.3 drew them.
-  const matrix = matrixState(thread, pullRequest);
   const children = childCountLabel(meta.childCount);
   // The branch, or the machine when there is no worktree, on hover only.
   const location = meta.branch ?? thread.host?.name ?? null;
@@ -154,7 +150,6 @@ export function ThreadCard({
             aria-label="Thread details"
             className="pointer-events-none relative mt-1 flex min-w-0 flex-wrap items-center gap-1 text-2xs text-muted-foreground"
           >
-            {matrix === "idle" ? null : <MatrixMark state={matrix} />}
             {meta.link && pullRequest ? (
               <a
                 href={meta.link.pullRequest!.url}
@@ -196,8 +191,9 @@ export function ThreadCard({
               />
             ) : null}
             <span className="ml-auto" />
-            {/* WB4-2: model and effort beside the harness logo, omitted when missing. */}
-            {model ? <Chip>{model}</Chip> : null}
+            {/* WB4-2: model and effort beside the harness logo, omitted when missing;
+                round 5 A draws them as quiet text, not a chip. */}
+            {model ? <span className="truncate text-muted-foreground">{model}</span> : null}
             {/* Always drawn, so the line has a fixed right edge. */}
             <span data-provider={thread.providerId} className="contents"><ProviderGlyph providerId={thread.providerId} /></span>
           </div>
