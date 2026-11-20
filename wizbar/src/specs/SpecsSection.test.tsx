@@ -585,3 +585,56 @@ describe("WB4-8: the sidebar shows WB4-7's effective open state (#1539)", () => 
     expect(target.querySelector("[aria-expanded]")?.getAttribute("aria-expanded") === "true").toBe(c.result.open);
   });
 });
+
+// S1 (#169): the Specs section header collapses like Pinned and Inbox; its rule stays whole, the
+// per-spec `specsOpen` is untouched, and Specs keeps its place above the "N running" footer.
+describe("S1: the Specs section collapses", () => {
+  function renderSidebar(settings: Record<string, string>, updates: unknown[] = []) {
+    const stored = { wizdeckFactories: binding, ...settings };
+    return renderSlot(app.threadLists[0]!, {
+      activeThreadId: null, activeProjectId: null, isCompactViewport: true, onNavigate() {}, searchQuery: "",
+    }, {
+      pluginId: "wizbar", settings: stored,
+      sidebarThreads: { status: "ready", threads: [...v4Threads] },
+      rpc: { listLifecycle: () => ({ rows: [] }), specsFile: () => ready,
+        cardModels: (input: unknown) => ({ source: "none",
+          items: (input as { threadIds: string[] }).threadIds.map((threadId) => ({ threadId, model: null, effort: null })) }) },
+      sdk: { plugins: { updateSettings: (async (args: { values: Record<string, string> }) => {
+        updates.push(args);
+        return { values: { ...stored, ...args.values } };
+      }) as never } },
+    });
+  }
+  const toggle = (region: HTMLElement) => within(region).getByRole("button", { name: "Specs 2 · 2 tickets need you (2 specs)" });
+
+  // catches: a collapsed Specs that hides what needs the owner, keeps its rows, or rewrites specsOpen.
+  it("collapses to its full rule and no rows, writing only sectionsCollapsed, and expands to the saved open specs", async () => {
+    const updates: unknown[] = [];
+    renderSidebar({ specsOpen: v4OpenSetting }, updates);
+    const region = await section();
+    await within(region).findByRole("list", { name: "Sample palette agents" });
+    expect(toggle(region).getAttribute("aria-expanded")).toBe("true");
+    expect(toggle(region).tagName).toBe("BUTTON");
+    fireEvent.click(toggle(region));
+    await waitFor(() => expect(toggle(region).getAttribute("aria-expanded")).toBe("false"));
+    expect(region.querySelectorAll("[data-spec]").length).toBe(0);
+    expect(within(region).getByRole("heading").textContent).toBe("Specs 2 · 2 tickets need you (2 specs)");
+    expect(region.querySelector<HTMLElement>("[data-rule-line]")!.style.background).toBe(tokens.rule);
+    expect(updates).toEqual([{ pluginId: "wizbar", values: { sectionsCollapsed: "[\"specs\"]" } }]);
+    fireEvent.click(toggle(region));
+    await waitFor(() => expect(within(region).getByRole("list", { name: "Sample palette agents" })).toBeTruthy());
+    expect(updates.at(-1)).toEqual({ pluginId: "wizbar", values: { sectionsCollapsed: "[]" } });
+  });
+
+  // catches: a stored collapse ignored on a fresh mount, or Specs moved above the shelves or below the footer.
+  it("restores a collapsed Specs on a fresh mount, under the shelves and above the footer", async () => {
+    renderSidebar({ sectionsCollapsed: "[\"specs\"]", specsOpen: v4OpenSetting });
+    const region = await section();
+    await waitFor(() => expect(toggle(region).getAttribute("aria-expanded")).toBe("false"));
+    expect(region.querySelectorAll("[data-spec]").length).toBe(0);
+    const before = (a: Element, b: Element) => (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+    const lastCard = screen.getAllByRole("link").filter((link) => !region.contains(link)).at(-1)!;
+    expect(before(lastCard, region)).toBe(true);
+    expect(before(region, screen.getByRole("status", { name: /^\d+ running$/ }))).toBe(true);
+  });
+});

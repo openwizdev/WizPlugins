@@ -1128,3 +1128,111 @@ describe("round 5 shelves", () => {
     expect(within(region).getByRole("link", { name: `${name} one` })).toBeDefined();
   });
 });
+
+// S1 (#169): Pinned and Inbox collapse like Settled, and the choice is kept in
+// `sectionsCollapsed` (sidebar-v3.v1.md section 9). Every row is synthetic.
+describe("S1: collapsible Pinned and Inbox", () => {
+  const rows = () => [
+    thread({ id: "pin_b", title: "Pinned second", isPinned: true, pinnedAt: 50, pinSortKey: "a1", createdAt: 300 }),
+    thread({ id: "pin_a", title: "Pinned first", isPinned: true, pinnedAt: 40, pinSortKey: "a0", createdAt: 100 }),
+    thread({ id: "in_old", title: "Inbox older", createdAt: 10 }),
+    thread({ id: "in_new", title: "Inbox newer", createdAt: 20 }),
+  ];
+  const ordered = (threads: PluginSidebarThread[]) => threads.filter((t) => t.isPinned)
+    .sort((a, b) => ((a.pinSortKey ?? "~") < (b.pinSortKey ?? "~") ? -1 : 1)).map((t) => t.id);
+  function renderSections(options: { stored?: string; searchQuery?: string; save?: (values: Record<string, unknown>) => unknown } = {}) {
+    const updates: unknown[] = [];
+    const settings: Record<string, string> = options.stored === undefined ? {} : { sectionsCollapsed: options.stored };
+    const threads = rows();
+    const rendered = renderSlot(inbox, { ...listProps, searchQuery: options.searchQuery ?? "" }, {
+      pluginId: "wizbar", settings,
+      sidebarThreads: { status: "ready", threads, projects: [] },
+      rpc: { listLifecycle: () => ({ rows: [] }), pin: () => ({ ok: true }), unpin: () => ({ ok: true }),
+        move: () => ({ ok: true }), pinnedOrder: () => ({ order: ordered(threads) }) },
+      sdk: { plugins: { updateSettings: (async (args: { values: Record<string, unknown> }) => {
+        updates.push(args);
+        return options.save?.(args.values) ?? { values: { ...settings, ...args.values } };
+      }) as never } },
+    });
+    return { rendered, updates };
+  }
+  const header = (name: "Pinned" | "Inbox") =>
+    within(screen.getByRole("region", { name })).getByRole("button", { name: new RegExp(`^${name}( \\d+)?$`) });
+  const links = (name: "Pinned" | "Inbox") => within(screen.getByRole("region", { name })).queryAllByRole("link").map((l) => l.getAttribute("aria-label"));
+  const pinCalls = (rendered: { rpcCalls: { method: string; input: unknown }[] }) =>
+    rendered.rpcCalls.filter((c) => ["pin", "unpin", "move"].includes(c.method)).map((c) => [c.method, c.input]);
+
+  // catches: a header that is only text, so neither a click nor Enter/Space (a native button's keys) can collapse it,
+  // or a collapse that hides the header, drops the rule, or writes any key but sectionsCollapsed.
+  it.each(["Pinned", "Inbox"] as const)("collapses and expands %s from its header, keeping the header, rule and count", async (name) => {
+    const { updates } = renderSections();
+    const button = header(name);
+    expect(button.tagName).toBe("BUTTON");
+    expect(button.getAttribute("type")).toBe("button");
+    expect(button.getAttribute("aria-expanded")).toBe("true");
+    expect(button.textContent).toBe(name);
+    expect(links(name)).toHaveLength(2);
+    fireEvent.click(button);
+    await waitFor(() => expect(header(name).getAttribute("aria-expanded")).toBe("false"));
+    expect(header(name).textContent).toBe(`${name} 2`);
+    expect(within(header(name)).getByText("2").className).toContain("text-muted-foreground/40");
+    expect(header(name).querySelector<HTMLElement>("span:last-child")!.style.background).toBe(tokens.rule);
+    expect(links(name)).toEqual([]);
+    expect(updates).toEqual([{ pluginId: "wizbar", values: { sectionsCollapsed: JSON.stringify([name.toLowerCase()]) } }]);
+    fireEvent.click(header(name));
+    await waitFor(() => expect(header(name).getAttribute("aria-expanded")).toBe("true"));
+    expect(links(name)).toHaveLength(2);
+    expect(updates.at(-1)).toEqual({ pluginId: "wizbar", values: { sectionsCollapsed: "[]" } });
+  });
+
+  // catches: a collapse kept only in memory, so a reload (a fresh mount on the stored value) shows the rows again.
+  it("restores collapsed sections from the stored setting on a fresh mount", async () => {
+    renderSections({ stored: "[\"pinned\",\"inbox\"]" });
+    expect(header("Pinned").getAttribute("aria-expanded")).toBe("false");
+    expect(header("Inbox").getAttribute("aria-expanded")).toBe("false");
+    expect(header("Pinned").textContent).toBe("Pinned 2");
+    expect(header("Inbox").textContent).toBe("Inbox 2");
+    expect(screen.queryAllByRole("link")).toEqual([]);
+  });
+
+  // catches: a refused save that snaps the section back without a word, or that leaves no notice.
+  it("keeps the on-screen state and says so when the save fails", async () => {
+    renderSections({ save: () => { throw new Error("refused"); } });
+    fireEvent.click(header("Inbox"));
+    expect(await screen.findByText("Could not save the collapsed section. Try again.")).toBeTruthy();
+    expect(header("Inbox").getAttribute("aria-expanded")).toBe("false");
+    expect(links("Inbox")).toEqual([]);
+  });
+
+  // catches: a collapsed Pinned that stops being a drop zone, so a card dropped on its header is not pinned.
+  it("pins a card dropped on a collapsed Pinned header, at the end", async () => {
+    const { rendered } = renderSections({ stored: "[\"pinned\"]" });
+    const from = screen.getByRole("link", { name: "Inbox older" });
+    fireEvent.dragStart(from, { dataTransfer: { setData() {}, effectAllowed: "all" } });
+    fireEvent.dragOver(header("Pinned"));
+    fireEvent.drop(header("Pinned"));
+    fireEvent.dragEnd(from);
+    await waitFor(() => expect(pinCalls(rendered)).toEqual([
+      ["pin", { threadId: "in_old" }], ["move", { threadId: "in_old", position: { after: "pin_b" } }],
+    ]));
+  });
+
+  // catches: Alt+Up computing against only the drawn pinned cards, so a collapsed Pinned pins to the wrong place or not at all.
+  it("pins with Alt+Up into a collapsed Pinned, after its last card", async () => {
+    const { rendered } = renderSections({ stored: "[\"pinned\"]" });
+    fireEvent.keyDown(screen.getByRole("link", { name: "Inbox older" }), { key: "ArrowUp", altKey: true });
+    await waitFor(() => expect(pinCalls(rendered)).toEqual([
+      ["pin", { threadId: "in_old" }], ["move", { threadId: "in_old", position: { after: "pin_b" } }],
+    ]));
+  });
+
+  // catches: a search that finds nothing inside a collapsed section, or one that writes the expansion to the store.
+  it("shows matches in a collapsed section while searching, without saving anything", async () => {
+    const { updates } = renderSections({ stored: "[\"pinned\",\"inbox\"]", searchQuery: "older" });
+    expect(header("Inbox").getAttribute("aria-expanded")).toBe("true");
+    expect(links("Inbox")).toEqual(["Inbox older"]);
+    expect(screen.queryByRole("region", { name: "Pinned" })).toBeNull();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(updates).toEqual([]);
+  });
+});
