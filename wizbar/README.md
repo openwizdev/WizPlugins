@@ -1,45 +1,75 @@
 # WizBar
 
 WizBar is an agent-first Cloudroom sidebar plugin for fleets of agent threads,
-version 0.4.0. It keeps T3 Sidebar's flat list of cards, newest first, that
+version 0.5.0. It keeps T3 Sidebar's flat list of cards, newest first, that
 never re-orders itself, with Inbox, Snoozed, Settled, Muted and Pinned shelves.
 v0.3 added richer cards, children on hover, a live running count, drag to pin,
-and a `wizbar` CLI command with JSON for every sidebar action. v0.4 keeps that
-list exactly as it is and adds a Specs section under it, matrix status marks,
-and a quiet footer with a hover card. The project lives in
+and a `wizbar` CLI command with JSON for every sidebar action. v0.4 added a
+Specs section under the list, matrix status marks and a quiet footer with a
+hover card. v0.5 fills the Specs section with live data from a specs producer,
+matches real fleet thread titles to their spec, shows friendly model and effort
+labels, and takes the confirmed 0.4 design. The project lives in
 [openwizdev/WizPlugins](https://github.com/openwizdev/WizPlugins).
 
-![WizBar rendered with synthetic example rows](../docs/images/wizbar.png)
+<img alt="WizBar rendered with synthetic example rows" src="../docs/images/wizbar.png" width="300">
 
-The image shows the React UI rendered with synthetic fixture data and styling,
-not an installed app. Everything below is proved by fixture tests in CI unless
+The image shows WizBar's real sidebar component and compiled styles in a
+headless browser, with synthetic data and a copy of the host's chrome around
+it, not an installed app. Everything below is proved by fixture tests in CI unless
 it says otherwise. **Behaviour on a real host awaits the live check in
 [#9](https://github.com/openwizdev/WizPlugins/issues/9).** The rules and sources
 are in the [v0.3 sidebar contract](contracts/sidebar-v3.v1.md) and the
 [v0.4 specs section contract](contracts/specs-section.v1.md).
 
-## What v0.4 shows
+## What v0.5 shows
 
-- **Specs.** Under the thread list, one row per running spec from the bound
-  factory's specs file: its name, one dot per ticket (done, done in the last
-  hour, building, review, needs you in the warning colour, held, not started),
-  "N done in the last hour" only when something moved, "K needs you", and
-  done/total. Finished specs are hidden. A missing, malformed or stale file
-  shows "Specs unavailable", never zero.
-- **Open a spec.** Click a spec to see its running builders and reviewers;
-  specs start collapsed and each one's open state is remembered.
-- **Running threads.** Each shows its harness logo, model and effort as a quiet
-  second line, and a 3 × 3 matrix status mark (working, checks running,
-  reviewing, needs you, failed, done, idle). Model and effort stay omitted
-  until the live check adopts the host's source; nothing is guessed.
-- **GitHub** is a quiet hover mark that opens the spec issue or the agent's
-  pull request.
-- **Footer.** No bolt. Only "N running" stays, counting threads, never
-  subagents, with a matrix mark. Hover or focus it for a card: who is waiting
-  on you with the Cloud and Local split, the harness split, then every running
-  thread with its mark, title, spec and model · effort. A click (or Enter or
+- **Specs.** Under the thread list, a `Specs 8 · 3 need you` rule, then one
+  row per running spec from the bound factory's specs file. A row leads with a
+  chevron when the spec has running agents, then its name; on the right,
+  "K needs you" in the warning colour or "N done in the last hour" in olive,
+  then done/total. One dot per ticket sits on the line below: done, done in the
+  last hour (bright olive), building (a pulsing ring), review (a ring), needs
+  you (warning), held (a grey ring), not started. Finished specs are hidden. A
+  missing, malformed or stale file shows "Specs unavailable", never zero.
+- **The specs producer.** Nothing in Cloudroom writes the specs file, so
+  WizBar ships a small producer (`tools/specs-producer/`) that writes it from
+  GitHub through your local `gh` login, REST only. Each run is one complete
+  scan, all or nothing: any failed read, or a scan needing more than 59
+  requests, writes nothing and keeps the last file. Unchanged pages cost
+  nothing, by ETag. Run it every 10 minutes as a systemd user timer; how to run
+  it once, install the timer, remove it, and how many specs fit in 59 requests
+  are in the [specs producer README](tools/specs-producer/README.md).
+- **Open a spec.** Click a spec to open it in a raised panel with its running
+  builders and reviewers; specs start collapsed and each one's open state is
+  remembered. Real fleet titles match their spec: `#<N>: …` is ticket N's
+  builder, `Review #<P> at <sha>` reviews the ticket whose pull request is P,
+  and the children of `Fleet #<S>: …` belong to spec S (the fleet thread
+  itself is not listed); the older `Role · CODE: …` form still matches. An
+  agent row reads
+  `Builder · EN3:` dimmed, then the task, then its age; its second line is the
+  harness logo and the model and effort.
+- **Model and effort** in friendly words: `Opus 5.5 · High`, `Sol 6.1 · XHigh`,
+  from the host's resolved options for the thread's latest turn. On cards they
+  are quiet text. An unknown model is shown as it is; a missing one is omitted,
+  never guessed. JSON keeps the raw ids and adds `modelLabel`.
+- **Matrix marks.** A quiet 3 × 3 mark on each running agent row, the footer
+  and its card: working is one light chasing round the ring, checks running
+  pulses the middle row, reviewing lights the corners and centre, needs you is
+  all warning, failed is a red X, done is all olive, idle is the centre only.
+  No mark uses the accent colour. Reduced motion shows the still pattern.
+  Thread cards show no mark.
+- **Shelves.** Pinned, Inbox, Snoozed, Muted and Settled use the same olive
+  rule as Specs. A parked shelf reads `Settled 4` with no chevron; a click
+  still opens it. A running card shows its age (`now`) in the corner.
+- **Footer.** No bolt: a matrix mark and `6 running`, counting threads, never
+  subagents. Hover or focus it for a raised card across the sidebar: who is
+  waiting on you with the cloud and local split, a bar split by harness with
+  each harness's name and count, then one line per running thread with its
+  mark, role and code, its spec, and model · effort. A click (or Enter or
   Space) pins the card open and another unpins it; Escape closes it; clicking a
   thread in the card opens it.
+- **GitHub** is a quiet hover mark that opens the spec issue or the agent's
+  pull request.
 - **Theme.** Every colour is a host theme variable, so WizBar follows the
   Cloudroom theme you use; a literal colour appears only as the fallback for a
   missing variable.
@@ -74,12 +104,15 @@ The matrix status idea is credited to Conductor's workspace status matrix
 
 ## Install
 
-**From the BB Marketplace: not listed yet.** Publication waits for Jake's
-go-ahead in [#45](https://github.com/openwizdev/WizPlugins/issues/45); once
-listed, install WizBar from the marketplace in the BB app or in Cloudroom.
+**From the BB Marketplace:** the listing serves 0.3.0. Version 0.5.0 is not
+published; it reaches the marketplace only when its release is tagged, after
+the owner's go-ahead.
 
-**From source: Unverified.** Build, installation beside T3 Sidebar,
-activation and live command execution remain unverified pending #9. The
+**From source.** `room-cli plugin build .` builds the plugin into `dist/`
+(checked for 0.5.0 with the same build command bundled in the locked `bb-app`).
+Installation beside T3 Sidebar, activation and live command execution remain
+unverified pending #9. To fill the Specs section, also set up the
+[specs producer](tools/specs-producer/README.md). The
 desktop CLI's help supplies these preparation commands. Read the
 [install and rollback kit](https://github.com/openwizdev/WizPlugins/issues/9#issuecomment-6768833446)
 and current desktop help before running them.
@@ -200,13 +233,15 @@ item that is neither a command nor listed here.
 
 ## Known limits
 
-- Model and effort, a finish time and an issue field are not exposed by the
-  host yet; WizBar omits or discloses them.
+- A finish time and an issue field are not exposed by the host yet; WizBar
+  omits or discloses them. Model and effort come from the host's resolved
+  options and are not yet confirmed live: the owner's look at the 0.5.0
+  candidate is that check.
 - Subagents are not counted; threads the sidebar does not see may be missing.
 - Cloud rows carry no branch or pull request in observed host data.
 - The real pinned order, footer placement and the hover card's real look are
-  unverified until #9. The v0.4 Specs section, marks, model source and hover
-  card on a real host await the WizBar 0.4 live check. PR badges have appeared inconsistently on real hosts; a
+  unverified until #9. The Specs section, marks, model source, producer and
+  hover card on a real host await the owner's look at the 0.5.0 candidate. PR badges have appeared inconsistently on real hosts; a
   missing badge alone is not a WizBar regression.
 
 ## Credit and licence
