@@ -50,7 +50,8 @@ function thread(
     },
     indicator: "none",
     indicatorLabel: null,
-    isUnread: false,
+    // E2 (#188): the list's rows have something new, so Unread shows them; a read row is set per case.
+    isUnread: true,
     isPinned: false,
     pinnedAt: null,
     pinSortKey: null,
@@ -429,7 +430,7 @@ describe("row context menu", () => {
       within(menu)
         .getAllByRole("menuitem")
         .map((item) => item.textContent),
-    ).toEqual(["Open in split", "Mark unread", "Pin", "Archive", "Delete"]);
+    ).toEqual(["Open in split", "Mark read", "Pin", "Archive", "Delete"]);
   });
 
   it("routes deletion through the host's confirmation", async () => {
@@ -1112,7 +1113,7 @@ describe("round 5 shelves", () => {
 
   // catches: a shelf left on the grey border rule, or on the text olive, while Specs uses its quieter rule olive.
   // E1 (#187): Settled is a quiet link with no rule now, tested in the E1 block.
-  it.each(["Pinned", "Inbox", "Snoozed", "Muted"])("draws the %s rule in the Specs rule olive", async (name) => {
+  it.each(["Pinned", "Unread", "Snoozed", "Muted"])("draws the %s rule in the Specs rule olive", async (name) => {
     renderShelves();
     const region = await screen.findByRole("region", { name });
     const specs = await screen.findByRole("region", { name: "Specs" });
@@ -1137,9 +1138,9 @@ describe("round 5 shelves", () => {
   });
 });
 
-// S1 (#169): Pinned and Inbox collapse like Settled, and the choice is kept in
+// S1 (#169), E2 (#188): Pinned and Unread (the 0.5 Inbox) collapse like Settled, and the choice is kept in
 // `sectionsCollapsed` (sidebar-v3.v1.md section 9). Every row is synthetic.
-describe("S1: collapsible Pinned and Inbox", () => {
+describe("S1: collapsible Pinned and Unread", () => {
   const rows = () => [
     thread({ id: "pin_b", title: "Pinned second", isPinned: true, pinnedAt: 50, pinSortKey: "a1", createdAt: 300 }),
     thread({ id: "pin_a", title: "Pinned first", isPinned: true, pinnedAt: 40, pinSortKey: "a0", createdAt: 100 }),
@@ -1164,15 +1165,15 @@ describe("S1: collapsible Pinned and Inbox", () => {
     });
     return { rendered, updates };
   }
-  const header = (name: "Pinned" | "Inbox") =>
+  const header = (name: "Pinned" | "Unread") =>
     within(screen.getByRole("region", { name })).getByRole("button", { name: new RegExp(`^${name}( \\d+)?$`) });
-  const links = (name: "Pinned" | "Inbox") => within(screen.getByRole("region", { name })).queryAllByRole("link").map((l) => l.getAttribute("aria-label"));
+  const links = (name: "Pinned" | "Unread") => within(screen.getByRole("region", { name })).queryAllByRole("link").map((l) => l.getAttribute("aria-label"));
   const pinCalls = (rendered: { rpcCalls: { method: string; input: unknown }[] }) =>
     rendered.rpcCalls.filter((c) => ["pin", "unpin", "move"].includes(c.method)).map((c) => [c.method, c.input]);
 
   // catches: a header that is only text, so neither a click nor Enter/Space (a native button's keys) can collapse it,
   // or a collapse that hides the header, drops the rule, or writes any key but sectionsCollapsed.
-  it.each(["Pinned", "Inbox"] as const)("collapses and expands %s from its header, keeping the header, rule and count", async (name) => {
+  it.each(["Pinned", "Unread"] as const)("collapses and expands %s from its header, keeping the header, rule and count", async (name) => {
     const { updates } = renderSections();
     const button = header(name);
     expect(button.tagName).toBe("BUTTON");
@@ -1197,19 +1198,19 @@ describe("S1: collapsible Pinned and Inbox", () => {
   it("restores collapsed sections from the stored setting on a fresh mount", async () => {
     renderSections({ stored: "[\"pinned\",\"inbox\"]" });
     expect(header("Pinned").getAttribute("aria-expanded")).toBe("false");
-    expect(header("Inbox").getAttribute("aria-expanded")).toBe("false");
+    expect(header("Unread").getAttribute("aria-expanded")).toBe("false");
     expect(header("Pinned").textContent).toBe("Pinned 2");
-    expect(header("Inbox").textContent).toBe("Inbox 2");
+    expect(header("Unread").textContent).toBe("Unread 2");
     expect(screen.queryAllByRole("link")).toEqual([]);
   });
 
   // catches: a refused save that snaps the section back without a word, or that leaves no notice.
   it("keeps the on-screen state and says so when the save fails", async () => {
     renderSections({ save: () => { throw new Error("refused"); } });
-    fireEvent.click(header("Inbox"));
+    fireEvent.click(header("Unread"));
     expect(await screen.findByText("Could not save the collapsed section. Try again.")).toBeTruthy();
-    expect(header("Inbox").getAttribute("aria-expanded")).toBe("false");
-    expect(links("Inbox")).toEqual([]);
+    expect(header("Unread").getAttribute("aria-expanded")).toBe("false");
+    expect(links("Unread")).toEqual([]);
   });
 
   // catches: a collapsed Pinned that stops being a drop zone, so a card dropped on its header is not pinned.
@@ -1234,8 +1235,8 @@ describe("S1: collapsible Pinned and Inbox", () => {
     ]));
   });
 
-  // #170 R1: catches an Inbox with no pinned rows that has no header, so it can never be collapsed.
-  it("gives an Inbox-only list a native Inbox header that collapses and expands", async () => {
+  // #170 R1: catches an Unread with no pinned rows that has no header, so it can never be collapsed.
+  it("gives an Unread-only list a native Unread header that collapses and expands", async () => {
     const updates: unknown[] = [];
     renderSlot(inbox, listProps, {
       pluginId: "wizbar", settings: {},
@@ -1246,19 +1247,19 @@ describe("S1: collapsible Pinned and Inbox", () => {
       }) as never } },
     });
     expect(screen.queryByRole("region", { name: "Pinned" })).toBeNull();
-    const button = header("Inbox");
+    const button = header("Unread");
     expect(button.tagName).toBe("BUTTON");
     expect(button.getAttribute("aria-expanded")).toBe("true");
     fireEvent.click(button);
-    await waitFor(() => expect(header("Inbox").getAttribute("aria-expanded")).toBe("false"));
-    expect(header("Inbox").textContent).toBe("Inbox 1");
+    await waitFor(() => expect(header("Unread").getAttribute("aria-expanded")).toBe("false"));
+    expect(header("Unread").textContent).toBe("Unread 1");
     expect(screen.queryByRole("link", { name: "Inbox alone" })).toBeNull();
-    expect(updates).toEqual([{ pluginId: "wizbar", values: { sectionsCollapsed: "[\"inbox\"]" } }]);
+    expect(updates).toEqual([{ pluginId: "wizbar", values: { sectionsCollapsed: "[\"unread\"]" } }]);
   });
 
   // #170 R2: catches a header click during a search that saves a collapse the owner cannot see,
   // which then hides the section once the search clears.
-  it.each(["Pinned", "Inbox"] as const)("leaves %s untoggleable while a search holds it open, and writes nothing", async (name) => {
+  it.each(["Pinned", "Unread"] as const)("leaves %s untoggleable while a search holds it open, and writes nothing", async (name) => {
     const { rendered, updates } = renderSections({ searchQuery: name === "Pinned" ? "first" : "older" });
     const button = header(name);
     expect(button.getAttribute("aria-disabled")).toBe("true");
@@ -1280,8 +1281,8 @@ describe("S1: collapsible Pinned and Inbox", () => {
   // catches: a search that finds nothing inside a collapsed section, or one that writes the expansion to the store.
   it("shows matches in a collapsed section while searching, without saving anything", async () => {
     const { updates } = renderSections({ stored: "[\"pinned\",\"inbox\"]", searchQuery: "older" });
-    expect(header("Inbox").getAttribute("aria-expanded")).toBe("true");
-    expect(links("Inbox")).toEqual(["Inbox older"]);
+    expect(header("Unread").getAttribute("aria-expanded")).toBe("true");
+    expect(links("Unread")).toEqual(["Inbox older"]);
     expect(screen.queryByRole("region", { name: "Pinned" })).toBeNull();
     await new Promise((resolve) => setTimeout(resolve, 10));
     expect(updates).toEqual([]);
@@ -1322,10 +1323,10 @@ describe("E1: section order and the Settled link", () => {
     });
     return { rendered, updates };
   }
-  // The three sections' regions, top to bottom (the 0.5 Inbox is the Unread place until #188 renames it).
+  // The three sections' regions, top to bottom.
   const sectionOrder = () => screen.getAllByRole("region").map((r) => r.getAttribute("aria-label"))
-    .filter((name) => name === "Pinned" || name === "Specs" || name === "Inbox");
-  const header = (name: "Pinned" | "Inbox") =>
+    .filter((name) => name === "Pinned" || name === "Specs" || name === "Unread");
+  const header = (name: "Pinned" | "Unread") =>
     within(screen.getByRole("region", { name })).getByRole("button", { name: new RegExp(`^${name}( \\d+)?$`) });
   const specsHeader = () => within(screen.getByRole("region", { name: "Specs" })).getAllByRole("button")
     .find((b) => b.closest("h2") !== null)!;
@@ -1342,14 +1343,14 @@ describe("E1: section order and the Settled link", () => {
   it("draws Pinned, Specs, then the Unread place by default", async () => {
     renderOrder();
     await screen.findByRole("region", { name: "Specs" });
-    expect(sectionOrder()).toEqual(["Pinned", "Specs", "Inbox"]);
+    expect(sectionOrder()).toEqual(["Pinned", "Specs", "Unread"]);
   });
 
   // catches: a stored order that is read but not drawn, or a malformed value that hides a section.
   it.each([
-    ["[\"unread\",\"pinned\",\"specs\"]", ["Inbox", "Pinned", "Specs"]],
-    ["[\"inbox\",\"specs\"]", ["Inbox", "Specs", "Pinned"]],
-    ["garbage", ["Pinned", "Specs", "Inbox"]],
+    ["[\"unread\",\"pinned\",\"specs\"]", ["Unread", "Pinned", "Specs"]],
+    ["[\"inbox\",\"specs\"]", ["Unread", "Specs", "Pinned"]],
+    ["garbage", ["Pinned", "Specs", "Unread"]],
   ])("draws the stored order %s", async (stored, expected) => {
     renderOrder({ stored: { sectionsOrder: stored } });
     await screen.findByRole("region", { name: "Specs" });
@@ -1362,15 +1363,15 @@ describe("E1: section order and the Settled link", () => {
     await waitFor(() => expect(specsHeader()).toBeDefined());
     header("Pinned").focus();
     fireEvent.keyDown(header("Pinned"), { key: "ArrowDown", altKey: true });
-    await waitFor(() => expect(sectionOrder()).toEqual(["Specs", "Pinned", "Inbox"]));
+    await waitFor(() => expect(sectionOrder()).toEqual(["Specs", "Pinned", "Unread"]));
     expect(document.activeElement).toBe(header("Pinned"));
     expect(updates).toEqual([{ pluginId: "wizbar", values: { sectionsOrder: "[\"specs\",\"pinned\",\"unread\"]" } }]);
     specsHeader().focus();
     fireEvent.keyDown(specsHeader(), { key: "ArrowDown", altKey: true });
-    await waitFor(() => expect(sectionOrder()).toEqual(["Pinned", "Specs", "Inbox"]));
+    await waitFor(() => expect(sectionOrder()).toEqual(["Pinned", "Specs", "Unread"]));
     expect(document.activeElement).toBe(specsHeader());
-    fireEvent.keyDown(header("Inbox"), { key: "ArrowUp", altKey: true });
-    await waitFor(() => expect(sectionOrder()).toEqual(["Pinned", "Inbox", "Specs"]));
+    fireEvent.keyDown(header("Unread"), { key: "ArrowUp", altKey: true });
+    await waitFor(() => expect(sectionOrder()).toEqual(["Pinned", "Unread", "Specs"]));
     expect(orderWrites(updates).at(-1)).toEqual({ sectionsOrder: "[\"pinned\",\"unread\",\"specs\"]" });
     // A plain arrow, or Alt at the top, moves nothing and toggles nothing.
     fireEvent.keyDown(header("Pinned"), { key: "ArrowUp", altKey: true });
@@ -1383,14 +1384,14 @@ describe("E1: section order and the Settled link", () => {
   it("reorders by dragging a header's grip onto another section", async () => {
     const { updates } = renderOrder();
     await screen.findByRole("region", { name: "Specs" });
-    const from = grip("Inbox");
+    const from = grip("Unread");
     expect(from.getAttribute("draggable")).toBe("true");
     fireEvent.dragStart(from, { dataTransfer: { setData() {}, effectAllowed: "all" } });
     const onto = header("Pinned");
     fireEvent(onto, at(createEvent.dragOver(onto), 0));
     fireEvent(onto, at(createEvent.drop(onto), 0));
     fireEvent.dragEnd(from);
-    await waitFor(() => expect(sectionOrder()).toEqual(["Inbox", "Pinned", "Specs"]));
+    await waitFor(() => expect(sectionOrder()).toEqual(["Unread", "Pinned", "Specs"]));
     expect(orderWrites(updates)).toEqual([{ sectionsOrder: "[\"unread\",\"pinned\",\"specs\"]" }]);
   });
 
@@ -1414,9 +1415,9 @@ describe("E1: section order and the Settled link", () => {
   it("keeps the moved order on screen and says so when the save fails", async () => {
     renderOrder({ save: (values) => { if ("sectionsOrder" in values) throw new Error("refused"); return { values }; } });
     await screen.findByRole("region", { name: "Specs" });
-    fireEvent.keyDown(header("Inbox"), { key: "ArrowUp", altKey: true });
+    fireEvent.keyDown(header("Unread"), { key: "ArrowUp", altKey: true });
     expect(await screen.findByText("Could not save the section order. Try again.")).toBeTruthy();
-    expect(sectionOrder()).toEqual(["Pinned", "Inbox", "Specs"]);
+    expect(sectionOrder()).toEqual(["Pinned", "Unread", "Specs"]);
   });
 
   // catches: Settled still drawn as a shelf, its threads in the list, or a link that is not last.
@@ -1484,6 +1485,9 @@ describe("E2: Unread", () => {
     });
     return { rendered, updates };
   }
+  // The specs file is read at its own time, so it is fresh (specs-section section 1).
+  beforeEach(() => { vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(v4Now); });
+  afterEach(() => { vi.useRealTimers(); });
   const unread = () => screen.getByRole("region", { name: "Unread" });
   const header = () => within(unread()).getByRole("button", { name: /^Unread( \d+)?$/ });
   const links = () => within(unread()).queryAllByRole("link").map((l) => l.getAttribute("aria-label"));

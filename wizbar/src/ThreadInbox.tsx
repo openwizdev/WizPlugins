@@ -28,13 +28,16 @@ import { SpecsSection } from "./specs/SpecsSection";
 import { tokens } from "./specs/theme";
 import type { t3sidebarRpcContract } from "./server";
 import {
-  readCollapsedKeys,
+  readCollapsedSections,
   readSectionsOrder,
-  withCollapsed,
+  withSectionCollapsed,
   withSectionMoved,
-  type SectionKey,
   type SidebarSection,
 } from "./sections";
+import type { SpecsFileReadV4, SpecsFileV4 } from "./fixtures/v4";
+import { boundHome, readSpecsFile } from "./specs/read";
+import { isRunning } from "./specs/rows";
+import type { specsRpcContract } from "./specs/server";
 import type { MovePositionV3 } from "./v3-types";
 import {
   dragPinOutcome,
@@ -54,6 +57,7 @@ import {
   sortByCreatedAtDescending,
   sortPinned,
   threadDisplayTitle,
+  unreadThreads,
   visibleInboxThreads,
 } from "./inbox";
 
@@ -92,6 +96,8 @@ export function ThreadInbox({
   const [showSnoozed, setShowSnoozed] = useState(false);
   const [showSettled, setShowSettled] = useState(false);
   const [showMuted, setShowMuted] = useState(false);
+
+  const specsFile = useSpecsFileForUnread(now);
 
   const projectNameById = useMemo(
     () => new Map(projects.map((project) => [project.id, project.name])),
@@ -136,13 +142,18 @@ export function ThreadInbox({
       muted: sortByCreatedAtDescending(onMutedShelf),
     };
   }, [lifecycle, scope, searchQuery, threads]);
+  // E2 (#188): Unread. Until the specs file answers, a running thread (one that may be a spec's agent)
+  // is held back rather than shown and then pulled out.
+  const unread = useMemo(() => specsFile === undefined
+    ? unreadThreads(inbox.filter((thread) => !isRunning(thread)), null, threads)
+    : unreadThreads(inbox, specsFile, threads), [inbox, specsFile, threads]);
 
   const connection = useRealtimeConnectionState();
   const drag = useDragPins(status, connection, threads, pinned);
   const sections = useSectionsCollapsed();
   // While a search is active its matches show even in a collapsed section; nothing is stored.
   const searching = searchQuery.trim() !== "";
-  const isCollapsed = (key: SectionKey) => !searching && sections.collapsed.has(key);
+  const isCollapsed = (key: SidebarSection) => !searching && sections.collapsed.has(key);
   const pinnedShown = pinned.length > 0 || drag.draggingId !== null;
   const order = useSectionsOrder();
 
@@ -234,11 +245,11 @@ export function ThreadInbox({
                   ])}
                   {drag.markerAtEnd() ? <DropMarker /> : null}
                 </Shelf>
-              ) : null) : key === "unread" ? (inbox.length > 0 ? (
-                // #170 R1: the Inbox always has its header, so it can always be collapsed and expanded.
-                <Shelf label="Inbox" count={inbox.length} searching={searching}
-                  collapsed={isCollapsed("inbox")} onToggle={() => sections.toggle("inbox")} saveFailed={sections.failed === "inbox"}>
-                  {inbox.map((thread) => (
+              ) : null) : key === "unread" ? (unread.length > 0 ? (
+                // #170 R1: Unread always has its header, so it can always be collapsed and expanded.
+                <Shelf label="Unread" count={unread.length} searching={searching}
+                  collapsed={isCollapsed("unread")} onToggle={() => sections.toggle("unread")} saveFailed={sections.failed === "unread"}>
+                  {unread.map((thread) => (
                     <ThreadCard
                       key={thread.id}
                       thread={thread}
@@ -487,12 +498,45 @@ function useSectionSetting<Tag>(name: "sectionsCollapsed" | "sectionsOrder") {
   return { value, save, failed };
 }
 
+/**
+ * E2 (#188): the specs file Unread matches against (specs-section section 3), read
+ * for the bound factory like the Specs section's, on mount, on a binding change
+ * and once a minute. Undefined until the first answer for this binding; null with
+ * no binding or no readable file. The last answer stays until the next, so a
+ * refresh never empties Unread.
+ */
+function useSpecsFileForUnread(now: number): SpecsFileV4 | null | undefined {
+  const host = useSettings();
+  const rpc = useRpc<typeof specsRpcContract>();
+  const bound = boundHome(host.values?.wizdeckFactories);
+  const home = bound === null ? null : JSON.stringify([bound.hostId, bound.rootPath]);
+  const [read, setRead] = useState<{ home: string; read: SpecsFileReadV4 } | null>(null);
+  useEffect(() => {
+    if (home === null) return;
+    let live = true;
+    const load = () => rpc.call("specsFile", {}).then(
+      (result) => { if (live) setRead({ home, read: result }); },
+      () => { if (live) setRead({ home, read: { kind: "unreadable" } }); },
+    );
+    void load();
+    const timer = setInterval(load, 60_000);
+    return () => { live = false; clearInterval(timer); };
+  }, [home, rpc]);
+  return useMemo(() => {
+    if (home === null) return null;
+    if (read?.home !== home) return undefined;
+    const file = readSpecsFile(read.read, now);
+    return file.status === "ready" ? file.file : null;
+  }, [home, now, read]);
+}
+
 /** S1 (#169): `sectionsCollapsed`; a toggle names the section whose save failed. */
 function useSectionsCollapsed() {
-  const { value, save, failed } = useSectionSetting<SectionKey>("sectionsCollapsed");
-  const collapsed = useMemo(() => new Set(readCollapsedKeys(value)), [value]);
-  const toggle = useCallback((key: SectionKey) =>
-    save((raw) => withCollapsed(raw, key, !readCollapsedKeys(raw).includes(key)), key), [save]);
+  // E2 (#188): the 0.6 readers, so a stored 0.5 `inbox` reads as `unread` and every write stores `unread`.
+  const { value, save, failed } = useSectionSetting<SidebarSection>("sectionsCollapsed");
+  const collapsed = useMemo(() => new Set(readCollapsedSections(value)), [value]);
+  const toggle = useCallback((key: SidebarSection) =>
+    save((raw) => withSectionCollapsed(raw, key, !readCollapsedSections(raw).includes(key)), key), [save]);
   return { collapsed, toggle, failed };
 }
 

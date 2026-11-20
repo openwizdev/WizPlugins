@@ -50,7 +50,7 @@ function thread(overrides: Partial<PluginSidebarThread> = {}): PluginSidebarThre
     activity: { workflows: 0, backgroundAgents: 0, backgroundCommands: 0, planMode: 0, goals: 0 },
     indicator: "none",
     indicatorLabel: null,
-    isUnread: false,
+    isUnread: true, // E2 (#188): Unread shows only rows with something new.
     isPinned: false,
     pinnedAt: null,
     pinSortKey: null,

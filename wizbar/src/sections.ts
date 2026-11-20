@@ -37,12 +37,13 @@ export interface SectionsSettingHandle {
   experimental_set(values: { sectionsCollapsed?: string | null }): Promise<{ sectionsCollapsed?: unknown }>;
 }
 
-const sectionUsage = "section <pinned|inbox|specs> --collapse|--expand [--json]";
+const sectionUsage = "section <pinned|specs|unread> --collapse|--expand [--json]";
 
 /**
- * `wizbar section <pinned|inbox|specs> --collapse|--expand [--json]`, the
+ * `wizbar section <pinned|specs|unread> --collapse|--expand [--json]`, the
  * agent-first route to a header click: the same read-modify-write of
  * `sectionsCollapsed`, one at a time, never writing from a failed read.
+ * E2 (#188): the 0.6 sections; a 0.5 `inbox` is accepted as `unread`.
  */
 export function withSectionCommand(cli: PluginCliRegistration, settings: SectionsSettingHandle): PluginCliRegistration {
   let queue: Promise<unknown> = Promise.resolve();
@@ -67,11 +68,11 @@ export function withSectionCommand(cli: PluginCliRegistration, settings: Section
       const flags = options.filter((arg) => arg.startsWith("--"));
       const positional = [...options.filter((arg) => !arg.startsWith("--")), ...(end === -1 ? [] : args.slice(end + 1))];
       const key = positional[0];
-      const ok = positional.length === 1 && (sectionKeys as readonly string[]).includes(key!)
+      const ok = positional.length === 1 && (key === "inbox" || (sidebarSections as readonly string[]).includes(key!))
         && new Set(flags).size === flags.length && flags.every((flag) => ["--json", "--collapse", "--expand"].includes(flag))
         && flags.includes("--collapse") !== flags.includes("--expand");
       if (!ok) return fail(2, "usage", sectionUsage);
-      const section = key as SectionKey;
+      const section = (key === "inbox" ? "unread" : key) as SidebarSection;
       const collapsed = flags.includes("--collapse");
       const written = await serial(async (): Promise<{ stored: unknown } | string> => {
         let raw: unknown;
@@ -82,13 +83,13 @@ export function withSectionCommand(cli: PluginCliRegistration, settings: Section
           return "The settings read failed.";
         }
         try {
-          return { stored: (await settings.experimental_set({ sectionsCollapsed: withCollapsed(raw, section, collapsed) })).sectionsCollapsed };
+          return { stored: (await settings.experimental_set({ sectionsCollapsed: withSectionCollapsed(raw, section, collapsed) })).sectionsCollapsed };
         } catch {
           return "The settings write failed.";
         }
       });
       if (typeof written === "string") return fail(1, "settings_failed", written);
-      const result = { section, collapsed: readCollapsedKeys(written.stored).includes(section) };
+      const result = { section, collapsed: readCollapsedSections(written.stored).includes(section) };
       return { exitCode: 0, stdout: (json ? JSON.stringify(result) : `${section}: ${result.collapsed ? "collapsed" : "expanded"}`) + "\n" };
     },
   };

@@ -1,4 +1,6 @@
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk";
+import type { SpecsFileV4 } from "./fixtures/v4";
+import { matchSpec } from "./specs/rows";
 
 /**
  * The sort that defines this sidebar: newest thread on top, and NOTHING moves
@@ -139,7 +141,29 @@ export function sortPinned<T extends PinnedSortable>(threads: readonly T[]): T[]
   });
 }
 
-/** E2 (#188): Unread. Stub: still the 0.5 Inbox, every thread. */
-export function unreadThreads<T extends PluginSidebarThread>(threads: readonly T[], _file: unknown, _rows: readonly PluginSidebarThread[]): T[] {
-  return [...threads];
+/**
+ * The host's attention markers: the indicator kinds that mean something new for
+ * the owner (unread finished or failed work, a question, a send that failed).
+ */
+const attentionIndicators: ReadonlySet<string> = new Set(["unread-error", "unread-success", "waiting-for-input", "queued-failed"]);
+
+/** Something new for the owner: `isUnread`, a pending question, or a host attention marker. */
+export function hasSomethingNew(thread: PluginSidebarThread): boolean {
+  return thread.isUnread || thread.hasPendingInteraction || attentionIndicators.has(thread.indicator);
+}
+
+/** A fleet wake's title form, the real `Fleet #S: …` title (specs-section section 3). */
+const fleetWakeTitle = /^Fleet #[1-9][0-9]*: /;
+
+/**
+ * E2 (#188), Unread (sidebar-v3.v1.md section 10): of `threads`, in their order,
+ * those with something new for the owner that match no spec (specs-section
+ * section 3, against `rows`, every sidebar row) and are not fleet wakes. With no
+ * specs file nothing matches a spec. SDK 0.6.33's row carries no loop origin.
+ */
+export function unreadThreads<T extends PluginSidebarThread>(
+  threads: readonly T[], file: SpecsFileV4 | null, rows: readonly PluginSidebarThread[],
+): T[] {
+  return threads.filter((thread) => hasSomethingNew(thread) && !fleetWakeTitle.test(thread.displayTitle)
+    && (file === null || matchSpec(file, thread, rows) === null));
 }

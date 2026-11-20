@@ -207,7 +207,8 @@ describe("V5: children and stats JSON equal the UI for the same fixtures", () =>
       activeThreadId: null, activeProjectId: null, isCompactViewport: true, onNavigate() {}, searchQuery: "",
     }, {
       pluginId: `synthetic-wz22-parity-${parentId}`,
-      sidebarThreads: { status: "ready", threads: [...v3Threads] },
+      // E2 (#188): Unread shows only rows with something new, so every parent card is unread here.
+      sidebarThreads: { status: "ready", threads: v3Threads.map((t) => ({ ...t, isUnread: true })) },
       rpc: { listLifecycle: () => ({ rows: [] }),
         cardModels: (input: unknown) => ({ source: "none",
           items: (input as { threadIds: string[] }).threadIds.map((threadId) => ({ threadId, model: null, effort: null })) }) },

@@ -92,10 +92,10 @@ describe("N1: actual WizBar settings declarations and persistent reload", () => 
     expect((await host.harness.behavior.runCli(["section", "inbox", "--collapse", "--json"])).exitCode).toBe(0);
     host = await host.harness.lifecycle.reload(factory);
     hosts.push(host);
-    expect(await read()).toEqual({ ...before, sectionsCollapsed: "[\"inbox\"]" });
+    expect(await read()).toEqual({ ...before, sectionsCollapsed: "[\"unread\"]" });
     expect(JSON.parse((await host.harness.behavior.runCli(["section", "specs", "--collapse", "--json"])).stdout!))
       .toEqual({ section: "specs", collapsed: true });
-    expect(await read()).toEqual({ ...before, sectionsCollapsed: "[\"inbox\",\"specs\"]" });
+    expect(await read()).toEqual({ ...before, sectionsCollapsed: "[\"unread\",\"specs\"]" });
   });
 
   // C0 (#182), Q5: a 0.5.0 store must come back whole in 0.6, with the new keys at their defaults.
