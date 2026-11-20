@@ -174,6 +174,20 @@ describe("S4: no bolt; N running with its hover card", () => {
     expect(card()!.querySelector("[data-harness]")!.parentElement!.style.flexDirection).not.toBe("column");
   });
 
+  // catches (#159 R2): the Claude Code segment mixed from --warning, so a theme's alert colour leaks into a bar of
+  // ordinary running sessions; or its replacement drawn the same as another harness's segment.
+  it("colours the harness segments from neutral host tones, never the warning, each harness apart", () => {
+    const named: Record<string, string> = { "harness-a": "claude-code", "harness-b": "codex" };
+    render(v4Threads.map((t) => ({ ...t, providerId: named[t.providerId] ?? t.providerId })));
+    fireEvent.pointerEnter(counter().parentElement!);
+    const segments = [...card()!.querySelector("[data-harness-bar]")!.children] as HTMLElement[];
+    expect(segments.map((el) => el.getAttribute("data-harness-segment"))).toEqual(["claude-code", "codex"]);
+    const colours = segments.map((el) => el.style.background);
+    expect(colours.filter((c) => c.includes("--warning"))).toEqual([]);
+    expect(colours.every((c) => c.length > 0)).toBe(true);
+    expect(new Set(colours).size).toBe(colours.length);
+  });
+
   // catches (0.5 E): the half-width card; it must fill the sidebar, inset 8 px each side.
   it("fills the sidebar width, inset 8 px", () => {
     render();

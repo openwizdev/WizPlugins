@@ -11,7 +11,7 @@ import type { EffortV3, FinishedTodayV3, RunningSplitV3, StatsCoverageV3, StatsW
 
 /** One host theme variable WizBar may read, with its fallback for a host that lacks it. */
 export interface HostTokenV4 {
-  role: "surface" | "card" | "edge" | "accent" | "warning" | "border" | "muted" | "text" | "muted-text" | "destructive";
+  role: "surface" | "card" | "edge" | "accent" | "success" | "warning" | "border" | "muted" | "text" | "muted-text" | "destructive";
   /** The host CSS custom property. */
   variable: `--${string}`;
   /** The only literal colour allowed for this variable, as `var(<variable>, <fallback>)`; null: no fallback. */
@@ -24,6 +24,8 @@ export const hostTokensV4: readonly HostTokenV4[] = [
   { role: "card", variable: "--card", fallback: "#222222" },
   { role: "edge", variable: "--background", fallback: "#0f0f0f" },
   { role: "accent", variable: "--primary", fallback: "#c0ff04" },
+  // No literal: a host without --success falls back to the muted-text row's variable, never the warning (#155).
+  { role: "success", variable: "--success", fallback: null },
   { role: "warning", variable: "--warning", fallback: "#fc8c45" },
   { role: "border", variable: "--border", fallback: "#292929" },
   { role: "muted", variable: "--muted", fallback: "#3a3a3d" },

@@ -237,23 +237,43 @@ describe("0.5 C: the rule, the spec rows and the open panel", () => {
     expect(tokens.brightOlive).not.toBe(tokens.mutedAccent);
   });
 
-  // catches (0.5 P, #130): a lime-green rule or done olive, drawn from the accent and sidebar alone without the warning's warmth;
-  // or the last-hour note left on the quieter done-dot olive, which reads below 4.5:1 on the open card and bb's bundled themes (#131 R1).
-  it("draws the rule, done dots and the brighter last-hour note in the accent warmed by the warning, on the sidebar", async () => {
+  // catches (0.5.x C2, #155): done tones mixed from the accent and the warning, so on a host whose --primary is not lime
+  // (a grey, a lavender tint) done dots drift into the needs-you hue; or an oklch mix with a host grey written as
+  // oklch(L 0 0), whose hue 0 swings green through yellow and orange; or a missing --success falling back to the warning.
+  it("draws done tones from --success (else a neutral) in oklab, and keeps --warning for needs-you only", async () => {
     render();
     await screen.findByText("Sample palette");
     const heading = screen.getByRole("region", { name: "Specs" });
+    const row = rowOf("Sample palette");
     const shown = [
       (heading.querySelector("[data-rule-line]") as HTMLElement).style.background,
-      (rowOf("Sample palette").querySelector("[data-done-last-hour]") as HTMLElement).style.color,
-      (rowOf("Sample palette").querySelector('[data-dot-state="done"]') as HTMLElement).style.background,
+      (row.querySelector("[data-done-last-hour]") as HTMLElement).style.color,
+      (row.querySelector('[data-dot-state="done"]') as HTMLElement).style.background,
     ];
     expect(shown).toEqual([tokens.rule, tokens.doneNote, tokens.mutedAccent]);
-    expect(tokens.doneNote).not.toBe(tokens.mutedAccent);
-    const variables = (value: string) => [...new Set(value.match(/var\(--[a-z-]+/g))].sort();
-    for (const value of [tokens.rule, tokens.mutedAccent, tokens.doneNote]) {
-      expect(variables(value)).toEqual(["var(--primary", "var(--sidebar", "var(--warning"]);
-    }
+    // Each role's colour, written out from the ticket: done tones are --success (falling back to the muted text, never
+    // the warning) mixed in oklab into the sidebar; the last-hour note is the host's text (#155 lead decision).
+    const success = "var(--success, var(--muted-foreground, #b7b7b7))";
+    const sidebar = "var(--sidebar, #161616)";
+    const roles: Record<string, string> = {
+      rule: `color-mix(in oklab, ${success} 40%, ${sidebar})`,
+      mutedAccent: `color-mix(in oklab, ${success} 55%, ${sidebar})`,
+      brightOlive: `color-mix(in oklab, ${success} 85%, ${sidebar})`,
+      doneNote: "var(--foreground)",
+      warning: "var(--warning, #fc8c45)",
+    };
+    for (const [role, value] of Object.entries(roles)) expect.soft(tokens[role as keyof typeof tokens], role).toBe(value);
+    const usesWarning = Object.entries(tokens).filter(([, value]) => value.includes("--warning")).map(([role]) => role);
+    expect(usesWarning).toEqual(["warning"]);
+  });
+
+  // catches (#155 lead decision after #159 R1): a last-hour note tinted toward done, whose contrast a theme tint can pull
+  // under 4.5:1 while the host's own text stays readable. The note is exactly the host's text colour; the dots carry "done".
+  it("draws the last-hour note in exactly the host's text colour", async () => {
+    render();
+    await screen.findByText("Sample palette");
+    const note = rowOf("Sample palette").querySelector("[data-done-last-hour]") as HTMLElement;
+    expect(note.style.color).toBe("var(--foreground)");
   });
 
   // catches: an open spec whose agents float on the plain sidebar, or a closed spec drawn raised.

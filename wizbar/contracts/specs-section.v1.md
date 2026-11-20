@@ -247,6 +247,7 @@ WizBar matches the host's theme, not the Ember map palette. Every colour is a ho
 | card | `--card` | `#222222` | The owner's sample: card |
 | edge | `--background` | `#0f0f0f` | The owner's sample: outer edge |
 | accent | `--primary` | `#c0ff04` | The owner's sample: the running dot |
+| success | `--success` | `var(--muted-foreground, #b7b7b7)`, a neutral, never the warning | bb-app 0.37.0 dark `--success` is `oklch(74% .15 155)` |
 | warning | `--warning` | `#fc8c45` | bb-app 0.37.0 dark `--warning` (`oklch(75% .16 50)`) |
 | border | `--border` | `#292929` | bb-app 0.37.0 dark `--border` (14% ink over canvas) |
 | text | `--foreground` | none | — |
@@ -254,9 +255,12 @@ WizBar matches the host's theme, not the Ember map palette. Every colour is a ho
 | muted text | `--muted-foreground` | `#b7b7b7` | bb-app 0.37.0 dark `--muted-foreground` (`oklch(78% 0 0)`) |
 | destructive | `--destructive` | none | — |
 
-- **Muted accent** (the owner's "olive"): `color-mix(in oklch, color-mix(in oklch, var(--primary, #c0ff04) 85%, var(--warning, #fc8c45)) 55%, var(--sidebar, #161616))`: the accent warmed by the warning so it reads olive, not lime-green (0.5.0 P, #130). It colours `done` dots and done marks. "N done in the last hour" uses the brighter **done note** from the same warmed accent, `color-mix(in oklch, color-mix(in oklch, var(--primary, #c0ff04) 85%, var(--warning, #fc8c45)) 75%, var(--sidebar, #161616))` (`tokens.doneNote`), which keeps 4.5:1 or better on `--sidebar` and `--card` in the fallback theme and in bb-app 0.37.0's bundled dark and light themes (#131 R1).
-- **Rule line:** `color-mix(in oklch, color-mix(in oklch, var(--primary, #c0ff04) 85%, var(--warning, #fc8c45)) 40%, var(--sidebar, #161616))`, the same warmed accent as a quieter olive for the line beside a section's name (`tokens.rule`).
-- **Bright olive:** `color-mix(in oklch, var(--primary, #c0ff04) 85%, var(--sidebar, #161616))`, for `done-recent` dots.
+- **Done tones** (0.5.x C2, #155): every done tone is the host's `--success`, else the muted text, mixed **in oklab**: `color-mix(in oklab, var(--success, var(--muted-foreground, #b7b7b7)) <P>%, <into>)`. None reads `--primary` or `--warning`, so done stays apart from needs-you whatever the accent or a theme tint is. They mix in oklab, not oklch, because a host grey written `oklch(L 0 0)` has hue 0, and an oklch mix from green toward it swings through yellow and orange, the needs-you hue.
+  - **Muted accent** (the owner's "olive", `tokens.mutedAccent`): 55% into `var(--sidebar, #161616)`. It colours `done` dots and done marks.
+  - **Rule line** (`tokens.rule`): 40% into the sidebar, the quieter line beside a section's name.
+  - **Bright olive** (`tokens.brightOlive`): 85% into the sidebar, for `done-recent` dots.
+- **Done note** (`tokens.doneNote`): "N done in the last hour" is exactly `var(--foreground)`, the host's text, so its contrast is always the host's own text contrast. A CSS mix can't keep 4.5:1 on arbitrary tinted themes, so "done" is carried by the success-coloured dots, not the note's colour (lead scope decision on #155, 2026-11-20, after #159 R1).
+- **Warning** is the needs-you role only: `needs-you` dots, "K needs you" and "M need you". No other token reads `--warning`, and nor does the running card's harness bar: Claude Code's segment is the host's text, `var(--foreground, var(--muted-foreground, #b7b7b7))`, and the other harnesses' are the muted text sunk into the card, `color-mix(in oklab, var(--muted-foreground, #b7b7b7) 55%, var(--card, #222222))`, then 35% (#159 R2).
 - **Quiet ring:** `color-mix(in oklch, var(--muted-foreground, #b7b7b7) 45%, var(--sidebar, #161616))`, a grey ring for `held` dots.
 - **Dots:** `done` muted accent, filled; `done-recent` bright olive, filled; `building` hollow, a 1 px muted-text ring that pulses (still under reduced motion); `review` hollow, a 1 px muted-text ring, still (no lime rings); `needs-you` warning, filled; `held` hollow, a 1 px quiet ring; `not-started` border, filled. "K needs you" uses warning text.
 - **Open-spec panel:** the card variable, `var(--card, #222222)`.
