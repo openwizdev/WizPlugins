@@ -1,6 +1,6 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/openwizdev/.github/main/profile/art/mark-dark.svg">
-  <img alt="OpenWiz mark" src="https://raw.githubusercontent.com/openwizdev/.github/main/profile/art/mark-light.svg" width="56">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/openwizdev/.github/main/profile/art/wiz.png">
+  <img alt="The OpenWiz Wiz" src="https://raw.githubusercontent.com/openwizdev/.github/main/profile/art/wiz.png" width="56">
 </picture>
 
 # WizPlugins
