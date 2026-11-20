@@ -2,7 +2,7 @@
 
 Writes `.openwiz/specs.v1.json` under your factory home, the file WizBar's Specs section reads ([contract section 1](../../contracts/specs-section.v1.md#1-the-specs-file)). It reads GitHub through your local `gh` login (REST only) and needs nothing else: Node 24 and `gh`, no packages.
 
-Each run is one complete scan. For each repository it reads the open issues (an issue with sub-issues is a running spec) and the open pull requests, then each spec's sub-issues (its tickets). Each page is a conditional request with the ETag and the page kept in `.openwiz/specs.v1.etags.json`, so an unchanged page costs nothing against your rate limit. The file is written whole (temp file, then rename) with `generatedAt` the run's time, or not at all: any failed read, or a scan that would need more than 59 requests, writes nothing, keeps the last file and exits 1 naming the reason. A repository you remove from `--repo` is gone from the file and the cache after the next successful run.
+Each run is one complete scan. For each repository it reads the open issues (an issue with sub-issues is a running spec) and the open pull requests, then each spec's sub-issues (its tickets). Each page is a conditional request with the ETag and the page kept in `.openwiz/specs.v1.etags.json`, so an unchanged page costs nothing against GitHub's rate limit: GitHub answers it `304 Not Modified`, which still counts as one of the run's 59 requests. The file is written whole (temp file, then rename) with `generatedAt` the run's time, or not at all: any failed read, or a scan that would need more than 59 requests, writes nothing, keeps the last file and exits 1 naming the reason. A repository you remove from `--repo` is gone from the file and the cache after the next successful run.
 
 **Capacity.** A run makes at most 59 requests, one per page of 100:
 
@@ -25,10 +25,10 @@ With one repository under 100 open issues and pull requests, and specs of up to 
 Use the factory home and repositories of your WizDeck factory binding (the `wizdeckFactories` setting):
 
 ```sh
-node wizbar/tools/specs-producer/producer.ts --home /path/to/factory-home --repo owner/name [--repo owner/other]
+node wizbar/tools/specs-producer/producer.ts --home /path/to/factory-home --repo owner/name [--repo owner/other] [--gh /path/to/gh]
 ```
 
-It prints `wrote …/.openwiz/specs.v1.json: N specs, M requests`. WizBar calls a file older than 30 minutes stale, so run it on a timer.
+It prints `wrote …/.openwiz/specs.v1.json: N specs, M requests (K unchanged)`, for example `25 specs, 31 requests (29 unchanged)`. `K` is how many of the `M` requests GitHub answered 304 unchanged: they count toward the 59-request budget, but not toward GitHub's rate limit. `--gh` is the `gh` to run, by default `gh` on `PATH`; a missing `gh` fails, keeps the last file and names `--gh` and `PATH`. WizBar calls a file older than 30 minutes stale, so run it on a timer.
 
 ## Run it every 10 minutes (systemd user timer)
 
@@ -42,6 +42,7 @@ Description=WizBar specs producer
 
 [Service]
 Type=oneshot
+Environment=PATH=/home/you/.local/bin:/usr/local/bin:/usr/bin
 ExecStart=/usr/bin/env node /path/to/WizPlugins/wizbar/tools/specs-producer/producer.ts --home /path/to/factory-home --repo owner/name
 EOF
 cat > ~/.config/systemd/user/wizbar-specs.timer <<'EOF'
@@ -58,6 +59,8 @@ EOF
 systemctl --user daemon-reload
 systemctl --user enable --now wizbar-specs.timer
 ```
+
+A user service's `PATH` is only `/usr/local/bin:/usr/bin`, so a `gh` in `~/.local/bin` fails with `gh not found`. In the `Environment=PATH=…` line, put `gh`'s folder first: find it with `command -v gh` in your shell. Or pass `--gh /full/path/to/gh` in `ExecStart` instead.
 
 Check it with `systemctl --user list-timers wizbar-specs.timer` and `journalctl --user -u wizbar-specs.service`. The service runs as you, so it uses your `gh` login; if `node` is not on the service's `PATH`, give its full path in `ExecStart`.
 

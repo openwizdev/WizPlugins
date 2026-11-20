@@ -69,7 +69,7 @@ describe("wizbar specs (section 8)", () => {
     const cli = await setup();
     expect(await cli.json(["specs"])).toEqual({ exitCode: 0, body: v4SpecRows });
     expect(cli.read).toHaveBeenCalledWith(expect.objectContaining({
-      hostId: "hst_v4_home", rootPath: "/synthetic/home", path: ".openwiz/specs.v1.json",
+      hostId: "hst_v4_home", rootPath: "/synthetic/home", path: "/synthetic/home/.openwiz/specs.v1.json",
     }));
   });
 

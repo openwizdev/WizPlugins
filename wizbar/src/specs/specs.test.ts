@@ -11,6 +11,7 @@ import {
 } from "../fixtures/v4";
 import plugin from "../server";
 import { computeStatsV4 } from "../stats";
+import { strictRead } from "../testing/strict-files";
 import { rawRow } from "./testing";
 import { readOpenKeys, withOpen } from "./open-state";
 import { readSpecsFile } from "./read";
@@ -98,17 +99,20 @@ describe("WB4-6: missing fleet ids and failed running rows (sections 3 and 5)", 
   const palette = { ...v4SpecRows.specs[0]!, agents: [...v4SpecRows.specs[0]!.agents, v4FailedRunningAgent] };
   const expectedRows = { ...v4SpecRows, specs: [palette, v4SpecRows.specs[1]!] };
   const hosts: FakePluginHost[] = [];
+  let read: ReturnType<typeof vi.fn>;
   afterEach(async () => {
     for (const host of hosts.splice(0)) await host.harness.lifecycle.dispose();
     vi.useRealTimers(); vi.unstubAllEnvs();
   });
-  async function cli(argv: string[]) {
+  async function cli(argv: string[], rootPath = "/synthetic/home") {
     vi.stubEnv("TZ", v4TimeZone);
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(v4Now);
     const sha = createHash("sha256").update(v4SpecsFileText).digest("hex");
+    // The real host's rule (#153): a relative path is refused with 400 "Path must be absolute".
+    read = vi.fn(strictRead(async ({ path }: { path: string }) => ({ content: v4SpecsFileText, contentEncoding: "utf8", path, sha256: sha, sizeBytes: 1 })));
     const host = createFakePluginHost({ pluginId: "wizbar", sdk: {
-      files: { read: vi.fn(async ({ path }: { path: string }) => ({ content: v4SpecsFileText, contentEncoding: "utf8", path, sha256: sha, sizeBytes: 1 })) },
+      files: { read },
       threads: { list: vi.fn(async ({ offset = 0 }: { offset?: number } = {}) => rows.map(rawRow).slice(offset, offset + 100)), get: vi.fn() },
     } as never });
     hosts.push(host);
@@ -117,7 +121,7 @@ describe("WB4-6: missing fleet ids and failed running rows (sections 3 and 5)", 
       specsOpen: v4OpenSetting,
       wizdeckFactories: JSON.stringify([{
         projectKey: "sample-factory", cloudroomProjectId: "prj_v4_atlas", repositories: ["example/sample-plans"],
-        home: { hostId: "hst_v4_home", rootPath: "/synthetic/home" }, orchestratorThreadId: "thr_v4_orchestrator",
+        home: { hostId: "hst_v4_home", rootPath }, orchestratorThreadId: "thr_v4_orchestrator",
         statusWriterLogin: "sample-manager",
       }]),
     });
@@ -143,5 +147,16 @@ describe("WB4-6: missing fleet ids and failed running rows (sections 3 and 5)", 
   it("wizbar specs --json and wizbar stats --json give the same", async () => {
     expect(await cli(["specs"])).toEqual({ exitCode: 0, body: expectedRows });
     expect(await cli(["stats"])).toEqual({ exitCode: 0, body: v4FleetIdStats });
+  });
+
+  // catches (#153): the reader passing `.openwiz/specs.v1.json` relative to rootPath, which the real host refuses
+  // with 400 "Path must be absolute", so a fresh file reads as unreadable; and a Windows root joined with `/`.
+  it.each([
+    ["/synthetic/home", "/synthetic/home/.openwiz/specs.v1.json"],
+    ["C:\\synthetic\\home", "C:\\synthetic\\home\\.openwiz\\specs.v1.json"],
+  ])("through the real host's absolute-path rule, root %s reads %s as ready", async (rootPath, absolute) => {
+    expect(await cli(["specs"], rootPath)).toEqual({ exitCode: 0, body: expectedRows });
+    expect(read).toHaveBeenCalledTimes(1);
+    expect(read.mock.calls[0]![0]).toMatchObject({ hostId: "hst_v4_home", rootPath, path: absolute });
   });
 });

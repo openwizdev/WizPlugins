@@ -17,7 +17,7 @@ Sources, read 2026-11-15:
 
 ## 2. Needs-you queue v1
 
-The file is UTF-8 JSON at `.openwiz/needs-you.v1.json`, relative to the binding's `home.rootPath` (`needsYouRelativePath`). Only the orchestrator writes it, by atomic replacement. The plugin backend reads it with `bb.sdk.files.read({ hostId, rootPath, path })` at most once per shared 60-second refresh, and again just before a delayed answer is sent. C1 does not assume that any sandbox is mounted on the plugin server. D1 owns that binding and the proof that the host is reachable.
+The file is UTF-8 JSON at `.openwiz/needs-you.v1.json`, relative to the binding's `home.rootPath` (`needsYouRelativePath`). Only the orchestrator writes it, by atomic replacement. The plugin backend reads it with `bb.sdk.files.read({ hostId, rootPath, path })`, where `path` is the absolute path, `rootPath` joined with `needsYouRelativePath` (a Windows root joins with `\`; a real host refuses a relative `path` with HTTP 400 "Path must be absolute", #153), at most once per shared 60-second refresh, and again just before a delayed answer is sent. C1 does not assume that any sandbox is mounted on the plugin server. D1 owns that binding and the proof that the host is reachable.
 
 Fields, frozen as #71 specifies (`needsYouQueueSchema`; the JSON Schema is generated from it and a test holds the two equal):
 

@@ -1,6 +1,7 @@
 // The Needs-you queue host reader (D1, #73; factory-view.v1.md section 2).
 // It reads exactly one file, `.openwiz/needs-you.v1.json`, through the
-// configured host's file-read API with an explicit hostId and rootPath. It
+// configured host's file-read API with an explicit hostId and rootPath, by
+// its absolute path (the host refuses a relative one, #153). It
 // never uses the default host, never assumes a sandbox is mounted, and has no
 // write path. Every failure is unavailable, never an empty queue.
 import { createHash } from "node:crypto";
@@ -8,7 +9,7 @@ import type { BbPluginApi } from "@get-bb/plugin-sdk";
 import {
   needsYouRelativePath, readNeedsYouQueue, type FactoryBindingV1, type NeedsYouQueueV1,
 } from "../../factory-contract";
-import { homeRootProblem, isExpectedReadPath } from "./binding";
+import { homeRootProblem, isExpectedReadPath, pathInRoot } from "./binding";
 import { ReadUnavailable, type LoadResult } from "./cache";
 
 export type FileRead = BbPluginApi["sdk"]["files"]["read"];
@@ -42,7 +43,7 @@ export async function loadQueue(
 
   let result: Awaited<ReturnType<FileRead>>;
   try {
-    result = await read({ hostId, rootPath, path: needsYouRelativePath, signal });
+    result = await read({ hostId, rootPath, path: pathInRoot(rootPath, needsYouRelativePath), signal });
   } catch (error) {
     const status = statusOf(error);
     if (status === 404 || status === "ENOENT" || status === "not_found") {
