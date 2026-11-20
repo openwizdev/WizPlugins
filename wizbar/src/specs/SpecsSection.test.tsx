@@ -50,7 +50,7 @@ describe("S1: the section shows one row per running spec", () => {
   it("shows the rule, names, counts, done/total and dots; finished and empty specs are hidden", async () => {
     render({ settings: { specsOpen: v4OpenSetting } });
     const region = await section();
-    expect(await within(region).findByRole("heading", { name: "Specs 2 · 2 need you" })).toBeTruthy();
+    expect(await within(region).findByRole("heading", { name: "Specs 2 · 2 tickets need you (2 specs)" })).toBeTruthy();
     expect([...region.querySelectorAll("[data-spec]")].map((el) => el.getAttribute("data-spec"))).toEqual(
       ["example/sample-plans#501", "example/sample-tools#77"]);
     const palette = rowOf("Sample palette");
@@ -154,10 +154,10 @@ describe("S2: open, closed and remembered", () => {
 // the dots and the open panel (specs-section.v1.md sections 2 and 9).
 describe("0.5 C: the rule, the spec rows and the open panel", () => {
   // catches: the rule drawn as one grey string, so "need you" loses its warning colour and the count is as loud as the word.
-  it("shows Specs, then the count faint, then · M need you in the warning colour, with an olive line", async () => {
+  it("shows Specs, then the count faint, then · M tickets need you (K specs) in the warning colour, with an olive line", async () => {
     render();
     const heading = within(await section()).getByRole("heading");
-    await waitFor(() => expect(heading.textContent).toBe("Specs 2 · 2 need you"));
+    await waitFor(() => expect(heading.textContent).toBe("Specs 2 · 2 tickets need you (2 specs)"));
     expect(within(heading).getByText("Specs").className).toContain("text-muted-foreground");
     // Council round 1: the target's label size and weight, as on the shelf labels.
     expect(heading.className).toContain("text-[11.5px]");
@@ -165,8 +165,49 @@ describe("0.5 C: the rule, the spec rows and the open panel", () => {
     const count = within(heading).getByText("2");
     expect(count.className).toMatch(/text-muted-foreground\/\d+/);
     expect(count.className).not.toBe(within(heading).getByText("Specs").className);
-    expect(within(heading).getByText("· 2 need you").style.color).toBe(tokens.warning);
+    expect(within(heading).getByText("· 2 tickets need you (2 specs)").style.color).toBe(tokens.warning);
     expect((heading.querySelector("[data-rule-line]") as HTMLElement).style.background).toBe(tokens.rule);
+  });
+
+  // catches (#161): "1 tickets need you (1 specs)", or a rule whose accessible name or tooltip differs from what it says.
+  it("uses singular forms at 1, and gives the full sentence as the rule's label and tooltip", async () => {
+    const file = JSON.parse(v4SpecsFileText);
+    file.specs[1].tickets.find((t: { code: string }) => t.code === "SH-1").state = "not-started";
+    render({ read: () => ({ kind: "content", text: JSON.stringify(file) }) });
+    const heading = within(await section()).getByRole("heading");
+    await waitFor(() => expect(heading.textContent).toBe("Specs 2 · 1 ticket needs you (1 spec)"));
+    expect(heading.getAttribute("aria-label")).toBe("Specs 2 · 1 ticket needs you (1 spec)");
+    expect(heading.getAttribute("title")).toBe("Specs 2 · 1 ticket needs you (1 spec)");
+  });
+
+  // catches (#161): the full sentence clipped or wrapped where it does not fit, or the short form shown where it does.
+  // jsdom has no layout, so the widths are stubbed: the rule's own width, and the full sentence's natural width.
+  it.each([
+    ["fits", 300, "Specs 2 · 2 tickets need you (2 specs)"],
+    ["does not fit", 150, "Specs 2 · 2 for you"],
+  ] as const)("when the full sentence %s on one line, shows it, else · M for you", async (_name, width, shown) => {
+    const restore = [
+      vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(function (this: HTMLElement) {
+        return this.tagName === "H2" ? width : 0;
+      }),
+      vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockImplementation(function (this: HTMLElement) {
+        return this.hasAttribute("data-rule-measure") ? 220 : 0;
+      }),
+    ];
+    try {
+      render();
+      const heading = within(await section()).getByRole("heading");
+      await waitFor(() => expect(heading.querySelector("[data-rule-text]")!.textContent).toBe(shown));
+      expect(heading.getAttribute("aria-label")).toBe("Specs 2 · 2 tickets need you (2 specs)");
+      expect(heading.getAttribute("title")).toBe("Specs 2 · 2 tickets need you (2 specs)");
+      // The measuring copy is never seen or read.
+      const measure = (await section()).querySelector("[data-rule-measure]") as HTMLElement;
+      expect(heading.contains(measure)).toBe(false);
+      expect(measure.getAttribute("aria-hidden")).toBe("true");
+      expect(measure.className).toContain("invisible");
+    } finally {
+      for (const spy of restore) spy.mockRestore();
+    }
   });
 
   // catches: a rule that still says "need you" when nothing waits on the owner.
@@ -280,7 +321,7 @@ describe("0.5 C: the rule, the spec rows and the open panel", () => {
   it("says K needs you then · L later in muted text, and draws a later ticket as a quiet hollow warning ring after needs you", async () => {
     render({ read: () => ({ kind: "content", text: v4SpecsFileV2Text }) });
     const heading = within(await section()).getByRole("heading");
-    await waitFor(() => expect(heading.textContent).toBe("Specs 2 · 2 need you"));
+    await waitFor(() => expect(heading.textContent).toBe("Specs 2 · 2 tickets need you (2 specs)"));
     const palette = rowOf("Sample palette");
     const line = palette.querySelector("[data-spec-line]")!;
     expect([...line.querySelectorAll("[data-spec-name], [data-needs-you], [data-yours-later], [data-done-last-hour], [data-done-total]")]
@@ -394,9 +435,9 @@ describe("parity: wizbar specs --json is what the section shows", () => {
         agents: [...row.querySelectorAll("[data-sidebar-thread-id]")].map((a) => a.getAttribute("data-sidebar-thread-id")),
       })),
     };
-    expect(cli).toEqual(v4SpecRows);
+    expect(cli).toEqual({ ...v4SpecRows, needsYouSpecs: 2 });
     expect(shown).toEqual({
-      rule: `Specs ${cli.specs.length} · ${cli.needsYou} need you`,
+      rule: `Specs ${cli.specs.length} · ${cli.needsYou} tickets need you (${cli.needsYouSpecs} specs)`,
       specs: cli.specs.map((s: typeof v4SpecRows.specs[number]) => ({
         spec: s.spec, shortName: s.shortName, doneTotal: `${s.done}/${s.total}`,
         doneLastHour: s.doneLastHour > 0 ? `${s.doneLastHour} done in the last hour` : null,

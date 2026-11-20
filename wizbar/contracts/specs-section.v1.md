@@ -89,7 +89,7 @@ One row per visible spec, in file order (`SpecRowV4`). All counts are over the s
 
 **Hidden.** A spec is hidden when `total === 0` or `done === total` (finished). A hidden spec has no row and counts nowhere, in the UI and the CLI.
 
-**Section rule.** `Specs N` where N is the number of visible rows, then ` · M need you` when M (the sum of `needsYou` over visible rows: due now only, never later) is over zero. On screen (0.5.0 C) the label is about 11.5 px, weight 500, in muted text, the count is faint, ` · M need you` is in the warning colour, and an olive rule line follows.
+**Section rule.** `Specs N` where N is the number of visible rows, then ` · M tickets need you (K specs)` when M (the sum of `needsYou` over visible rows: due now only, never later) is over zero, where K is the visible specs with `needsYou > 0` (#161). At 1 the forms are singular: `1 ticket needs you`, `1 spec`. At zero nothing follows the count. When the full sentence does not fit on one line, the rule shows the narrow form `Specs N · M for you`, and the full sentence stays the rule's accessible label and tooltip. On screen (0.5.0 C) the label is about 11.5 px, weight 500, in muted text, the count is faint, the words after `·` are in the warning colour, and an olive rule line follows.
 
 ## 3. Matching running threads to a spec
 
@@ -203,17 +203,17 @@ New error codes:
 No arguments, else usage. The visible rows of section 2 with their agents.
 
 ```json
-{"version":1,"status":"ready","generatedAt":1795089300000,"needsYou":1,"yoursLater":0,"specs":[{"spec":"example/sample-plans#501","shortName":"Sample palette","url":"https://github.com/example/sample-plans/issues/501","done":2,"total":6,"doneLastHour":1,"needsYou":1,"yoursLater":0,"open":true,"dots":[{"ticket":"example/sample-plans#502","code":"SP-0","state":"done"}],"agents":[{"threadId":"thr_v4_builder_a","title":"Builder · SP-2: Sample add keyboard paths","role":"Builder","code":"SP-2","ticket":"example/sample-plans#504","providerId":"sample-harness","model":null,"effort":null,"matrix":"working","createdAt":1795081200000,"updatedAt":1795089540000}]}]}
+{"version":1,"status":"ready","generatedAt":1795089300000,"needsYou":1,"yoursLater":0,"needsYouSpecs":1,"specs":[{"spec":"example/sample-plans#501","shortName":"Sample palette","url":"https://github.com/example/sample-plans/issues/501","done":2,"total":6,"doneLastHour":1,"needsYou":1,"yoursLater":0,"open":true,"dots":[{"ticket":"example/sample-plans#502","code":"SP-0","state":"done"}],"agents":[{"threadId":"thr_v4_builder_a","title":"Builder · SP-2: Sample add keyboard paths","role":"Builder","code":"SP-2","ticket":"example/sample-plans#504","providerId":"sample-harness","model":null,"effort":null,"matrix":"working","createdAt":1795081200000,"updatedAt":1795089540000}]}]}
 ```
 
 (The example's `dots` and `agents` are shortened.) `generatedAt` is epoch ms. Unavailable file: `{"error":{"code":"specs_unavailable","message":"Specs unavailable.","reason":"stale"}}`, exit 1. Text:
 
 ```text
-Specs 1 · 1 need you
+Specs 1 · 1 ticket needs you (1 spec)
 example/sample-plans#501 Sample palette: 2/6 · 1 done in the last hour · 1 needs you · 1 running
 ```
 
-`yoursLater` (#162) counts later tickets per row and in total, apart from `needsYou`; the text adds `· L later` after `· K needs you` when `L > 0`. The two middle parts and `· L later` appear only when non-zero; `· N running` only when agents exist. Unavailable: `Specs unavailable (stale)` on stderr, exit 1.
+`needsYouSpecs` (#161) is the number of visible specs with `needsYou > 0`; it is in the JSON only, beside the rows. `yoursLater` (#162) counts later tickets per row and in total, apart from `needsYou`; the text adds `· L later` after `· K needs you` when `L > 0`. The two middle parts and `· L later` appear only when non-zero; `· N running` only when agents exist. Unavailable: `Specs unavailable (stale)` on stderr, exit 1.
 
 ### `wizbar spec <n> (--open | --close) [--json]`
 
