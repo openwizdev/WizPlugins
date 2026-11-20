@@ -141,18 +141,20 @@ export type StatsV4 = { version: 2; window: StatsWindowV3; coverage: StatsCovera
 export const specsOpenSettingV4 = { key: "specsOpen", type: "string", default: "[]" } as const;
 
 /** Section 5: 3 × 3 masks, row-major; unlit dots use the border token. */
-/** Section 5's quiet marks: the still mask, its colour and its motion (null when still). */
-export type MatrixColourV4 = "accent" | "muted-accent" | "muted-text" | "warning" | "destructive" | "dim" | "border";
+/** Section 5's quiet grey marks: the still mask, its colour, its motion (null when still) and the chase's fading tail. */
+export type MatrixColourV4 = "accent" | "muted-accent" | "muted-text" | "warning" | "destructive" | "dim" | "faint" | "bright" | "border";
 export type MatrixMotionV4 = "chase" | "pulse" | null;
-export const matrixMarksV4: Readonly<Record<MatrixStateV4, { mask: string; colour: MatrixColourV4; animated: boolean; motion: MatrixMotionV4 }>> = {
-  working: { mask: "100000000", colour: "accent", animated: true, motion: "chase" },
-  reviewing: { mask: "101010101", colour: "muted-text", animated: false, motion: null },
-  "checks-running": { mask: "000111000", colour: "muted-text", animated: true, motion: "pulse" },
-  "needs-you": { mask: "111111111", colour: "warning", animated: false, motion: null },
-  failed: { mask: "101010101", colour: "destructive", animated: false, motion: null },
-  done: { mask: "111111111", colour: "muted-accent", animated: false, motion: null },
-  idle: { mask: "000010000", colour: "dim", animated: false, motion: null },
+export const matrixMarksV4: Readonly<Record<MatrixStateV4, { mask: string; colour: MatrixColourV4; animated: boolean; motion: MatrixMotionV4; tail: readonly MatrixColourV4[] }>> = {
+  working: { mask: "100000000", colour: "bright", animated: true, motion: "chase", tail: ["muted-text", "faint"] },
+  reviewing: { mask: "101010101", colour: "muted-text", animated: false, motion: null, tail: [] },
+  "checks-running": { mask: "000111000", colour: "muted-text", animated: true, motion: "pulse", tail: [] },
+  "needs-you": { mask: "111111111", colour: "warning", animated: false, motion: null, tail: [] },
+  failed: { mask: "101010101", colour: "destructive", animated: false, motion: null, tail: [] },
+  done: { mask: "111111111", colour: "muted-accent", animated: false, motion: null, tail: [] },
+  idle: { mask: "000010000", colour: "faint", animated: false, motion: null, tail: [] },
 };
+/** Section 5: unlit dots, a visible grey. */
+export const matrixUnlitV4: MatrixColourV4 = "dim";
 /** Section 5: the working chase's clockwise ring order (row-major dot indexes). */
 export const matrixRingV4 = [0, 1, 2, 5, 8, 7, 6, 3] as const;
 
