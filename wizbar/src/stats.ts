@@ -4,7 +4,9 @@
 import { hasRuntimeWork } from "./lifecycle";
 import { classifyMachine } from "./machine-source";
 import type { PluginRealtimeConnectionState, PluginSidebarThreadsState } from "@get-bb/plugin-sdk";
-import type { StatsCoverageV3, StatsV3, StatsWindowV3, ThreadV3 } from "./v3-types";
+import type { CardModelsResultV3, StatsCoverageV3, StatsV3, StatsWindowV3, ThreadV3 } from "./v3-types";
+import type { CardEventV4, CardStateV4, FooterThreadV4, SpecsFileV4, StatsV4 } from "./fixtures/v4";
+import { isHidden, matchSpec, matrixState, type SpecsThreadRow } from "./specs/rows";
 
 /** SDK 0.6.33 `ThreadRuntimeDisplayStatus`; anything else cannot mean idle. */
 export const runtimeDisplayStatuses = [
@@ -122,17 +124,72 @@ export function readSidebarRows(
 }
 
 /** The panel's and the CLI's wording for the finish line. */
-export const finishedTodayText = (stats: Extract<StatsV3, { status: "ready" }>): string =>
+export const finishedTodayText = (stats: Extract<StatsV3 | StatsV4, { status: "ready" }>): string =>
   `Finished today: ${stats.finishedToday.source === "host" ? stats.finishedToday.count : "not available yet"}`;
 export const disclosureText = "subagents not counted yet · some threads may be unseen";
 
-/** `wizbar stats` text: three lines. */
-export function formatStatsText(stats: StatsV3): string {
+/** `wizbar stats` text: three lines; from 0.4 the harness split, then one line per running thread. */
+export function formatStatsText(stats: StatsV3 | StatsV4): string {
   if (stats.status !== "ready") return "ERROR state_unavailable: Thread state is unavailable.";
   const { running: r } = stats;
   return [
     `${r.total} running · ${r.topLevel} top-level, ${r.children} children · ${r.cloud} cloud, ${r.local} local, ${r.unknown} unknown · ${disclosureText}`,
     `Waiting on you: ${stats.waitingOnYou}`,
     finishedTodayText(stats),
+    ...(stats.version === 2 ? [
+      `Harness: ${stats.harness.map((h) => `${h.providerId} ${h.count}`).join(", ")}`,
+      ...stats.threads.map((t) => `${JSON.stringify(t.id)}: ${t.matrix} ${t.title}${t.shortName === null ? "" : ` [${t.shortName}]`}`),
+    ] : []),
   ].join("\n");
+}
+
+// ---- WB4-3 (openwizdev/OpenWiz#1437): the hover card's data, specs-section.v1.md sections 7 and 8 ----
+
+/** A row with what the card reads too: the spec rows' fields beside the 0.3 stats fields. */
+export type StatsV4Row = StatsRow & SpecsThreadRow;
+
+/**
+ * `wizbar stats --json` from 0.4 and the hover card: one computation for both
+ * (sections 7 and 8). The 0.3 numbers, then the harness split and every running
+ * thread with its matrix state, its visible spec and its served model. With no
+ * ready specs file every thread names no spec; the numbers stand.
+ */
+export function computeStatsV4(
+  rows: readonly StatsV4Row[] | null, specs: SpecsFileV4 | null, models: CardModelsResultV3 | null, now: number, timeZone: string,
+): StatsV4 {
+  const v3 = computeStats(rows, now, timeZone);
+  if (v3.status !== "ready") return { ...v3, version: 2, harness: null, threads: null };
+  const seen = new Set<string>();
+  const running = (rows ?? []).filter((row) => isRunning(row) && !seen.has(row.id) && seen.add(row.id))
+    .sort((a, b) => a.createdAt - b.createdAt || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  const counts = new Map<string, number>();
+  for (const row of running) counts.set(row.providerId, (counts.get(row.providerId) ?? 0) + 1);
+  const harness = [...counts].map(([providerId, count]) => ({ providerId, count }))
+    .sort((a, b) => b.count - a.count || (a.providerId < b.providerId ? -1 : a.providerId > b.providerId ? 1 : 0));
+  const served = new Map(models?.source === "host" ? models.items.map((item) => [item.threadId, item]) : []);
+  const threads = running.map((row): FooterThreadV4 => {
+    const key = specs ? matchSpec(specs, row) : null;
+    // A hidden (finished) spec has no row, so its agents name no spec (section 3).
+    const entry = key ? specs!.specs.find((spec) => spec.spec === key && !isHidden(spec)) ?? null : null;
+    const model = served.get(row.id);
+    return {
+      id: row.id, title: row.displayTitle, providerId: row.providerId, matrix: matrixState(row, null),
+      spec: entry?.spec ?? null, shortName: entry?.shortName ?? null,
+      model: model?.model ?? null, effort: model?.model ? model.effort : null,
+    };
+  });
+  return { ...v3, version: 2, harness, threads };
+}
+
+/** The card's first line (section 7): `<W> waiting on you · Cloud <C> · Local <L>`, then Unknown when over zero. */
+export function cardSummary({ waitingOnYou, running }: Extract<StatsV4, { status: "ready" }>): string {
+  return `${waitingOnYou} waiting on you · Cloud ${running.cloud} · Local ${running.local}${running.unknown > 0 ? ` · Unknown ${running.unknown}` : ""}`;
+}
+
+/** The card's state on "N running" (section 7, `v4CardPinCases`). */
+export function cardPinNext(state: CardStateV4, event: CardEventV4): CardStateV4 {
+  if (event === "escape") return "closed";
+  if (event === "click") return state === "pinned" ? "hover" : "pinned";
+  if (state === "pinned") return "pinned";
+  return event === "enter" || event === "focus" ? "hover" : "closed";
 }

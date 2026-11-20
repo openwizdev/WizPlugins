@@ -30,51 +30,24 @@ const empty = { complete: true, threads: [], subagentsByThread: new Map<string, 
 afterEach(() => { cleanup(); vi.restoreAllMocks(); fixtureFeed.current = null; });
 
 describe("W3: synthetic footer artwork through the SDK rendering harness", () => {
-  it("shows a dim zero with a stopped spinner", () => {
-    const rendered = renderSlot(candidate, { source: empty });
+  // WB4-3 (#1437): the spinner is now a matrix mark, idle at zero.
+  it("shows a dim zero with an idle mark", () => {
+    renderSlot(candidate, { source: empty });
     const counter = screen.getByRole("status", { name: "0 running" });
     expect(counter.textContent).toBe("0");
-    expect(counter.style.color).toBe("var(--muted-foreground)");
-    expect(rendered.container.querySelector("svg")?.style.animation).toBe("");
-    fireEvent.mouseEnter(counter);
-    expect(screen.getByRole("tooltip").textContent).toBe("0 threads, 0 subagents");
+    expect(counter.style.color).toBe("var(--muted-foreground, #b7b7b7)");
+    expect(counter.querySelector("[data-matrix]")?.getAttribute("data-matrix")).toBe("idle");
   });
-  it("shows a total, spinning icon and split on hover, with inert clicks", () => {
+  it("updates from five to zero and clears old numbers when inputs become unknown", () => {
     const rendered = renderSlot(candidate, { source: positiveSource });
-    const counter = screen.getByRole("status", { name: "5 running" });
-    expect(counter.textContent).toBe("5");
-    expect(rendered.container.querySelector("svg")?.style.animation).toContain("wizbar-running-spin");
-    expect(screen.queryByRole("tooltip")).toBeNull();
-    fireEvent.mouseEnter(counter);
-    expect(screen.getByRole("tooltip").textContent).toBe("2 threads, 3 subagents");
-    fireEvent.click(counter);
-    expect(screen.getByRole("status", { name: "5 running" })).toBe(counter);
-    expect(rendered.sidebarActionCalls).toEqual([]);
-    expect(rendered.navigateCalls).toEqual([]);
-    expect(rendered.rpcCalls).toEqual([]);
-    expect(rendered.sdkCalls).toEqual([]);
-    expect(screen.queryByRole("button")).toBeNull();
-    fireEvent.mouseLeave(counter);
-    expect(screen.queryByRole("tooltip")).toBeNull();
-    fireEvent.focus(counter);
-    expect(screen.getByRole("tooltip").textContent).toBe("2 threads, 3 subagents");
-    fireEvent.blur(counter);
-    expect(screen.queryByRole("tooltip")).toBeNull();
-  });
-  it("updates from five to zero and clears old numbers/splits when inputs become unknown", () => {
-    const rendered = renderSlot(candidate, { source: positiveSource });
-    fireEvent.mouseEnter(screen.getByRole("status"));
     rendered.rerender(<FooterCounterArtwork source={empty} />);
     expect(screen.getByRole("status", { name: "0 running" })).toBeDefined();
-    expect(screen.getByRole("tooltip").textContent).toBe("0 threads, 0 subagents");
     for (const source of [null, { ...positiveSource, complete: false }, { ...positiveSource, subagentsByThread: null }]) {
       rendered.rerender(<FooterCounterArtwork source={source} />);
       expect(screen.queryByRole("status")).toBeNull();
-      expect(screen.queryByRole("tooltip")).toBeNull();
     }
     rendered.rerender(<FooterCounterArtwork source={positiveSource} />);
     expect(screen.getByRole("status", { name: "5 running" })).toBeDefined();
-    expect(screen.queryByRole("tooltip")).toBeNull();
   });
   it("does not narrow synthetic input when inbox search, project and shelves change", async () => {
     const rawThreads = positiveThreads;
@@ -116,22 +89,6 @@ describe("W3: synthetic footer artwork through the SDK rendering harness", () =>
 // gap passes its own copy, as a host would hand over a new snapshot.
 describe("N4: approved observable footer route", () => {
   const icon = line;
-  // WZ20 (#41): one disclosure with a named host icon and a fixed label
-  // replaces the no-op action and its count artwork icon.
-  it("registers one fixed-label disclosure on the host's bolt icon and no count artwork", () => {
-    expect(app.sidebarFooterActions).toEqual([]);
-    expect(app.icons).toEqual([]);
-    expect(app.experimentalSidebarFooterItems).toHaveLength(1);
-    // The harness adds its own `runtime` and `source`; the rest is the registration.
-    const { runtime: _runtime, source: _source, ...item } = app.experimentalSidebarFooterItems[0]! as typeof app.experimentalSidebarFooterItems[0] & { source?: string };
-    expect(item).toEqual({ id: "stats", kind: "disclosure", label: "WizBar stats", icon: "Zap", component: expect.any(Function) });
-    renderSlot({ component: item.kind === "disclosure" ? item.component : () => null }, { dismiss() {} }, {
-      sidebarThreads: { status: "ready", threads: v3Threads },
-    });
-    expect(app.experimentalSidebarFooterItems).toHaveLength(1);
-    expect(app.experimentalSidebarFooterItems[0]!.label).toBe("WizBar stats");
-  });
-
   it("reads raw observable projects/children and publishes unverified coverage", () => {
     const rendered = renderSlot({ component: icon.component }, {}, {
       pluginId: "synthetic-running-source", sidebarThreads: { status: "ready", threads: [...positiveThreads, positiveThreads[0]!] },
@@ -139,11 +96,7 @@ describe("N4: approved observable footer route", () => {
     const counter = screen.getByRole("status", { name: "2 running" });
     expect(counter.textContent).toBe("2");
     expect(getSourceStatuses("synthetic-running-source").footer).toBe("unverified");
-    fireEvent.mouseEnter(counter);
-    expect(screen.getByRole("tooltip").textContent).toBe("2 running · subagents not counted yet · some threads may be unseen");
-    fireEvent.click(counter);
     expect(rendered.sdkCalls).toEqual([]);
-    expect(rendered.rpcCalls).toEqual([]);
     expect(rendered.navigateCalls).toEqual([]);
     rendered.unmount();
     expect(getSourceStatuses("synthetic-running-source").footer).toBe("unavailable");
@@ -202,24 +155,19 @@ describe("N4: approved observable footer route", () => {
     expect(getSourceStatuses(pluginId).footer).toBe("unverified");
   });
 
-  it("updates observable artwork to dim zero, clears stale hover on failure and discloses thread-only input", () => {
+  // WB4-3 (#1437): the thread-only tooltip is now the hover card (footer-card.test.tsx).
+  it("updates observable artwork to dim zero and hides it on failure", () => {
     const valid = readRunningSource({ status: "ready", threads: positiveThreads }, "connected");
     const rendered = renderSlot(candidate, { source: valid });
-    fireEvent.mouseEnter(screen.getByRole("status", { name: "2 running" }));
     const empty = readRunningSource({ status: "ready", threads: [] }, "connected");
     rendered.rerender(<FooterCounterArtwork source={empty} />);
     const zero = screen.getByRole("status", { name: "0 running" });
-    expect(zero.style.color).toBe("var(--muted-foreground)");
-    expect(rendered.container.querySelector("svg")?.style.animation).toBe("");
-    expect(screen.getByRole("tooltip").textContent).toBe("0 running · subagents not counted yet · some threads may be unseen");
+    expect(zero.style.color).toBe("var(--muted-foreground, #b7b7b7)");
+    expect(zero.querySelector("[data-matrix]")?.getAttribute("data-matrix")).toBe("idle");
     rendered.rerender(<FooterCounterArtwork source={readRunningSource({ status: "error", threads: positiveThreads }, "connected")} />);
     expect(screen.queryByRole("status")).toBeNull();
-    expect(screen.queryByRole("tooltip")).toBeNull();
     rendered.rerender(<FooterCounterArtwork source={valid} />);
     expect(screen.getByRole("status", { name: "2 running" })).toBeDefined();
-    expect(screen.queryByRole("tooltip")).toBeNull();
-    fireEvent.focus(screen.getByRole("status"));
-    expect(screen.getByRole("tooltip").textContent).toContain("subagents not counted yet");
   });
 });
 

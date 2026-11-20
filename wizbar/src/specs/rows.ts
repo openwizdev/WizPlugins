@@ -7,6 +7,7 @@ import {
   dotOrderV4, type DotStateV4, type MatrixStateV4, type SpecAgentV4, type SpecEntryV4, type SpecKeyV4,
   type SpecRowV4, type SpecsFileV4, type SpecsResultV4, type TicketEntryV4,
 } from "../fixtures/v4";
+import type { CardModelsResultV3 } from "../v3-types";
 
 /** The row fields the spec rows read; the app's rows and the CLI reader both supply them. */
 export type SpecsThreadRow = Pick<PluginSidebarThread,
@@ -74,24 +75,25 @@ export function isHidden(spec: SpecEntryV4): boolean {
   return spec.tickets.every((ticket) => ticket.state === "done");
 }
 
-function agentOf(spec: SpecEntryV4, row: SpecsThreadRow): SpecAgentV4 {
+function agentOf(spec: SpecEntryV4, row: SpecsThreadRow, models: CardModelsResultV3 | null): SpecAgentV4 {
+  const served = models?.source === "host" ? models.items.find((item) => item.threadId === row.id) : undefined;
   const { role, code } = parseTitle(row.displayTitle);
   return {
     threadId: row.id, title: row.displayTitle, role, code,
     ticket: spec.tickets.find((t) => code !== null && t.code === code)?.ticket ?? null,
     providerId: row.providerId,
-    // The model source is not adopted (section 6): omitted, never guessed.
-    model: null, effort: null,
+    // The shared model source (section 6): null until WB4-4 adopts it; missing values are omitted, never guessed.
+    model: served?.model ?? null, effort: served?.model ? served.effort : null,
     matrix: matrixState(row, null), createdAt: row.createdAt, updatedAt: row.updatedAt,
   };
 }
 
 /** Sections 2 and 3: the visible rows, in file order, with their running agents. */
-export function specRows(file: SpecsFileV4, rows: readonly SpecsThreadRow[], openKeys: readonly string[], now: number): SpecsResultV4 {
+export function specRows(file: SpecsFileV4, rows: readonly SpecsThreadRow[], openKeys: readonly string[], now: number, models: CardModelsResultV3 | null = null): SpecsResultV4 {
   const agents = new Map<SpecEntryV4, SpecAgentV4[]>();
   for (const row of rows) {
     const spec = matchEntry(file, row);
-    if (spec) agents.set(spec, [...(agents.get(spec) ?? []), agentOf(spec, row)]);
+    if (spec) agents.set(spec, [...(agents.get(spec) ?? []), agentOf(spec, row, models)]);
   }
   const specs = file.specs.filter((spec) => !isHidden(spec)).map((spec): SpecRowV4 => {
     const order = spec.tickets.map((ticket, index) => ({ ticket, index, state: dotState(ticket, now) }));

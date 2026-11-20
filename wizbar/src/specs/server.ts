@@ -9,6 +9,7 @@ import { defineRpcContract, type BbPluginApi } from "@get-bb/plugin-sdk";
 import { z } from "zod";
 import { runtimeStatusesV3 } from "../children";
 import type { SpecsFileReadV4 } from "../fixtures/v4";
+import type { CardModelsResultV3 } from "../v3-types";
 import { createSpecsCommands, type SpecsCommands } from "./cli";
 import { boundHome, specsRelativePath } from "./read";
 import type { SpecsThreadRow } from "./rows";
@@ -30,6 +31,8 @@ interface Handles {
     experimental_set(values: { specsOpen?: string | null }): Promise<{ specsOpen?: unknown }>;
   };
   factories: { get(): Promise<{ wizdeckFactories?: unknown }> };
+  /** The shared model source (`cardModelsFrom`), gated by `modelSourceV4.adopted`. */
+  models(threadIds: readonly string[]): Promise<CardModelsResultV3>;
 }
 
 const statusOf = (error: unknown): unknown =>
@@ -112,7 +115,7 @@ async function readRows(bb: BbPluginApi, signal?: AbortSignal): Promise<SpecsThr
   }
 }
 
-export function registerSpecs(bb: BbPluginApi, handles: Handles): SpecsCommands {
+export function registerSpecs(bb: BbPluginApi, handles: Handles): SpecsCommands & { specsFile(): Promise<SpecsFileReadV4> } {
   let cached: { key: string; at: number; read: Promise<SpecsFileReadV4> } | null = null;
 
   /** The bound factory's specs file, shared by every reader for 60 seconds. */
@@ -136,11 +139,14 @@ export function registerSpecs(bb: BbPluginApi, handles: Handles): SpecsCommands 
 
   bb.rpc.register(specsRpcContract, { specsFile: () => specsFile() });
 
-  return createSpecsCommands({
+  const commands = createSpecsCommands({
     specsFile,
+    models: handles.models,
     rows: (signal) => readRows(bb, signal),
     // A settings read that fails reads as every spec collapsed (section 4: fail closed).
     openSetting: async () => (await handles.settings.get().catch(() => ({ specsOpen: undefined }))).specsOpen,
     writeOpenSetting: async (value) => (await handles.settings.experimental_set({ specsOpen: value })).specsOpen,
   });
+  // WB4-3 (#1437): `wizbar stats` reads the same cached file.
+  return { ...commands, specsFile };
 }

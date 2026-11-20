@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
-// WZ20 (#41): the footer disclosure's panel, rendered through the registered
-// app and the SDK harness. Expected text is the contract's wording over the
-// hand-worked fixture numbers (`v3Stats`: 4 running, 2+2, 1/2/1, 3 waiting).
+// WZ20 (#41), WB4-3 (#1437): the stats card, now the hover card on "N running"
+// (specs-section.v1.md section 7), over the plugin-wide rows reader. Expected
+// text is the card's summary over the hand-worked fixture numbers (`v3Stats`:
+// 4 running, 1/2/1, 3 waiting).
 import { createElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, screen } from "@testing-library/react";
-import { loadPluginApp, renderSlot } from "@get-bb/plugin-sdk/testing/app";
+import { renderSlot } from "@get-bb/plugin-sdk/testing/app";
 import type { PluginSidebarThread, PluginSidebarThreadsState } from "@get-bb/plugin-sdk";
 import { v3Threads } from "./fixtures/v3";
 
@@ -34,39 +35,26 @@ const fresh = () => v3Threads.map((thread) => ({ ...thread }));
 /** A new host snapshot: one row's revision moved on. */
 const changed = () => v3Threads.map((thread, i) => ({ ...thread, updatedAt: thread.updatedAt + (i === 0 ? 1 : 0) }));
 
-const app = await loadPluginApp(() => import("../app"));
-const { FooterCounter } = await import("./FooterCounter");
-// Looked up per render, so a missing registration fails each test at its own
-// assertions (registration itself is proved in FooterCounter.test.tsx N4).
-function Panel(props: { dismiss(): void }) {
-  const item = app.experimentalSidebarFooterItems.find(({ id }) => id === "stats");
-  if (!item || item.kind !== "disclosure") return null;
-  return createElement(item.component, props);
+const { FooterCounter, useObservableRows } = await import("./FooterCounter");
+const { StatsPanel } = await import("./StatsPanel");
+// The card as the running line mounts it: over the plugin-wide rows reader.
+function Panel(_: { dismiss(): void }) {
+  return createElement(StatsPanel, { rows: useObservableRows().rows });
 }
 const panel = { component: Panel };
 const props = { dismiss() {} };
 afterEach(() => { cleanup(); fixtureFeed.current = null; });
 
-const lines = () => [...(screen.queryByRole("region", { name: "WizBar stats" })?.querySelectorAll("p") ?? [])].map((p) => p.textContent);
+const lines = () => [...(screen.queryByRole("region", { name: "Running threads" })?.querySelectorAll("p") ?? [])].map((p) => p.textContent);
+const fixtureLine = "3 waiting on you · Cloud 1 · Local 2 · Unknown 1";
 
 describe("V3: footer stats panel", () => {
   it("shows the contract's numbers and coverage disclosures for the fixture", () => {
     const rendered = renderSlot(panel, props, { sidebarThreads: { status: "ready", threads: v3Threads } });
-    expect(lines()).toEqual([
-      "4 running · 2 top-level, 2 children",
-      "1 cloud, 2 local, 1 unknown",
-      "subagents not counted yet · some threads may be unseen",
-      "Waiting on you: 3",
-      "Finished today: not available yet",
-    ]);
+    expect(lines()).toEqual([fixtureLine]);
     expect(rendered.sdkCalls).toEqual([]);
-    expect(rendered.rpcCalls).toEqual([]);
+    expect(rendered.rpcCalls.map(({ method }) => method)).toEqual(["cardModels"]);
     expect(rendered.navigateCalls).toEqual([]);
-  });
-
-  it("keeps showing its numbers when the list-bottom line is switched off", () => {
-    renderSlot(panel, props, { settings: { footerCountEnabled: false }, sidebarThreads: { status: "ready", threads: v3Threads } });
-    expect(lines()[0]).toBe("4 running · 2 top-level, 2 children");
   });
 
   const unknownRuntime = [...v3Threads, { ...v3Threads[0]!, id: "thr_v3_future", runtimeStatus: "host-reconnecting" as never }];
@@ -76,20 +64,20 @@ describe("V3: footer stats panel", () => {
     ["an unrecognised runtime status", { status: "ready" as const, threads: unknownRuntime as PluginSidebarThread[] }],
   ])("shows a plain unavailable state, never a number, for %s", (_, sidebarThreads) => {
     renderSlot(panel, props, { sidebarThreads });
-    expect(lines()).toEqual(["Stats unavailable", "subagents not counted yet · some threads may be unseen"]);
+    expect(lines()).toEqual(["Stats unavailable"]);
   });
 
   it("drops its numbers when the realtime connection is lost", async () => {
     const rendered = renderSlot(panel, props, { sidebarThreads: { status: "ready", threads: fresh() } });
-    expect(lines()[0]).toBe("4 running · 2 top-level, 2 children");
+    expect(lines()[0]).toBe(fixtureLine);
     await rendered.setRealtimeConnectionState("reconnecting");
     expect(lines()[0]).toBe("Stats unavailable");
     await rendered.setRealtimeConnectionState("connected");
     expect(lines()[0], "a reconnect alone cannot certify the retained rows").toBe("Stats unavailable");
   });
 
-  // R1: snapshot validity is the plugin's, not one component's. The host may
-  // mount the disclosure only when it opens, after a gap the line observed.
+  // R1: snapshot validity is the plugin's, not one component's. The card
+  // mounts only when it opens, after a gap the line observed.
   it("opens unavailable after a gap the list line saw, until a new snapshot arrives", async () => {
     fixtureFeed.current = { status: "ready", threads: fresh() };
     const View = ({ open }: { open: boolean }) => createElement("div", null,
@@ -113,7 +101,7 @@ describe("V3: footer stats panel", () => {
     expect(lines()[0]).toBe("Stats unavailable");
     fixtureFeed.current = { status: "ready", threads: changed() };
     rendered.rerender(createElement(View, { open: true }));
-    expect(lines()[0]).toBe("4 running · 2 top-level, 2 children");
+    expect(lines()[0]).toBe(fixtureLine);
     expect(screen.getByRole("status", { name: "4 running" })).toBeDefined();
   });
 
@@ -133,7 +121,7 @@ describe("V3: footer stats panel", () => {
 
   // R3: duplicates are compared on the running rule's facts, never the indicator.
   it.each([
-    ["agree on runtime work but differ only in indicator", "none", "active", "1 running · 1 top-level, 0 children", "1 running"],
+    ["agree on runtime work but differ only in indicator", "none", "active", "0 waiting on you · Cloud 0 · Local 1", "1 running"],
     ["genuinely conflict on runtime work", "runtime", "idle", "Stats unavailable", null],
   ])("counts duplicate rows that %s by the running rule", (_, indicator, runtimeStatus, panelLine, lineName) => {
     const row = { ...v3Threads.find(({ id }) => id === "thr_v3_pinned_idle")!, status: "active" as const, runtimeStatus: "active" as const, indicator: "runtime" as const };

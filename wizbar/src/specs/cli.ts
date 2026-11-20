@@ -5,7 +5,8 @@ import type { PluginCliResult } from "@get-bb/plugin-sdk";
 import type { SpecKeyV4, SpecOpenResultV4, SpecsFileReadV4, SpecsResultV4 } from "../fixtures/v4";
 import { readOpenKeys, withOpen } from "./open-state";
 import { readSpecsFile } from "./read";
-import { isHidden, sectionRule, specRows, type SpecsThreadRow } from "./rows";
+import { isHidden, isRunning, sectionRule, specRows, type SpecsThreadRow } from "./rows";
+import type { CardModelsResultV3 } from "../v3-types";
 
 export interface SpecsCommands {
   /** Runs `specs` or `spec`; null means a usage error. */
@@ -15,6 +16,8 @@ export interface SpecsCommands {
 export interface SpecsSources {
   specsFile(): Promise<SpecsFileReadV4>;
   rows(signal?: AbortSignal): Promise<SpecsThreadRow[] | null>;
+  /** WB4-3 (#1437): the shared model source, as `cardModels` serves it. */
+  models?(threadIds: readonly string[]): Promise<CardModelsResultV3>;
   openSetting(): Promise<unknown>;
   /** Writes `specsOpen` and returns the value read back. */
   writeOpenSetting(value: string): Promise<unknown>;
@@ -64,7 +67,9 @@ export function createSpecsCommands(sources: SpecsSources): SpecsCommands {
     if (read.status !== "ready") return fail(json, unavailable(read.reason));
     const rows = await sources.rows(signal);
     if (rows === null) return fail(json, { code: "state_unavailable", message: "Thread state is unavailable." });
-    const result = specRows(read.file, rows, readOpenKeys(await sources.openSetting()), now);
+    const running = rows.filter(isRunning).map((row) => row.id);
+    const models = sources.models && running.length ? await sources.models(running) : null;
+    const result = specRows(read.file, rows, readOpenKeys(await sources.openSetting()), now, models);
     return { exitCode: 0, stdout: (json ? JSON.stringify(result) : formatSpecsText(result)) + "\n" };
   };
 

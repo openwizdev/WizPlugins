@@ -359,7 +359,7 @@ describe("pending parking invalidation lifetime", () => {
 describe("wizbar stats", () => {
   const raw = (t: PluginSidebarThread) => ({
     id: t.id, projectId: t.projectId, parentThreadId: t.parentThreadId, archivedAt: null, deletedAt: null,
-    title: t.title, titleFallback: t.titleFallback, createdAt: t.createdAt, updatedAt: t.updatedAt,
+    title: t.title, titleFallback: t.titleFallback, providerId: t.providerId, createdAt: t.createdAt, updatedAt: t.updatedAt,
     lastReadAt: t.lastReadAt, latestAttentionAt: t.latestAttentionAt, hasPendingInteraction: t.hasPendingInteraction,
     queuedWork: t.queuedWork, status: t.status, pinnedAt: t.pinnedAt, pinSortKey: t.pinSortKey,
     runtime: { displayStatus: t.runtimeStatus, hostReconnectGraceExpiresAt: null },
@@ -382,11 +382,20 @@ describe("wizbar stats", () => {
   }
   beforeEach(() => { vi.setSystemTime(v3Now); });
 
-  it("prints the panel's numbers for the same fixture rows as JSON", async () => {
+  // WB4-3 (#1437): `stats` is `StatsV4` (specs-section.v1.md section 8): 0.3's
+  // numbers at version 2, plus the harness split and the running threads in
+  // `createdAt` order. No factory is bound here, so no thread names a spec.
+  const thread = (id: string, title: string) => ({ id, title, providerId: "synthetic-provider", matrix: "working", spec: null, shortName: null, model: null, effort: null });
+  const v3StatsV4 = { ...v3Stats, version: 2, harness: [{ providerId: "synthetic-provider", count: 4 }], threads: [
+    thread("thr_v3_child_local", "Sample measure cache hits"), thread("thr_v3_parent_many", "Sample refine command palette"),
+    thread("thr_v3_child_working", "Sample audit shortcuts"), thread("thr_v3_starting", "Sample update color tokens"),
+  ] };
+
+  it("prints the card's data for the same fixture rows as JSON", async () => {
     const host = statsHost(v3Threads.map(raw));
     const result = await host.run(["stats", "--json"]);
     expect(result.exitCode).toBe(0);
-    expect(JSON.parse(result.stdout!)).toEqual(v3Stats);
+    expect(JSON.parse(result.stdout!)).toEqual(v3StatsV4);
     expect(host.list).toHaveBeenCalledWith(expect.objectContaining({ archived: false, includeHidden: true, limit: 100, offset: 0 }));
     expect(host.list.mock.calls[0]![0]).not.toHaveProperty("projectId");
   });
@@ -398,6 +407,11 @@ describe("wizbar stats", () => {
       "4 running · 2 top-level, 2 children · 1 cloud, 2 local, 1 unknown · subagents not counted yet · some threads may be unseen",
       "Waiting on you: 3",
       "Finished today: not available yet",
+      "Harness: synthetic-provider 4",
+      "\"thr_v3_child_local\": working Sample measure cache hits",
+      "\"thr_v3_parent_many\": working Sample refine command palette",
+      "\"thr_v3_child_working\": working Sample audit shortcuts",
+      "\"thr_v3_starting\": working Sample update color tokens",
     ].join("\n") + "\n");
   });
 

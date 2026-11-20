@@ -706,7 +706,7 @@ describe("explicit muted shelf", () => {
 
 // WZ16: isolated artwork tests cannot prove a number exists in the thread list.
 describe("WZ16: visible list-bottom running count", () => {
-  it("keeps exactly one inert count below the scrolling rows, independent of search and projects", () => {
+  it("keeps exactly one count below the scrolling rows, independent of search and projects", () => {
     const threads = [
       thread({ id: "sample-parent", indicator: "runtime", runtimeStatus: "active" }),
       thread({ id: "sample-child", parentThreadId: "sample-parent", indicator: "runtime", runtimeStatus: "active" }),
@@ -720,32 +720,27 @@ describe("WZ16: visible list-bottom running count", () => {
     expect(counters).toHaveLength(1);
     const counter = counters[0]!;
     expect(counter.textContent).toBe("3");
-    expect(counter.parentElement).toBe(rendered.container.firstElementChild);
-    expect(counter).toBe(counter.parentElement?.lastElementChild);
-    const scrollArea = counter.parentElement?.querySelector(".overflow-y-auto");
+    // WB4-3 (#1437): the line sits in its card's wrapper, the list's last child.
+    const line = counter.parentElement!;
+    expect(line.parentElement).toBe(rendered.container.firstElementChild);
+    expect(line).toBe(line.parentElement?.lastElementChild);
+    const scrollArea = line.parentElement?.querySelector(".overflow-y-auto");
     expect(scrollArea?.contains(counter)).toBe(false);
     expect(scrollArea!.compareDocumentPosition(counter) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.queryAllByRole("listitem")).toHaveLength(0);
-    expect(counter.querySelector("svg")?.style.animation).toContain("wizbar-running-spin");
-    fireEvent.mouseEnter(counter);
-    expect(screen.getByRole("tooltip").textContent).toBe("3 running · subagents not counted yet · some threads may be unseen");
-    expect(counter.getAttribute("aria-describedby")).toBe(screen.getByRole("tooltip").id);
-    fireEvent.click(counter);
+    expect(counter.querySelector("[data-matrix]")?.getAttribute("data-matrix")).toBe("working");
+    fireEvent.pointerEnter(line);
+    expect(screen.getByRole("region", { name: "Running threads" })).toBeDefined();
     expect(rendered.navigateCalls).toEqual([]);
     expect(rendered.sidebarActionCalls).toEqual([]);
-    expect(rendered.sdkCalls).toEqual([]);
-    expect(rendered.rpcCalls.filter(({ method }) => method !== "listLifecycle")).toEqual([]);
-    expect(counter.closest("button, a")).toBeNull();
   });
 
-  it("shows dim zero on an empty list and stops its spinner", () => {
+  it("shows dim zero on an empty list with an idle mark", () => {
     render([]);
     const counter = screen.getByRole("status", { name: "0 running" });
     expect(counter.textContent).toBe("0");
-    expect(counter.style.color).toBe("var(--muted-foreground)");
-    expect(counter.querySelector("svg")?.style.animation).toBe("");
-    fireEvent.mouseEnter(counter);
-    expect(screen.getByRole("tooltip").textContent).toBe("0 running · subagents not counted yet · some threads may be unseen");
+    expect(counter.style.color).toBe("var(--muted-foreground, #b7b7b7)");
+    expect(counter.querySelector("[data-matrix]")?.getAttribute("data-matrix")).toBe("idle");
   });
 
   it.each(["loading", "error"] as const)("hides the number for %s despite retained rows", (status) => {
@@ -755,7 +750,6 @@ describe("WZ16: visible list-bottom running count", () => {
       rpc: { listLifecycle: () => ({ rows: [] }) },
     });
     expect(rendered.container.querySelector('[aria-label$=" running"]')).toBeNull();
-    expect(screen.queryByRole("tooltip")).toBeNull();
   });
 
   it("updates list and artwork together when the registered settings switch is saved", async () => {

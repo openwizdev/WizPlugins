@@ -2,18 +2,22 @@
 // WZ22 (#44), V5: the CLI parity test (contracts/sidebar-v3.v1.md sections 1
 // and 7). Every UI action has a `wizbar` command that takes `--json`; each
 // command does what its UI action does on the same rows; and `children` and
-// `stats` JSON equal what the hover panel and the footer panel show for the
+// `stats` JSON equal what the hover panel and the running line's card show for the
 // same fixtures. Every row is synthetic (src/fixtures/v3.ts).
 import { createElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { createFakePluginHost, type FakePluginHost } from "@get-bb/plugin-sdk/testing";
 import { loadPluginApp, renderSlot } from "@get-bb/plugin-sdk/testing/app";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import plugin, { t3sidebarRpcContract } from "./server";
-import { v3Children, v3Now, v3Stats, v3Threads } from "./fixtures/v3";
+import { v3Children, v3Now, v3Threads } from "./fixtures/v3";
 import { wizbarOperationsV3 } from "./v3-types";
-import { wizbarOperationsV4 } from "./fixtures/v4";
+import { v4Now, v4SpecsFileText, v4Stats, v4Threads, wizbarOperationsV4 } from "./fixtures/v4";
+import { createHash } from "node:crypto";
+
+const v4Binding = JSON.stringify([{ projectKey: "sample-factory", cloudroomProjectId: "prj_v4_atlas", repositories: ["example/sample-plans"],
+  home: { hostId: "hst_v4_home", rootPath: "/synthetic/home" }, orchestratorThreadId: "thr_v4_orchestrator", statusWriterLogin: "sample-manager" }]);
 
 /**
  * The UI's actions, by the RPC method the sidebar calls for each (every
@@ -53,7 +57,7 @@ const hostOwnedMenuItems: Record<string, string> = {
 /** `threads.list` rows for the fixture, by the contract's raw-to-row table. */
 const raw = (t: PluginSidebarThread) => ({
   id: t.id, projectId: t.projectId, parentThreadId: t.parentThreadId, archivedAt: null, deletedAt: null,
-  title: t.title, titleFallback: t.titleFallback, createdAt: t.createdAt, updatedAt: t.updatedAt,
+  title: t.title, titleFallback: t.titleFallback, providerId: t.providerId, createdAt: t.createdAt, updatedAt: t.updatedAt,
   lastReadAt: t.lastReadAt, latestAttentionAt: t.latestAttentionAt, hasPendingInteraction: t.hasPendingInteraction,
   queuedWork: t.queuedWork, status: t.status, pinnedAt: t.pinnedAt, pinSortKey: t.pinSortKey,
   runtime: { displayStatus: t.runtimeStatus, hostReconnectGraceExpiresAt: null },
@@ -234,29 +238,41 @@ describe("V5: children and stats JSON equal the UI for the same fixtures", () =>
       ({ id: c.id, label: `Open child: ${c.title}, ${c.status}, ${ages[c.id]}` })));
   });
 
-  it("stats: the CLI's numbers are the footer panel's", async () => {
-    const cli = await server().run(["stats", "--json"]);
-    expect(cli).toEqual({ exitCode: 0, json: v3Stats });
-    const item = app.experimentalSidebarFooterItems.find(({ id }) => id === "stats");
-    expect(item?.kind).toBe("disclosure");
-    if (item?.kind !== "disclosure") return;
-    renderSlot({ component: item.component }, { dismiss() {} }, { sidebarThreads: { status: "ready", threads: [...v3Threads] } });
-    const lines = [...screen.getByRole("region", { name: "WizBar stats" }).querySelectorAll("p")].map((p) => p.textContent ?? "");
-    const number = (pattern: RegExp) => {
-      const found = lines.join("\n").match(pattern);
-      return found ? Number(found[1]) : undefined;
-    };
-    const panel = {
-      running: {
-        total: number(/^(\d+) running/m), topLevel: number(/(\d+) top-level/), children: number(/(\d+) children/),
-        cloud: number(/(\d+) cloud/), local: number(/(\d+) local/), unknown: number(/(\d+) unknown/),
-      },
-      waitingOnYou: number(/^Waiting on you: (\d+)$/m),
-      finishedToday: lines.includes("Finished today: not available yet") ? { source: "none", count: null } : undefined,
-      coverage: lines.includes("subagents not counted yet · some threads may be unseen")
-        ? { scope: "observable-sidebar", subagents: "not-counted", unseen: "possible" } : undefined,
-    };
-    const { running, waitingOnYou, finishedToday, coverage } = cli.json;
-    expect(panel).toEqual({ running, waitingOnYou, finishedToday, coverage });
+  // WB4-3 (#1437): the bolt's panel is gone; "N running"'s hover card shows the stats data.
+  // catches: the card and `wizbar stats --json` computing different threads, specs or harness counts for the same rows.
+  it("stats: the CLI's JSON is the hover card's data", async () => {
+    vi.setSystemTime(v4Now);
+    const sha = createHash("sha256").update(v4SpecsFileText).digest("hex");
+    const host = createFakePluginHost({ pluginId: "wizbar", sdk: {
+      files: { read: vi.fn(async ({ path }: { path: string }) => ({ content: v4SpecsFileText, contentEncoding: "utf8", path, sha256: sha, sizeBytes: 1 })) },
+      threads: { list: vi.fn(async () => v4Threads.map(raw)), get: vi.fn() },
+    } as never });
+    hosts.push(host);
+    plugin(host.bb);
+    await host.harness.behavior.setSettings({ wizdeckFactories: v4Binding });
+    const cli = JSON.parse((await host.harness.behavior.runCli(["stats", "--json"])).stdout!);
+    expect(cli).toEqual(v4Stats);
+    const served = await host.harness.behavior.callRpc("specsFile", {});
+    renderSlot(app.threadLists[0]!, {
+      activeThreadId: null, activeProjectId: null, isCompactViewport: true, onNavigate() {}, searchQuery: "",
+    }, {
+      pluginId: "synthetic-wb4-3-parity", settings: { wizdeckFactories: v4Binding },
+      sidebarThreads: { status: "ready", threads: [...v4Threads] },
+      rpc: { listLifecycle: () => ({ rows: [] }), specsFile: () => served, cardModels: (input: unknown) =>
+        host.harness.behavior.callRpc("cardModels", input) },
+    });
+    fireEvent.pointerEnter(screen.getByRole("status", { name: /^\d+ running$/ }).parentElement!);
+    const card = screen.getByRole("region", { name: "Running threads" });
+    await waitFor(() => expect(card.querySelectorAll("[data-spec-name]").length).toBe(4));
+    expect({
+      summary: card.querySelector("p")?.textContent,
+      harness: [...card.querySelectorAll("[data-harness]")].map((el) => ({ providerId: el.getAttribute("data-harness"), count: Number(el.getAttribute("data-count")) })),
+      threads: [...card.querySelectorAll("[data-thread]")].map((el) => ({ id: el.getAttribute("data-thread"),
+        matrix: el.querySelector("[data-matrix]")?.getAttribute("data-matrix"), shortName: el.querySelector("[data-spec-name]")?.textContent ?? null })),
+    }).toEqual({
+      summary: `${cli.waitingOnYou} waiting on you · Cloud ${cli.running.cloud} · Local ${cli.running.local} · Unknown ${cli.running.unknown}`,
+      harness: cli.harness,
+      threads: cli.threads.map((t: { id: string; matrix: string; shortName: string | null }) => ({ id: t.id, matrix: t.matrix, shortName: t.shortName })),
+    });
   });
 });
