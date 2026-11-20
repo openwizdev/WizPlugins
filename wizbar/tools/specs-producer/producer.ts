@@ -84,18 +84,19 @@ interface CacheEntry { etag: string; next: string | null; body: Record<string, u
  * cursor: a run reads pages never read first, then the longest unread, so a scan bigger than one
  * run's budget continues where the last run stopped.
  */
-interface Cache { version: 1; run: number; pages: Record<string, CacheEntry> }
+interface Cache { version: 1; run: number; pages: Record<string, CacheEntry>; vanished?: string[] }
 
 async function readCache(path: string): Promise<Cache> {
   try {
     const parsed = JSON.parse(await readFile(path, "utf8")) as Partial<Cache> | null;
     if (parsed?.version === 1 && Number.isSafeInteger(parsed.run) && typeof parsed.pages === "object" && parsed.pages !== null) {
-      return { version: 1, run: parsed.run!, pages: parsed.pages };
+      const vanished = Array.isArray(parsed.vanished) ? parsed.vanished.filter((page) => typeof page === "string") : [];
+      return { version: 1, run: parsed.run!, pages: parsed.pages, vanished };
     }
   } catch {
     // No cache, or an unreadable one: start a new scan.
   }
-  return { version: 1, run: 0, pages: {} };
+  return { version: 1, run: 0, pages: {}, vanished: [] };
 }
 
 async function writeAtomically(path: string, text: string): Promise<void> {
@@ -108,6 +109,8 @@ async function writeAtomically(path: string, text: string): Promise<void> {
   }
 }
 
+class NotFound extends ReadFailed {}
+
 /** One conditional read of a page into the cache. */
 async function readPage(page: string, request: GitHubRequest, pages: Record<string, CacheEntry>, run: number): Promise<void> {
   const cached = pages[page];
@@ -116,8 +119,12 @@ async function readPage(page: string, request: GitHubRequest, pages: Record<stri
   else if (response.status === 200) {
     if (!Array.isArray(response.body)) throw new ReadFailed(`GitHub answered something other than a list for ${page}`);
     pages[page] = { etag: response.etag ?? "", next: response.next, body: response.body.map(slim), run };
-  } else throw new ReadFailed(`GitHub answered ${response.status} for ${page}`);
+  } else if (response.status === 404) throw new NotFound(`GitHub answered 404 for ${page}`);
+  else throw new ReadFailed(`GitHub answered ${response.status} for ${page}`);
 }
+
+/** The repository of a spec's sub-issues page, or null for any other page. */
+const subIssuesRepository = (page: string) => /^repos\/([^/]+\/[^/]+)\/issues\/[0-9]+\/sub_issues\?/.exec(page)?.[1] ?? null;
 
 const text = (value: unknown): string => (typeof value === "string" ? value : "");
 const repositoryOf = (issue: Record<string, unknown>, fallback: string) =>
@@ -209,6 +216,10 @@ function scan(repositories: readonly string[], pages: Record<string, CacheEntry>
  * One producer run of at most `BUDGET` requests. It reads pages never read first, then those read
  * longest ago, so a scan over the budget resumes on the next run while unreached pages keep their
  * last good data. The file is written whole once every page has data; a failed read writes nothing.
+ *
+ * A spec's sub-issues page answering 404 is `vanished` (#122 R5): its spec keeps its last data and its
+ * repository's open-issues list is read next, before anything else, in this run or the next. Once that
+ * list is read, a spec no longer listed leaves the scan; one still listed fails the run (a real 404).
  */
 export async function runOnce(options: { home: string; repositories: readonly string[]; request: GitHubRequest; now?: () => Date }): Promise<RunResult> {
   const { home, request } = options;
@@ -217,26 +228,47 @@ export async function runOnce(options: { home: string; repositories: readonly st
   const cache = await readCache(cachePath);
   const run = cache.run + 1;
   const pages = { ...cache.pages };
+  const vanished = new Set(cache.vanished);
   let calls = 0;
+  const listing = (order: readonly string[], repository: string) => order.filter((page) => page.startsWith(`repos/${repository}/issues?`));
+  const listingRead = (order: readonly string[], repository: string) => listing(order, repository).every((page) => pages[page]?.run === run);
+  /** Settles each vanished page whose repository's list was read in this run. */
+  const settle = (order: readonly string[]) => {
+    for (const page of vanished) {
+      if (!listingRead(order, subIssuesRepository(page)!)) continue;
+      if (order.includes(page)) throw new ReadFailed(`GitHub answered 404 for ${page}`);
+      vanished.delete(page);
+    }
+  };
   try {
     while (calls < BUDGET) {
       const { order, missing } = scan(repositories, pages);
-      const due = order.filter((page) => pages[page]?.run !== run);
+      settle(order);
+      const due = order.filter((page) => pages[page]?.run !== run && !vanished.has(page));
       if (due.length === 0) break;
-      const age = (page: string) => (missing.includes(page) ? -1 : pages[page]!.run);
+      const waiting = new Set([...vanished].flatMap((page) => listing(order, subIssuesRepository(page)!)));
+      const age = (page: string) => (waiting.has(page) ? -2 : missing.includes(page) ? -1 : pages[page]!.run);
       const next = due.reduce((best, page) => (age(page) < age(best) ? page : best));
       calls += 1;
-      await readPage(next, request, pages, run);
+      try {
+        await readPage(next, request, pages, run);
+      } catch (error) {
+        const repository = subIssuesRepository(next);
+        if (!(error instanceof NotFound) || repository === null || listingRead(order, repository)) throw error;
+        vanished.add(next);
+      }
     }
     const { order, missing, specs } = scan(repositories, pages);
+    settle(order);
     await mkdir(join(home, ".openwiz"), { recursive: true });
     if (missing.length === 0) {
       const generatedAt = (options.now?.() ?? new Date()).toISOString().replace(/\.\d+Z$/, "Z");
       await writeAtomically(join(home, OUTPUT), `${JSON.stringify({ schema: "openwiz.specs.v1", generatedAt, specs }, null, 2)}\n`);
     }
-    // Keep only the pages of this scan.
+    // Keep only the pages of this scan, and the vanished pages still waiting for their list.
     const kept = Object.fromEntries(order.filter((page) => pages[page]).map((page) => [page, pages[page]!]));
-    await writeAtomically(cachePath, JSON.stringify({ version: 1, run, pages: kept } satisfies Cache));
+    const waiting = [...vanished].filter((page) => order.includes(page));
+    await writeAtomically(cachePath, JSON.stringify({ version: 1, run, pages: kept, vanished: waiting } satisfies Cache));
     const written = missing.length === 0;
     return { ok: true, calls, specs: written ? specs.length : 0, written, pending: missing.length };
   } catch (error) {
