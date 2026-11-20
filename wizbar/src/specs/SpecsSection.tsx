@@ -166,7 +166,7 @@ function SpecRow({ row, threads, now, activeThreadId, onNavigate, onToggle }: {
   const notes = (
     <>
       {row.needsYou > 0 ? <span data-needs-you="" className="shrink-0 text-[11.5px]" style={{ color: tokens.warning }}>{row.needsYou} needs you</span> : null}
-      {row.doneLastHour > 0 ? <span data-done-last-hour="" className="shrink-0 text-[11.5px]" style={{ color: tokens.mutedAccent }}>{row.doneLastHour} done in the last hour</span> : null}
+      {row.doneLastHour > 0 ? <span data-done-last-hour="" className="shrink-0 text-[11.5px]" style={{ color: tokens.doneNote }}>{row.doneLastHour} done in the last hour</span> : null}
     </>
   );
   return (
