@@ -11,12 +11,15 @@ import { breathPeriodMsV6 } from "../fixtures/v6";
 export const BREATH_KEYFRAMES = [{ opacity: 1 }, { opacity: 0.4 }, { opacity: 1 }];
 export const BREATH_TIMING = { duration: breathPeriodMsV6, iterations: Infinity, easing: "ease-in-out" };
 
-/** Section 13: a dot breathes when a `working` agent names its ticket and it is not done. */
+/**
+ * Section 13: a dot breathes when a `working` agent names its ticket and it is not done. A `review` dot
+ * always keeps its steady ring ("nothing else moves"), even when a working agent names it.
+ */
 export function dotBreathes(
   dot: { ticket: string; state: DotStateV4 },
   agents: readonly { ticket: string | null; matrix: MatrixStateV4 | "working" | "reviewing" | "failed" }[],
 ): boolean {
-  if (dot.state === "done" || dot.state === "done-recent") return false;
+  if (dot.state === "done" || dot.state === "done-recent" || dot.state === "review") return false;
   return agents.some((agent) => agent.matrix === "working" && agent.ticket === dot.ticket);
 }
 
