@@ -112,6 +112,10 @@ A visible spec with no agents still has its row; it shows no chevron and cannot 
 
 Declared in `wizbarSettingDescriptors` (by WB4-1) with the settings.v1.md store and write rule; this contract is the key's record, and settings.v1.md is not changed here. Every spec starts collapsed. A key missing from the array, a missing setting, or a value that is not a JSON array of strings reads as collapsed for every spec (fail closed). Opening adds the key once; closing removes it; both are idempotent. Keys of specs no longer listed are kept and ignored, so a spec that comes back keeps its state.
 
+**Effective open state** (`effectiveOpen` in `wizbar/src/specs/open-state.ts`): a visible spec shows open exactly when its key is in the array and it has at least one agent (section 3). A spec with no agents shows closed whatever is stored; its stored key stays, so it opens once agents run. The row's `open` (section 2) is the stored state; the sidebar and `wizbar spec` both report the effective one.
+
+**Changing it.** Each change reads the stored array, then writes it back with only that spec's key added or removed, one change at a time on the server, so overlapping changes keep each other's key. A settings read that fails never becomes a write: a change fails with `settings_failed` and the stored array is unchanged. Only display falls back to every spec collapsed.
+
 ## 5. Matrix status
 
 A small 3 × 3 dot mark on each running thread (inside an open spec, and on the 0.3 running thread cards). Inputs: the row, and in the app only, the row's pull request (`experimental_useSidebarThreadPullRequest(id).pullRequest`; the server has no pull request, so it passes null). First match wins:
@@ -169,9 +173,9 @@ New error codes:
 | `specs_unavailable` | The specs file is unavailable (section 1); the JSON adds `reason` | `specs`, `spec` |
 | `unknown_spec` | No visible spec matches | `spec` |
 | `ambiguous_spec` | A bare number matches visible specs in several repositories | `spec` |
-| `settings_failed` | The host refused or failed the settings write | `spec` |
+| `settings_failed` | The settings read failed (nothing is written), or the host refused or failed the settings write | `spec` |
 
-`state_unavailable` (0.3) still means the thread rows could not be read; `specs` needs both the file and the rows.
+`state_unavailable` (0.3) still means the thread rows could not be read; `specs` and `spec` need both the file and the rows (`spec` reads the rows before it writes).
 
 ### `wizbar specs [--json]`
 
@@ -192,7 +196,7 @@ The two middle parts appear only when non-zero; `· N running` only when agents 
 
 ### `wizbar spec <n> (--open | --close) [--json]`
 
-Exactly one spec reference and exactly one of `--open`/`--close`, else usage. `<n>` is `owner/name#N`, or a bare `N` that matches exactly one visible spec's number. It needs a ready specs file. It writes the `specsOpen` setting (section 4) and reports the state read back.
+Exactly one spec reference and exactly one of `--open`/`--close`, else usage. `<n>` is `owner/name#N`, or a bare `N` that matches exactly one visible spec's number. It needs a ready specs file and the thread rows. It changes the `specsOpen` setting as section 4 says and reports the effective open state (section 4) from the value read back, so it says what the sidebar shows: on a visible spec with no agents, `--open` saves the key and reports `"open":false`, exit 0 (`v4SpecOpenCases`).
 
 ```json
 {"spec":"example/sample-plans#501","open":true}

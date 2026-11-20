@@ -3,7 +3,7 @@
 // `--json`, `--` before literal arguments, unknown flags are usage errors.
 import type { PluginCliResult } from "@get-bb/plugin-sdk";
 import type { SpecKeyV4, SpecOpenResultV4, SpecsFileReadV4, SpecsResultV4 } from "../fixtures/v4";
-import { readOpenKeys, withOpen } from "./open-state";
+import { effectiveOpen, readOpenKeys, withOpen } from "./open-state";
 import { readSpecsFile } from "./read";
 import { isHidden, isRunning, sectionRule, specRows, type SpecsThreadRow } from "./rows";
 import type { CardModelsResultV3 } from "../v3-types";
@@ -18,6 +18,7 @@ export interface SpecsSources {
   rows(signal?: AbortSignal): Promise<SpecsThreadRow[] | null>;
   /** WB4-3 (#1437): the shared model source, as `cardModels` serves it. */
   models?(threadIds: readonly string[]): Promise<CardModelsResultV3>;
+  /** Reads `specsOpen`; a failed read rejects (the display falls back to collapsed, a mutation fails). */
   openSetting(): Promise<unknown>;
   /** Writes `specsOpen` and returns the value read back. */
   writeOpenSetting(value: string): Promise<unknown>;
@@ -61,6 +62,14 @@ function parse(args: readonly string[], allowed: readonly string[]): { positiona
 const issueKey = /^[A-Za-z0-9][A-Za-z0-9-]*\/[A-Za-z0-9._-]+#[1-9][0-9]*$/;
 
 export function createSpecsCommands(sources: SpecsSources): SpecsCommands {
+  // One `specsOpen` read-modify-write at a time, so overlapping commands keep each other's change.
+  let queue: Promise<unknown> = Promise.resolve();
+  const serial = <T>(task: () => Promise<T>): Promise<T> => {
+    const next = queue.then(task, task);
+    queue = next.catch(() => undefined);
+    return next;
+  };
+
   const specs = async (json: boolean, signal?: AbortSignal): Promise<PluginCliResult> => {
     const now = Date.now();
     const read = readSpecsFile(await sources.specsFile(), now);
@@ -69,12 +78,15 @@ export function createSpecsCommands(sources: SpecsSources): SpecsCommands {
     if (rows === null) return fail(json, { code: "state_unavailable", message: "Thread state is unavailable." });
     const running = rows.filter(isRunning).map((row) => row.id);
     const models = sources.models && running.length ? await sources.models(running) : null;
-    const result = specRows(read.file, rows, readOpenKeys(await sources.openSetting()), now, models);
+    // A failed settings read shows every spec collapsed (section 4: fail closed).
+    const openKeys = readOpenKeys(await sources.openSetting().catch(() => undefined));
+    const result = specRows(read.file, rows, openKeys, now, models);
     return { exitCode: 0, stdout: (json ? JSON.stringify(result) : formatSpecsText(result)) + "\n" };
   };
 
-  const spec = async (reference: string, open: boolean, json: boolean): Promise<PluginCliResult> => {
-    const read = readSpecsFile(await sources.specsFile(), Date.now());
+  const spec = async (reference: string, open: boolean, json: boolean, signal?: AbortSignal): Promise<PluginCliResult> => {
+    const now = Date.now();
+    const read = readSpecsFile(await sources.specsFile(), now);
     if (read.status !== "ready") return fail(json, unavailable(read.reason));
     const visible = read.file.specs.filter((entry) => !isHidden(entry)).map((entry) => entry.spec);
     const matches = issueKey.test(reference) ? visible.filter((key) => key === reference)
@@ -82,13 +94,26 @@ export function createSpecsCommands(sources: SpecsSources): SpecsCommands {
     if (matches.length > 1) return fail(json, { code: "ambiguous_spec", message: "That number matches specs in several repositories." });
     if (matches.length === 0) return fail(json, { code: "unknown_spec", message: "Unknown spec." });
     const key: SpecKeyV4 = matches[0]!;
-    let stored: unknown;
-    try {
-      stored = await sources.writeOpenSetting(withOpen(await sources.openSetting(), key, open));
-    } catch {
-      return fail(json, { code: "settings_failed", message: "The settings write failed." });
-    }
-    const result: SpecOpenResultV4 = { spec: key, open: readOpenKeys(stored).includes(key) };
+    // The agents decide what the sidebar shows, so they are read before anything is written.
+    const rows = await sources.rows(signal);
+    if (rows === null) return fail(json, { code: "state_unavailable", message: "Thread state is unavailable." });
+    const written = await serial(async (): Promise<{ stored: unknown } | Failure> => {
+      let raw: unknown;
+      try {
+        raw = await sources.openSetting();
+      } catch {
+        // Never write from a list that could not be read: that would erase every other saved spec.
+        return { code: "settings_failed", message: "The settings read failed." };
+      }
+      try {
+        return { stored: await sources.writeOpenSetting(withOpen(raw, key, open)) };
+      } catch {
+        return { code: "settings_failed", message: "The settings write failed." };
+      }
+    });
+    if (!("stored" in written)) return fail(json, written);
+    const row = specRows(read.file, rows, readOpenKeys(written.stored), now).specs.find((entry) => entry.spec === key);
+    const result: SpecOpenResultV4 = { spec: key, open: row !== undefined && effectiveOpen(row) };
     return { exitCode: 0, stdout: (json ? JSON.stringify(result) : `${key}: ${result.open ? "open" : "closed"}`) + "\n" };
   };
 
@@ -100,7 +125,7 @@ export function createSpecsCommands(sources: SpecsSources): SpecsCommands {
       }
       const args = parse(argv.slice(1), ["--json", "--open", "--close"]);
       if (!args || args.positional.length !== 1 || args.flags.has("--open") === args.flags.has("--close")) return null;
-      return spec(args.positional[0]!, args.flags.has("--open"), json);
+      return spec(args.positional[0]!, args.flags.has("--open"), json, signal);
     },
   };
 }

@@ -143,8 +143,8 @@ export function registerSpecs(bb: BbPluginApi, handles: Handles): SpecsCommands 
     specsFile,
     models: handles.models,
     rows: (signal) => readRows(bb, signal),
-    // A settings read that fails reads as every spec collapsed (section 4: fail closed).
-    openSetting: async () => (await handles.settings.get().catch(() => ({ specsOpen: undefined }))).specsOpen,
+    // A failed read rejects: the display shows every spec collapsed, a mutation fails before writing.
+    openSetting: async () => (await handles.settings.get()).specsOpen,
     writeOpenSetting: async (value) => (await handles.settings.experimental_set({ specsOpen: value })).specsOpen,
   });
   // WB4-3 (#1437): `wizbar stats` reads the same cached file.
