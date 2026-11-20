@@ -9,6 +9,7 @@ import { z } from "zod";
 import { specsSettingDescriptors, wizbarSettingDescriptors } from "./settings";
 import { canMute, canPark, hasRuntimeWork, resolveShelf, type ThreadActivitySignals } from "./lifecycle";
 import { cardModelsNone } from "./card-meta";
+import { withModelLabel } from "./model-names";
 import { createLifecycleCommand, LifecycleError, type LifecycleOperation, type LifecycleSuccess, type PinOperations } from "./command";
 import { placePinned } from "./drag";
 import type { CardModelsResultV3, MovePositionV3 } from "./v3-types";
@@ -19,6 +20,7 @@ import { childrenList, runtimeStatusesV3, type ChildrenRow } from "./children";
 import { registerDeckReaders } from "./deck/data/server";
 import { registerDeckActions } from "./deck/actions/server";
 import { registerSpecs } from "./specs/server";
+import type { SpecsCommands } from "./specs/cli";
 import { modelSourceV4 } from "./fixtures/v4";
 
 const migrations = [
@@ -398,7 +400,8 @@ export async function cardModelsFrom(
 ): Promise<CardModelsResultV3> {
   if (!adopted) return cardModelsNone(threadIds);
   const items = await Promise.all(threadIds.map(async (threadId) => {
-    const options = await read({ threadId }).catch(() => null);
+    // A read that throws, synchronously or not, nulls only its own thread.
+    const options = await Promise.resolve().then(() => read({ threadId })).catch(() => null);
     const parsed = resolvedOptionsSchema.safeParse(options);
     return parsed.success && parsed.data.source === modelSourceV4.acceptedSource
       ? { threadId, model: parsed.data.model, effort: parsed.data.reasoningLevel }
@@ -439,7 +442,26 @@ export async function readChildren(bb: BbPluginApi, rawId: string, signal?: Abor
   const childIds = rows.filter((row) => row.parentThreadId === threadId).map((row) => row.id);
   const result = childrenList(rows, threadId, await cardModelsFrom((args) => bb.sdk.threads.defaultExecutionOptions(args), childIds, adopted));
   if (!result) throw stateUnavailable();
-  return result;
+  return { ...result, children: result.children.map(withModelLabel) };
+}
+
+/**
+ * #111: `wizbar specs --json` keeps each agent's raw model and effort and adds
+ * `modelLabel` (section 6). The specs command builds its body elsewhere, so the
+ * label is added to its JSON output here; text output and errors pass through.
+ */
+function withSpecsModelLabels(specs: SpecsCommands): SpecsCommands {
+  return {
+    ...specs,
+    async run(argv, json, signal) {
+      const result = await specs.run(argv, json, signal);
+      if (!json || result?.exitCode !== 0 || !result.stdout) return result;
+      const body = JSON.parse(result.stdout) as { specs?: { agents?: Parameters<typeof withModelLabel>[0][] }[] };
+      if (!Array.isArray(body.specs)) return result;
+      const specsList = body.specs.map((spec) => Array.isArray(spec.agents) ? { ...spec, agents: spec.agents.map(withModelLabel) } : spec);
+      return { ...result, stdout: JSON.stringify({ ...body, specs: specsList }) + "\n" };
+    },
+  };
 }
 
 export default function plugin(bb: BbPluginApi) {
@@ -660,10 +682,11 @@ export default function plugin(bb: BbPluginApi) {
     const now = Date.now();
     const read = readSpecsFile(await specs.specsFile(), now);
     const running = rows?.filter(isRunning).map((row) => row.id) ?? [];
-    return computeStatsV4(rows, read.status === "ready" ? read.file : null, running.length ? await models(running) : null,
+    const stats = computeStatsV4(rows, read.status === "ready" ? read.file : null, running.length ? await models(running) : null,
       now, Intl.DateTimeFormat().resolvedOptions().timeZone);
+    return stats.threads ? { ...stats, threads: stats.threads.map(withModelLabel) } : stats;
   }, pins,
-    (threadId, signal) => readChildren(bb, threadId, signal), specs));
+    (threadId, signal) => readChildren(bb, threadId, signal), withSpecsModelLabels(specs)));
 
   bb.events.on("interaction.pending", ({ thread }) => breakMute(thread.id));
   bb.events.on("thread.failed", ({ thread }) => breakMute(thread.id));

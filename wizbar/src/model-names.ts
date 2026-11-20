@@ -47,13 +47,8 @@ export function modelEffortLabel(model: string | null | undefined, effort: Effor
   return level ? `${name} · ${level}` : name;
 }
 
-/** JSON: keep the raw ids, add `modelLabel` (and `harnessName` beside a `providerId`). */
-export function withNames<T extends { model: string | null; effort: EffortV3 | null; providerId?: string }>(
-  item: T,
-): T & { modelLabel: string | null; harnessName?: string } {
-  return {
-    ...item,
-    modelLabel: modelEffortLabel(item.model, item.effort),
-    ...(typeof item.providerId === "string" ? { harnessName: harnessName(item.providerId) } : {}),
-  };
+/** JSON: keep the raw `model` and `effort`, and add `modelLabel` only when the model is known. */
+export function withModelLabel<T extends { model: string | null; effort: EffortV3 | null }>(item: T): T & { modelLabel?: string } {
+  const label = modelEffortLabel(item.model, item.effort);
+  return label === null ? item : { ...item, modelLabel: label };
 }

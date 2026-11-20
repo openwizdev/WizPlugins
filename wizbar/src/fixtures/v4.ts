@@ -151,11 +151,11 @@ export const matrixMarksV4: Readonly<Record<MatrixStateV4, { mask: string; colou
   idle: { mask: "000000000", colour: "border", animated: false },
 };
 
-/** Section 6: the model and effort source and its gate. Needs WB4-4's live observation. */
+/** Section 6: the model and effort source and its gate, open from 0.5.0 (#111); the owner's look at the candidate is the live check. */
 export const modelSourceV4 = {
   read: "bb.sdk.threads.defaultExecutionOptions",
   acceptedSource: "client/turn/start",
-  adopted: false,
+  adopted: true,
 } as const;
 
 /** Every `wizbar` operation from 0.4; `specs` and `spec` are new, `stats` is extended. */
