@@ -177,6 +177,65 @@ describe("P1: a scan over one run's budget resumes", () => {
   });
 });
 
+// #122 R5: a deleted spec leaves the scan; a 404 for a spec still listed keeps the last file.
+describe("P1: a spec that disappears", () => {
+  const MINUTE = 60_000;
+  const at = (minutes: number) => () => new Date(NOW.getTime() + minutes * MINUTE);
+  const issuesPath = `repos/${FLEET}/issues?state=open&per_page=100`;
+  const goneSub = `repos/${FLEET}/issues/2020/sub_issues?per_page=100`;
+  const big = (count: number) => {
+    const answers = new Map<string, { body: unknown }>([[`repos/${FLEET}/pulls?state=open&per_page=100`, { body: [] }]]);
+    const specs = Array.from({ length: count }, (_, i) => ({
+      number: 2000 + i, title: `spec: Sample ${i}`, state: "open", labels: [], repository_url: `https://api.github.com/repos/${FLEET}`,
+      sub_issues_summary: { total: 1 },
+    }));
+    answers.set(issuesPath, { body: specs });
+    for (const s of specs) {
+      answers.set(`repos/${FLEET}/issues/${s.number}/sub_issues?per_page=100`, {
+        body: [{ number: 3000 + s.number, title: `S${s.number % 100}: Sample task`, state: "open", labels: [], repository_url: `https://api.github.com/repos/${FLEET}` }],
+      });
+    }
+    return answers;
+  };
+  async function completeScan(answers: Map<string, { body: unknown }>) {
+    const dir = await home();
+    const github = fakeGitHub(answers);
+    for (const minutes of [0, 10]) await runOnce({ home: dir, repositories: [FLEET], request: github.request, now: at(minutes) });
+    return { dir, github };
+  }
+  const specKeys = async (dir: string) => (JSON.parse(await readFile(output(dir), "utf8")) as typeof expectedFile).specs.map((s) => s.spec);
+
+  // Spec 2020's page was last read in run 1, the issues list in run 2: run 3 reads 2020 first.
+  // catches: a deleted spec's cached sub-issues answering 404 before the issues list is re-read, failing every run until Specs go stale.
+  it("a deleted spec drops out of the file and never blocks a write", async () => {
+    const answers = big(58);
+    const { dir, github } = await completeScan(answers);
+    answers.set(issuesPath, { body: (answers.get(issuesPath)!.body as { number: number }[]).filter((s) => s.number !== 2020) });
+    answers.delete(goneSub);
+    const results = [];
+    for (const minutes of [20, 30, 40]) results.push(await runOnce({ home: dir, repositories: [FLEET], request: github.request, now: at(minutes) }));
+    expect(results.map((r) => r.ok && r.written && r.calls <= 40)).toEqual([true, true, true]);
+    const keys = await specKeys(dir);
+    expect({ count: keys.length, gone: keys.includes(`${FLEET}#2020`) }).toEqual({ count: 57, gone: false });
+    const cache = await readFile(join(dir, ".openwiz", "specs.v1.etags.json"), "utf8");
+    expect(cache.includes(goneSub)).toBe(false);
+  });
+
+  // catches: a 404 for a spec GitHub still lists taken as a deletion, so a spec silently vanishes from the file.
+  it("a 404 for a spec still listed fails the run and keeps the last file", async () => {
+    const answers = big(58);
+    const { dir, github } = await completeScan(answers);
+    const before = await readFile(output(dir), "utf8");
+    answers.delete(goneSub);
+    const results = [];
+    for (const minutes of [20, 30]) results.push(await runOnce({ home: dir, repositories: [FLEET], request: github.request, now: at(minutes) }));
+    const failed = results.find((r) => !r.ok);
+    expect(failed).toMatchObject({ ok: false, error: `GitHub answered 404 for ${goneSub}` });
+    expect((await specKeys(dir)).includes(`${FLEET}#2020`)).toBe(true);
+    if (results[0]!.ok === false) expect(await readFile(output(dir), "utf8")).toBe(before);
+  });
+});
+
 describe("P1: a failed read keeps the last file", () => {
   it.each([
     ["a server error on the pull requests", (g: ReturnType<typeof fakeGitHub>) => g.failNext(`repos/${TOOLS}/pulls?state=open&per_page=100`)],
