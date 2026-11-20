@@ -521,8 +521,8 @@ describe("R1 (#172): the open card updates in place, with no flashing", () => {
     const label = modelNodes().get("thr_v4_builder_a")!;
     // Past the refresh window, the host's lookup for every thread fails: null model and effort.
     answer = (threadIds) => models(null, null)({ threadIds });
-    await tick(MODEL_REFRESH_MS);
     const before = modelCalls(rendered).length;
+    await tick(MODEL_REFRESH_MS);
     await push(snapshot(["thr_v4_code_a"]));
     await tick(10);
     expect(modelCalls(rendered).slice(before).flat()).toContain("thr_v4_builder_a");
@@ -535,6 +535,59 @@ describe("R1 (#172): the open card updates in place, with no flashing", () => {
     await push(snapshot(["thr_v4_code_a", "thr_v4_stray"]));
     await tick(10);
     expect(modelNodes().get("thr_v4_builder_a")).toBe(label);
+    expect(label.textContent).toBe("Other model · Low");
+  });
+
+  // catches (#175 re-check R3): a new turn with another model while the card is closed, its old model shown
+  // for good on reopen because the reopened card sees the same running id.
+  it("on reopen shows the cached label at once, then one batched re-read brings a changed model", async () => {
+    let answer = (threadIds: string[]) => models("Sample model", "high")({ threadIds });
+    const rendered = await pinned(snapshot(), ({ threadIds }: { threadIds: string[] }) => answer(threadIds));
+    fireEvent.keyDown(trigger(), { key: "Escape" });
+    // Closed: thr_v4_code_a ends its turn, its model is switched, and it starts another turn.
+    await push(snapshot(["thr_v4_code_a"]));
+    await tick(30_000);
+    answer = (threadIds) => models("Other model", "low")({ threadIds });
+    await push(snapshot());
+    await tick(90_000);
+    const before = modelCalls(rendered).length;
+    fireEvent.click(trigger());
+    const label = modelNodes().get("thr_v4_code_a")!;
+    expect(label.textContent).toBe("Sample model · High");
+    await tick(10);
+    const reads = modelCalls(rendered).slice(before);
+    expect(reads).toHaveLength(1);
+    expect(reads[0]).toContain("thr_v4_code_a");
+    expect(modelNodes().get("thr_v4_code_a")).toBe(label);
+    expect(label.textContent).toBe("Other model · Low");
+  });
+
+  // catches (#175 re-check R4): a failed new-turn lookup on a pinned card with no later sidebar change, its
+  // wrong label kept past the refresh window because only sidebar events ever read again.
+  it("while open, re-reads a failed or old label on a timer, one batch a minute at most", async () => {
+    let answer = (threadIds: string[]) => models("Sample model", "high")({ threadIds });
+    const rendered = await pinned(snapshot(), ({ threadIds }: { threadIds: string[] }) => answer(threadIds));
+    const label = modelNodes().get("thr_v4_code_a")!;
+    // The model is switched, and the new turn's lookup fails transiently.
+    answer = (threadIds) => models(null, null)({ threadIds });
+    await push(snapshot(["thr_v4_code_a"]));
+    await tick(500);
+    await push(snapshot());
+    await tick(10);
+    expect(label.textContent).toBe("Sample model · High");
+    // Still failing, with no sidebar change: at most one batch a minute, and the label never blanks.
+    const before = modelCalls(rendered).length;
+    for (let i = 0; i < 30; i++) {
+      await tick(10_000);
+      expect(modelNodes().get("thr_v4_code_a")).toBe(label);
+    }
+    const retries = modelCalls(rendered).slice(before);
+    expect(retries.length).toBeGreaterThanOrEqual(1);
+    expect(retries.length).toBeLessThanOrEqual(5);
+    // The host recovers with the new model: the next timed re-read shows it in place.
+    answer = (threadIds) => models("Other model", "low")({ threadIds });
+    await tick(60_000);
+    expect(modelNodes().get("thr_v4_code_a")).toBe(label);
     expect(label.textContent).toBe("Other model · Low");
   });
 
