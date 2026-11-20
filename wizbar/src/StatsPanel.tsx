@@ -4,13 +4,13 @@
 // and the served model source. Colours are host theme variables only.
 import { useEffect, useState } from "react";
 import {
-  experimental_useProviders as useProviders,
   experimental_useSidebarThreadActions as useSidebarThreadActions,
   useRpc,
   useSettings,
   type PluginSidebarThread,
 } from "@get-bb/plugin-sdk/app";
 import { modelLabel } from "./card-meta";
+import { harnessName } from "./model-names";
 import { MatrixMark } from "./MatrixMark";
 import { ProviderGlyph } from "./ProviderGlyph";
 import { cardRowLabel, cardSummary, computeStatsV4, isRunning } from "./stats";
@@ -87,7 +87,6 @@ const segmentColour = (providerId: string, index: number): string => providerId 
  */
 export function StatsPanel({ rows }: { rows: readonly PluginSidebarThread[] | null }) {
   const actions = useSidebarThreadActions();
-  const providers = useProviders().providers;
   const read = useSpecsRead();
   const running = rows?.filter(isRunning) ?? [];
   const models = useModels(running.map((row) => row.id), running.map((row) => row.updatedAt).join());
@@ -95,8 +94,6 @@ export function StatsPanel({ rows }: { rows: readonly PluginSidebarThread[] | nu
   const specs = read ? readSpecsFile(read, now) : null;
   const stats = computeStatsV4(rows, specs?.status === "ready" ? specs.file : null, models, now,
     Intl.DateTimeFormat().resolvedOptions().timeZone);
-  // Seam (#111): the host's display name until the shared harness-name function lands.
-  const harnessName = (providerId: string) => providers.find((p) => p.id === providerId)?.displayName ?? providerId;
   return (
     <section aria-label="Running threads" style={{
       display: "flex", flexDirection: "column", gap: 10, minHeight: 0, boxSizing: "border-box",
