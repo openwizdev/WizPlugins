@@ -28,6 +28,8 @@ export const tokens = {
   warning,
   border: "var(--border, #292929)",
   mutedText,
+  /** A1 (#186): an active spec's name, the host's text. An inactive one's is `mutedText`. */
+  text: "var(--foreground)",
   /** A quiet grey ring: a held ticket. */
   quietRing: `color-mix(in oklch, ${mutedText} 45%, ${sidebar})`,
   /** The raised panel of an open spec. */
