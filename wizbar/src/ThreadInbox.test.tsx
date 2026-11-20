@@ -1518,7 +1518,7 @@ describe("E2: Unread", () => {
   it("shows every matching thread while a search is active, read or not, and filters again once it clears", async () => {
     const { rendered } = renderUnread({ searchQuery: "Sample" });
     await waitFor(() => expect(links()).toEqual(["Sample read", "Sample new", "Sample waiting", "Fleet #77: Sample cache",
-      "Builder · SC-1: Sample borrowed code", "Builder · ZZ-9: Sample stray", "Sample weekly loop"]));
+      "Builder · SC-1: Sample borrowed code", "Builder · ZZ-9: Sample stray", "launch-fleet wakes example/sample-plans", "Sample weekly loop"]));
     rendered.rerender(createElement(inbox.component, { ...listProps, searchQuery: "" }));
     await waitFor(() => expect(links()).toEqual(["Sample new", "Sample waiting", "Builder · ZZ-9: Sample stray", "Sample weekly loop"]));
   });

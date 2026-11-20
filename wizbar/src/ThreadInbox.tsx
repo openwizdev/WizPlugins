@@ -36,6 +36,7 @@ import {
 } from "./sections";
 import type { SpecsFileReadV4, SpecsFileV4 } from "./fixtures/v4";
 import { boundHome, readSpecsFile } from "./specs/read";
+import { readDeckFactories } from "./deck/data/binding";
 import { isRunning } from "./specs/rows";
 import type { specsRpcContract } from "./specs/server";
 import type { MovePositionV3 } from "./v3-types";
@@ -146,9 +147,15 @@ export function ThreadInbox({
   // Until the specs file answers, a running thread (one that may be a spec's agent) is held back
   // rather than shown and then pulled out.
   const searchActive = searchQuery.trim() !== "";
+  const factories = useSettings().values?.wizdeckFactories;
+  // The fleet loops' names use the bound factories' repositories (section 10).
+  const repositories = useMemo(() => {
+    const binding = readDeckFactories(factories);
+    return binding.ok ? binding.factories.flatMap((factory) => factory.binding.repositories) : [];
+  }, [factories]);
   const unread = useMemo(() => searchActive ? inbox : specsFile === undefined
-    ? unreadThreads(inbox.filter((thread) => !isRunning(thread)), null, threads)
-    : unreadThreads(inbox, specsFile, threads), [inbox, searchActive, specsFile, threads]);
+    ? unreadThreads(inbox.filter((thread) => !isRunning(thread)), null, threads, repositories)
+    : unreadThreads(inbox, specsFile, threads, repositories), [inbox, repositories, searchActive, specsFile, threads]);
 
   const connection = useRealtimeConnectionState();
   const drag = useDragPins(status, connection, threads, pinned);

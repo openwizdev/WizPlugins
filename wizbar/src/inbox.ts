@@ -156,6 +156,18 @@ export function hasSomethingNew(thread: PluginSidebarThread): boolean {
 const fleetWakeTitle = /^Fleet #[1-9][0-9]*: /;
 
 /**
+ * A fleet loop run's title: exactly one of the fleet skill's loop names for one of
+ * `repositories` (`launch-fleet <owner>/<repo>`, `launch-fleet wakes <owner>/<repo>`,
+ * `launch-fleet #<N> <owner>/<repo>`). The host marks no loop run (SDK 0.6.33's
+ * `originKind` and `originPluginId` are null on every thread), so the title is the
+ * only record; any other loop's run is not recognised.
+ */
+export function isFleetLoopTitle(title: string, repositories: readonly string[]): boolean {
+  const match = /^launch-fleet (?:wakes |#[1-9][0-9]* )?(.+)$/.exec(title);
+  return match !== null && repositories.includes(match[1]!);
+}
+
+/**
  * E2 (#188), Unread (sidebar-v3.v1.md section 10): of `threads`, in their order,
  * those with something new for the owner that match no spec (specs-section
  * section 3, against `rows`, every sidebar row), are not fleet wakes and are not
@@ -166,5 +178,6 @@ export function unreadThreads<T extends PluginSidebarThread>(
   repositories: readonly string[] = [],
 ): T[] {
   return threads.filter((thread) => hasSomethingNew(thread) && !fleetWakeTitle.test(thread.displayTitle)
+    && !isFleetLoopTitle(thread.displayTitle, repositories)
     && (file === null || matchSpec(file, thread, rows) === null));
 }
