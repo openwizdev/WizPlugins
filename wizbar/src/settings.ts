@@ -30,7 +30,21 @@ export const specsSettingDescriptors = {
     type: "string", label: "Open specs", default: "[]",
     description: "JSON list of the specs open in the Specs section. Every spec starts collapsed.",
   },
+  // C0 (#182): the Specs section's order (specs-section.v1.md section 11).
+  specsSort: {
+    type: "string", label: "Specs sort", default: "needs-you",
+    description: "How the Specs section is ordered: needs-you, recent, closest or newest.",
+  },
 } satisfies PluginSettingDescriptors;
+
+/** The four sorts (specs-section.v1.md section 11), the default first. */
+export const specsSorts = ["needs-you", "recent", "closest", "newest"] as const;
+export type SpecsSort = (typeof specsSorts)[number];
+
+/** A stored `specsSort`; anything but one of the four exact names reads as the default. */
+export function readSpecsSort(raw: unknown): SpecsSort {
+  return (specsSorts as readonly unknown[]).includes(raw) ? raw as SpecsSort : "needs-you";
+}
 
 /**
  * S1 (#169): which sidebar sections are collapsed (sidebar-v3.v1.md section 9).
@@ -40,6 +54,11 @@ export const sectionsSettingDescriptors = {
   sectionsCollapsed: {
     type: "string", label: "Collapsed sections", default: "[]",
     description: "JSON list of the collapsed sidebar sections (pinned, inbox, specs). Every section starts expanded.",
+  },
+  // C0 (#182): the sections' order (sidebar-v3.v1.md section 10).
+  sectionsOrder: {
+    type: "string", label: "Section order", default: "[\"pinned\",\"specs\",\"unread\"]",
+    description: "JSON list of the sidebar sections in the order shown: pinned, specs and unread.",
   },
 } satisfies PluginSettingDescriptors;
 
@@ -113,9 +132,4 @@ export function reportFeatureSourceStatus(pluginId: string, feature: Feature, st
     reports.delete(token);
     refresh();
   };
-}
-
-// RED STUB (C0, #182): replaced in the next commit.
-export function readSpecsSort(_raw: unknown): string {
-  return "needs-you";
 }

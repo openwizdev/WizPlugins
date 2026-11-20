@@ -95,18 +95,46 @@ export function withSectionCommand(cli: PluginCliRegistration, settings: Section
 }
 
 // ---- 0.6 (C0, #182): sidebar-v3.v1.md section 10 ------------------------------
-// RED STUBS: 0.5 behaviour, replaced in the next commit.
+// The 0.6 sections are Pinned, Specs and Unread. Until E2 (#188) moves the sidebar
+// and `wizbar section` to them, the 0.5 readers above stay as they are.
+
+/** The 0.6 sections, in their default order. */
 export const sidebarSections = ["pinned", "specs", "unread"] as const;
 export type SidebarSection = (typeof sidebarSections)[number];
+
+/** A stored key in 0.6 terms: the 0.5 `inbox` is `unread`. */
+const canonical = (key: string) => (key === "inbox" ? "unread" : key);
+const unique = (keys: readonly string[]) => keys.filter((key, index) => keys.indexOf(key) === index);
+
+/**
+ * The collapsed keys of a raw `sectionsCollapsed`, in 0.6 terms: a stored `inbox`
+ * reads as `unread`, each key once, unknown keys kept; anything malformed names none.
+ */
 export function readCollapsedSections(raw: unknown): string[] {
-  return readCollapsedKeys(raw);
+  return unique(readCollapsedKeys(raw).map(canonical));
 }
+
+/** The `sectionsCollapsed` value after collapsing or expanding one 0.6 section; a stored `inbox` is written as `unread`. */
 export function withSectionCollapsed(raw: unknown, key: SidebarSection, collapsed: boolean): string {
-  return withCollapsed(raw, key as SectionKey, collapsed);
+  const keys = readCollapsedSections(raw);
+  if (collapsed) return JSON.stringify(keys.includes(key) ? keys : [...keys, key]);
+  return JSON.stringify(keys.filter((entry) => entry !== key));
 }
-export function readSectionsOrder(_raw: unknown): SidebarSection[] {
-  return [...sidebarSections];
+
+/**
+ * The sections' order from a raw `sectionsOrder`: the known keys in stored order,
+ * each once, then any missing ones in default order. Anything malformed is the default.
+ */
+export function readSectionsOrder(raw: unknown): SidebarSection[] {
+  const known = (key: string): key is SidebarSection => (sidebarSections as readonly string[]).includes(key);
+  // The same JSON-list-of-strings rule as `sectionsCollapsed`.
+  const stored = unique(readCollapsedKeys(raw).map(canonical)).filter(known);
+  return [...stored, ...sidebarSections.filter((key) => !stored.includes(key))];
 }
-export function withSectionMoved(_raw: unknown, _key: SidebarSection, _to: number): string {
-  return JSON.stringify(sidebarSections);
+
+/** The `sectionsOrder` value after moving one section to index `to` (clamped), as a drop or Alt+Up/Alt+Down does. */
+export function withSectionMoved(raw: unknown, key: SidebarSection, to: number): string {
+  const order = readSectionsOrder(raw).filter((entry) => entry !== key);
+  order.splice(Math.max(0, Math.min(order.length, to)), 0, key);
+  return JSON.stringify(order);
 }

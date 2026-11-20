@@ -67,7 +67,7 @@ An unavailable file shows "Specs unavailable" and no rows, never "Specs 0". A re
 
 ## 2. The spec row
 
-One row per visible spec, in file order (`SpecRowV4`). All counts are over the spec's tickets at `now`:
+One row per visible spec, in file order (`SpecRowV4`). From 0.6 the rows are in the chosen sort (section 11), and a 0.6 row adds `activityAt` and `quiet` (`SpecRowV6`). All counts are over the spec's tickets at `now`:
 
 | Field | Exact definition |
 | --- | --- |
@@ -87,7 +87,7 @@ One row per visible spec, in file order (`SpecRowV4`). All counts are over the s
 
 **Layout (display only, 0.5.0 C, #112).** A spec row leads with a chevron (`›` closed, `⌄` open) only when the spec has agents, and a placeholder of the same width otherwise, so names line up. The name sits on the left; on the right come `K needs you`, then `N done in the last hour`, then done/total. The dots sit on the line below. An open spec and its agents sit in one raised panel (the card colour, rounded corners). An agent row's first line is its matrix mark, its title with `Role · CODE:` dimmed and the task in the foreground colour, and its age on the right; its second line is quiet: the harness logo (its display name as the logo's label), then the shared model label, omitted when unknown.
 
-**Hidden.** A spec is hidden when `total === 0` or `done === total` (finished). A hidden spec has no row and counts nowhere, in the UI and the CLI.
+**Hidden.** A spec is hidden when `total === 0` or `done === total` (finished). A hidden spec has no row and counts nowhere, in the UI and the CLI. **From 0.6** (section 12) only `total === 0` hides a spec; a finished spec is quiet instead.
 
 **Section rule.** `Specs N` where N is the number of visible rows, then ` · M tickets need you (K specs)` when M (the sum of `needsYou` over visible rows: due now only, never later) is over zero, where K is the visible specs with `needsYou > 0` (#161). At 1 the forms are singular: `1 ticket needs you`, `1 spec`. At zero nothing follows the count. When the full sentence does not fit on one line, the rule shows the narrow form `Specs N · M for you`, and the full sentence stays the rule's accessible label and tooltip. On screen (0.5.0 C) the label is about 11.5 px, weight 500, in muted text, the count is faint, the words after `·` are in the warning colour, and an olive rule line follows.
 
@@ -271,6 +271,56 @@ WizBar matches the host's theme, not the Ember map palette. Every colour is a ho
 - **The check.** `src/fixtures/v4-fixtures.test.ts` (run by `npm test`, so by `wizbar-checks`) fails on any hard-coded colour in WizBar's non-test source (`*.ts`, `*.tsx`, `*.css` under `wizbar/`, except `node_modules/` and `src/fixtures/`). A hard-coded colour is a hex literal, a colour function (`rgb`, `rgba`, `hsl`, `hsla`, `hwb`, `lab`, `lch`, `oklab`, `oklch`, `color`), a Tailwind palette class (`text-amber-500`, `bg-black`), an arbitrary colour class (`bg-[#…]`), or a colour keyword as a style value, JSX colour attribute (`fill="red"`) or CSS declaration (`color: red;`); `transparent`, `currentColor`, `inherit`, `initial`, `unset` and `none` are not colours. The only literals it passes are `var(<variable>, <fallback>)` exactly as in the table; there are no exceptions. Comments are ignored. An arbitrary class holding a keyword (`text-[red]`), side and offset prefixes (`border-x-black`, `ring-offset-white`) and every `*Color` style key (`borderTopColor`) count too.
 - **Pre-0.4 colours moved to host variables** (F4 ruling on openwizdev/OpenWiz#1434): the per-thread disc in `src/Disc.tsx` mixes the accent into muted text by the thread's hash (`color-mix(in oklch, var(--primary, #c0ff04) <35–94>%, var(--muted-foreground, #b7b7b7))`), and WizDeck's `LIME` in `src/deck/home/sections.tsx` is the accent, `var(--primary, #c0ff04)`. WizDeck's progress track keeps `var(--muted, #3a3a3d)`, the `--muted` row's fallback.
 
+## 10. Activity time (0.6, C0 openwizdev/WizPlugins#182)
+
+Shapes and synthetic fixtures with hand-worked expected values for sections 10 to 13: `src/fixtures/v6.ts`, checked by `src/fixtures/v6-fixtures.test.ts`.
+
+**Specs file v2, additive.** A v2 ticket (`TicketEntryV6`) may carry `updatedAt`: the issue's `updated_at` from the sub-issues answer the producer already reads (no added request), a UTC ISO timestamp ending `Z`. It is optional, so a v2 file from before it still reads `ready`. A v1 file never carries it: v1 stays exactly as section 1 has it, and `updatedAt` in a v1 file is an unknown field (`malformed`).
+
+**A spec's activity time** (`activityAt`, epoch ms) is the newest of:
+
+- each of its tickets' `updatedAt`, when present;
+- each of its tickets' `closedAt`, when not null;
+- each of its running agents' `updatedAt` (section 3).
+
+With none of these it is null: unknown, never "long ago". A time after `now` (clock skew) counts as it is.
+
+## 11. Sort (0.6, SO1 and SO2)
+
+| Key | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `specsSort` | string | `"needs-you"` | The Specs section's order |
+
+Declared in `specsSettingDescriptors` (`wizbar/src/settings.ts`, beside `specsOpen`), not a switch, so it stays off the settings page; settings.v1.md's store and write rule apply. `readSpecsSort` reads exactly one of the four names below; anything else, including a missing setting or another case, reads as `needs-you`. The picker on the Specs header writes only this key.
+
+Every sort orders the visible specs (section 2); ties keep file order. In each, a null activity time comes after every time.
+
+| Name | Order |
+| --- | --- |
+| `needs-you` (default) | Three groups: specs with `needsYou > 0`; then the other unfinished specs; then finished specs (`done === total`). Within each group, `activityAt` newest first |
+| `recent` | `activityAt` newest first |
+| `closest` | The done share `done / total` highest first (compare `done × total′` with `done′ × total`, never as floats); equal shares: fewer tickets left (`total − done`) first |
+| `newest` | The file's order: the producer writes the newest spec first |
+
+`v6SortOrders` holds each sort for `v6SpecsFile` with `v6Agents` at `v6Now`.
+
+## 12. Quiet (0.6, SO3)
+
+A visible spec is **quiet** when it has no ticket due now (`needsYou === 0`) and either every ticket is done (`done === total`), or its activity time is not null and `now − activityAt > 3 days` (exactly 3 days is not quiet). A spec with `needsYou > 0` is never quiet; a spec with a null activity time is quiet only when finished.
+
+- **The group.** Quiet specs leave the main list for one collapsed `Quiet N` group at the bottom of the Specs section. Both keep the chosen sort's order: the split is a stable filter of the sorted rows (`v6QuietSplit`).
+- **Its open state** is stored as the key `quiet` in `specsOpen` (section 4): the group starts closed, opens like a spec, and `quiet` can never be a spec key (a spec key holds `#`). The group's header shows whenever N > 0, agents or not.
+- **The section rule** (section 2) counts the main list only: `Specs N` is the visible specs that are not quiet. Quiet specs never have a ticket due now, so `M` and `K` are unchanged.
+- **CLI.** `wizbar specs --json` lists quiet rows after the others, each row carrying `quiet` and `activityAt` (epoch ms or null), and the body adds `sort` (`SpecsResultV6`). `wizbar specs --sort <name>` takes one of the four names, else usage; without it the stored `specsSort` applies. Text marks a quiet row with ` · quiet` at its end.
+
+## 13. Activity look (0.6, AC1 to AC3)
+
+- **The breath.** A ticket's dot breathes when the spec has a running agent whose `ticket` is that ticket and whose `matrix` is `working`, and the dot is not `done` or `done-recent` (`v6DotMotion`). One breath is one soft pulse every 2000 ms (`breathPeriodMsV6`): opacity from full down to 0.4 and back, ease in and out. Every breathing dot in the sidebar is at the same phase at any instant (one shared clock, never a per-dot start).
+- **Nothing else moves.** A `review` dot, or one only a `reviewing` agent names, keeps its steady 1 px ring. A `building` dot that no working agent names is a still ring: 0.5's pulse on every `building` dot ends. Agent matrix marks keep section 5's motion.
+- **Limits.** Under `prefers-reduced-motion: reduce` no dot breathes: each shows at full opacity. While the sidebar is not visible (`document.visibilityState` is `hidden`, or the section is off screen) the breath pauses; it resumes in step.
+- **Muted names.** A spec with no running agents and nothing due now (`agents.length === 0` and `needsYou === 0`) shows its name in the muted text colour, `var(--muted-foreground, #b7b7b7)`. Every other spec keeps `var(--foreground)`. Later tickets (`yoursLater`) do not keep a name bright.
+- **In place.** A spec's activity changes in place, keyed by spec: no row remounts, and no new flashing. Colours stay section 9's host variables.
+
 ## Seams
 
 | Seam | For |
@@ -280,6 +330,11 @@ WizBar matches the host's theme, not the Ember map palette. Every colour is a ho
 | No footer registration, `StatsV4`, the hover card, pinning, `v4Stats`, `v4CardPinCases` | WB4-3 (#1437) |
 | The producer's format (section 1), the model-source observation (section 6), the accent variable (section 9) | WB4-4 (#1438) |
 | Theme tokens, fallbacks and the check | Every 0.4 ticket |
+| Ticket `updatedAt` in v2 and the reader (section 10), `TicketEntryV6`, `v6SpecsFileText` | P1 (openwizdev/WizPlugins#183) |
+| `specsSort`, `readSpecsSort`, the four sorts, `wizbar specs --sort`, `v6SortOrders`, `v6SpecsSortCases` | S1 (openwizdev/WizPlugins#184) |
+| The Quiet rule and group, `quiet` in `specsOpen`, `SpecRowV6`, `SpecsResultV6`, `v6Activity`, `v6QuietSplit` | S2 (openwizdev/WizPlugins#185) |
+| The breath, its limits and muted names, `breathPeriodMsV6`, `v6DotMotion`, `v6Activity.muted` | A1 (openwizdev/WizPlugins#186) |
+| `v6Store050`, `v6NewSettingDefaults` for the 0.5.0 → 0.6.0 reload | V (openwizdev/WizPlugins#189) |
 
 ## Evidence limits
 

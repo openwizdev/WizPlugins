@@ -272,6 +272,28 @@ Exactly one known section and exactly one of `--collapse` / `--expand`, else usa
 
 `collapsed` is read back from the stored value. Text: `inbox: collapsed` or `inbox: expanded`. A failed read or write: `{"error":{"code":"settings_failed","message":"The settings read failed."}}` (or `write`), exit 1. Parity with the sidebar is tested in `cli-parity.test.ts`.
 
+## 10. Sections in 0.6: Pinned, Specs, Unread (C0, #182)
+
+0.6 has three sections, **Pinned**, **Specs** and **Unread**, in an order the owner chooses. Inbox becomes Unread (#188), and Settled leaves the sidebar for one link (#187). Section 9's toggle, collapsed look, search and drag-to-pin rules carry over with `Unread` in place of `Inbox`. Fixtures: `src/fixtures/v6.ts`; the keys and readers: `src/sections.ts`.
+
+**Keys.** `pinned`, `specs`, `unread` (`sidebarSections`), and that is the default order.
+
+**`sectionsCollapsed` in 0.6.** The key and its rules are section 9's, read with `readCollapsedSections` and written with `withSectionCollapsed`: a stored `inbox` reads as `unread` (one key, however often either is stored), and every write stores `unread`, never `inbox`, so a 0.5 Inbox collapse stays collapsed as Unread and expanding Unread clears it. Unknown keys are kept (`v6CollapsedCases`, `v6CollapseWrites`). Until #188 moves the sidebar to these readers, section 9's `inbox` stays in use.
+
+**Order.**
+
+| Key | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `sectionsOrder` | string | `"[\"pinned\",\"specs\",\"unread\"]"` | A JSON array of the section keys, top to bottom |
+
+Declared in `sectionsSettingDescriptors` beside `sectionsCollapsed`, off the settings page, with the same store and write rule. `readSectionsOrder`: the known keys in stored order, each once (a stored `inbox` is `unread`), unknown keys ignored, then any missing key in default order; a missing setting or a value that is not a JSON array of strings is the default (`v6OrderCases`). `withSectionMoved(raw, key, to)` moves one section to index `to`, clamped to the ends, and stores the full order (`v6OrderMoves`): a header dropped on another section's place, or Alt+Up and Alt+Down on a focused header (`to` is its index − 1 or + 1; at the end it stays). Only `sectionsOrder` is written. The Specs section's rule and the "N running" footer keep their places within and below the sections.
+
+**Unread** (#188) shows only threads with something new for the owner (`isUnread` or the host's attention markers) that match no spec (specs-section section 3), and never a thread whose origin is a loop or whose title is a fleet wake. #188 writes the exact rule here.
+
+**Settled** (#187) is reachable by search and by one quiet `Settled N` link at the very bottom; it is not a section, has no key, and is absent from `sectionsOrder`.
+
+**CLI.** `wizbar section` keeps section 9's form until #188 moves it to `unread` (accepting `inbox` as the same section). A 0.6 command that reorders sections writes `sectionsOrder` with `withSectionMoved`.
+
 ## Seams
 
 | Seam | For |
@@ -281,6 +303,8 @@ Exactly one known section and exactly one of `--collapse` / `--expand`, else usa
 | `StatsV3`, the footer registration, the `stats` CLI, `v3Stats` | #41 |
 | `MovePositionV3`, pin/move results, the drag table, `DragPinCaseV3`, `v3PinnedOrder`, `v3DragPinCases` | #42 |
 | `wizbarOperationsV3`, exit and error codes, every JSON shape | #44 (parity test) |
+| `sectionsOrder`, `readSectionsOrder`, `withSectionMoved`, `v6OrderCases`, `v6OrderMoves`, the Settled link | E1 (#187) |
+| `unread`, `readCollapsedSections`, `withSectionCollapsed`, `v6CollapsedCases`, `v6CollapseWrites`, the Unread rule | E2 (#188) |
 
 ## Evidence limits
 
