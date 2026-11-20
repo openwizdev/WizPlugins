@@ -21,18 +21,31 @@ import type { t3sidebarRpcContract } from "./server";
 import type { SpecsFileReadV4 } from "./fixtures/v4";
 import type { CardModelsResultV3 } from "./v3-types";
 
-/** The specs file read, asked for while the card is open and a factory is bound; a failed call is unreadable. */
+const REFRESH_MS = 60_000;
+
+/**
+ * The specs file read while the card is open, on open and once a minute (the
+ * server's shared refresh, specs-section.v1.md section 1), keyed to the bound
+ * factory's host and root: a new binding hides the old read at once and drops
+ * its late answers. A failed call is unreadable.
+ */
 function useSpecsRead(): SpecsFileReadV4 | null {
   const rpc = useRpc<typeof specsRpcContract>();
-  const bound = boundHome(useSettings().values?.wizdeckFactories) !== null;
-  const [read, setRead] = useState<SpecsFileReadV4 | null>(null);
+  const home = boundHome(useSettings().values?.wizdeckFactories);
+  const key = home ? JSON.stringify([home.hostId, home.rootPath]) : null;
+  const [read, setRead] = useState<{ key: string; read: SpecsFileReadV4 } | null>(null);
   useEffect(() => {
-    if (!bound) return;
+    if (key === null) return;
     let live = true;
-    rpc.call("specsFile", {}).then((result) => { if (live) setRead(result); }, () => { if (live) setRead({ kind: "unreadable" }); });
-    return () => { live = false; };
-  }, [bound, rpc]);
-  return bound ? read : null;
+    const load = () => rpc.call("specsFile", {}).then(
+      (result) => { if (live) setRead({ key, read: result }); },
+      () => { if (live) setRead({ key, read: { kind: "unreadable" } }); },
+    );
+    void load();
+    const timer = setInterval(load, REFRESH_MS);
+    return () => { live = false; clearInterval(timer); };
+  }, [key, rpc]);
+  return read && read.key === key ? read.read : null;
 }
 
 /** Model and effort for the running threads, from the `cardModels` RPC; null until every batch answers. */
@@ -56,7 +69,7 @@ function useModels(threadIds: readonly string[]): CardModelsResultV3 | null {
 }
 
 const quiet = { margin: 0, color: tokens.mutedText } as const;
-const list = { margin: 0, padding: 0, listStyle: "none", display: "grid", gap: 2 } as const;
+const list = { margin: 0, padding: 0, listStyle: "none", display: "grid", gap: 2, flexShrink: 0 } as const;
 
 export function StatsPanel({ rows }: { rows: readonly PluginSidebarThread[] | null }) {
   const actions = useSidebarThreadActions();
@@ -69,13 +82,13 @@ export function StatsPanel({ rows }: { rows: readonly PluginSidebarThread[] | nu
     Intl.DateTimeFormat().resolvedOptions().timeZone);
   return (
     <section aria-label="Running threads" style={{
-      position: "absolute", bottom: "calc(100% + 6px)", left: 8, zIndex: 50, display: "grid", gap: 8,
+      display: "flex", flexDirection: "column", gap: 8, minHeight: 0, boxSizing: "border-box",
       width: 300, maxWidth: "calc(100vw - 32px)", padding: "8px 10px", borderRadius: 8, fontSize: 12, lineHeight: "18px",
       fontVariantNumeric: "tabular-nums", background: "var(--card, #222222)", color: "var(--foreground)", border: `1px solid ${tokens.border}`,
     }}>
       {stats.status !== "ready" ? <p style={quiet}>Stats unavailable</p> : (
         <>
-          <p style={{ margin: 0 }}>{cardSummary(stats)}</p>
+          <p style={{ margin: 0, flexShrink: 0 }}>{cardSummary(stats)}</p>
           <ul aria-label="Harness" style={list}>
             {stats.harness.map(({ providerId, count }) => (
               <li key={providerId} data-harness={providerId} data-count={count} style={{ display: "flex", alignItems: "center", gap: 6, color: tokens.mutedText }}>
@@ -85,13 +98,13 @@ export function StatsPanel({ rows }: { rows: readonly PluginSidebarThread[] | nu
               </li>
             ))}
           </ul>
-          <ul aria-label="Threads" style={{ ...list, borderTop: `1px solid ${tokens.border}`, paddingTop: 6 }}>
+          <ul aria-label="Threads" style={{ ...list, flexShrink: 1, minHeight: 0, overflowY: "auto", alignContent: "start", borderTop: `1px solid ${tokens.border}`, paddingTop: 6 }}>
             {stats.threads.map((thread) => {
               const model = modelLabel(thread.model, thread.effort);
               return (
                 <li key={thread.id} data-thread={thread.id}>
-                  <button type="button" className="hover:bg-sidebar-accent/60"
-                    style={{ all: "unset", boxSizing: "border-box", width: "100%", display: "grid", gridTemplateColumns: "auto 1fr", columnGap: 6, alignItems: "center", padding: "2px 4px", borderRadius: 4, cursor: "pointer" }}
+                  <button type="button" className="bg-transparent hover:bg-sidebar-accent/60 focus-visible:ring-1 focus-visible:ring-inset"
+                    style={{ appearance: "none", margin: 0, border: 0, color: "inherit", font: "inherit", textAlign: "left", boxSizing: "border-box", width: "100%", display: "grid", gridTemplateColumns: "auto 1fr", columnGap: 6, alignItems: "center", padding: "2px 4px", borderRadius: 4, cursor: "pointer" }}
                     onClick={(event) => actions.open(thread.id, { split: event.metaKey || event.ctrlKey })}>
                     <MatrixMark state={thread.matrix} />
                     <span data-title="" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{thread.title}</span>

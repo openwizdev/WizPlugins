@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk";
 import { countRunning, type ObservableRunningSource, type RunningCountSource } from "./running-count";
 import { cardPinNext, isRunning, readSidebarRows, type SidebarRowsStatus } from "./stats";
@@ -62,6 +62,9 @@ export function FooterCounter({ className }: { className?: string }) {
   return <FooterCounterArtwork className={className} source={source} card={() => <StatsPanel rows={rows} />} />;
 }
 
+const CARD_GAP = 6;
+const CARD_MARGIN = 8;
+
 /**
  * "N running" (specs-section.v1.md section 7): threads only, with a matrix
  * mark. Hover or focus opens the card; a click (Enter or Space) pins it and
@@ -80,14 +83,23 @@ export function FooterCounterArtwork({ source, className, card }: {
   useEffect(() => {
     if (unavailable) setState("closed");
   }, [unavailable]);
+  const wrapper = useRef<HTMLDivElement>(null);
+  const [room, setRoom] = useState<number | null>(null);
+  const open = state !== "closed" && card !== undefined && footerCountEnabled && count !== null;
+  // The card may use the space above the trigger, less a margin, and its list scrolls.
+  useLayoutEffect(() => {
+    if (!open) return;
+    const measure = () => setRoom(Math.max(0, (wrapper.current?.getBoundingClientRect().top ?? 0) - CARD_MARGIN));
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [open]);
   if (!footerCountEnabled || count === null) return null;
-  const open = state !== "closed" && card !== undefined;
   return (
-    <div className={className} style={{ position: "relative" }}
+    <div ref={wrapper} className={className} style={{ position: "relative" }}
       onPointerEnter={() => send("enter")} onPointerLeave={() => send("leave")} onFocus={() => send("focus")}
       onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) send("blur"); }}
       onKeyDown={(event) => { if (event.key === "Escape") send("escape"); }}>
-      {open ? card() : null}
       <span role="status" aria-label={`${count.total} running`} aria-live="polite" style={{
         display: "inline-flex", fontSize: 12, fontVariantNumeric: "tabular-nums", lineHeight: "20px",
         color: count.total === 0 ? "var(--muted-foreground, #b7b7b7)" : "var(--foreground)",
@@ -104,6 +116,16 @@ export function FooterCounterArtwork({ source, className, card }: {
           <span>{count.total}</span>
         </span>
       </span>
+      {/* After the trigger, so Tab moves into the card. The padding bridges the gap to the
+          trigger, one hit area, so pointing into the card never leaves the wrapper. */}
+      {open ? (
+        <div style={{
+          position: "absolute", bottom: "100%", left: 8, zIndex: 50, paddingBottom: CARD_GAP, boxSizing: "border-box",
+          display: "flex", flexDirection: "column", maxHeight: room === null ? `calc(100vh - ${CARD_MARGIN}px)` : `${room}px`,
+        }}>
+          {card()}
+        </div>
+      ) : null}
     </div>
   );
 }

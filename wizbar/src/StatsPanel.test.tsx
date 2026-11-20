@@ -5,20 +5,24 @@
 // 4 running, 1/2/1, 3 waiting).
 import { createElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, screen } from "@testing-library/react";
+import { act, cleanup, screen, waitFor } from "@testing-library/react";
 import { renderSlot } from "@get-bb/plugin-sdk/testing/app";
 import type { PluginSidebarThread, PluginSidebarThreadsState } from "@get-bb/plugin-sdk";
 import { v3Threads } from "./fixtures/v3";
+import { v4Now, v4SpecsFileText, v4Threads } from "./fixtures/v4";
 
 // Lets a test hand the hook the same or a new host snapshot across rerenders.
 // Like the host's per-hook projection, each hook instance builds its own array
 // and its own row objects (kept per instance while a source row is unchanged),
 // so no two consumers ever share an array or a row object.
 const fixtureFeed = vi.hoisted(() => ({ current: null as Pick<PluginSidebarThreadsState, "status" | "threads"> | null }));
+// WB4-10: lets a test switch the bound factory under a mounted card (the harness's settings are fixed per render).
+const settingsFeed = vi.hoisted(() => ({ current: null as Record<string, unknown> | null }));
 vi.mock("@get-bb/plugin-sdk/app", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@get-bb/plugin-sdk/app")>();
   const { useRef } = await import("react");
-  return { ...actual, experimental_useSidebarThreads: (...args: Parameters<typeof actual.experimental_useSidebarThreads>) => {
+  return { ...actual, useSettings: () => settingsFeed.current ? { values: settingsFeed.current, isLoading: false } : actual.useSettings(),
+    experimental_useSidebarThreads: (...args: Parameters<typeof actual.experimental_useSidebarThreads>) => {
     const projections = useRef(new WeakMap<PluginSidebarThread, PluginSidebarThread>());
     const real = actual.experimental_useSidebarThreads(...args);
     if (!fixtureFeed.current) return real;
@@ -43,7 +47,7 @@ function Panel(_: { dismiss(): void }) {
 }
 const panel = { component: Panel };
 const props = { dismiss() {} };
-afterEach(() => { cleanup(); fixtureFeed.current = null; });
+afterEach(() => { cleanup(); fixtureFeed.current = null; settingsFeed.current = null; vi.useRealTimers(); });
 
 const lines = () => [...(screen.queryByRole("region", { name: "Running threads" })?.querySelectorAll("p") ?? [])].map((p) => p.textContent);
 const fixtureLine = "3 waiting on you · Cloud 1 · Local 2 · Unknown 1";
@@ -132,5 +136,43 @@ describe("V3: footer stats panel", () => {
     expect(lines()[0]).toBe(panelLine);
     if (lineName) expect(screen.getByRole("status", { name: lineName })).toBeDefined();
     else expect(screen.queryByRole("status", { name: /running$/ })).toBeNull();
+  });
+});
+
+// WB4-10 (openwizdev/OpenWiz#1585), #1534: the card's specs read follows the bound factory.
+const factory = (rootPath: string) => ({ wizdeckFactories: JSON.stringify([{ projectKey: "sample-factory", cloudroomProjectId: "prj_v4_atlas",
+  repositories: ["example/sample-plans"], home: { hostId: "hst_v4_home", rootPath }, orchestratorThreadId: "thr_v4_orchestrator", statusWriterLogin: "sample-manager" }]) });
+
+describe("WB4-10: the card's spec names follow the bound factory", () => {
+  // catches: a switch between two valid bindings that keeps the old factory's spec names, never reads the
+  // new one, or lets the old binding's late answer overwrite the new one.
+  it("clears the old names at once, reads the new factory and drops the old binding's late answer", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(v4Now);
+    fixtureFeed.current = { status: "ready", threads: [...v4Threads] };
+    settingsFeed.current = factory("/synthetic/home-a");
+    const answers: Array<(text: string) => void> = [];
+    const rendered = renderSlot(panel, props, { rpc: {
+      specsFile: () => new Promise((resolve) => answers.push((text) => resolve({ kind: "content", text }))),
+      cardModels: ({ threadIds }: { threadIds: string[] }) => ({ source: "none", items: threadIds.map((threadId) => ({ threadId, model: null, effort: null })) }),
+    } as never });
+    const names = () => [...document.querySelectorAll("[data-spec-name]")].map((el) => el.textContent);
+    const fileB = v4SpecsFileText.replaceAll("\"Sample palette\"", "\"Sample palette B\"");
+    await waitFor(() => expect(answers).toHaveLength(1));
+    answers[0]!(v4SpecsFileText);
+    await waitFor(() => expect(names()).toContain("Sample palette"));
+    settingsFeed.current = factory("/synthetic/home-b");
+    rendered.rerender(createElement(Panel, props));
+    expect(names()).toEqual([]);
+    await waitFor(() => expect(answers).toHaveLength(2));
+    settingsFeed.current = factory("/synthetic/home-c");
+    rendered.rerender(createElement(Panel, props));
+    await waitFor(() => expect(answers).toHaveLength(3));
+    // The old binding's answer settles first, on its own; then the current one.
+    await act(async () => { answers[1]!(v4SpecsFileText); });
+    expect(names()).toEqual([]);
+    answers[2]!(fileB);
+    await waitFor(() => expect(names()).toContain("Sample palette B"));
+    expect(names()).not.toContain("Sample palette");
   });
 });
