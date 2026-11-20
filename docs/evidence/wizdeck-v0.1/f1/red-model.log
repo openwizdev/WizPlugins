@@ -1,0 +1,460 @@
+
+ RUN  v4.1.10 wizbar
+
+ ❯ |bb-plugin-wizbar| src/deck/live/health.test.ts (8 tests | 7 failed) 14ms
+     × keeps an absent inventory unavailable and a real empty inventory zero 7ms
+     × counts exactly the selected project's deduplicated rows 1ms
+     × does not turn three-hour-old row times into idle time or amber 1ms
+     × keeps absent, older-page and stale evidence unavailable 1ms
+     × shows no amber without a factory threshold, even with a clock 1ms
+     × resets idle on later progress through the verified-source seam 1ms
+     × has no stall count without an inventory 0ms
+ ❯ |bb-plugin-wizbar| src/deck/fleet/fleet.test.ts (14 tests | 7 failed) 26ms
+     × shows every active thread of the project once, hidden, absent-parent and inventory-only work included 8ms
+     × places by verified links, then arranges managers, builders and helpers by parent 2ms
+     × never parses titles: unlinked work stays unplaced, with its absent parent named 1ms
+     × places nothing without a work-link read and leaves running unknown without an inventory 2ms
+     × leaves ambiguous links unplaced 1ms
+     × keeps ancestors as context and reorders siblings only 1ms
+     × reads branch, PR, ticket and parent spec, skipping forks 1ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 14 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/fleet/fleet.test.ts > fleet placement > shows every active thread of the project once, hidden, absent-parent and inventory-only work included
+AssertionError: expected [ 'thr_b2', 'thr_b3', …(6) ] to deeply equal [ 'thr_b2', 'thr_b3', …(6) ]
+
+- Expected
++ Received
+
+  [
+    "thr_b2",
+    "thr_b3",
+    "thr_ghost",
+-   "thr_help",
+    "thr_mgr",
+    "thr_orphan",
++   "thr_other",
+    "thr_rev",
+    "thr_titled",
+  ]
+
+ ❯ src/deck/fleet/fleet.test.ts:23:37
+     21|   it("shows every active thread of the project once, hidden, absent-pa…
+     22|     const m = model();
+     23|     expect(ids(everyRow(m)).sort()).toEqual(["thr_b2", "thr_b3", "thr_…
+       |                                     ^
+     24|     expect(m.threadCount).toBe(8);
+     25|     expect(m.running.count).toBe(4);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/14]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/fleet/fleet.test.ts > fleet placement > places by verified links, then arranges managers, builders and helpers by parent
+AssertionError: expected [ …(6) ] to deeply equal [ …(6) ]
+
+- Expected
++ Received
+
+@@ -12,12 +12,12 @@
+      "own",
+    ],
+    [
+      "thr_rev",
+      2,
+-     "helper",
+-     "parent",
++     "builder",
++     "own",
+    ],
+    [
+      "thr_ghost",
+      2,
+      "helper",
+@@ -28,11 +28,11 @@
+      1,
+      "helper",
+      "parent",
+    ],
+    [
+-     "thr_help",
+-     2,
+-     "helper",
+-     "parent",
++     "thr_titled",
++     0,
++     "builder",
++     "own",
+    ],
+  ]
+
+ ❯ src/deck/fleet/fleet.test.ts:34:77
+     32|     expect(m.groups.map((group) => group.spec)).toEqual([SPEC]);
+     33|     const rows = m.groups[0].rows;
+     34|     expect(rows.map((row) => [row.id, row.depth, row.role, row.placeme…
+       |                                                                             ^
+     35|       ["thr_mgr", 0, "manager", "children"],
+     36|       ["thr_b2", 1, "builder", "own"],
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/14]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/fleet/fleet.test.ts > fleet placement > never parses titles: unlinked work stays unplaced, with its absent parent named
+AssertionError: expected [ 'thr_orphan', 'thr_other' ] to deeply equal [ 'thr_orphan', 'thr_titled' ]
+
+- Expected
++ Received
+
+  [
+    "thr_orphan",
+-   "thr_titled",
++   "thr_other",
+  ]
+
+ ❯ src/deck/fleet/fleet.test.ts:51:34
+     49|   it("never parses titles: unlinked work stays unplaced, with its abse…
+     50|     const m = model();
+     51|     expect(ids(m.unplaced.rows)).toEqual(["thr_orphan", "thr_titled"]);
+       |                                  ^
+     52|     expect(m.unplaced.rows[0]).toMatchObject({ parentNote: "absent", l…
+     53|     expect(specOfThread(m, "thr_titled")).toBeNull();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/14]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/fleet/fleet.test.ts > fleet placement > places nothing without a work-link read and leaves running unknown without an inventory
+AssertionError: expected { status: 'ready', …(3) } to match object { status: 'unavailable', …(2) }
+(2 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "count": null,
+-   "reason": "absent",
+-   "status": "unavailable",
++   "count": 0,
++   "status": "ready",
+  }
+
+ ❯ src/deck/fleet/fleet.test.ts:63:23
+     61|     expect(m.unplaced.rows).toHaveLength(7); // No inventory: the inve…
+     62|     expect(m.unplaced.rows.find((row) => row.id === "thr_b2")?.link).t…
+     63|     expect(m.running).toMatchObject({ status: "unavailable", reason: "…
+       |                       ^
+     64|     expect(m.unplaced.running).toBeNull();
+     65|     expect(m.unplaced.rows.every((row) => row.running === null)).toBe(…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/14]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/fleet/fleet.test.ts > fleet placement > leaves ambiguous links unplaced
+AssertionError: expected { id: 'thr_b2', …(13) } to be undefined
+
+- Expected:
+undefined
+
++ Received:
+{
+  "createdAt": 1794763920000,
+  "depth": 1,
+  "id": "thr_b2",
+  "isHidden": false,
+  "link": {
+    "branch": "room/t2",
+    "detail": "2 pull requests use this branch",
+    "status": "ambiguous",
+  },
+  "parentNote": null,
+  "parentThreadId": "thr_mgr",
+  "placement": "children",
+  "role": "manager",
+  "running": true,
+  "spec": "example-org/sample-app#41",
+  "stall": {
+    "reason": "no-activity-evidence",
+    "status": "unavailable",
+  },
+  "thread": {
+    "activity": {
+      "backgroundAgents": 0,
+      "backgroundCommands": 0,
+      "goals": 0,
+      "planMode": 0,
+      "workflows": 0,
+    },
+    "archivedAt": null,
+    "createdAt": 1794763920000,
+    "displayTitle": "Build T2 filter chips",
+    "environment": {
+      "branchName": "room/t2",
+      "id": "env_thr_b2",
+      "isWorktree": true,
+      "name": "Synthetic environment",
+      "path": null,
+      "providerId": null,
+      "workspaceDisplayKind": null,
+    },
+    "hasPendingInteraction": false,
+    "host": null,
+    "href": "/projects/prj_a/threads/thr_b2",
+    "id": "thr_b2",
+    "indicator": "none",
+    "indicatorLabel": null,
+    "isArchived": false,
+    "isHidden": false,
+    "isPinned": false,
+    "isUnread": false,
+    "lastReadAt": null,
+    "latestAttentionAt": 1794774599000,
+    "lifecycleOwnerThreadId": null,
+    "originKind": null,
+    "originPluginId": null,
+    "parentThreadId": "thr_mgr",
+    "pinSortKey": null,
+    "pinnedAt": null,
+    "projectId": "prj_a",
+    "providerId": "synthetic-provider",
+    "queuedWork": "none",
+    "runtimeStatus": "idle",
+    "sectionId": null,
+    "sourceThreadId": null,
+    "status": "idle",
+    "title": "Build T2 filter chips",
+    "titleFallback": null,
+    "updatedAt": 1794774599000,
+  },
+  "title": "Build T2 filter chips",
+}
+
+ ❯ src/deck/fleet/fleet.test.ts:71:103
+     69|   it("leaves ambiguous links unplaced", () => {
+     70|     const twin = { ...fxPullRequests[0], ref: "example-org/second-app#…
+     71|     expect(model(read([...fxPullRequests, twin])).groups[0]?.rows.find…
+       |                                                                                                       ^
+     72|     const split = { ...fxPullRequests[0], tickets: [...fxPullRequests[…
+     73|     const m = model(read([split, ...fxPullRequests.slice(1)]));
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/14]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/fleet/fleet.test.ts > fleet search and sort > keeps ancestors as context and reorders siblings only
+AssertionError: expected [ Array(4) ] to deeply equal [ 'thr_mgr', 'thr_b2', 'thr_rev' ]
+
+- Expected
++ Received
+
+  [
+    "thr_mgr",
+    "thr_b2",
+    "thr_rev",
++   "thr_titled",
+  ]
+
+ ❯ src/deck/fleet/fleet.test.ts:93:50
+     91|   it("keeps ancestors as context and reorders siblings only", () => {
+     92|     const group = model().groups[0];
+     93|     expect(ids(viewGroup(group, "#52", "plan"))).toEqual(["thr_mgr", "…
+       |                                                  ^
+     94|     expect(ids(viewGroup(group, "room/t3", "plan"))).toEqual(["thr_mgr…
+     95|     expect(ids(viewGroup(group, "search helper", "plan"))).toEqual(["t…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/14]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/fleet/fleet.test.ts > work-link reader > reads branch, PR, ticket and parent spec, skipping forks
+AssertionError: expected [ [ …(4) ], [ …(4) ], [ …(4) ] ] to deeply equal [ [ …(4) ], [ …(4) ] ]
+
+- Expected
++ Received
+
+@@ -4,10 +4,16 @@
+      "room/t2",
+      "open",
+      "example-org/sample-app#41",
+    ],
+    [
++     "example-org/sample-app#70",
++     "room/t3",
++     "open",
++     "example-org/sample-app#41",
++   ],
++   [
+      "example-org/sample-app#50",
+      "room/t1",
+      "merged",
+      "example-org/sample-app#41",
+    ],
+
+ ❯ src/deck/fleet/fleet.test.ts:135:106
+    133|     expect(calls.every((call) => !/mutation/.test(call.query))).toBe(t…
+    134|     expect(result.complete).toBe(true);
+    135|     expect(result.data.pullRequests.map((pr) => [pr.ref, pr.headRefNam…
+       |                                                                                                          ^
+    136|       [`${REPO}#52`, "room/t2", "open", SPEC], [`${REPO}#50`, "room/t1…
+    137|     ]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/14]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/live/health.test.ts > scoped running inventory > keeps an absent inventory unavailable and a real empty inventory zero
+AssertionError: expected { status: 'ready', …(3) } to deeply equal { status: 'unavailable', …(2) }
+
+- Expected
++ Received
+
+  {
+-   "count": null,
+-   "reason": "absent",
+-   "status": "unavailable",
++   "count": 0,
++   "projectId": "prj_a",
++   "rows": [],
++   "status": "ready",
+  }
+
+ ❯ src/deck/live/health.test.ts:18:59
+     16|   // Bug caught: an older host (no runningThreads) shown as "0 running…
+     17|   it("keeps an absent inventory unavailable and a real empty inventory…
+     18|     expect(scopedRunning(readHostInventory({}), "prj_a")).toEqual({ st…
+       |                                                           ^
+     19|     expect(scopedRunning(readHostInventory({ runningThreads: [] }), "p…
+     20|     expect(scopedRunning({ status: "not-ready", reason: "stale" }, "pr…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/14]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/live/health.test.ts > scoped running inventory > counts exactly the selected project's deduplicated rows
+AssertionError: expected [ 'thr_mgr', 'thr_b2', 'thr_b3', …(2) ] to deeply equal [ 'thr_mgr', 'thr_b2', 'thr_b3', …(1) ]
+
+- Expected
++ Received
+
+  [
+    "thr_mgr",
+    "thr_b2",
+    "thr_b3",
+    "thr_ghost",
++   "thr_other",
+  ]
+
+ ❯ src/deck/live/health.test.ts:26:77
+     24|   it("counts exactly the selected project's deduplicated rows", () => {
+     25|     const running = scopedRunning(ready, "prj_a");
+     26|     expect(running.status === "ready" && running.rows.map((row) => row…
+       |                                                                             ^
+     27|     expect(running.count).toBe(4);
+     28|     expect(scopedRunning(ready, "prj_b").count).toBe(1);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/14]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/live/health.test.ts > timeline to amber (final F1 proof on synthetic timelines) > does not turn three-hour-old row times into idle time or amber
+AssertionError: expected { status: 'stalled', …(2) } to deeply equal { status: 'unavailable', …(1) }
+
+- Expected
++ Received
+
+  {
+-   "reason": "no-activity-clock",
+-   "status": "unavailable",
++   "idleMs": 10800000,
++   "status": "stalled",
++   "thresholdMs": 1800000,
+  }
+
+ ❯ src/deck/live/health.test.ts:48:40
+     46|   it("does not turn three-hour-old row times into idle time or amber",…
+     47|     const health = one(readTimelineActivity(fxTimelineInactive, c1Now …
+     48|     expect(health.stalls.get("thr_x")).toEqual({ status: "unavailable"…
+       |                                        ^
+     49|     expect(stallLabel(health.stalls.get("thr_x"))).toEqual({ text: "st…
+     50|     expect(health.stallCount).toBeNull();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/14]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/live/health.test.ts > timeline to amber (final F1 proof on synthetic timelines) > keeps absent, older-page and stale evidence unavailable
+AssertionError: expected { status: 'stalled', …(2) } to deeply equal { status: 'unavailable', …(1) }
+
+- Expected
++ Received
+
+  {
+-   "reason": "stale-observation",
+-   "status": "unavailable",
++   "idleMs": 10800000,
++   "status": "stalled",
++   "thresholdMs": 1800000,
+  }
+
+ ❯ src/deck/live/health.test.ts:59:53
+     57|     expect(one(readTimelineActivity(fxTimelineOlderPage, c1Now), facto…
+     58|     const stale = { status: "read", fetchedAt: c1Now - 61_000, activeT…
+     59|     expect(one(stale, factory).stalls.get("thr_x")).toEqual({ status: …
+       |                                                     ^
+     60|   });
+     61|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/14]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/live/health.test.ts > timeline to amber (final F1 proof on synthetic timelines) > shows no amber without a factory threshold, even with a clock
+AssertionError: expected { status: 'stalled', …(2) } to deeply equal { status: 'unavailable', …(1) }
+
+- Expected
++ Received
+
+  {
+-   "reason": "no-threshold",
+-   "status": "unavailable",
++   "idleMs": 10800000,
++   "status": "stalled",
++   "thresholdMs": 1800000,
+  }
+
+ ❯ src/deck/live/health.test.ts:65:47
+     63|   it("shows no amber without a factory threshold, even with a clock", …
+     64|     const verified = { status: "read", fetchedAt: c1Now, activeTurnId:…
+     65|     expect(one(verified).stalls.get("thr_x")).toEqual({ status: "unava…
+       |                                               ^
+     66|   });
+     67|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/14]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/live/health.test.ts > timeline to amber (final F1 proof on synthetic timelines) > resets idle on later progress through the verified-source seam
+AssertionError: expected { Object (text, amber) } to deeply equal { text: 'stalled · idle 45 min', …(1) }
+
+- Expected
++ Received
+
+  {
+    "amber": true,
+-   "text": "stalled · idle 45 min",
++   "text": "stalled · idle 180 min",
+  }
+
+ ❯ src/deck/live/health.test.ts:74:52
+     72|     const at = (lastActivityAt: number) => ({ status: "read", fetchedA…
+     73|     const before = one(at(c1Now - 45 * 60_000), factory);
+     74|     expect(stallLabel(before.stalls.get("thr_x"))).toEqual({ text: "st…
+       |                                                    ^
+     75|     expect(before.stallCount).toBe(1);
+     76|     const after = one(at(c1Now - 2 * 60_000), factory);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/14]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/live/health.test.ts > timeline to amber (final F1 proof on synthetic timelines) > has no stall count without an inventory
+AssertionError: expected +0 to be null
+
+- Expected:
+null
+
++ Received:
+0
+
+ ❯ src/deck/live/health.test.ts:84:31
+     82|   it("has no stall count without an inventory", () => {
+     83|     const health = liveHealth({ inventory: readHostInventory({}), proj…
+     84|     expect(health.stallCount).toBeNull();
+       |                               ^
+     85|     expect(health.stalls.size).toBe(0);
+     86|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/14]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  14 failed | 8 passed (22)
+   Start at  19:15:18
+   Duration  374ms (transform 278ms, setup 0ms, import 409ms, tests 40ms, environment 0ms)
+

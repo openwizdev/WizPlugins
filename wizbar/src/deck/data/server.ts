@@ -11,6 +11,7 @@ import { SharedReadCache, type CacheView } from "./cache";
 import { GitHubReader, type Fetch } from "./github";
 import { buildHomeView, type HomeViewV1 } from "./home";
 import { loadQueue, type QueueReadResultV1 } from "./queue";
+import { loadFleetLinks, type FleetLinksV1 } from "../fleet/links";
 
 import { DECK_CHANNEL } from "./protocol";
 
@@ -28,6 +29,12 @@ export interface DeckWatchResultV1 {
   view: HomeViewV1 | null;
   /** Plain words when no factory can be shown. */
   setup: string | null;
+  /**
+   * F1 (#75): each configured repository's cached fleet work links, from the
+   * same shared cache, lease and 60-second schedule as the board. Absent when
+   * no factory is shown.
+   */
+  fleetLinks?: CacheView<FleetLinksV1>[];
 }
 
 const watchInput = z.object({
@@ -108,6 +115,10 @@ export function registerDeckReaders(bb: BbPluginApi, options: { fetch?: Fetch; n
     const boardViews = binding.repositories.map((repository) => lease<BoardV1>(`github|${github.account}|${repository}|board|${scope}`,
       (signal) => loadBoard({ reader: github.reader, repository, repositories: binding.repositories, statusWriterLogin: factory.statusWriterLogin, now }, signal)));
 
+    // F1 (#75): one work-link read per repository, inside the same cache, budget and back-off.
+    const linkViews = binding.repositories.map((repository) => lease<FleetLinksV1>(`github|${github.account}|${repository}|fleet-links`,
+      (signal) => loadFleetLinks({ reader: github.reader, repository }, signal)));
+
     if (refresh) for (const key of keys) started = cache.refresh(key).started || started;
 
     const previous = leasesByClient.get(input.clientId);
@@ -120,7 +131,8 @@ export function registerDeckReaders(bb: BbPluginApi, options: { fetch?: Fetch; n
       boards: boardViews.map((board, index) => cache.peek<BoardV1>(keys[index + 1]) ?? board),
       timeZone: input.timeZone, now: now(), authenticated: github.reader.authenticated,
     });
-    return { projects, projectKey: binding.projectKey, view, setup: null, started };
+    const fleetLinks = linkViews.map((links, index) => cache.peek<FleetLinksV1>(keys[1 + boardViews.length + index]) ?? links);
+    return { projects, projectKey: binding.projectKey, view, setup: null, fleetLinks, started };
   };
 
   bb.rpc.register(deckRpcContract, {
