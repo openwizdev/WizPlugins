@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createFakePluginHost, type FakePluginHost } from "@get-bb/plugin-sdk/testing";
 import plugin from "./server";
 import type { BbPluginApi } from "@get-bb/plugin-sdk";
+import { v6NewSettingDefaults, v6SpecsSortCases, v6Store050 } from "./fixtures/v6";
 
 // N1: the real backend must declare writable keys in the host's persistent store.
 // App SDK fakes alone would incorrectly pass if server declaration were omitted.
@@ -24,13 +25,17 @@ function setup() {
 }
 
 describe("N1: actual WizBar settings declarations and persistent reload", () => {
-  it("declares exactly four named boolean switches with defaults", () => {
+  // C0 (#182): 0.6 adds `specsSort` and `sectionsOrder`; every 0.5.0 key stays as it was.
+  it("declares the four switches, the 0.5.0 keys and the two 0.6 keys with their defaults", () => {
     const { host } = setup();
     const descriptors = host.harness.inspection.registrations.settingsDescriptors;
     expect(Object.keys(descriptors).sort()).toEqual([
       "childrenChipEnabled", "footerCountEnabled", "machineIconsEnabled", "parentChipEnabled", "sectionsCollapsed",
-      "specsOpen", "wizdeckFactories", "wizdeckGithubToken",
+      "sectionsOrder", "specsOpen", "specsSort", "wizdeckFactories", "wizdeckGithubToken",
     ]);
+    expect(descriptors.specsSort).toMatchObject({ type: "string", default: "needs-you" });
+    expect(descriptors.sectionsOrder).toMatchObject({ type: "string", default: "[\"pinned\",\"specs\",\"unread\"]" });
+    expect(descriptors.specsOpen).toMatchObject({ type: "string", default: "[]" });
     expect(descriptors.footerCountEnabled).toMatchObject({ type: "boolean", label: "Footer count", default: true });
     expect(descriptors.machineIconsEnabled).toMatchObject({ type: "boolean", label: "Cloud/Local row icons", default: true });
     expect(descriptors.childrenChipEnabled).toMatchObject({ type: "boolean", label: "Children chip in thread header", default: false });
@@ -93,6 +98,29 @@ describe("N1: actual WizBar settings declarations and persistent reload", () => 
     expect(await read()).toEqual({ ...before, sectionsCollapsed: "[\"inbox\",\"specs\"]" });
   });
 
+  // C0 (#182), Q5: a 0.5.0 store must come back whole in 0.6, with the new keys at their defaults.
+  // catches: a renamed, retyped or re-defaulted 0.5.0 key, or a new key that is not declared (its write would be refused).
+  it("reloads a 0.5.0 store with every value kept and the 0.6 keys at their defaults", async () => {
+    let read: () => Promise<Record<string, unknown>> = async () => ({});
+    const factory = (bb: BbPluginApi) => {
+      const definition = vi.spyOn(bb.settings, "define");
+      plugin(bb);
+      const handles = definition.mock.results.map((result) => result.value as { get(): Promise<Record<string, unknown>> });
+      read = async () => Object.assign({}, ...await Promise.all(handles.map((handle) => handle.get())));
+    };
+    let host = createFakePluginHost({ pluginId: "wizbar" });
+    hosts.push(host);
+    factory(host.bb);
+    await host.harness.behavior.setSettings({ ...v6Store050 });
+    host = await host.harness.lifecycle.reload(factory);
+    hosts.push(host);
+    expect(await read()).toEqual({ ...v6Store050, ...v6NewSettingDefaults });
+    await host.harness.behavior.setSettings({ specsSort: "closest", sectionsOrder: "[\"unread\",\"pinned\",\"specs\"]" });
+    host = await host.harness.lifecycle.reload(factory);
+    hosts.push(host);
+    expect(await read()).toEqual({ ...v6Store050, specsSort: "closest", sectionsOrder: "[\"unread\",\"pinned\",\"specs\"]" });
+  });
+
   it("rejects wrong types and unknown keys without changing saved settings", async () => {
     const fixture = setup();
     const host = fixture.host;
@@ -141,5 +169,14 @@ describe("N1: boolean settings and source status boundary", () => {
     expect(getSourceStatuses(id).footer).toBe("live");
     live();
     expect(getSourceStatuses(id)).toEqual({ footer: "unavailable", icons: "unverified" });
+  });
+});
+
+// C0 (#182): `specsSort` (specs-section.v1.md section 11). An unknown value must
+// fall back to the default sort, never to the file's order or a crash.
+describe("C0: specsSort reads one of four sorts", () => {
+  it.each(v6SpecsSortCases.map((c) => [c.raw, c.sort] as const))("reads %j as %s", async (raw, sort) => {
+    const { readSpecsSort } = await import("./settings");
+    expect(readSpecsSort(raw)).toBe(sort);
   });
 });

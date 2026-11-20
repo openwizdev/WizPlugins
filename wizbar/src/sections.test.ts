@@ -1,7 +1,10 @@
 // S1 (#169): the `sectionsCollapsed` setting (sidebar-v3.v1.md section 9). Every
 // value is a known literal from the contract, never computed the way the code does.
 import { describe, expect, it } from "vitest";
-import { readCollapsedKeys, withCollapsed } from "./sections";
+import { v6CollapseWrites, v6CollapsedCases, v6OrderCases, v6OrderMoves } from "./fixtures/v6";
+import {
+  readCollapsedKeys, readCollapsedSections, readSectionsOrder, sidebarSections, withCollapsed, withSectionCollapsed, withSectionMoved,
+} from "./sections";
 
 describe("S1: sectionsCollapsed reads fail open and writes touch one key", () => {
   // catches: a malformed stored value collapsing sections the owner never closed, or crashing the sidebar.
@@ -59,5 +62,34 @@ describe("S1: wizbar section errors", () => {
     expect(JSON.parse(result.stdout!)).toEqual({ error: { code: "settings_failed", message: "The settings read failed." } });
     expect(writes).toEqual([]);
     expect((await cli.run(["other"], {} as never)).exitCode).toBe(9);
+  });
+});
+
+// C0 (#182): the 0.6 section keys (sidebar-v3.v1.md section 10). Every value is a
+// hand-worked fixture from src/fixtures/v6.ts, never computed the way the code does.
+describe("C0: 0.6 section keys, a stored inbox reads as unread", () => {
+  it("names the three 0.6 sections in their default order", () => {
+    expect(sidebarSections).toEqual(["pinned", "specs", "unread"]);
+  });
+
+  // catches: an owner's 0.5 Inbox collapse lost on upgrade (Unread opens again), or listed twice.
+  it.each(v6CollapsedCases.map((c) => [c.raw, c.keys] as const))("reads collapsed %j as %j", (raw, keys) => {
+    expect(readCollapsedSections(raw)).toEqual(keys);
+  });
+
+  // catches: a write that keeps the old `inbox` beside `unread`, so expanding Unread leaves it collapsed after a reload.
+  it.each(v6CollapseWrites.map((c) => [c.raw, c.key, c.collapsed, c.stored] as const))(
+    "from %j, sets %s collapsed=%s to %j", (raw, key, collapsed, stored) => {
+      expect(withSectionCollapsed(raw, key, collapsed)).toBe(stored);
+    });
+
+  // catches: a malformed or partial `sectionsOrder` that drops a section from the sidebar.
+  it.each(v6OrderCases.map((c) => [c.raw, c.order] as const))("reads order %j as %j", (raw, order) => {
+    expect(readSectionsOrder(raw)).toEqual(order);
+  });
+
+  // catches: a move that loses or duplicates a section, or an Alt+Up at the top that wraps round.
+  it.each(v6OrderMoves.map((c) => [c.raw, c.key, c.to, c.stored] as const))("from %j, moves %s to %i: %j", (raw, key, to, stored) => {
+    expect(withSectionMoved(raw, key, to)).toBe(stored);
   });
 });
