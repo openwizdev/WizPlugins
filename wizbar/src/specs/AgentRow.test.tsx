@@ -95,20 +95,26 @@ describe("S3: the agent row (sections 3, 5 and 6)", () => {
     expect(within(unknown as HTMLElement).getByRole("img", { name: "harness-a" })).toBeTruthy();
   });
 
-  // catches (#1551): the age's trailing box stacked over the stretched link, so a click on the age
-  // lands on it and opens nothing; or the GitHub button made click-through and so unclickable.
-  // jsdom has no hit-testing, so this reads the stacking rule a browser applies: inside the row,
-  // only the stretched link and `relative` boxes take a click unless they pass pointer events.
-  it("lets a click on the age reach the thread link; the GitHub button keeps its own target", () => {
-    const takesClick = (el: Element) => {
-      for (let at: Element | null = el; at && at.tagName !== "LI"; at = at.parentElement) {
-        if (at.classList.contains("pointer-events-none")) return false;
-        if (at.classList.contains("relative") || at.tagName === "A") return true;
+  // catches (#1551): any part of the trailing slot stacked over the stretched link that is not the
+  // GitHub button itself (the age, or the empty space beside the button), so a click there opens
+  // nothing; or a click-through fix applied to the button too, so it can't be clicked.
+  // jsdom has no hit-testing, so this computes the region a browser lets take a click above the
+  // stretched link: elements under a positioned (`relative`/`absolute`) box inside the row whose
+  // nearest `pointer-events-*` class is not `none`. That region must be exactly the button.
+  // It cannot prove sizes, z-order between siblings or the host's CSS; it reads only these rules.
+  it("lets a click anywhere but the GitHub button reach the thread link", () => {
+    const capturing = (li: Element) => [...li.querySelectorAll("*")].filter((el) => {
+      let positioned = false;
+      let events: "auto" | "none" | null = null;
+      for (let at: Element | null = el; at && at !== li; at = at.parentElement) {
+        if (at.classList.contains("relative") || at.classList.contains("absolute")) positioned = true;
+        if (events === null && at.classList.contains("pointer-events-none")) events = "none";
+        if (events === null && at.classList.contains("pointer-events-auto")) events = "auto";
       }
-      return false;
-    };
+      return positioned && events !== "none";
+    });
     const { rendered, row } = show(reviewer);
-    expect(takesClick(within(row()).getByText("50m"))).toBe(false);
+    expect(capturing(row())).toEqual([]);
     fireEvent.click(within(row()).getByRole("link"));
     expect(rendered.inspection.sidebarActionCalls).toEqual([expect.objectContaining({ threadId: reviewer.threadId })]);
     cleanup();
@@ -116,7 +122,7 @@ describe("S3: the agent row (sections 3, 5 and 6)", () => {
     const other = show(builder, served(null, null), { thr_v4_builder_a: pr });
     fireEvent.pointerEnter(other.row());
     const button = within(other.row()).getByRole("button", { name: /GitHub/ });
-    expect(takesClick(button)).toBe(true);
+    expect(capturing(other.row())).toEqual([button, ...button.querySelectorAll("*")]);
     fireEvent.click(button);
     expect(other.rendered.inspection.navigateCalls).toEqual([{ method: "openUrl", url: pr.url }]);
     expect(other.rendered.inspection.sidebarActionCalls).toEqual([]);
