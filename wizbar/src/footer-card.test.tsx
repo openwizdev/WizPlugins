@@ -104,6 +104,8 @@ describe("S4: no bolt; N running with its hover card", () => {
     render();
     expect(counter().getAttribute("aria-label")).toBe("9 running");
     expect(counter().textContent).toBe("9 running");
+    // catches (#118 R1): a screen reader hears only the mark ("Working") on the focusable trigger, not the count.
+    expect(within(counter()).getByRole("button", { name: "9 running" })).toBe(trigger());
     expect(counter().querySelector("[data-matrix]")?.getAttribute("data-matrix")).toBe("working");
     cleanup();
     render([]);
