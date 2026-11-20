@@ -10,7 +10,7 @@ import { loadPluginApp, renderSlot } from "@get-bb/plugin-sdk/testing/app";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import plugin from "../server";
 import { v4Now, v4OpenSetting, v4SpecOpenCases, v4SpecRows, v4SpecRowsV2, v4SpecsFileText, v4SpecsFileV2Text, v4Threads, type SpecsFileReadV4 } from "../fixtures/v4";
-import { specsSortsV6, type SpecsSortV6, v6Activity, v6Agents, v6Now, v6SortOrders, v6SpecsFileText } from "../fixtures/v6";
+import { specsSortsV6, type SpecsSortV6, v6Activity, v6Agents, v6Now, v6QuietSplit, v6SortOrders, v6SpecsFileText } from "../fixtures/v6";
 import { strictRead } from "../testing/strict-files";
 import { SpecsSection, type SpecsSectionProps } from "./SpecsSection";
 import { effectiveOpen, readOpenKeys } from "./open-state";
@@ -852,5 +852,81 @@ describe("A1: active specs breathe, inactive names are muted", () => {
     render();
     await screen.findByText("Sample cache");
     expect((rowOf("Sample cache").querySelector("[data-spec-name]") as HTMLElement).style.color).toBe("var(--foreground)");
+  });
+});
+
+// S2 (#185): finished and idle specs fold into one collapsed Quiet group (specs-section.v1.md section 12).
+describe("S2: the Quiet group", () => {
+  const v6Threads: PluginSidebarThread[] = Object.values(v6Agents).flat().map((agent) => {
+    const role = agent.matrix === "reviewing" ? "Reviewer" : "Builder";
+    const title = `${role} · SS${agent.ticket!.slice(agent.ticket!.lastIndexOf("#") + 1)}: Sample work`;
+    return { ...v4Threads[2]!, id: agent.threadId, title, displayTitle: title, parentThreadId: null, createdAt: agent.updatedAt - 60_000, updatedAt: agent.updatedAt };
+  });
+  function renderV6(settings: Record<string, string> = {}, updateSettings?: (args: unknown) => unknown) {
+    vi.setSystemTime(v6Now);
+    const updates: unknown[] = [];
+    const stored = { wizdeckFactories: binding, ...settings };
+    const rendered = renderSlot({ component: SpecsSection }, { ...props, threads: v6Threads, now: v6Now }, {
+      pluginId: "wizbar", rpc: { specsFile: (): SpecsFileReadV4 => ({ kind: "content", text: v6SpecsFileText }) }, settings: stored,
+      sdk: { plugins: { updateSettings: (async (args: { values: Record<string, string> }) => {
+        updates.push(args);
+        return updateSettings ? updateSettings(args) : { values: { ...stored, ...args.values } };
+      }) as never } },
+    });
+    return { rendered, updates };
+  }
+  const order = (region: HTMLElement) => [...region.querySelectorAll("[data-spec]")].map((el) => el.getAttribute("data-spec"));
+  const group = (region: HTMLElement) => within(region).getByRole("button", { name: /^Quiet \d+$/ });
+
+  // catches: quiet specs left in the main list, a group that starts open, a header above the main list, or a rule counting quiet specs.
+  it("folds quiet specs into a collapsed Quiet 2 at the bottom, and counts only the main list in the rule", async () => {
+    renderV6();
+    const region = await section();
+    await waitFor(() => expect(order(region)).toEqual([...v6QuietSplit.main]));
+    expect(within(region).getByRole("heading", { name: v6QuietSplit.rule })).toBeTruthy();
+    const header = group(region);
+    expect(header.textContent).toBe("Quiet2");
+    expect(header.getAttribute("aria-expanded")).toBe("false");
+    // The group's header follows every main row.
+    const last = region.querySelector(`[data-spec="${v6QuietSplit.main.at(-1)}"]`)!;
+    expect(last.compareDocumentPosition(header) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  // catches: a group that opens without saving, saves another key, or loses the specs' own open keys.
+  it("opens like a spec: its rows follow the header in the sort's order, remembered as quiet in specsOpen", async () => {
+    const { updates } = renderV6({ specsOpen: "[\"example/sample-sort#711\"]" });
+    const region = await section();
+    await waitFor(() => expect(order(region)).toEqual([...v6QuietSplit.main]));
+    fireEvent.click(group(region));
+    expect(order(region)).toEqual([...v6QuietSplit.main, ...v6QuietSplit.quiet]);
+    expect(group(region).getAttribute("aria-expanded")).toBe("true");
+    await waitFor(() => expect(updates).toEqual([{ pluginId: "wizbar", values: { specsOpen: "[\"example/sample-sort#711\",\"quiet\"]" } }]));
+    fireEvent.click(group(region));
+    expect(order(region)).toEqual([...v6QuietSplit.main]);
+    await waitFor(() => expect(updates.at(-1)).toEqual({ pluginId: "wizbar", values: { specsOpen: "[\"example/sample-sort#711\"]" } }));
+  });
+
+  // catches: a stored open group shown closed on a fresh mount.
+  it("restores an open group on a fresh mount", async () => {
+    renderV6({ specsOpen: "[\"quiet\"]" });
+    const region = await section();
+    await waitFor(() => expect(order(region)).toEqual([...v6QuietSplit.main, ...v6QuietSplit.quiet]));
+    expect(group(region).getAttribute("aria-expanded")).toBe("true");
+  });
+
+  // catches: an empty group header drawn when nothing is quiet.
+  it("shows no group when nothing is quiet", async () => {
+    render({ settings: { specsOpen: v4OpenSetting }, now: v4Now });
+    const region = await section();
+    await waitFor(() => expect(order(region).length).toBeGreaterThan(0));
+    // v4's finished spec is quiet; with it gone nothing is.
+    expect(within(region).queryByRole("button", { name: /^Quiet/ })).not.toBeNull();
+    cleanup();
+    const file = JSON.parse(v4SpecsFileText);
+    file.specs = file.specs.filter((spec: { shortName: string }) => spec.shortName !== "Sample finished");
+    render({ settings: { specsOpen: v4OpenSetting }, read: () => ({ kind: "content", text: JSON.stringify(file) }) });
+    const again = await section();
+    await waitFor(() => expect(order(again).length).toBe(2));
+    expect(within(again).queryByRole("button", { name: /^Quiet/ })).toBeNull();
   });
 });
