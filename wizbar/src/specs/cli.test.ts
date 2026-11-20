@@ -7,7 +7,7 @@ import { createFakePluginHost, type FakePluginHost } from "@get-bb/plugin-sdk/te
 import type { BbPluginApi } from "@get-bb/plugin-sdk";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import plugin from "../server";
-import { v4Now, v4OpenSetting, v4SpecOpenCases, v4SpecRows, v4SpecsFile, v4SpecsFileText, v4Threads } from "../fixtures/v4";
+import { v4Now, v4OpenSetting, v4SpecOpenCases, v4SpecRows, v4SpecRowsV2, v4SpecsFile, v4SpecsFileText, v4SpecsFileV2Text, v4Threads } from "../fixtures/v4";
 import { effectiveOpen, readOpenKeys } from "./open-state";
 import { rawRow } from "./testing";
 
@@ -79,6 +79,18 @@ describe("wizbar specs (section 8)", () => {
     expect(await cli.run(["specs"])).toEqual({ exitCode: 0, stderr: "", stdout: [
       "Specs 2 · 2 need you",
       "example/sample-plans#501 Sample palette: 4/10 · 1 done in the last hour · 1 needs you · 4 running",
+      "example/sample-tools#77 Sample cache: 0/3 · 1 needs you",
+      "",
+    ].join("\n") });
+  });
+
+  // catches (#162): a v2 file refused, or its later tickets missing from the JSON, folded into needs you, or left out of the text.
+  it("prints later tickets apart from needs you, in JSON and text", async () => {
+    const cli = await setup({ text: v4SpecsFileV2Text });
+    expect(await cli.json(["specs"])).toEqual({ exitCode: 0, body: v4SpecRowsV2 });
+    expect(await cli.run(["specs"])).toEqual({ exitCode: 0, stderr: "", stdout: [
+      "Specs 2 · 2 need you",
+      "example/sample-plans#501 Sample palette: 4/11 · 1 done in the last hour · 1 needs you · 1 later · 4 running",
       "example/sample-tools#77 Sample cache: 0/3 · 1 needs you",
       "",
     ].join("\n") });

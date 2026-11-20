@@ -8,7 +8,7 @@ import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-libra
 import { createFakePluginHost, type FakePluginHost } from "@get-bb/plugin-sdk/testing";
 import { loadPluginApp, renderSlot } from "@get-bb/plugin-sdk/testing/app";
 import plugin from "../server";
-import { v4Now, v4OpenSetting, v4SpecOpenCases, v4SpecRows, v4SpecsFileText, v4Threads, type SpecsFileReadV4 } from "../fixtures/v4";
+import { v4Now, v4OpenSetting, v4SpecOpenCases, v4SpecRows, v4SpecRowsV2, v4SpecsFileText, v4SpecsFileV2Text, v4Threads, type SpecsFileReadV4 } from "../fixtures/v4";
 import { strictRead } from "../testing/strict-files";
 import { SpecsSection, type SpecsSectionProps } from "./SpecsSection";
 import { effectiveOpen, readOpenKeys } from "./open-state";
@@ -274,6 +274,41 @@ describe("0.5 C: the rule, the spec rows and the open panel", () => {
     await screen.findByText("Sample palette");
     const note = rowOf("Sample palette").querySelector("[data-done-last-hour]") as HTMLElement;
     expect(note.style.color).toBe("var(--foreground)");
+  });
+
+  // catches (#162): a later ticket drawn or counted as needs you, its note loud, its dot filled, or its dot out of order.
+  it("says K needs you then · L later in muted text, and draws a later ticket as a quiet hollow warning ring after needs you", async () => {
+    render({ read: () => ({ kind: "content", text: v4SpecsFileV2Text }) });
+    const heading = within(await section()).getByRole("heading");
+    await waitFor(() => expect(heading.textContent).toBe("Specs 2 · 2 need you"));
+    const palette = rowOf("Sample palette");
+    const line = palette.querySelector("[data-spec-line]")!;
+    expect([...line.querySelectorAll("[data-spec-name], [data-needs-you], [data-yours-later], [data-done-last-hour], [data-done-total]")]
+      .map((el) => el.textContent)).toEqual(["Sample palette", "1 needs you", "· 1 later", "1 done in the last hour", "4/11"]);
+    const later = line.querySelector("[data-yours-later]") as HTMLElement;
+    expect(later.className).toContain("text-muted-foreground");
+    expect(later.style.color).toBe("");
+    expect([...palette.querySelectorAll("[data-dot-state]")].map((d) => d.getAttribute("data-dot-state"))).toEqual(
+      v4SpecRowsV2.specs[0]!.dots.map((d) => d.state));
+    expect(v4SpecRowsV2.specs[0]!.dots.map((d) => d.state).slice(6, 8)).toEqual(["needs-you", "yours-later"]);
+    const dot = palette.querySelector('[data-dot-state="yours-later"]') as HTMLElement;
+    expect(dot.style.background).toBe("");
+    expect(dot.style.boxShadow).toBe("inset 0 0 0 1px color-mix(in oklab, var(--warning, #fc8c45) 60%, transparent)");
+    expect(dot.className).not.toContain("animate-pulse");
+    expect(palette.querySelector('[role="img"]')!.getAttribute("aria-label")).toContain("1 needs you, 1 later");
+    expect(within(rowOf("Sample cache")).queryByText(/later/)).toBeNull();
+  });
+
+  // catches (#162): a spec whose only owner tickets are later still saying "needs you", or a stray leading dot.
+  it("says only L later, muted, when nothing on the spec is due now", async () => {
+    const file = JSON.parse(v4SpecsFileV2Text);
+    for (const spec of file.specs) for (const ticket of spec.tickets) if (ticket.state === "needs-you") ticket.state = "not-started";
+    render({ read: () => ({ kind: "content", text: JSON.stringify(file) }) });
+    const heading = within(await section()).getByRole("heading");
+    await waitFor(() => expect(heading.textContent).toBe("Specs 2"));
+    const line = rowOf("Sample palette").querySelector("[data-spec-line]")!;
+    expect(line.querySelector("[data-needs-you]")).toBeNull();
+    expect(line.querySelector("[data-yours-later]")!.textContent).toBe("1 later");
   });
 
   // catches: an open spec whose agents float on the plain sidebar, or a closed spec drawn raised.

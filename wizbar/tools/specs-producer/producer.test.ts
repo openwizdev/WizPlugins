@@ -41,6 +41,9 @@ const kernel = {
     t(FLEET, 909, "KN9", "0.1.0 KN9: Sample only mentioned", "not-started"),
     // Its pull 41 is in sample-tools, its own repository (#122 R1).
     t(TOOLS, 31, "KN10", "0.1.0 KN10: Sample tool hook", "review", null, [41]),
+    // #162: ready-for-human with open blockers is later; 904's one closed blocker leaves it due now.
+    t(FLEET, 910, "KN11", "0.1.0 KN11: Sample sign-off", "yours-later"),
+    t(FLEET, 911, "KN12", "0.1.0 KN12: Sample after the sign-off", "not-started"),
   ],
 };
 const filler = (i: number) => {
@@ -52,7 +55,7 @@ const filler = (i: number) => {
   };
 };
 const expectedFile = {
-  schema: "openwiz.specs.v1", generatedAt: "2026-11-20T12:00:00Z",
+  schema: "openwiz.specs.v2", generatedAt: "2026-11-20T12:00:00Z",
   specs: [kernel, ...[0, 1, 2, 3, 4, 5, 6, 7, 8].map(filler)],
 };
 
@@ -116,6 +119,20 @@ describe("P1: unchanged answers cost nothing", () => {
 
 // #122 R3: a scan bigger than one run's budget resumes where it stopped, and the file stays fresh.
 const cacheOf = (dir: string) => join(dir, ".openwiz", "specs.v1.etags.json");
+
+describe("N1 (#162): the later state needs no extra request", () => {
+  // catches: a cache written before the producer kept blockers, whose 304 pages would read every blocked ticket as due now.
+  it("a cache from before blockers were kept is read afresh, and the file still says later", async () => {
+    const dir = await home();
+    const github = fakeGitHub();
+    await runOnce({ home: dir, repositories, request: github.request, now: () => NOW });
+    const cache = JSON.parse(await readFile(cacheOf(dir), "utf8")) as { version: number; pages: Record<string, { body: Record<string, unknown>[] }> };
+    for (const page of Object.values(cache.pages)) for (const item of page.body) delete item.issue_dependencies_summary;
+    await writeFile(cacheOf(dir), JSON.stringify({ ...cache, version: 3 }));
+    expect(await runOnce({ home: dir, repositories, request: github.request, now: () => LATER })).toEqual({ ok: true, calls: 15, specs: 10, unchanged: 0 });
+    expect(JSON.parse(await readFile(output(dir), "utf8"))).toEqual({ ...expectedFile, generatedAt: "2026-11-20T12:10:00Z" });
+  });
+});
 
 describe("P1: all or nothing", () => {
   // catches: a partial or mixed file (R7: a server error in the middle of a paginated list), a temp file left

@@ -38,6 +38,13 @@ describe("S1: spec rows, dots, last hour and needs you (section 2)", () => {
     expect(sectionRule({ ...v4SpecRows, needsYou: 0, specs: [v4SpecRows.specs[0]!].map((s) => ({ ...s, needsYou: 0 })) })).toBe("Specs 1");
   });
 
+  // catches (#162): a later ticket counted as needs you, in the rule, or with its dot outside its place after needs you.
+  it("counts later tickets apart from needs you, with their dots right after needs you", () => {
+    const result = specRows(v4SpecsFileV2, v4Threads, readOpenKeys(v4OpenSetting), v4Now);
+    expect(result).toEqual(v4SpecRowsV2);
+    expect(sectionRule(result)).toBe("Specs 2 · 2 need you");
+  });
+
   // catches: a fresh file with only finished specs shown as unavailable or with rows.
   it("shows Specs 0 and no rows when every spec is hidden", () => {
     const hiddenOnly = { ...v4SpecsFile, specs: v4SpecsFile.specs.slice(2) };
