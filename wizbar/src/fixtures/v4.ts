@@ -47,6 +47,8 @@ export interface TicketEntryV4 {
   state: TicketStateV4;
   /** UTC ISO; only a `done` ticket may have one, and it may be null. */
   closedAt: string | null;
+  /** Additive (0.5.0 A): the ticket's open pull request numbers, so a `Review #P at <sha>` thread finds it (section 3). */
+  pulls?: number[];
 }
 export interface SpecEntryV4 {
   spec: SpecKeyV4;
@@ -394,6 +396,14 @@ export const v4TitleCases: ReadonlyArray<readonly [string, string | null, string
   ["Builder · SP-2 Sample no colon", null, null],
   ["Builder · SP-: Sample no number", null, null],
   [" · SP-2: Sample empty role", null, null],
+  // Real titles (0.5.0 A): codes with no hyphen, the builder, reviewer and fleet forms.
+  ["Builder · AP11: Sample no hyphen", "Builder", "AP11"],
+  ["#902: Sample the driver", "Builder", null],
+  ["Review #951 at abc1234", "Reviewer", null],
+  ["Fleet #900: Sample kernel", null, null],
+  ["#0: Sample no issue zero", null, null],
+  ["Review #951", null, null],
+  ["Review #951 at not-a-sha", null, null],
 ];
 
 /** Section 3: the spec each running row matches, hidden specs included; null for none. */
@@ -589,5 +599,105 @@ export const v4FleetIdStats: StatsV4 = {
     newFooter("thr_v4_top_level", "working", null),
     newFooter("thr_v4_failed_running", "failed", `${PLANS}#501`),
     ...(v4Stats as Extract<StatsV4, { status: "ready" }>).threads.slice(-1),
+  ],
+};
+
+// ---- 0.5.0 A (openwizdev/WizPlugins#110): real titles -------------------------
+
+const FLEET = "example/sample-fleet";
+const real = (n: number, code: string | null, title: string, state: TicketStateV4, extra: Partial<TicketEntryV4> = {}): TicketEntryV4 =>
+  ({ ticket: `${FLEET}#${n}` as SpecKeyV4, code, title, state, closedAt: null, ...extra });
+
+/**
+ * A specs file as the producer writes it (section 1): full GitHub titles, codes
+ * with no hyphen, and each ticket's open pull requests. No fleet thread ids:
+ * the producer reads GitHub only, so the `Fleet #S:` title links a fleet to its spec.
+ */
+export const v4RealTitlesFile: SpecsFileV4 = {
+  schema: "openwiz.specs.v1",
+  generatedAt: iso(v4Now - 5 * MINUTE),
+  specs: [
+    {
+      spec: `${FLEET}#900`, shortName: "Sample kernel", url: `https://github.com/${FLEET}/issues/900`, fleetThreadId: null,
+      tickets: [
+        real(901, "KN1", "0.1.0 KN1: Sample records shape", "done", { closedAt: iso(v4Now - 2 * HOUR), pulls: [] }),
+        real(902, "KN2", "0.1.0 KN2: Sample the driver", "building", { pulls: [950] }),
+        real(903, "KN3", "0.1.0 KN3: Sample the reader", "review", { pulls: [951] }),
+        real(904, "AP11", "0.1.0 AP11: Sample app shell", "not-started", { pulls: [] }),
+      ],
+    },
+    {
+      spec: `${FLEET}#920`, shortName: "Sample relay", url: `https://github.com/${FLEET}/issues/920`, fleetThreadId: null,
+      tickets: [
+        real(921, "RL1", "RL1: Sample relay start", "building", { pulls: [] }),
+        // The old code form still matches.
+        real(922, "SP-9", "Sample old form", "not-started"),
+        // No code: its builder row keeps the issue number in the code's place.
+        real(923, null, "Sample uncoded work", "not-started", { pulls: [] }),
+      ],
+    },
+  ],
+};
+
+/**
+ * Running rows with real titles, read with `v4RealTitlesFile`. Every row runs.
+ * - fleet: the `Fleet #900:` thread; never an agent.
+ * - builder: `#902:` under the fleet; reviewer: `Review #951 at …`, top-level, found by its pull.
+ * - helper: an untitled child of the fleet, which belongs to its spec.
+ * - top_builder: `#921:` with no parent, found by its issue number.
+ * - old_form and no_hyphen: `Role · CODE:` titles.
+ * - uncoded: `#923:`, a ticket with no code.
+ * - lost_review, lost_child: a pull and an issue no spec has, under a fleet for a spec not in the file.
+ */
+export const v4RealTitleThreads: readonly PluginSidebarThread[] = [
+  thread({ id: "thr_rt_fleet", displayTitle: "Fleet #900: Sample kernel", machine: "cloud", createdAgo: 3 * HOUR }),
+  thread({ id: "thr_rt_builder", displayTitle: "#902: Sample the driver", machine: "cloud", parentThreadId: "thr_rt_fleet", createdAgo: 80 * MINUTE }),
+  thread({ id: "thr_rt_reviewer", displayTitle: "Review #951 at abc1234", machine: "cloud", providerId: "harness-b", createdAgo: 70 * MINUTE }),
+  thread({ id: "thr_rt_helper", displayTitle: "Sample helper sweep", machine: "cloud", parentThreadId: "thr_rt_fleet", createdAgo: 60 * MINUTE }),
+  thread({ id: "thr_rt_top_builder", displayTitle: "#921: Sample relay start", machine: "cloud", createdAgo: 50 * MINUTE }),
+  thread({ id: "thr_rt_old_form", displayTitle: "Builder · SP-9: Sample old form", machine: "cloud", createdAgo: 40 * MINUTE }),
+  thread({ id: "thr_rt_no_hyphen", displayTitle: "Builder · AP11: Sample app shell", machine: "cloud", createdAgo: 30 * MINUTE }),
+  thread({ id: "thr_rt_uncoded", displayTitle: "#923: Sample uncoded work", machine: "cloud", createdAgo: 25 * MINUTE }),
+  thread({ id: "thr_rt_lost_fleet", displayTitle: "Fleet #777: Sample gone spec", machine: "cloud", createdAgo: 2 * HOUR }),
+  thread({ id: "thr_rt_lost_review", displayTitle: "Review #999 at def5678", machine: "cloud", createdAgo: 20 * MINUTE }),
+  thread({ id: "thr_rt_lost_child", displayTitle: "#5: Sample nothing", machine: "cloud", parentThreadId: "thr_rt_lost_fleet", createdAgo: 10 * MINUTE }),
+];
+
+/** Section 3 for `v4RealTitleThreads` with the rows passed: the spec each matches. */
+export const v4RealTitleMatching: Readonly<Record<string, SpecKeyV4 | null>> = {
+  thr_rt_fleet: null,
+  thr_rt_builder: `${FLEET}#900`,
+  thr_rt_reviewer: `${FLEET}#900`,
+  thr_rt_helper: `${FLEET}#900`,
+  thr_rt_top_builder: `${FLEET}#920`,
+  thr_rt_old_form: `${FLEET}#920`,
+  thr_rt_no_hyphen: `${FLEET}#900`,
+  thr_rt_uncoded: `${FLEET}#920`,
+  thr_rt_lost_fleet: null,
+  thr_rt_lost_review: null,
+  thr_rt_lost_child: null,
+};
+
+const realAgent = (threadId: string, title: string, role: string | null, code: string | null, ticketNumber: number | null, matrix: MatrixStateV4 = "working"): SpecAgentV4 => {
+  const row = v4RealTitleThreads.find((t) => t.id === threadId);
+  if (!row) throw new Error(threadId);
+  return {
+    threadId, title, role, code, ticket: ticketNumber === null ? null : `${FLEET}#${ticketNumber}`,
+    providerId: row.providerId, ...none, matrix, createdAt: row.createdAt, updatedAt: row.updatedAt,
+  };
+};
+
+/** The agents under each visible spec, worked out by hand: `<Role> · <code>: <ticket title without its version and code>`. */
+export const v4RealTitleAgents: Readonly<Record<SpecKeyV4, SpecAgentV4[]>> = {
+  [`${FLEET}#900`]: [
+    realAgent("thr_rt_builder", "Builder · KN2: Sample the driver", "Builder", "KN2", 902),
+    realAgent("thr_rt_reviewer", "Reviewer · KN3: Sample the reader", "Reviewer", "KN3", 903, "reviewing"),
+    realAgent("thr_rt_helper", "Sample helper sweep", null, null, null),
+    realAgent("thr_rt_no_hyphen", "Builder · AP11: Sample app shell", "Builder", "AP11", 904),
+  ],
+  [`${FLEET}#920`]: [
+    realAgent("thr_rt_top_builder", "Builder · RL1: Sample relay start", "Builder", "RL1", 921),
+    realAgent("thr_rt_old_form", "Builder · SP-9: Sample old form", "Builder", "SP-9", 922),
+    realAgent("thr_rt_uncoded", "Builder · #923: Sample uncoded work", "Builder", null, 923),
   ],
 };
