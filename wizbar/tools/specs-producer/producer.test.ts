@@ -37,7 +37,8 @@ const kernel = {
     t(FLEET, 907, null, "Sample uncoded work", "not-started"),
     t(FLEET, 908, "KN8", "0.1.0 KN8: Sample held with a pull", "held", null, [952]),
     t(FLEET, 909, "KN9", "0.1.0 KN9: Sample only mentioned", "not-started"),
-    t(TOOLS, 31, "KN10", "0.1.0 KN10: Sample tool hook", "not-started"),
+    // Its pull 41 is in sample-tools, its own repository (#122 R1).
+    t(TOOLS, 31, "KN10", "0.1.0 KN10: Sample tool hook", "review", null, [41]),
   ],
 };
 const filler = (i: number) => {
@@ -58,10 +59,21 @@ describe("P1: one run writes a file WizBar reads as ready", () => {
   it("writes the hand-worked file for the recorded answers", async () => {
     const dir = await home();
     const github = fakeGitHub();
-    expect(await runOnce({ home: dir, repositories, request: github.request, now: () => NOW })).toEqual({ ok: true, calls: 15, specs: 10 });
+    expect(await runOnce({ home: dir, repositories, request: github.request, now: () => NOW })).toEqual({ ok: true, calls: 15, specs: 10, written: true, pending: 0 });
     const text = await readFile(output(dir), "utf8");
     expect(JSON.parse(text)).toEqual(expectedFile);
     expect(readSpecsFile({ kind: "content", text }, NOW.getTime())).toEqual({ status: "ready", file: expectedFile });
+  });
+
+  // catches: a ticket in another bound repository than its spec losing the pulls of its own repository (#122 R1).
+  it("finds a ticket's pulls in its own repository whichever repository is read first", async () => {
+    for (const order of [[FLEET, TOOLS], [TOOLS, FLEET]]) {
+      const dir = await home();
+      expect((await runOnce({ home: dir, repositories: order, request: fakeGitHub().request, now: () => NOW })).ok).toBe(true);
+      const file = JSON.parse(await readFile(output(dir), "utf8")) as typeof expectedFile;
+      const ticket = file.specs.find((s) => s.spec === `${FLEET}#900`)!.tickets.find((x) => x.ticket === `${TOOLS}#31`);
+      expect({ order, ticket }).toEqual({ order, ticket: t(TOOLS, 31, "KN10", "0.1.0 KN10: Sample tool hook", "review", null, [41]) });
+    }
   });
 
   // catches: a loose short-name or code rule that keeps the version, the `spec:` word or the task.
@@ -93,32 +105,79 @@ describe("P1: unchanged answers cost nothing", () => {
     const github = fakeGitHub();
     await runOnce({ home: dir, repositories, request: github.request, now: () => NOW });
     github.calls.length = 0;
-    expect(await runOnce({ home: dir, repositories, request: github.request, now: () => LATER })).toEqual({ ok: true, calls: 15, specs: 10 });
+    expect(await runOnce({ home: dir, repositories, request: github.request, now: () => LATER })).toEqual({ ok: true, calls: 15, specs: 10, written: true, pending: 0 });
     expect(github.calls.length).toBeLessThan(60);
     expect(github.calls.every((call) => call.etag !== null && call.status === 304)).toBe(true);
     expect(JSON.parse(await readFile(output(dir), "utf8"))).toEqual({ ...expectedFile, generatedAt: "2026-11-20T12:10:00Z" });
   });
 });
 
-describe("P1: a failed read keeps the last file", () => {
-  // catches: a run with no request budget, which a repository with many specs could drain.
-  it("stops before 60 requests and writes nothing", async () => {
-    const dir = await home();
-    const many = new Map<string, { body: unknown }>([[`repos/${FLEET}/pulls?state=open&per_page=100`, { body: [] }]]);
-    const specs = Array.from({ length: 70 }, (_, i) => ({
+// #122 R3: a scan bigger than one run's budget resumes where it stopped, and the file stays fresh.
+describe("P1: a scan over one run's budget resumes", () => {
+  const MINUTE = 60_000;
+  const big = (count: number) => {
+    const answers = new Map<string, { body: unknown }>([[`repos/${FLEET}/pulls?state=open&per_page=100`, { body: [] }]]);
+    const specs = Array.from({ length: count }, (_, i) => ({
       number: 2000 + i, title: `spec: Sample ${i}`, state: "open", labels: [], repository_url: `https://api.github.com/repos/${FLEET}`,
       sub_issues_summary: { total: 1 },
     }));
-    many.set(`repos/${FLEET}/issues?state=open&per_page=100`, { body: specs });
-    for (const s of specs) many.set(`repos/${FLEET}/issues/${s.number}/sub_issues?per_page=100`, { body: [] });
-    const github = fakeGitHub(many);
-    expect(await runOnce({ home: dir, repositories: [FLEET], request: github.request, now: () => NOW }))
-      .toEqual({ ok: false, calls: 59, error: "over 59 requests in one run" });
-    expect(github.calls.length).toBe(59);
+    answers.set(`repos/${FLEET}/issues?state=open&per_page=100`, { body: specs });
+    for (const s of specs) {
+      answers.set(`repos/${FLEET}/issues/${s.number}/sub_issues?per_page=100`, {
+        body: [{ number: 3000 + s.number, title: `S${s.number % 100}: Sample task`, state: "open", labels: [], repository_url: `https://api.github.com/repos/${FLEET}` }],
+      });
+    }
+    return answers;
+  };
+  const at = (minutes: number) => () => new Date(NOW.getTime() + minutes * MINUTE);
+
+  // catches: every timer run failing at the cap, so the file goes stale and WizBar shows Specs unavailable.
+  it("58 specs (60 pages): each run stays under 60 requests, the second run writes, and the file stays fresh", async () => {
+    const dir = await home();
+    const github = fakeGitHub(big(58));
+    const first = await runOnce({ home: dir, repositories: [FLEET], request: github.request, now: at(0) });
+    expect(first).toEqual({ ok: true, calls: 40, specs: 0, written: false, pending: 20 });
     await expect(readFile(output(dir), "utf8")).rejects.toThrow();
+    const second = await runOnce({ home: dir, repositories: [FLEET], request: github.request, now: at(10) });
+    expect(second).toEqual({ ok: true, calls: 40, specs: 58, written: true, pending: 0 });
+    for (const minutes of [20, 30]) {
+      github.calls.length = 0;
+      expect(await runOnce({ home: dir, repositories: [FLEET], request: github.request, now: at(minutes) }))
+        .toEqual({ ok: true, calls: 40, specs: 58, written: true, pending: 0 });
+      expect(github.calls.length).toBe(40);
+    }
+    // 31 minutes after the first run, the file is 1 minute old: ready, with every spec.
+    const read = readSpecsFile({ kind: "content", text: await readFile(output(dir), "utf8") }, NOW.getTime() + 31 * MINUTE);
+    expect(read.status === "ready" ? read.file.specs.length : read).toBe(58);
   });
 
-  // catches: a partial file written mid-run, a temp file left behind, or an error page saved as data.
+  // catches: a resume that re-reads the same first pages every run, so the last specs are never refreshed.
+  it("every page is read again within two runs once the scan is complete", async () => {
+    const dir = await home();
+    const github = fakeGitHub(big(58));
+    await runOnce({ home: dir, repositories: [FLEET], request: github.request, now: at(0) });
+    await runOnce({ home: dir, repositories: [FLEET], request: github.request, now: at(10) });
+    github.calls.length = 0;
+    await runOnce({ home: dir, repositories: [FLEET], request: github.request, now: at(20) });
+    await runOnce({ home: dir, repositories: [FLEET], request: github.request, now: at(30) });
+    expect(new Set(github.calls.map((c) => c.path)).size).toBe(60);
+  });
+
+  // catches: a spec that changed while it waited for its turn, kept from old data forever.
+  it("a page that changes is picked up when its turn comes", async () => {
+    const dir = await home();
+    const answers = big(58);
+    const github = fakeGitHub(answers);
+    for (const minutes of [0, 10]) await runOnce({ home: dir, repositories: [FLEET], request: github.request, now: at(minutes) });
+    const last = `repos/${FLEET}/issues/2057/sub_issues?per_page=100`;
+    answers.set(last, { body: [{ number: 5057, title: "S57: Sample task", state: "closed", state_reason: "completed", closed_at: "2026-11-20T12:15:00Z", labels: [], repository_url: `https://api.github.com/repos/${FLEET}` }] });
+    for (const minutes of [20, 30]) await runOnce({ home: dir, repositories: [FLEET], request: github.request, now: at(minutes) });
+    const file = JSON.parse(await readFile(output(dir), "utf8")) as typeof expectedFile;
+    expect(file.specs.find((s) => s.spec === `${FLEET}#2057`)!.tickets[0]).toMatchObject({ ticket: `${FLEET}#5057`, state: "done", closedAt: "2026-11-20T12:15:00Z" });
+  });
+});
+
+describe("P1: a failed read keeps the last file", () => {
   it.each([
     ["a server error on the pull requests", (g: ReturnType<typeof fakeGitHub>) => g.failNext(`repos/${TOOLS}/pulls?state=open&per_page=100`)],
     ["a missing spec's sub-issues", (g: ReturnType<typeof fakeGitHub>) => g.failNext(`repos/${FLEET}/issues/900/sub_issues?per_page=100`, 404)],

@@ -404,6 +404,9 @@ export const v4TitleCases: ReadonlyArray<readonly [string, string | null, string
   ["#0: Sample no issue zero", null, null],
   ["Review #951", null, null],
   ["Review #951 at not-a-sha", null, null],
+  // Real forms are tried first: free text holding ` · CODE:` never turns them into the old form (#122 R4).
+  ["Fleet #900: Sample kernel · KN2: rollout", null, null],
+  ["#902: Sample driver · KN2: rollout", "Builder", null],
 ];
 
 /** Section 3: the spec each running row matches, hidden specs included; null for none. */

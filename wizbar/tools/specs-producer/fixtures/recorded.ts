@@ -77,7 +77,9 @@ export function recordedAnswers(): Map<string, { body: unknown; next?: string }>
       pull(954, null),
     ],
   });
-  answers.set(`repos/${TOOLS}/pulls?state=open&per_page=100`, { body: [pull(40, "Closes example/sample-fleet#903")] });
+  // Pull 40 closes a fleet ticket from another repository (not counted); pull 41 closes #31, a sample-tools
+  // ticket under the fleet's spec 900 (counted, whichever repository is read first).
+  answers.set(`repos/${TOOLS}/pulls?state=open&per_page=100`, { body: [pull(40, "Closes example/sample-fleet#903"), pull(41, "Closes #31")] });
   return answers;
 }
 
