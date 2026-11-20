@@ -226,7 +226,8 @@ describe("0.5 C: the rule, the spec rows and the open panel", () => {
     // Council round 1: a light grey ring, as in the target, which has no lime rings.
     expect(dot("building").style.boxShadow).toBe(ring(tokens.mutedText));
     expect(dot("building").className).toContain("motion-safe:animate-pulse");
-    expect(dot("review").style.boxShadow).toBe(ring(tokens.accent));
+    // Lead, after council round 1: no lime rings, so review is the same grey ring, still.
+    expect(dot("review").style.boxShadow).toBe(ring(tokens.mutedText));
     expect(dot("review").className).not.toContain("animate-pulse");
     expect(dot("needs-you").style.background).toBe(tokens.warning);
     expect(dot("held").style.boxShadow).toBe(ring(tokens.quietRing));
