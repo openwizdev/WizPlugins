@@ -271,7 +271,7 @@ describe("P1: a spec that disappears from a later page of the issue list", () =>
     const dir = await home();
     const github = fakeGitHub(fixture.answers);
     let run = 0;
-    for (; run < 4; run++) {
+    for (; run < 8; run++) {
       const result = await runOnce({ home: dir, repositories: [FLEET], request: github.request, now: at(run) });
       if (result.ok && result.written) break;
     }
@@ -279,7 +279,8 @@ describe("P1: a spec that disappears from a later page of the issue list", () =>
     const results = [];
     for (let i = 1; i <= runs; i++) results.push(await runOnce({ home: dir, repositories: [FLEET], request: github.request, now: at(run + i) }));
     const keys = (JSON.parse(await readFile(output(dir), "utf8")) as typeof expectedFile).specs.map((s) => s.spec);
-    return { results, keys, cache: await readFile(join(dir, ".openwiz", "specs.v1.etags.json"), "utf8") };
+    const file = JSON.parse(await readFile(output(dir), "utf8")) as typeof expectedFile;
+    return { results, keys, file, cache: await readFile(join(dir, ".openwiz", "specs.v1.etags.json"), "utf8") };
   }
 
   // catches: page one re-read taken for the whole list, so a spec deleted from page two fails every run (the reviewer's case).
@@ -316,6 +317,46 @@ describe("P1: a spec that disappears from a later page of the issue list", () =>
       expect(results.slice(0, failedAt).every((r) => r.ok && r.written)).toBe(true);
       expect(keys.includes(`${FLEET}#2999`)).toBe(false);
     }
+  });
+
+  // catches: a list longer than one run's budget re-read from page one every run, so a spec deleted near its end is never dropped (#122 R5, third check).
+  it("an issue list of 60 pages: the re-read resumes where the last run stopped and the deleted spec leaves", async () => {
+    for (const n of [2049, 2059]) {
+      const { results, keys } = await scenario(60, 1, (f) => f.delete(n), 5);
+      expect({ n, runs: results.map((r) => r.ok && r.calls <= 40), count: keys.length, listed: keys.includes(`${FLEET}#${n}`) })
+        .toEqual({ n, runs: [true, true, true, true, true], count: 59, listed: false });
+    }
+  });
+
+  // catches: a fresh generatedAt over data read runs ago, so WizBar never calls a file stale that can't be refreshed.
+  it("generatedAt is the read time of the oldest page in the file", async () => {
+    const dir = await home();
+    const github = fakeGitHub(paged(58, 100).answers);
+    await runOnce({ home: dir, repositories: [FLEET], request: github.request, now: at(0) });
+    expect(await runOnce({ home: dir, repositories: [FLEET], request: github.request, now: at(1) })).toMatchObject({ written: true });
+    // Run 1 (12:00) read 40 pages, run 2 (12:10) the other 20 and 20 of run 1's: the oldest data is from 12:00.
+    expect((JSON.parse(await readFile(output(dir), "utf8")) as typeof expectedFile).generatedAt).toBe("2026-11-20T12:00:00Z");
+    await runOnce({ home: dir, repositories: [FLEET], request: github.request, now: at(2) });
+    expect((JSON.parse(await readFile(output(dir), "utf8")) as typeof expectedFile).generatedAt).toBe("2026-11-20T12:10:00Z");
+  });
+
+  // catches: a page that keeps failing hidden behind a fresh timestamp: the file must go stale after 30 minutes.
+  it("a spec kept from old data keeps the file's generatedAt at that data's read time", async () => {
+    const fixture = paged(60, 1);
+    const dir = await home();
+    const github = fakeGitHub(fixture.answers);
+    for (let run = 0; run < 4; run++) await runOnce({ home: dir, repositories: [FLEET], request: github.request, now: at(run) });
+    // Spec 2059 is deleted from the list but its old page keeps answering 404 while the 60-page list is re-read.
+    fixture.delete(2059);
+    const generated: string[] = [];
+    for (let run = 4; run < 6; run++) {
+      await runOnce({ home: dir, repositories: [FLEET], request: github.request, now: at(run) });
+      generated.push((JSON.parse(await readFile(output(dir), "utf8")) as typeof expectedFile).generatedAt);
+    }
+    // While 2059's last data (read in run 3 or earlier) is in the file, generatedAt is no later than run 3.
+    const file = JSON.parse(await readFile(output(dir), "utf8")) as typeof expectedFile;
+    if (file.specs.some((spec) => spec.spec === `${FLEET}#2059`)) expect(Date.parse(generated[1]!)).toBeLessThanOrEqual(at(3)().getTime());
+    else expect(generated).toHaveLength(2);
   });
 
   // catches: a still-listed spec on a later page discarded instead of failing once its whole list was re-read.
