@@ -308,9 +308,9 @@ function ParkedShelf({
         // edge like every shelf's, and no chevron; the whole line toggles.
         className="mt-3 flex w-full items-center gap-2 px-2.5 pb-1 text-left"
       >
-        <span className="text-2xs font-medium text-muted-foreground/70">
+        <span className="text-[11.5px] font-medium text-muted-foreground">
           {label}{" "}
-          <span className="font-normal text-muted-foreground/40">{threads.length}</span>
+          <span className="ml-1 font-normal text-muted-foreground/40">{threads.length}</span>
         </span>
         <ShelfRule />
       </button>
@@ -396,7 +396,7 @@ function Shelf({
     <section {...(label ? { "aria-label": label } : {})} {...(pinnedDropZone ? { "data-wizbar-pinned": "" } : {})}>
       {label ? (
         <h2 className={cn("flex items-center gap-2 px-2.5 pb-1 pt-3")}>
-          <span className="text-2xs font-medium text-muted-foreground/70">
+          <span className="text-[11.5px] font-medium text-muted-foreground">
             {label}
           </span>
           <ShelfRule />

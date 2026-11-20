@@ -73,7 +73,7 @@ export function ThreadCard({
       <li className="list-none">
         <div
           className={cn(
-            "group/card relative rounded-md px-2.5 py-2 transition-colors",
+            "group/card relative rounded-md px-2.5 pb-[9px] pt-2.5 transition-colors",
             isActive ? "bg-sidebar-accent" : "hover:bg-sidebar-accent/60",
             // A thread open in another pane gets a weaker tint than the active
             // row, so the two states stay distinguishable.
@@ -103,7 +103,7 @@ export function ThreadCard({
             className="absolute inset-0 cursor-pointer rounded-md"
           />
           <div className="pointer-events-none relative flex h-5 items-center gap-1.5">
-            <span className="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground">
+            <span className="min-w-0 flex-1 truncate text-[11.5px] font-medium text-muted-foreground">
               {projectName ?? " "}
             </span>
             <MachineIcon environment={thread.environment} host={thread.host} runtimeStatus={thread.runtimeStatus} />
