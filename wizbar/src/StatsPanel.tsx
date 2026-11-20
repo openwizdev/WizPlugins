@@ -51,6 +51,13 @@ function useSpecsRead(): SpecsFileReadV4 | null {
 
 /** How often one thread's model and effort may be read again (owner steer on #175). */
 export const MODEL_REFRESH_MS = 5 * 60_000;
+/** On opening, labels read longer ago than this are read again, in one batch (#175 R3). */
+export const MODEL_REOPEN_MS = 60_000;
+/** A failed read is tried again after this, by the open card's timer (#175 R4). */
+export const MODEL_RETRY_MS = 30_000;
+/** The open card's timer sends at most one batch per this (#175 R4). */
+export const MODEL_SWEEP_MS = 60_000;
+const MODEL_TICK_MS = 10_000;
 
 /**
  * Model and effort per thread for the session, one cache per plugin (like `gapStore`), so it outlives the
@@ -61,16 +68,24 @@ interface ModelCache {
   labels: Map<string, CardModelV3>;
   /** When each thread was last asked, answered or not. */
   readAt: Map<string, number>;
+  /** Threads whose last read failed: rejected, malformed, or a host answer with no model for them. */
+  failed: Set<string>;
   inFlight: Set<string>;
   /** The running threads last seen, to tell a new turn (not running, then running). */
   running: Set<string> | null;
+  /** The open card timer's last batch. */
+  sweptAt: number;
   version: number;
   listeners: Set<() => void>;
 }
 const modelCaches = new Map<string, ModelCache>();
 const modelCache = (pluginId: string): ModelCache => {
   let cache = modelCaches.get(pluginId);
-  if (!cache) modelCaches.set(pluginId, cache = { labels: new Map(), readAt: new Map(), inFlight: new Set(), running: null, version: 0, listeners: new Set() });
+  if (!cache) {
+    modelCaches.set(pluginId, cache = {
+      labels: new Map(), readAt: new Map(), failed: new Set(), inFlight: new Set(), running: null, sweptAt: -Infinity, version: 0, listeners: new Set(),
+    });
+  }
   return cache;
 };
 const label = (item: unknown, asked: ReadonlySet<string>): CardModelV3 | null => {
@@ -81,42 +96,81 @@ const label = (item: unknown, asked: ReadonlySet<string>): CardModelV3 | null =>
   return { threadId, model, effort: effort as CardModelV3["effort"] };
 };
 
+/** Reads `ids` (not already being read) in batches of 100 and settles them into the cache. */
+function readModels(cache: ModelCache, rpc: ReturnType<typeof useRpc<typeof t3sidebarRpcContract>>, ids: readonly string[]) {
+  const due = ids.filter((id) => !cache.inFlight.has(id));
+  for (let i = 0; i < due.length; i += 100) {
+    const batch = due.slice(i, i + 100);
+    const asked = new Set(batch);
+    for (const id of batch) cache.inFlight.add(id);
+    // `items` null: the read failed. A host answer with no model for a thread failed for that thread;
+    // `source: "none"` is an answer (no models offered) and fails nothing.
+    const settle = (items: readonly unknown[] | null, host: boolean) => {
+      const answered = new Set<string>();
+      for (const item of items ?? []) {
+        const next = label(item, asked);
+        if (!next) continue;
+        answered.add(next.threadId);
+        const known = cache.labels.get(next.threadId);
+        if (!(known && known.model === next.model && known.effort === next.effort)) cache.labels.set(next.threadId, next);
+      }
+      for (const id of batch) {
+        cache.inFlight.delete(id);
+        cache.readAt.set(id, Date.now());
+        if (answered.has(id) || (items !== null && !host)) cache.failed.delete(id);
+        else cache.failed.add(id);
+      }
+      cache.version++;
+      for (const listener of cache.listeners) listener();
+    };
+    rpc.call("cardModels", { threadIds: batch }).then(
+      (result) => result?.source === "host" && Array.isArray(result.items) ? settle(result.items, true)
+        : result?.source === "none" ? settle([], false) : settle(null, true),
+      () => settle(null, true),
+    );
+  }
+}
+
 /**
  * Model and effort for the running threads, from the cache. Reads `cardModels` only for a thread not yet
  * asked, one that starts a new turn, or one last asked `MODEL_REFRESH_MS` ago; never every thread because
- * the running set or a revision changed. `revision` only wakes the check.
+ * the running set or a revision changed (`revision` only wakes the check). Opening the card reads again,
+ * in one batch, labels older than `MODEL_REOPEN_MS`, so a turn missed while it was closed shows (#175 R3).
+ * While it is open, a timer reads old labels and failed ones (after `MODEL_RETRY_MS`), at most one batch
+ * per `MODEL_SWEEP_MS`, with no sidebar change needed (#175 R4).
  */
 function useModels(threadIds: readonly string[], revision: string): CardModelsResultV3 | null {
   const rpc = useRpc<typeof t3sidebarRpcContract>();
   const cache = modelCache(experimental_usePluginId());
   useSyncExternalStore((listener) => { cache.listeners.add(listener); return () => { cache.listeners.delete(listener); }; }, () => cache.version);
   const key = threadIds.join("\n");
+  const latest = useRef(key);
+  latest.current = key;
+  const opened = useRef(false);
   useEffect(() => {
     const ids = key ? key.split("\n") : [];
     const now = Date.now();
-    const due = ids.filter((id) => !cache.inFlight.has(id) && (!cache.readAt.has(id) ||
-      now - cache.readAt.get(id)! >= MODEL_REFRESH_MS || (cache.running !== null && !cache.running.has(id))));
+    const age = (id: string) => now - (cache.readAt.get(id) ?? -Infinity);
+    const reopen = !opened.current;
+    opened.current = true;
+    readModels(cache, rpc, ids.filter((id) => age(id) >= (reopen ? MODEL_REOPEN_MS : MODEL_REFRESH_MS) ||
+      (cache.running !== null && !cache.running.has(id))));
     cache.running = new Set(ids);
-    for (let i = 0; i < due.length; i += 100) {
-      const batch = due.slice(i, i + 100);
-      const asked = new Set(batch);
-      for (const id of batch) cache.inFlight.add(id);
-      const settle = (items: readonly unknown[]) => {
-        for (const id of batch) { cache.inFlight.delete(id); cache.readAt.set(id, Date.now()); }
-        for (const item of items) {
-          const next = label(item, asked);
-          const known = next && cache.labels.get(next.threadId);
-          if (next && !(known && known.model === next.model && known.effort === next.effort)) cache.labels.set(next.threadId, next);
-        }
-        cache.version++;
-        for (const listener of cache.listeners) listener();
-      };
-      rpc.call("cardModels", { threadIds: batch }).then(
-        (result) => settle(result?.source === "host" && Array.isArray(result.items) ? result.items : []),
-        () => settle([]),
-      );
-    }
   }, [cache, rpc, key, revision]);
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const now = Date.now();
+      if (now - cache.sweptAt < MODEL_SWEEP_MS) return;
+      const due = (latest.current ? latest.current.split("\n") : []).filter((id) => {
+        const age = now - (cache.readAt.get(id) ?? -Infinity);
+        return !cache.inFlight.has(id) && (age >= MODEL_REFRESH_MS || (cache.failed.has(id) && age >= MODEL_RETRY_MS));
+      });
+      if (due.length === 0) return;
+      cache.sweptAt = now;
+      readModels(cache, rpc, due);
+    }, MODEL_TICK_MS);
+    return () => clearInterval(timer);
+  }, [cache, rpc]);
   const items = threadIds.flatMap((id) => cache.labels.get(id) ?? []);
   return items.length > 0 ? { source: "host", items } : null;
 }
