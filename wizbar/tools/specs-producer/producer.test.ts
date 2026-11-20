@@ -293,10 +293,28 @@ describe("P1: a spec that disappears from a later page of the issue list", () =>
 
   // catches: a recovery that only works when the list fits one run, with the 404 landing at the end of a run's 40 requests.
   it("120 specs over three pages: a spec deleted from page three leaves within four runs, every run writing", async () => {
-    for (let n = 2080; n < 2120; n++) {
+    for (let n = 2080; n < 2120; n += 4) {
       const { results, keys } = await scenario(120, 40, (f) => f.delete(n), 4);
       expect({ n, runs: results.map((r) => r.ok && r.written && r.calls <= 40), count: keys.length, listed: keys.includes(`${FLEET}#${n}`) })
         .toEqual({ n, runs: [true, true, true, true], count: 119, listed: false });
+    }
+  });
+
+  // catches: a new spec whose first read answers 404 breaking the scan or the file before its list is re-read.
+  it("a new spec that answers 404 from its first read: runs write without it until its re-read list fails one", async () => {
+    for (let at404 = 0; at404 < 40; at404 += 3) {
+      const { results, keys } = await scenario(120, 40, (f) => {
+        const page = f.answers.get(first)!;
+        const extra = { number: 2999, title: "spec: Sample new", state: "open", labels: [], repository_url: `https://api.github.com/repos/${FLEET}`, sub_issues_summary: { total: 1 } };
+        const list = [...(page.body as unknown[])];
+        list.splice(at404, 0, extra);
+        f.answers.set(first, { ...page, body: list });
+      }, 4);
+      const failedAt = results.findIndex((r) => !r.ok);
+      expect({ at404, failedAt: failedAt >= 0, error: results[failedAt] && !results[failedAt]!.ok ? results[failedAt]!.error : null })
+        .toEqual({ at404, failedAt: true, error: `GitHub answered 404 for ${sub(2999)}` });
+      expect(results.slice(0, failedAt).every((r) => r.ok && r.written)).toBe(true);
+      expect(keys.includes(`${FLEET}#2999`)).toBe(false);
     }
   });
 

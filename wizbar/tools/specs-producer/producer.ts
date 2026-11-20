@@ -151,19 +151,24 @@ function ticketOf(issue: Record<string, unknown>, repository: string, pulls: Pul
   return { ticket: key, code: ticketCodeOf(title), title, state, closedAt, pulls: open.map((p) => p.number).sort((a, b) => a - b) };
 }
 
-interface Scan { order: string[]; missing: string[]; specs: Spec[] }
+/** `issueLists`: each repository's open-issues pages, following GitHub's own continuation links. */
+interface Scan { order: string[]; missing: string[]; specs: Spec[]; issueLists: Map<string, string[]> }
 
 /**
  * The whole scan over the cached pages, in reading order: per repository its open issues and open
  * pulls, then each spec's sub-issues. `missing` lists the pages with no data yet.
  */
-function scan(repositories: readonly string[], pages: Record<string, CacheEntry>): Scan {
+function scan(repositories: readonly string[], pages: Record<string, CacheEntry>, vanished: ReadonlySet<string> = new Set()): Scan {
   const order: string[] = [];
+  const seen = new Set<string>();
   const missing: string[] = [];
-  const list = (path: string) => {
+  const issueLists = new Map<string, string[]>();
+  const list = (path: string, chain: string[] = []) => {
     const items: Record<string, unknown>[] = [];
-    for (let page: string | null = path; page !== null && !order.includes(page);) {
+    for (let page: string | null = path; page !== null && !seen.has(page);) {
+      seen.add(page);
       order.push(page);
+      chain.push(page);
       const entry: CacheEntry | undefined = pages[page];
       if (!entry) { missing.push(page); break; }
       items.push(...entry.body);
@@ -176,7 +181,10 @@ function scan(repositories: readonly string[], pages: Record<string, CacheEntry>
   // ticket under a spec in another bound repository keeps its pulls (#122 R1).
   const pulls: PullIndex = new Map();
   for (const repository of repositories) {
-    issues.set(repository, list(`repos/${repository}/issues?state=open&per_page=100`));
+    // Later pages' links name the repository by id (`repositories/<id>/issues?…`): keep the chain by repository.
+    const chain: string[] = [];
+    issueLists.set(repository, chain);
+    issues.set(repository, list(`repos/${repository}/issues?state=open&per_page=100`, chain));
     const own = `${repository.toLowerCase()}#`;
     for (const pull of list(`repos/${repository}/pulls?state=open&per_page=100`)) {
       for (const key of closedBy(text(pull.body), repository.toLowerCase())) {
@@ -191,13 +199,16 @@ function scan(repositories: readonly string[], pages: Record<string, CacheEntry>
       const summary = issue.sub_issues_summary as { total?: unknown } | undefined;
       if (issue.pull_request || typeof summary?.total !== "number" || summary.total <= 0) continue;
       const number = Number(issue.number);
+      const subPath = `repos/${repository}/issues/${number}/sub_issues?per_page=100`;
+      // A vanished page with no data yet cannot block the write: its spec waits for its list.
+      if (vanished.has(subPath) && !pages[subPath]) { seen.add(subPath); order.push(subPath); continue; }
       const tickets: Ticket[] = [];
-      const seen = new Set<string>();
+      const ticketKeys = new Set<string>();
       const codes = new Set<string>();
-      for (const sub of list(`repos/${repository}/issues/${number}/sub_issues?per_page=100`)) {
+      for (const sub of list(subPath)) {
         const ticket = ticketOf(sub, repositoryOf(sub, repository), pulls);
-        if (!ticket || seen.has(ticket.ticket)) continue;
-        seen.add(ticket.ticket);
+        if (!ticket || ticketKeys.has(ticket.ticket)) continue;
+        ticketKeys.add(ticket.ticket);
         // A code twice in one spec would make the whole file malformed: the later one goes without.
         if (ticket.code !== null && codes.has(ticket.code)) ticket.code = null;
         if (ticket.code !== null) codes.add(ticket.code);
@@ -209,7 +220,7 @@ function scan(repositories: readonly string[], pages: Record<string, CacheEntry>
       });
     }
   }
-  return { order, missing, specs };
+  return { order, missing, specs, issueLists };
 }
 
 /**
@@ -230,36 +241,47 @@ export async function runOnce(options: { home: string; repositories: readonly st
   const pages = { ...cache.pages };
   const vanished = new Set(cache.vanished);
   let calls = 0;
-  const listing = (order: readonly string[], repository: string) => order.filter((page) => page.startsWith(`repos/${repository}/issues?`));
-  const listingRead = (order: readonly string[], repository: string) => listing(order, repository).every((page) => pages[page]?.run === run);
-  /** Settles each vanished page whose repository's list was read in this run. */
-  const settle = (order: readonly string[]) => {
+  const listing = (current: Scan, repository: string) => current.issueLists.get(repository) ?? [];
+  /** Every page of the repository's issue list, as linked now, was read in this run. */
+  const listingRead = (current: Scan, repository: string) => listing(current, repository).every((page) => pages[page]?.run === run);
+  /**
+   * Settles each vanished page once its repository's whole issue list was re-read: a spec no longer
+   * listed leaves; one still listed has answered 404 with a fresh list, which fails the run.
+   */
+  const settle = (current: Scan) => {
     for (const page of vanished) {
-      if (!listingRead(order, subIssuesRepository(page)!)) continue;
-      if (order.includes(page)) throw new ReadFailed(`GitHub answered 404 for ${page}`);
+      if (!listingRead(current, subIssuesRepository(page)!)) continue;
+      if (current.order.includes(page)) throw new ReadFailed(`GitHub answered 404 for ${page}`);
       vanished.delete(page);
     }
   };
   try {
     while (calls < BUDGET) {
-      const { order, missing } = scan(repositories, pages);
-      settle(order);
+      const current = scan(repositories, pages, vanished);
+      settle(current);
+      const { order, missing } = current;
       const due = order.filter((page) => pages[page]?.run !== run && !vanished.has(page));
       if (due.length === 0) break;
-      const waiting = new Set([...vanished].flatMap((page) => listing(order, subIssuesRepository(page)!)));
-      const age = (page: string) => (waiting.has(page) ? -2 : missing.includes(page) ? -1 : pages[page]!.run);
+      // A vanished page makes every page of its repository's issue list due before anything else.
+      const waiting = new Set([...vanished].flatMap((page) => listing(current, subIssuesRepository(page)!)));
+      const absent = new Set(missing);
+      const age = (page: string) => (waiting.has(page) ? -2 : absent.has(page) ? -1 : pages[page]!.run);
       const next = due.reduce((best, page) => (age(page) < age(best) ? page : best));
       calls += 1;
       try {
         await readPage(next, request, pages, run);
       } catch (error) {
         const repository = subIssuesRepository(next);
-        if (!(error instanceof NotFound) || repository === null || listingRead(order, repository)) throw error;
+        // A 404 alone never fails a run: only one after a full re-read of the list (settle) does.
+        if (!(error instanceof NotFound) || repository === null) throw error;
         vanished.add(next);
+        // The list must be read after this 404: an earlier read in this run does not settle it.
+        for (const page of listing(current, repository)) if (pages[page]) pages[page] = { ...pages[page]!, run: 0 };
       }
     }
-    const { order, missing, specs } = scan(repositories, pages);
-    settle(order);
+    const final = scan(repositories, pages, vanished);
+    settle(final);
+    const { order, missing, specs } = final;
     await mkdir(join(home, ".openwiz"), { recursive: true });
     if (missing.length === 0) {
       const generatedAt = (options.now?.() ?? new Date()).toISOString().replace(/\.\d+Z$/, "Z");
