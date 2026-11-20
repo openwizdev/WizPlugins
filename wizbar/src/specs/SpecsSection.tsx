@@ -25,6 +25,7 @@ import { needsYouWords, sectionRule, specRows } from "./rows";
 import type { specsRpcContract } from "./server";
 import { tokens } from "./theme";
 import { AgentRow } from "./AgentRow";
+import { dotBreathes, nameMuted, useBreath, useBreathMode, type BreathMode } from "./breath";
 
 const REFRESH_MS = 60_000;
 const NO_BINDING: SpecsFileReadV4 = { kind: "no-binding" };
@@ -109,6 +110,8 @@ function useOpenSetting() {
 export function SpecsSection({ threads, now, activeThreadId, onNavigate, collapsed = false, onToggleCollapsed, collapseFailed = false }: SpecsSectionProps) {
   const { value, toggle, failed, home } = useOpenSetting();
   const read = useSpecsFile(home);
+  // A1 (#186): one breath mode for every dot in the section.
+  const [breath, sectionRef] = useBreathMode();
   const view = useMemo(() => {
     if (read === null) return null;
     const file = readSpecsFile(read, now);
@@ -117,7 +120,7 @@ export function SpecsSection({ threads, now, activeThreadId, onNavigate, collaps
   if (view === null) return null;
   const byId = new Map(threads.map((thread) => [thread.id, thread]));
   return (
-    <section aria-label="Specs">
+    <section ref={sectionRef} aria-label="Specs">
       {view === "unavailable" ? (
         <h2 className="flex items-center gap-2 px-2.5 pb-1 pt-3 text-[11.5px] font-medium">
           <span className="text-muted-foreground">Specs unavailable</span>
@@ -129,7 +132,7 @@ export function SpecsSection({ threads, now, activeThreadId, onNavigate, collaps
       {view === "unavailable" || collapsed ? null : (
         <ul className="flex flex-col gap-px">
           {view.specs.map((row) => (
-            <SpecRow key={row.spec} row={row} threads={byId} now={now} activeThreadId={activeThreadId}
+            <SpecRow key={row.spec} row={row} threads={byId} now={now} activeThreadId={activeThreadId} breath={breath}
               onNavigate={onNavigate} onToggle={() => toggle(row.spec, !row.open)} />
           ))}
         </ul>
@@ -203,8 +206,9 @@ function SpecsRule({ result, collapsed, onToggle }: { result: SpecsResultV4; col
   );
 }
 
-function SpecRow({ row, threads, now, activeThreadId, onNavigate, onToggle }: {
+function SpecRow({ row, threads, now, activeThreadId, breath, onNavigate, onToggle }: {
   row: SpecRowV4;
+  breath: BreathMode;
   now: number;
   threads: ReadonlyMap<string, PluginSidebarThread>;
   activeThreadId: string | null;
@@ -231,7 +235,12 @@ function SpecRow({ row, threads, now, activeThreadId, onNavigate, onToggle }: {
     </span>
   );
   // A minimum width, so the notes can never squeeze the name to nothing (#164 R2).
-  const name = <span data-spec-name="" className="min-w-[6rem] flex-1 truncate text-[13px] text-foreground">{row.shortName}</span>;
+  // A1 (#186): nothing running and nothing due now mutes the name, in place; host text colours only.
+  const muted = nameMuted(row);
+  const name = (
+    <span data-spec-name="" data-muted={muted ? "" : undefined} className="min-w-[6rem] flex-1 truncate text-[13px]"
+      style={{ color: muted ? tokens.mutedText : tokens.text }}>{row.shortName}</span>
+  );
   // One clipped, wrapping line in priority order (#164 R2): when space is short the last note wraps out of
   // sight first, so done in the last hour goes, then later, and needs you stays longest.
   const notes = row.needsYou > 0 || row.yoursLater > 0 || row.doneLastHour > 0 ? (
@@ -272,7 +281,7 @@ function SpecRow({ row, threads, now, activeThreadId, onNavigate, onToggle }: {
             {revealed ? null : <span data-done-total="" className="tabular-nums text-muted-foreground">{row.done}/{row.total}</span>}
           </span>
         </div>
-        <Dots row={row} />
+        <Dots row={row} breath={breath} />
       </div>
       {open ? (
         <ul aria-label={`${row.shortName} agents`} className="flex flex-col gap-px">
@@ -304,16 +313,22 @@ const dotWords: Record<DotStateV4, string> = {
 };
 
 /** One dot per ticket, in the contract's dot order (section 2). */
-function Dots({ row }: { row: SpecRowV4 }) {
+function Dots({ row, breath }: { row: SpecRowV4; breath: BreathMode }) {
   const counts = new Map<DotStateV4, number>();
   for (const dot of row.dots) counts.set(dot.state, (counts.get(dot.state) ?? 0) + 1);
   const label = `${row.total} tickets: ${[...counts].map(([state, count]) => `${count} ${dotWords[state]}`).join(", ")}`;
   return (
     <span role="img" aria-label={label} className="mt-[5px] flex flex-wrap gap-[3px]">
       {row.dots.map((dot) => (
-        <span key={dot.ticket} data-dot-state={dot.state}
-          className={cn("size-[5px] rounded-full", dot.state === "building" && "motion-safe:animate-pulse")} style={dotStyle[dot.state]} />
+        <Dot key={dot.ticket} state={dot.state} breathing={dotBreathes(dot, row.agents)} breath={breath} />
       ))}
     </span>
   );
+}
+
+/** A1 (#186): one ticket dot; it breathes, in place and in step, while a working agent names its ticket. */
+function Dot({ state, breathing, breath }: { state: DotStateV4; breathing: boolean; breath: BreathMode }) {
+  const ref = useBreath(breathing, breath);
+  return <span ref={ref} data-dot-state={state} data-breath={breathing ? "" : undefined}
+    className="size-[5px] rounded-full" style={dotStyle[state]} />;
 }

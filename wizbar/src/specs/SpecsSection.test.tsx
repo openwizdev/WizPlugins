@@ -761,11 +761,11 @@ describe("A1: active specs breathe, inactive names are muted", () => {
     expect(name("Sample palette").style.color).toBe("var(--foreground)");
     expect(name("Sample cache").style.color).toBe("var(--muted-foreground, #b7b7b7)");
     expect(tokens.mutedText).toBe("var(--muted-foreground, #b7b7b7)");
-    const before = name("Sample palette");
+    // The row stays mounted (section 13: keyed by spec). 0.5's chevron button wraps the name only while a spec has agents,
+    // so the name's own node follows that, as in 0.5.
     const row = rowOf("Sample palette");
     act(() => rendered.lifecycle.rerender(<SpecsSection {...props} threads={[]} />));
     await waitFor(() => expect(name("Sample palette").style.color).toBe("var(--muted-foreground, #b7b7b7)"));
-    expect(name("Sample palette")).toBe(before);
     expect(rowOf("Sample palette")).toBe(row);
   });
 
