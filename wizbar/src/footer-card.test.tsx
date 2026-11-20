@@ -137,7 +137,7 @@ describe("S4: no bolt; N running with its hover card", () => {
     expect([...bar.children].map((el) => [el.getAttribute("data-harness-segment"), (el as HTMLElement).style.flexGrow]))
       .toEqual([["harness-a", "6"], ["harness-b", "3"]]);
     const names = [...card()!.querySelectorAll("[data-harness]")].map((el) => el.textContent);
-    expect(names).toEqual(["harness-a 6", "harness-b 3"]);
+    expect(names).toEqual(["Harness A 6", "Harness B 3"]);
     expect(card()!.querySelector("[data-harness]")!.parentElement!.style.flexDirection).not.toBe("column");
   });
 
