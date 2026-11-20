@@ -59,7 +59,7 @@ describe("P1: one run writes a file WizBar reads as ready", () => {
   it("writes the hand-worked file for the recorded answers", async () => {
     const dir = await home();
     const github = fakeGitHub();
-    expect(await runOnce({ home: dir, repositories, request: github.request, now: () => NOW })).toEqual({ ok: true, calls: 15, specs: 10, written: true, pending: 0 });
+    expect(await runOnce({ home: dir, repositories, request: github.request, now: () => NOW })).toEqual({ ok: true, calls: 15, specs: 10, written: true, pending: 0, errors: [] });
     const text = await readFile(output(dir), "utf8");
     expect(JSON.parse(text)).toEqual(expectedFile);
     expect(readSpecsFile({ kind: "content", text }, NOW.getTime())).toEqual({ status: "ready", file: expectedFile });
@@ -105,7 +105,7 @@ describe("P1: unchanged answers cost nothing", () => {
     const github = fakeGitHub();
     await runOnce({ home: dir, repositories, request: github.request, now: () => NOW });
     github.calls.length = 0;
-    expect(await runOnce({ home: dir, repositories, request: github.request, now: () => LATER })).toEqual({ ok: true, calls: 15, specs: 10, written: true, pending: 0 });
+    expect(await runOnce({ home: dir, repositories, request: github.request, now: () => LATER })).toEqual({ ok: true, calls: 15, specs: 10, written: true, pending: 0, errors: [] });
     expect(github.calls.length).toBeLessThan(60);
     expect(github.calls.every((call) => call.etag !== null && call.status === 304)).toBe(true);
     expect(JSON.parse(await readFile(output(dir), "utf8"))).toEqual({ ...expectedFile, generatedAt: "2026-11-20T12:10:00Z" });
@@ -136,14 +136,14 @@ describe("P1: a scan over one run's budget resumes", () => {
     const dir = await home();
     const github = fakeGitHub(big(58));
     const first = await runOnce({ home: dir, repositories: [FLEET], request: github.request, now: at(0) });
-    expect(first).toEqual({ ok: true, calls: 40, specs: 0, written: false, pending: 20 });
+    expect(first).toEqual({ ok: true, calls: 40, specs: 0, written: false, pending: 20, errors: [] });
     await expect(readFile(output(dir), "utf8")).rejects.toThrow();
     const second = await runOnce({ home: dir, repositories: [FLEET], request: github.request, now: at(10) });
-    expect(second).toEqual({ ok: true, calls: 40, specs: 58, written: true, pending: 0 });
+    expect(second).toEqual({ ok: true, calls: 40, specs: 58, written: true, pending: 0, errors: [] });
     for (const minutes of [20, 30]) {
       github.calls.length = 0;
       expect(await runOnce({ home: dir, repositories: [FLEET], request: github.request, now: at(minutes) }))
-        .toEqual({ ok: true, calls: 40, specs: 58, written: true, pending: 0 });
+        .toEqual({ ok: true, calls: 40, specs: 58, written: true, pending: 0, errors: [] });
       expect(github.calls.length).toBe(40);
     }
     // 31 minutes after the first run, the file is 1 minute old: ready, with every spec.
@@ -222,17 +222,17 @@ describe("P1: a spec that disappears", () => {
   });
 
   // catches: a 404 for a spec GitHub still lists taken as a deletion, so a spec silently vanishes from the file.
-  it("a 404 for a spec still listed fails the run and keeps the last file", async () => {
+  it("a 404 for a spec still listed is reported, and the spec keeps its last data", async () => {
     const answers = big(58);
     const { dir, github } = await completeScan(answers);
     const before = await readFile(output(dir), "utf8");
     answers.delete(goneSub);
     const results = [];
     for (const minutes of [20, 30]) results.push(await runOnce({ home: dir, repositories: [FLEET], request: github.request, now: at(minutes) }));
-    const failed = results.find((r) => !r.ok);
-    expect(failed).toMatchObject({ ok: false, error: `GitHub answered 404 for ${goneSub}` });
+    // The failure is the repository's: the run reports it, and the spec keeps its last data in the file.
+    expect(results.find((r) => !r.ok)).toMatchObject({ ok: false, written: true, errors: [`GitHub answered 404 for ${goneSub}`] });
     expect((await specKeys(dir)).includes(`${FLEET}#2020`)).toBe(true);
-    if (results[0]!.ok === false) expect(await readFile(output(dir), "utf8")).toBe(before);
+    expect(before).toContain(`${FLEET}#2020`);
   });
 });
 
@@ -304,7 +304,7 @@ describe("P1: a spec that disappears from a later page of the issue list", () =>
   });
 
   // catches: a new spec whose first read answers 404 breaking the scan or the file before its list is re-read.
-  it("a new spec that answers 404 from its first read: runs write without it until its re-read list fails one", async () => {
+  it("a new spec that answers 404 from its first read: every run writes without it, and its re-read list reports it", async () => {
     for (let at404 = 0; at404 < 40; at404 += 3) {
       const { results, keys } = await scenario(120, 40, (f) => {
         const page = f.answers.get(first)!;
@@ -314,9 +314,9 @@ describe("P1: a spec that disappears from a later page of the issue list", () =>
         f.answers.set(first, { ...page, body: list });
       }, 4);
       const failedAt = results.findIndex((r) => !r.ok);
-      expect({ at404, failedAt: failedAt >= 0, error: results[failedAt] && !results[failedAt]!.ok ? results[failedAt]!.error : null })
-        .toEqual({ at404, failedAt: true, error: `GitHub answered 404 for ${sub(2999)}` });
-      expect(results.slice(0, failedAt).every((r) => r.ok && r.written)).toBe(true);
+      expect({ at404, failedAt: failedAt >= 0, errors: results[failedAt]?.errors ?? null })
+        .toEqual({ at404, failedAt: true, errors: [`GitHub answered 404 for ${sub(2999)}`] });
+      expect(results.every((r) => r.written)).toBe(true);
       expect(keys.includes(`${FLEET}#2999`)).toBe(false);
     }
   });
@@ -343,9 +343,9 @@ describe("P1: a spec that disappears from a later page of the issue list", () =>
   });
 
   // catches: a still-listed spec on a later page discarded instead of failing once its whole list was re-read.
-  it("a spec on page two still listed but answering 404 fails a run once the whole list is re-read, keeping its last data", async () => {
+  it("a spec on page two still listed but answering 404 is reported once the whole list is re-read, keeping its last data", async () => {
     const { results, keys } = await scenario(45, 30, (f) => f.break404(2040), 3);
-    expect(results.find((r) => !r.ok)).toMatchObject({ ok: false, error: `GitHub answered 404 for ${sub(2040)}` });
+    expect(results.find((r) => !r.ok)).toMatchObject({ ok: false, written: true, errors: [`GitHub answered 404 for ${sub(2040)}`] });
     expect(keys.includes(`${FLEET}#2040`)).toBe(true);
   });
 });
@@ -439,7 +439,9 @@ describe("P1: repositories never block each other", () => {
 });
 const github_calls_for = (calls: { path: string }[], repository: string) => calls.filter((c) => c.path.includes(repository)).length;
 
-describe("P1: a failed read keeps the last file", () => {
+// Since #122 R6 a failed read stops only its repository: here nothing else changed, so the file's
+// specs and its age (the failing repository's oldest page) are exactly the last file's.
+describe("P1: a failed read keeps that repository's last data", () => {
   it.each([
     ["a server error on the pull requests", (g: ReturnType<typeof fakeGitHub>) => g.failNext(`repos/${TOOLS}/pulls?state=open&per_page=100`)],
     ["a missing spec's sub-issues", (g: ReturnType<typeof fakeGitHub>) => g.failNext(`repos/${FLEET}/issues/900/sub_issues?per_page=100`, 404)],
@@ -452,7 +454,8 @@ describe("P1: a failed read keeps the last file", () => {
     const filesBefore = await readdir(join(dir, ".openwiz"));
     breakIt(github);
     const result = await runOnce({ home: dir, repositories, request: github.request, now: () => LATER });
-    expect(result.ok).toBe(false);
+    expect(result).toMatchObject({ ok: false, written: true });
+    expect(result.errors).toHaveLength(1);
     expect(await readFile(output(dir), "utf8")).toBe(before);
     expect(await readdir(join(dir, ".openwiz"))).toEqual(filesBefore);
   });
@@ -460,7 +463,8 @@ describe("P1: a failed read keeps the last file", () => {
   it("a request that throws (no gh, no network) writes nothing on a first run", async () => {
     const dir = await home();
     const result = await runOnce({ home: dir, repositories, request: async () => { throw new Error("spawn gh ENOENT"); }, now: () => NOW });
-    expect(result).toEqual({ ok: false, calls: 1, error: "spawn gh ENOENT" });
+    // One try per repository, then each stops for the run.
+    expect(result).toMatchObject({ ok: false, calls: 2, written: false, errors: ["spawn gh ENOENT", "spawn gh ENOENT"] });
     await expect(readFile(output(dir), "utf8")).rejects.toThrow();
   });
 
