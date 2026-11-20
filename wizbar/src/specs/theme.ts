@@ -20,8 +20,11 @@ export const tokens = {
   rule: done(40, sidebar),
   /** The owner's "olive": done dots and done marks. */
   mutedAccent: done(55, sidebar),
-  /** "N done in the last hour": mixed toward the text, so it keeps 4.5:1 or better on the sidebar and the card, dark or light. */
-  doneNote: done(50, `var(--foreground, ${mutedText})`),
+  /**
+   * "N done in the last hour": mostly the host's text, a quarter done, so it keeps about two thirds of the text's own
+   * contrast on any sidebar or card, tinted too: 4.5:1 or better wherever the host text is 6.7:1 or better (#159 R1).
+   */
+  doneNote: done(25, `var(--foreground, ${mutedText})`),
   /** A ticket done in the last hour: a brighter done dot. */
   brightOlive: done(85, sidebar),
   /** Needs-you only. */

@@ -75,10 +75,13 @@ const quiet = { margin: 0, color: tokens.mutedText } as const;
 const list = { margin: 0, padding: 0, listStyle: "none" } as const;
 const oneLine = { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } as const;
 
-/** A harness's segment colour: host variables only (section 9). Claude Code a warm grey, the others muted text. */
+/**
+ * A harness's segment colour: host variables only (section 9), never the warning, which is needs-you's (#159 R2).
+ * Claude Code the host's text, the others muted text sunk into the card, so the two read apart on dark and light themes.
+ */
 const segmentColour = (providerId: string, index: number): string => providerId === "claude-code"
-  ? `color-mix(in oklch, ${tokens.warning} 55%, ${tokens.mutedText})`
-  : index % 2 === 0 ? tokens.mutedText : `color-mix(in oklch, ${tokens.mutedText} 60%, var(--card, #222222))`;
+  ? `var(--foreground, ${tokens.mutedText})`
+  : `color-mix(in oklab, ${tokens.mutedText} ${index % 2 === 0 ? 55 : 35}%, var(--card, #222222))`;
 
 /**
  * The round-5 card (section 7): the summary line, the harness split as one bar
