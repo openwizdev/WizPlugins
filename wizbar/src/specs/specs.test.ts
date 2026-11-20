@@ -34,7 +34,7 @@ describe("S1: spec rows, dots, last hour and needs you (section 2)", () => {
 
   // catches: hidden specs counted in the rule, or a need-you count that ignores visibility.
   it("writes the section rule from visible rows only", () => {
-    expect(sectionRule(v4SpecRows)).toBe("Specs 2 · 2 need you");
+    expect(sectionRule(v4SpecRows)).toBe("Specs 2 · 2 tickets need you (2 specs)");
     expect(sectionRule({ ...v4SpecRows, needsYou: 0, specs: [v4SpecRows.specs[0]!].map((s) => ({ ...s, needsYou: 0 })) })).toBe("Specs 1");
   });
 
@@ -42,7 +42,7 @@ describe("S1: spec rows, dots, last hour and needs you (section 2)", () => {
   it("counts later tickets apart from needs you, with their dots right after needs you", () => {
     const result = specRows(v4SpecsFileV2, v4Threads, readOpenKeys(v4OpenSetting), v4Now);
     expect(result).toEqual(v4SpecRowsV2);
-    expect(sectionRule(result)).toBe("Specs 2 · 2 need you");
+    expect(sectionRule(result)).toBe("Specs 2 · 2 tickets need you (2 specs)");
   });
 
   // catches: a fresh file with only finished specs shown as unavailable or with rows.
@@ -156,7 +156,7 @@ describe("WB4-6: missing fleet ids and failed running rows (sections 3 and 5)", 
 
   // catches: the CLI readers dropping the null parent or the failed queued work, so the CLI and the app disagree.
   it("wizbar specs --json and wizbar stats --json give the same", async () => {
-    expect(await cli(["specs"])).toEqual({ exitCode: 0, body: expectedRows });
+    expect(await cli(["specs"])).toEqual({ exitCode: 0, body: { ...expectedRows, needsYouSpecs: 2 } });
     expect(await cli(["stats"])).toEqual({ exitCode: 0, body: v4FleetIdStats });
   });
 
@@ -166,7 +166,7 @@ describe("WB4-6: missing fleet ids and failed running rows (sections 3 and 5)", 
     ["/synthetic/home", "/synthetic/home/.openwiz/specs.v1.json"],
     ["C:\\synthetic\\home", "C:\\synthetic\\home\\.openwiz\\specs.v1.json"],
   ])("through the real host's absolute-path rule, root %s reads %s as ready", async (rootPath, absolute) => {
-    expect(await cli(["specs"], rootPath)).toEqual({ exitCode: 0, body: expectedRows });
+    expect(await cli(["specs"], rootPath)).toEqual({ exitCode: 0, body: { ...expectedRows, needsYouSpecs: 2 } });
     // specs.v2.json first (missing here), then specs.v1.json (#164 R1).
     expect(read).toHaveBeenCalledTimes(2);
     expect(read.mock.calls[0]![0]).toMatchObject({ hostId: "hst_v4_home", rootPath, path: absolute.replace("specs.v1.json", "specs.v2.json") });
@@ -215,11 +215,11 @@ describe("#164 R1: either upgrade order", () => {
 
   // catches: a new WizBar that needs specs.v2.json, so an old producer's file shows Specs unavailable.
   it("an old producer (specs.v1.json only): the v1 rows", async () => {
-    expect(await specs({ v1 })).toEqual({ exitCode: 0, body: v4SpecRows });
+    expect(await specs({ v1 })).toEqual({ exitCode: 0, body: { ...v4SpecRows, needsYouSpecs: 2 } });
   });
   // catches: a new WizBar that still reads only specs.v1.json, so later never shows.
   it("a new producer (both files): the v2 rows, later apart", async () => {
-    expect(await specs({ v1, v2 })).toEqual({ exitCode: 0, body: v4SpecRowsV2 });
+    expect(await specs({ v1, v2 })).toEqual({ exitCode: 0, body: { ...v4SpecRowsV2, needsYouSpecs: 2 } });
   });
   // catches (#164 R3): after a producer rollback, an older specs.v2.json winning over a newer specs.v1.json until it goes stale.
   it("an older specs.v2.json loses to a newer specs.v1.json: a ticket now done shows done", async () => {
@@ -236,7 +236,7 @@ describe("#164 R1: either upgrade order", () => {
   // catches (#164 R3): equal or newer v2 times losing to v1, so later never shows from a current producer.
   it.each([["equal", 5, 5], ["newer", 2, 5]] as const)("a specs.v2.json %s to specs.v1.json wins", async (_name, v2Age, v1Age) => {
     const result = await specs({ v1: at(v1, v1Age), v2: at(v2, v2Age) });
-    expect(result).toEqual({ exitCode: 0, body: { ...v4SpecRowsV2, generatedAt: v4Now - v2Age * 60_000 } });
+    expect(result).toEqual({ exitCode: 0, body: { ...v4SpecRowsV2, generatedAt: v4Now - v2Age * 60_000, needsYouSpecs: 2 } });
   });
 
   // catches: a stale or broken specs.v2.json hiding a fresh specs.v1.json.
@@ -245,7 +245,7 @@ describe("#164 R1: either upgrade order", () => {
     ["malformed", "{\"schema\":"],
     ["of an unknown schema", v2.replace("openwiz.specs.v2", "openwiz.specs.v3")],
   ])("a specs.v2.json that is %s falls back to a fresh specs.v1.json", async (_name, text) => {
-    expect(await specs({ v1, v2: text })).toEqual({ exitCode: 0, body: v4SpecRows });
+    expect(await specs({ v1, v2: text })).toEqual({ exitCode: 0, body: { ...v4SpecRows, needsYouSpecs: 2 } });
   });
   // catches: unavailable files read as zero, or a reason from the wrong file.
   it.each([

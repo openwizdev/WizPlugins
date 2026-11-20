@@ -72,7 +72,7 @@ describe("wizbar specs (section 8)", () => {
       return contentRead(v4SpecsFileText)(args);
     };
     const cli = await setup({ read: v1Only });
-    expect(await cli.json(["specs"])).toEqual({ exitCode: 0, body: v4SpecRows });
+    expect(await cli.json(["specs"])).toEqual({ exitCode: 0, body: { ...v4SpecRows, needsYouSpecs: 2 } });
     expect(cli.read.mock.calls.map(([args]) => args)).toEqual([
       expect.objectContaining({ hostId: "hst_v4_home", rootPath: "/synthetic/home", path: "/synthetic/home/.openwiz/specs.v2.json" }),
       expect.objectContaining({ hostId: "hst_v4_home", rootPath: "/synthetic/home", path: "/synthetic/home/.openwiz/specs.v1.json" }),
@@ -83,7 +83,7 @@ describe("wizbar specs (section 8)", () => {
   it("prints the section as text", async () => {
     const cli = await setup();
     expect(await cli.run(["specs"])).toEqual({ exitCode: 0, stderr: "", stdout: [
-      "Specs 2 · 2 need you",
+      "Specs 2 · 2 tickets need you (2 specs)",
       "example/sample-plans#501 Sample palette: 4/10 · 1 done in the last hour · 1 needs you · 4 running",
       "example/sample-tools#77 Sample cache: 0/3 · 1 needs you",
       "",
@@ -93,13 +93,37 @@ describe("wizbar specs (section 8)", () => {
   // catches (#162): a v2 file refused, or its later tickets missing from the JSON, folded into needs you, or left out of the text.
   it("prints later tickets apart from needs you, in JSON and text", async () => {
     const cli = await setup({ text: v4SpecsFileV2Text });
-    expect(await cli.json(["specs"])).toEqual({ exitCode: 0, body: v4SpecRowsV2 });
+    expect(await cli.json(["specs"])).toEqual({ exitCode: 0, body: { ...v4SpecRowsV2, needsYouSpecs: 2 } });
     expect(await cli.run(["specs"])).toEqual({ exitCode: 0, stderr: "", stdout: [
-      "Specs 2 · 2 need you",
+      "Specs 2 · 2 tickets need you (2 specs)",
       "example/sample-plans#501 Sample palette: 4/11 · 1 done in the last hour · 1 needs you · 1 later · 4 running",
       "example/sample-tools#77 Sample cache: 0/3 · 1 needs you",
       "",
     ].join("\n") });
+  });
+
+  // catches (#161): a rule read as a count of specs, a wrong singular, or the JSON missing how many specs need you.
+  it.each([
+    ["one ticket in one spec", ["not-started"], "Specs 2 · 1 ticket needs you (1 spec)", 1, 1],
+    ["two tickets in one spec", ["needs-you"], "Specs 2 · 2 tickets need you (1 spec)", 2, 1],
+  ] as const)("words the rule for %s, and counts its specs in the JSON", async (_name, [palette79], rule, needsYou, needsYouSpecs) => {
+    const file = structuredClone(v4SpecsFile);
+    // The cache spec's needs-you ticket moves; the palette keeps its one (SP-4), and gains another for the second case.
+    file.specs[1]!.tickets.find((t) => t.code === "SH-1")!.state = "not-started";
+    file.specs[0]!.tickets.find((t) => t.code === "SP-5")!.state = palette79;
+    const cli = await setup({ text: JSON.stringify(file) });
+    expect((await cli.run(["specs"])).stdout.split("\n")[0]).toBe(rule);
+    const body = (await cli.json(["specs"])).body;
+    expect({ needsYou: body.needsYou, needsYouSpecs: body.needsYouSpecs }).toEqual({ needsYou, needsYouSpecs });
+  });
+
+  // catches (#161): a rule that says something after the count when nothing is due now, or a missing zero in the JSON.
+  it("says only Specs N when nothing is due now, with needsYouSpecs 0", async () => {
+    const file = structuredClone(v4SpecsFile);
+    for (const spec of file.specs) for (const ticket of spec.tickets) if (ticket.state === "needs-you") ticket.state = "not-started";
+    const cli = await setup({ text: JSON.stringify(file) });
+    expect((await cli.run(["specs"])).stdout.split("\n")[0]).toBe("Specs 2");
+    expect((await cli.json(["specs"])).body).toMatchObject({ needsYou: 0, needsYouSpecs: 0 });
   });
 
   // catches: an unavailable file shown as "Specs 0", in JSON or text.
