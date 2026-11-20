@@ -2,7 +2,7 @@
 // endpoints return that the producer reads, with synthetic owners, numbers and
 // titles. `fakeGitHub` serves them like GitHub: an ETag per page, 304 when the
 // caller sends the same ETag back, and a `next` page link.
-import type { GitHubRequest, GitHubResponse } from "./producer";
+import type { GitHubRequest, GitHubResponse } from "../producer";
 
 const API = "https://api.github.com";
 export const FLEET = "example/sample-fleet";
@@ -89,7 +89,8 @@ export function fakeGitHub(answers = recordedAnswers()) {
     const answer = answers.get(path);
     const served = `W/"${path.length}-${JSON.stringify(answer?.body ?? null).length}"`;
     let response: GitHubResponse;
-    if (fail?.path === path) response = { status: fail.status, etag: null, next: null, body: { message: "Server Error" } };
+    const failing = fail;
+    if (failing?.path === path) response = { status: failing.status, etag: null, next: null, body: { message: "Server Error" } };
     else if (!answer) response = { status: 404, etag: null, next: null, body: { message: "Not Found" } };
     // GitHub's 304 carries no body; the producer keeps the page and its link from the last 200.
     else if (etag === served) response = { status: 304, etag: served, next: null, body: null };

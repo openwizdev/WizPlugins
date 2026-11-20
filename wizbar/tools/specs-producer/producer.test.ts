@@ -7,7 +7,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { readSpecsFile } from "../../src/specs/read";
 import { runOnce, shortNameOf, ticketCodeOf } from "./producer";
-import { fakeGitHub, FLEET, TOOLS } from "./recorded";
+import { fakeGitHub, FLEET, TOOLS } from "./fixtures/recorded";
 
 const NOW = new Date("2026-11-20T12:00:00Z");
 const LATER = new Date("2026-11-20T12:10:00Z");
@@ -101,6 +101,23 @@ describe("P1: unchanged answers cost nothing", () => {
 });
 
 describe("P1: a failed read keeps the last file", () => {
+  // catches: a run with no request budget, which a repository with many specs could drain.
+  it("stops before 60 requests and writes nothing", async () => {
+    const dir = await home();
+    const many = new Map<string, { body: unknown }>([[`repos/${FLEET}/pulls?state=open&per_page=100`, { body: [] }]]);
+    const specs = Array.from({ length: 70 }, (_, i) => ({
+      number: 2000 + i, title: `spec: Sample ${i}`, state: "open", labels: [], repository_url: `https://api.github.com/repos/${FLEET}`,
+      sub_issues_summary: { total: 1 },
+    }));
+    many.set(`repos/${FLEET}/issues?state=open&per_page=100`, { body: specs });
+    for (const s of specs) many.set(`repos/${FLEET}/issues/${s.number}/sub_issues?per_page=100`, { body: [] });
+    const github = fakeGitHub(many);
+    expect(await runOnce({ home: dir, repositories: [FLEET], request: github.request, now: () => NOW }))
+      .toEqual({ ok: false, calls: 59, error: "over 59 requests in one run" });
+    expect(github.calls.length).toBe(59);
+    await expect(readFile(output(dir), "utf8")).rejects.toThrow();
+  });
+
   // catches: a partial file written mid-run, a temp file left behind, or an error page saved as data.
   it.each([
     ["a server error on the pull requests", (g: ReturnType<typeof fakeGitHub>) => g.failNext(`repos/${TOOLS}/pulls?state=open&per_page=100`)],
