@@ -2,7 +2,16 @@
 
 Writes `.openwiz/specs.v1.json` under your factory home, the file WizBar's Specs section reads ([contract section 1](../../contracts/specs-section.v1.md#1-the-specs-file)). It reads GitHub through your local `gh` login (REST only) and needs nothing else: Node 24 and `gh`, no packages.
 
-For each repository it reads the open issues (an issue with sub-issues is a running spec), each spec's sub-issues (its tickets) and the open pull requests. Each page is a conditional request with the ETag kept in `.openwiz/specs.v1.etags.json`, so an unchanged page costs nothing against your rate limit. A run makes at most 40 requests: ten specs take about 15. A bigger scan resumes on the next run: it reads pages never read first, then those read longest ago, and the pages it did not reach keep their last data, so the file stays fresh. The file is written whole and holds every repository whose scan has finished once (a very large first scan takes a few runs). Repositories never block each other: a failed read stops only its own repository for that run, its specs keep their last data, the others refresh and the file is written; the run then exits 1 and names the failure. A repository you remove from `--repo` is dropped from the file and the cache on the next run. A spec whose sub-issues answer 404 keeps its last data while the repository's issue list is read again from its first page, before anything else; a list longer than one run's budget resumes where the last run stopped. If the spec is gone it leaves the file; if it is still listed the run reports it and the spec keeps its last data. The file's `generatedAt` is the read time of the oldest page whose data is in it, so data that cannot be refreshed makes WizBar call the file stale after 30 minutes.
+Each run is one complete scan. For each repository it reads the open issues (an issue with sub-issues is a running spec) and the open pull requests, then each spec's sub-issues (its tickets). Each page is a conditional request with the ETag and the page kept in `.openwiz/specs.v1.etags.json`, so an unchanged page costs nothing against your rate limit. The file is written whole (temp file, then rename) with `generatedAt` the run's time, or not at all: any failed read, or a scan that would need more than 59 requests, writes nothing, keeps the last file and exits 1 naming the reason. A repository you remove from `--repo` is gone from the file and the cache after the next successful run.
+
+**Capacity.** A run makes at most 59 requests, one per page of 100:
+
+```text
+requests = for each repository: ⌈open issues and pull requests / 100⌉ + ⌈open pull requests / 100⌉
+         + for each spec:       ⌈its sub-issues / 100⌉
+```
+
+With one repository under 100 open issues and pull requests, and specs of up to 100 tickets, that is 2 + one per spec: **57 specs** fit (55 with two repositories). Ten specs in two repositories take 15 requests. A factory that outgrows this fails loudly with `the scan needs more than 59 requests`; it never writes part of a scan.
 
 | Field | From GitHub |
 | --- | --- |
