@@ -39,7 +39,7 @@ const fresh = () => v3Threads.map((thread) => ({ ...thread }));
 /** A new host snapshot: one row's revision moved on. */
 const changed = () => v3Threads.map((thread, i) => ({ ...thread, updatedAt: thread.updatedAt + (i === 0 ? 1 : 0) }));
 
-const { FooterCounter, useObservableRows } = await import("./FooterCounter");
+const { FOOTER_HOLD_MS, FooterCounter, useObservableRows } = await import("./FooterCounter");
 const { StatsPanel } = await import("./StatsPanel");
 // The card as the running line mounts it: over the plugin-wide rows reader.
 function Panel(_: { dismiss(): void }) {
@@ -83,6 +83,7 @@ describe("V3: footer stats panel", () => {
   // R1: snapshot validity is the plugin's, not one component's. The card
   // mounts only when it opens, after a gap the line observed.
   it("opens unavailable after a gap the list line saw, until a new snapshot arrives", async () => {
+    vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] });
     fixtureFeed.current = { status: "ready", threads: fresh() };
     const View = ({ open }: { open: boolean }) => createElement("div", null,
       createElement(FooterCounter), open ? createElement(Panel, props) : null);
@@ -90,6 +91,9 @@ describe("V3: footer stats panel", () => {
     expect(screen.getByRole("status", { name: "4 running" })).toBeDefined();
     await rendered.setRealtimeConnectionState("reconnecting");
     await rendered.setRealtimeConnectionState("connected");
+    // R1 (#172): the line holds its last count through a brief gap, then drops it.
+    expect(screen.getByRole("status", { name: "4 running" })).toBeDefined();
+    act(() => { vi.advanceTimersByTime(FOOTER_HOLD_MS); });
     rendered.rerender(createElement(View, { open: true }));
     expect(screen.queryByRole("status", { name: /running$/ })).toBeNull();
     expect(lines()[0]).toBe("Stats unavailable");

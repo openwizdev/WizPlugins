@@ -218,3 +218,43 @@ export function cardPinNext(state: CardStateV4, event: CardEventV4): CardStateV4
   if (state === "pinned") return "pinned";
   return event === "enter" || event === "focus" ? "hover" : "closed";
 }
+
+/** R1 (#172): how long a thread that stopped running stays on the open card, and the least time between removals. */
+export const CARD_BATCH_MS = 3_000;
+
+/** A card row; `leaving` marks a thread that stopped running and waits for its batch. */
+export type CardThread = FooterThreadV4 & { leaving?: true };
+export interface CardBatch {
+  threads: readonly CardThread[];
+  /** When each leaving thread was first seen gone. */
+  leftAt: ReadonlyMap<string, number>;
+  /** The last removal. */
+  removedAt: number;
+}
+export const emptyCardBatch: CardBatch = { threads: [], leftAt: new Map(), removedAt: -Infinity };
+
+/**
+ * The open card's rows (section 7, R1 #172): the running threads in their order, plus each thread that left
+ * since the last removal, faded in its old place. Leaving threads go together, at most once per
+ * `CARD_BATCH_MS`: once the first of them has been gone that long and that long has passed since the last
+ * removal. A thread back before then is never removed. `flushAt` is when to look again (null when none waits).
+ */
+export function cardBatch(prev: CardBatch, running: readonly FooterThreadV4[], now: number): { batch: CardBatch; flushAt: number | null } {
+  const ids = new Set(running.map((thread) => thread.id));
+  const leftAt = new Map<string, number>();
+  for (const thread of prev.threads) if (!ids.has(thread.id)) leftAt.set(thread.id, prev.leftAt.get(thread.id) ?? now);
+  let removedAt = prev.removedAt;
+  let flushAt = leftAt.size === 0 ? null : Math.max(Math.min(...leftAt.values()), removedAt) + CARD_BATCH_MS;
+  if (flushAt !== null && now >= flushAt) {
+    leftAt.clear();
+    removedAt = now;
+    flushAt = null;
+  }
+  const threads: CardThread[] = [...running];
+  let anchor: string | null = null;
+  for (const thread of prev.threads) {
+    if (leftAt.has(thread.id)) threads.splice(anchor === null ? 0 : threads.findIndex((t) => t.id === anchor) + 1, 0, { ...thread, leaving: true });
+    if (leftAt.has(thread.id) || ids.has(thread.id)) anchor = thread.id;
+  }
+  return { batch: { threads, leftAt, removedAt }, flushAt };
+}

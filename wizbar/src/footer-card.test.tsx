@@ -11,7 +11,7 @@ import {
   v4CardPinCases, v4Now, v4OpenSetting, v4RealTitlesFile, v4RealTitleThreads, v4SpecRows, v4SpecsFile, v4SpecsFileText, v4Stats, v4Threads,
   v4TimeZone, type StatsV4,
 } from "./fixtures/v4";
-import { cardPinNext, cardRowLabel, cardRowLabels, cardSummary, computeStatsV4, formatStatsText } from "./stats";
+import { cardBatch, cardPinNext, cardRowLabel, cardRowLabels, cardSummary, computeStatsV4, emptyCardBatch, formatStatsText } from "./stats";
 import { createSpecsCommands } from "./specs/cli";
 
 // R1 (#172): a live host feed. While set, the sidebar hook reads these rows and re-renders when they change,
@@ -447,6 +447,17 @@ describe("R1 (#172): the open card updates in place, with no flashing", () => {
     expect(rowNode("thr_v4_builder_a")).not.toBeNull();
   });
 
+  // catches: a leaving row that jumps to the end or the top of the list, so the rows below it shift twice.
+  it("keeps a leaving thread in its old place until its batch goes", () => {
+    const row = (id: string) => ({ ...ready.threads[0]!, id });
+    const first = cardBatch(emptyCardBatch, [row("a"), row("b"), row("c")], 0).batch;
+    const order = (running: string[]) => cardBatch(first, running.map(row), 1000);
+    expect(order(["a", "c"]).batch.threads.map((t) => [t.id, t.leaving ?? false])).toEqual([["a", false], ["b", true], ["c", false]]);
+    expect(order(["b", "c"]).batch.threads.map((t) => [t.id, t.leaving ?? false])).toEqual([["a", true], ["b", false], ["c", false]]);
+    expect(order(["a", "c"]).flushAt).toBe(4000);
+    expect(cardBatch(order(["a", "c"]).batch, [row("a"), row("c")], 4000)).toMatchObject({ flushAt: null, batch: { removedAt: 4000 } });
+  });
+
   // catches (b): a brief source gap that unmounts the footer and closes a pinned card, or old numbers kept
   // as current: past a few seconds the count is marked last known, and closing the card hides it.
   it("keeps the last card through a brief source gap, then marks it last known", async () => {
@@ -469,7 +480,7 @@ describe("R1 (#172): the open card updates in place, with no flashing", () => {
     expect(card()).toBe(section);
     expect(count.getAttribute("data-stale")).toBe("true");
     expect(count.getAttribute("aria-label")).toBe("9 running, last known");
-    fireEvent.keyDown(trigger(), { key: "Escape" });
+    fireEvent.keyDown(within(count).getByRole("button"), { key: "Escape" });
     expect(screen.queryByRole("status")).toBeNull();
     await act(() => rendered.setRealtimeConnectionState("connected"));
     await push(snapshot(["thr_v4_code_a"]));

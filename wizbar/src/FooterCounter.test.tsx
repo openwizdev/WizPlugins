@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { createElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen } from "@testing-library/react";
 import type { PluginSidebarThreadsState } from "@get-bb/plugin-sdk";
 import { loadPluginApp, renderSlot } from "@get-bb/plugin-sdk/testing/app";
 import { getSourceStatuses } from "./settings";
@@ -23,11 +23,14 @@ vi.mock("@get-bb/plugin-sdk/app", async (importOriginal) => {
 });
 
 const app = await loadPluginApp(() => import("../app"));
-const { FooterCounter, FooterCounterArtwork } = await import("./FooterCounter");
+const { FOOTER_HOLD_MS, FooterCounter, FooterCounterArtwork } = await import("./FooterCounter");
 const line = { component: FooterCounter };
 const candidate = { component: FooterCounterArtwork };
 const empty = { complete: true, threads: [], subagentsByThread: new Map<string, number>() };
-afterEach(() => { cleanup(); vi.restoreAllMocks(); fixtureFeed.current = null; });
+afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.useRealTimers(); fixtureFeed.current = null; });
+/** R1 (#172): a source gap holds the last count; past the hold, with the card closed, it is dropped. */
+const outlastHold = () => act(() => { vi.advanceTimersByTime(FOOTER_HOLD_MS); });
+const fakeTimers = () => vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] });
 
 describe("W3: synthetic footer artwork through the SDK rendering harness", () => {
   // WB4-3 (#1437): the spinner is now a matrix mark, idle at zero.
@@ -38,14 +41,17 @@ describe("W3: synthetic footer artwork through the SDK rendering harness", () =>
     expect(counter.style.color).toBe("var(--muted-foreground, #b7b7b7)");
     expect(counter.querySelector("[data-matrix]")?.getAttribute("data-matrix")).toBe("idle");
   });
-  it("updates from five to zero and clears old numbers when inputs become unknown", () => {
+  it("updates from five to zero and clears old numbers once unknown inputs outlast the hold", () => {
+    fakeTimers();
     const rendered = renderSlot(candidate, { source: positiveSource });
     rendered.rerender(<FooterCounterArtwork source={empty} />);
     expect(screen.getByRole("status", { name: "0 running" })).toBeDefined();
     for (const source of [null, { ...positiveSource, complete: false }, { ...positiveSource, subagentsByThread: null }]) {
       rendered.rerender(<FooterCounterArtwork source={source} />);
-      expect(screen.queryByRole("status")).toBeNull();
+      expect(screen.getByRole("status", { name: "0 running" }), "held through a brief gap").toBeDefined();
     }
+    outlastHold();
+    expect(screen.queryByRole("status")).toBeNull();
     rendered.rerender(<FooterCounterArtwork source={positiveSource} />);
     expect(screen.getByRole("status", { name: "5 running" })).toBeDefined();
   });
@@ -132,9 +138,13 @@ describe("N4: approved observable footer route", () => {
       }) : createElement(icon.component);
     fixtureFeed.current = { status: "ready", threads: [...positiveThreads] };
     const pluginId = `synthetic-updating-footer-${view}`;
+    fakeTimers();
     const rendered = renderSlot({ component: View }, {}, { pluginId, rpc: { listLifecycle: () => ({ rows: [] }) } });
     expect(screen.getByRole("status", { name: "2 running" })).toBeDefined();
     await rendered.setRealtimeConnectionState("reconnecting");
+    expect(screen.getByRole("status", { name: "2 running" }), "held through a brief gap").toBeDefined();
+    expect(getSourceStatuses(pluginId).footer).toBe("unavailable");
+    outlastHold();
     expect(screen.queryByRole("status", { name: /^\d+ running$/ })).toBeNull();
     await rendered.setRealtimeConnectionState("connected");
     expect(screen.queryByRole("status", { name: /^\d+ running$/ }), "reconnect alone cannot certify the old cache").toBeNull();
@@ -145,6 +155,7 @@ describe("N4: approved observable footer route", () => {
     expect(getSourceStatuses(pluginId).footer).toBe("unverified");
     fixtureFeed.current = { ...fixtureFeed.current, status: "error" };
     rendered.rerender(createElement(View));
+    outlastHold();
     expect(screen.queryByRole("status", { name: /^\d+ running$/ })).toBeNull();
     fixtureFeed.current = { ...fixtureFeed.current, status: "ready" };
     rendered.rerender(createElement(View));
@@ -157,6 +168,7 @@ describe("N4: approved observable footer route", () => {
 
   // WB4-3 (#1437): the thread-only tooltip is now the hover card (footer-card.test.tsx).
   it("updates observable artwork to dim zero and hides it on failure", () => {
+    fakeTimers();
     const valid = readRunningSource({ status: "ready", threads: positiveThreads }, "connected");
     const rendered = renderSlot(candidate, { source: valid });
     const empty = readRunningSource({ status: "ready", threads: [] }, "connected");
@@ -165,6 +177,7 @@ describe("N4: approved observable footer route", () => {
     expect(zero.style.color).toBe("var(--muted-foreground, #b7b7b7)");
     expect(zero.querySelector("[data-matrix]")?.getAttribute("data-matrix")).toBe("idle");
     rendered.rerender(<FooterCounterArtwork source={readRunningSource({ status: "error", threads: positiveThreads }, "connected")} />);
+    outlastHold();
     expect(screen.queryByRole("status")).toBeNull();
     rendered.rerender(<FooterCounterArtwork source={valid} />);
     expect(screen.getByRole("status", { name: "2 running" })).toBeDefined();

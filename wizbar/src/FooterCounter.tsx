@@ -1,6 +1,6 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useReducer, useRef, useState, type ReactNode } from "react";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk";
-import { countRunning, type ObservableRunningSource, type RunningCountSource } from "./running-count";
+import { countRunning, type ObservableRunningSource, type RunningCount, type RunningCountSource } from "./running-count";
 import { cardPinNext, isRunning, readSidebarRows, type SidebarRowsStatus } from "./stats";
 import type { CardEventV4, CardStateV4 } from "./fixtures/v4";
 import { MatrixMark } from "./MatrixMark";
@@ -59,8 +59,15 @@ export function FooterCounter({ className }: { className?: string }) {
     ? { ...base, status, threads: rows.map((t) => ({ id: t.id, projectId: t.projectId, parentThreadId: t.parentThreadId, isWorking: isRunning(t) })) }
     : { ...base, status: status === "ready" ? "incomplete" : status, threads: null };
   useFeatureSourceStatus("footer", source.status === "ready" ? "unverified" : "unavailable");
-  return <FooterCounterArtwork className={className} source={source} card={() => <StatsPanel rows={rows} />} />;
+  // R1 (#172): through a gap the card keeps the last ready rows; the artwork decides how long it shows them.
+  const held = useRef<readonly PluginSidebarThread[] | null>(null);
+  if (rows && status === "ready") held.current = rows;
+  const cardRows = rows ?? held.current;
+  return <FooterCounterArtwork className={className} source={source} card={(stale) => <StatsPanel rows={cardRows} stale={stale} />} />;
 }
+
+/** R1 (#172): how long a source gap shows the last known count unmarked; past it, only an open card keeps it. */
+export const FOOTER_HOLD_MS = 5_000;
 
 const CARD_GAP = 6;
 const CARD_MARGIN = 8;
@@ -69,23 +76,41 @@ const CARD_MARGIN = 8;
  * "N running" (specs-section.v1.md section 7): threads only, with a matrix
  * mark and the visible word. The card fills the sidebar, inset 8 px. Hover or focus opens the card; a click (Enter or Space) pins it and
  * another unpins it; Escape closes it. Synthetic inputs are not host proof.
+ * R1 (#172): a gap in the source keeps the last known count, and an open card, in place: unmarked for
+ * `FOOTER_HOLD_MS`, then marked last known while the card stays open, and hidden once it is closed.
  */
 export function FooterCounterArtwork({ source, className, card }: {
   source: RunningCountSource | null;
   className?: string;
-  card?: () => ReactNode;
+  card?: (stale: boolean) => ReactNode;
 }) {
   const { footerCountEnabled } = useWizBarSettings();
-  const count = countRunning(source);
+  const live = countRunning(source);
+  const last = useRef<RunningCount | null>(null);
+  const gapSince = useRef<number | null>(null);
+  if (live) {
+    last.current = live;
+    gapSince.current = null;
+  } else if (gapSince.current === null && last.current) gapSince.current = Date.now();
+  const count = live ?? (gapSince.current === null ? null : last.current);
+  const stale = live === null && gapSince.current !== null && Date.now() - gapSince.current >= FOOTER_HOLD_MS;
+  const [, wake] = useReducer((n: number) => n + 1, 0);
+  const staleAt = live === null && !stale ? gapSince.current : null;
+  useEffect(() => {
+    if (staleAt === null) return;
+    const timer = setTimeout(wake, Math.max(0, staleAt + FOOTER_HOLD_MS - Date.now()));
+    return () => clearTimeout(timer);
+  }, [staleAt]);
   const [state, setState] = useState<CardStateV4>("closed");
   const send = (event: CardEventV4) => setState((current) => cardPinNext(current, event));
-  const unavailable = count === null;
+  const cardOpen = state !== "closed" && card !== undefined;
+  const shown = footerCountEnabled && count !== null && (!stale || cardOpen);
   useEffect(() => {
-    if (unavailable) setState("closed");
-  }, [unavailable]);
+    if (!shown) setState("closed");
+  }, [shown]);
   const wrapper = useRef<HTMLDivElement>(null);
   const [room, setRoom] = useState<number | null>(null);
-  const open = state !== "closed" && card !== undefined && footerCountEnabled && count !== null;
+  const open = cardOpen && shown;
   // The card may use the space above the trigger, less a margin, and its list scrolls.
   useLayoutEffect(() => {
     if (!open) return;
@@ -94,17 +119,18 @@ export function FooterCounterArtwork({ source, className, card }: {
     window.addEventListener("resize", measure);
     return () => window.removeEventListener("resize", measure);
   }, [open]);
-  if (!footerCountEnabled || count === null) return null;
+  if (!shown || count === null) return null;
+  const label = `${count.total} running${stale ? ", last known" : ""}`;
   return (
     <div ref={wrapper} className={className} style={{ position: "relative" }}
       onPointerEnter={() => send("enter")} onPointerLeave={() => send("leave")} onFocus={() => send("focus")}
       onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) send("blur"); }}
       onKeyDown={(event) => { if (event.key === "Escape") send("escape"); }}>
-      <span role="status" aria-label={`${count.total} running`} aria-live="polite" style={{
+      <span role="status" aria-label={label} aria-live="polite" data-stale={stale ? "true" : undefined} style={{
         display: "inline-flex", fontSize: 12, fontVariantNumeric: "tabular-nums", lineHeight: "20px",
-        color: count.total === 0 ? "var(--muted-foreground, #b7b7b7)" : "var(--foreground)",
+        color: count.total === 0 || stale ? "var(--muted-foreground, #b7b7b7)" : "var(--foreground)",
       }}>
-        <span role="button" tabIndex={0} aria-label={`${count.total} running`} aria-pressed={state === "pinned"} aria-expanded={open}
+        <span role="button" tabIndex={0} aria-label={label} aria-pressed={state === "pinned"} aria-expanded={open}
           style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer" }}
           onClick={() => send("click")}
           onKeyDown={(event) => {
@@ -123,7 +149,7 @@ export function FooterCounterArtwork({ source, className, card }: {
           position: "absolute", bottom: "100%", left: 8, right: 8, zIndex: 50, paddingBottom: CARD_GAP, boxSizing: "border-box",
           display: "flex", flexDirection: "column", maxHeight: room === null ? `calc(100vh - ${CARD_MARGIN}px)` : `${room}px`,
         }}>
-          {card()}
+          {card(stale)}
         </div>
       ) : null}
     </div>
