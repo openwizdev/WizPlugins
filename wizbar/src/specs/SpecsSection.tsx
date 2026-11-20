@@ -214,7 +214,7 @@ const dotStyle: Record<DotStateV4, CSSProperties> = {
   done: { background: tokens.mutedAccent },
   "done-recent": { background: tokens.brightOlive },
   building: ring(tokens.mutedText),
-  review: ring(tokens.accent),
+  review: ring(tokens.mutedText),
   "needs-you": { background: tokens.warning },
   held: ring(tokens.quietRing),
   "not-started": { background: tokens.border },
