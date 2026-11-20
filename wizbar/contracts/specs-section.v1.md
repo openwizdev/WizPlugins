@@ -83,9 +83,11 @@ One row per visible spec, in file order (`SpecRowV4`). All counts are over the s
 
 **Text.** `N done in the last hour` appears only when `doneLastHour > 0`; `K needs you` (amber) only when `needsYou > 0`; done/total is `<done>/<total>`.
 
+**Layout (display only, 0.5.0 C, #112).** A spec row leads with a chevron (`›` closed, `⌄` open) only when the spec has agents, and a placeholder of the same width otherwise, so names line up. The name sits on the left; on the right come `K needs you`, then `N done in the last hour`, then done/total. The dots sit on the line below. An open spec and its agents sit in one raised panel (the card colour, rounded corners). An agent row's first line is its matrix mark, its title with `Role · CODE:` dimmed and the task in the foreground colour, and its age on the right; its second line is quiet: the harness logo (its display name as the logo's label), then the shared model label, omitted when unknown.
+
 **Hidden.** A spec is hidden when `total === 0` or `done === total` (finished). A hidden spec has no row and counts nowhere, in the UI and the CLI.
 
-**Section rule.** `Specs N` where N is the number of visible rows, then ` · M need you` when M (the sum of `needsYou` over visible rows) is over zero.
+**Section rule.** `Specs N` where N is the number of visible rows, then ` · M need you` when M (the sum of `needsYou` over visible rows) is over zero. On screen (0.5.0 C) the count is faint, ` · M need you` is in the warning colour, and an olive rule line follows.
 
 ## 3. Matching running threads to a spec
 
@@ -234,8 +236,12 @@ WizBar matches the host's theme, not the Ember map palette. Every colour is a ho
 | muted text | `--muted-foreground` | `#b7b7b7` | bb-app 0.37.0 dark `--muted-foreground` (`oklch(78% 0 0)`) |
 | destructive | `--destructive` | none | — |
 
-- **Muted accent** (the owner's "olive"): `color-mix(in oklch, var(--primary, #c0ff04) 45%, var(--sidebar, #161616))`. It colours section rules and "N done in the last hour".
-- **Dots:** `done` muted accent, filled; `done-recent` muted accent with a 1 px accent ring; `building` accent, filled; `review` hollow, a 1 px accent ring; `needs-you` warning, filled; `held` hollow, a 1 px muted-text ring; `not-started` border, filled. "K needs you" uses warning text.
+- **Muted accent** (the owner's "olive"): `color-mix(in oklch, var(--primary, #c0ff04) 60%, var(--sidebar, #161616))`, raised from 45% in 0.5.0 (#112) so "N done in the last hour" reads clearly on `#161616` (about 5.5:1 with the fallbacks). It colours "N done in the last hour", `done` dots and done marks.
+- **Rule line:** `color-mix(in oklch, var(--primary, #c0ff04) 40%, var(--sidebar, #161616))`, a quieter olive for the line beside a section's name (`tokens.rule`).
+- **Bright olive:** `color-mix(in oklch, var(--primary, #c0ff04) 85%, var(--sidebar, #161616))`, for `done-recent` dots.
+- **Quiet ring:** `color-mix(in oklch, var(--muted-foreground, #b7b7b7) 45%, var(--sidebar, #161616))`, a grey ring for `held` dots.
+- **Dots:** `done` muted accent, filled; `done-recent` bright olive, filled; `building` hollow, a 1 px accent ring that pulses (still under reduced motion); `review` hollow, a 1 px accent ring; `needs-you` warning, filled; `held` hollow, a 1 px quiet ring; `not-started` border, filled. "K needs you" uses warning text.
+- **Open-spec panel:** the card variable, `var(--card, #222222)`.
 - **Accent variable: Unverified.** Which host variable carries the owner's lime is not declared anywhere; `--primary` is this contract's choice. WB4-4 reads the owner's theme; if the lime is another variable, a contract revision swaps that one row.
 - **The check.** `src/fixtures/v4-fixtures.test.ts` (run by `npm test`, so by `wizbar-checks`) fails on any hard-coded colour in WizBar's non-test source (`*.ts`, `*.tsx`, `*.css` under `wizbar/`, except `node_modules/` and `src/fixtures/`). A hard-coded colour is a hex literal, a colour function (`rgb`, `rgba`, `hsl`, `hsla`, `hwb`, `lab`, `lch`, `oklab`, `oklch`, `color`), a Tailwind palette class (`text-amber-500`, `bg-black`), an arbitrary colour class (`bg-[#…]`), or a colour keyword as a style value, JSX colour attribute (`fill="red"`) or CSS declaration (`color: red;`); `transparent`, `currentColor`, `inherit`, `initial`, `unset` and `none` are not colours. The only literals it passes are `var(<variable>, <fallback>)` exactly as in the table; there are no exceptions. Comments are ignored. An arbitrary class holding a keyword (`text-[red]`), side and offset prefixes (`border-x-black`, `ring-offset-white`) and every `*Color` style key (`borderTopColor`) count too.
 - **Pre-0.4 colours moved to host variables** (F4 ruling on openwizdev/OpenWiz#1434): the per-thread disc in `src/Disc.tsx` mixes the accent into muted text by the thread's hash (`color-mix(in oklch, var(--primary, #c0ff04) <35–94>%, var(--muted-foreground, #b7b7b7))`), and WizDeck's `LIME` in `src/deck/home/sections.tsx` is the accent, `var(--primary, #c0ff04)`. WizDeck's progress track keeps `var(--muted, #3a3a3d)`, the `--muted` row's fallback.

@@ -2,7 +2,9 @@
 // sections 2 to 4 and 9. Under the 0.3 thread list: the rule
 // `Specs N · M need you` and one row per running spec, collapsed until
 // clicked, its open state kept per spec in plugin settings. Rows come from
-// `specRows`, the same computation `wizbar specs` prints.
+// `specRows`, the same computation `wizbar specs` prints. The round-5 look
+// (0.5 C, #112): a leading chevron, notes on the right, dots below, and an
+// open spec raised into one card panel with its agents.
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import {
   experimental_usePluginId,
@@ -14,13 +16,12 @@ import {
 } from "@get-bb/plugin-sdk/app";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { GithubIcon } from "@hugeicons/core-free-icons";
-import { Icon } from "../components/Icon";
 import { cn } from "../lib/utils";
 import { TRAILING_GLYPH_BOX_CLASS } from "../StatusSlot";
 import type { DotStateV4, SpecRowV4, SpecsFileReadV4 } from "../fixtures/v4";
 import { effectiveOpen, readOpenKeys, withOpen } from "./open-state";
 import { boundHome, readSpecsFile } from "./read";
-import { sectionRule, specRows } from "./rows";
+import { specRows } from "./rows";
 import type { specsRpcContract } from "./server";
 import { tokens } from "./theme";
 import { AgentRow } from "./AgentRow";
@@ -111,11 +112,15 @@ export function SpecsSection({ threads, now, activeThreadId, onNavigate }: Specs
   const byId = new Map(threads.map((thread) => [thread.id, thread]));
   return (
     <section aria-label="Specs">
-      <h2 className="flex items-center gap-2 px-2.5 pb-1 pt-3">
-        <span className="text-2xs font-medium text-muted-foreground/70">
-          {view === "unavailable" ? "Specs unavailable" : sectionRule(view)}
-        </span>
-        <span className="h-px flex-1" style={{ background: tokens.mutedAccent }} />
+      <h2 className="flex items-center gap-2 px-2.5 pb-1 pt-3 text-2xs font-medium">
+        {view === "unavailable" ? <span className="text-muted-foreground">Specs unavailable</span> : (
+          <span>
+            <span className="text-muted-foreground">Specs</span>{" "}
+            <span className="font-normal tabular-nums text-muted-foreground/60">{view.specs.length}</span>
+            {view.needsYou > 0 ? <>{" "}<span style={{ color: tokens.warning }}>· {view.needsYou} need you</span></> : null}
+          </span>
+        )}
+        <span data-rule-line="" className="h-px flex-1" style={{ background: tokens.rule }} />
       </h2>
       {failed ? <p role="status" className="px-2.5 text-xs text-muted-foreground">Could not save the open spec. Try again.</p> : null}
       {view === "unavailable" ? null : (
@@ -146,39 +151,54 @@ function SpecRow({ row, threads, now, activeThreadId, onNavigate, onToggle }: {
   const revealed = hover || focusWithin;
   const canOpen = row.agents.length > 0;
   const open = effectiveOpen(row);
-  const name = (
-    <span className="flex min-w-0 flex-1 items-baseline gap-1.5">
-      <span data-spec-name="" className="truncate text-foreground">{row.shortName}</span>
-      {row.needsYou > 0 ? <span data-needs-you="" className="shrink-0" style={{ color: tokens.warning }}>{row.needsYou} needs you</span> : null}
-      {row.doneLastHour > 0 ? <span data-done-last-hour="" className="shrink-0" style={{ color: tokens.mutedAccent }}>{row.doneLastHour} done in the last hour</span> : null}
+  // The lead is the chevron, or a same-width placeholder, so every name starts at the same x.
+  const lead = (
+    <span data-chevron={canOpen ? (open ? "open" : "closed") : "none"} aria-hidden
+      className="flex size-2.5 shrink-0 items-center justify-center text-muted-foreground/70">
+      {canOpen ? (
+        <svg viewBox="0 0 10 10" className={cn("size-2.5", open && "rotate-90")} fill="none" stroke="currentColor" strokeWidth={1.6}>
+          <path d="M3.5 1.5 7 5l-3.5 3.5" />
+        </svg>
+      ) : null}
     </span>
   );
+  const name = <span data-spec-name="" className="min-w-0 flex-1 truncate text-[13px] text-foreground">{row.shortName}</span>;
+  const notes = (
+    <>
+      {row.needsYou > 0 ? <span data-needs-you="" className="shrink-0 text-[11.5px]" style={{ color: tokens.warning }}>{row.needsYou} needs you</span> : null}
+      {row.doneLastHour > 0 ? <span data-done-last-hour="" className="shrink-0 text-[11.5px]" style={{ color: tokens.mutedAccent }}>{row.doneLastHour} done in the last hour</span> : null}
+    </>
+  );
   return (
-    <li data-spec={row.spec} className="list-none rounded-md px-2.5 py-1 text-xs hover:bg-sidebar-accent/60"
+    <li data-spec={row.spec} className={cn("list-none text-xs", open && "my-0.5 rounded-lg pb-1")}
+      style={open ? { background: tokens.card } : undefined}
       onPointerEnter={() => setHover(true)} onPointerLeave={() => setHover(false)}
       onFocus={() => setFocusWithin(true)}
       onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setFocusWithin(false); }}>
-      <div className="flex items-center gap-2">
-        {canOpen ? (
-          <button type="button" aria-expanded={open} aria-label={`${open ? "Close" : "Open"} ${row.shortName}`}
-            onClick={onToggle} className="flex min-w-0 flex-1 items-center gap-1.5 text-left">
-            {name}
-            <Icon name="ChevronDown" className={cn("size-3 shrink-0 text-muted-foreground/70 transition-transform", open && "rotate-180")} />
-          </button>
-        ) : name}
-        <span className={cn(TRAILING_GLYPH_BOX_CLASS, "w-auto min-w-6 justify-end")}>
-          {/* Always in the tab order, so a row with no chevron can still reach GitHub; shown on hover or focus. */}
-          <button type="button" aria-label={`Open ${row.shortName} on GitHub`}
-            className={cn("text-muted-foreground hover:text-foreground", !revealed && "sr-only")}
-            onClick={() => navigate.openUrl(row.url)}>
-            <HugeiconsIcon icon={GithubIcon} className="size-3.5" />
-          </button>
-          {revealed ? null : <span data-done-total="" className="tabular-nums text-muted-foreground">{row.done}/{row.total}</span>}
-        </span>
+      <div className="rounded-lg px-2.5 py-[5px] hover:bg-sidebar-accent/60">
+        <div data-spec-line="" className="flex items-center gap-2">
+          {canOpen ? (
+            <button type="button" aria-expanded={open} aria-label={`${open ? "Close" : "Open"} ${row.shortName}`}
+              onClick={onToggle} className="flex min-w-0 flex-1 items-center gap-2 text-left">
+              {lead}
+              {name}
+              {notes}
+            </button>
+          ) : <>{lead}{name}{notes}</>}
+          <span className={cn(TRAILING_GLYPH_BOX_CLASS, "w-auto min-w-8 justify-end")}>
+            {/* Always in the tab order, so a row with no chevron can still reach GitHub; shown on hover or focus. */}
+            <button type="button" aria-label={`Open ${row.shortName} on GitHub`}
+              className={cn("text-muted-foreground hover:text-foreground", !revealed && "sr-only")}
+              onClick={() => navigate.openUrl(row.url)}>
+              <HugeiconsIcon icon={GithubIcon} className="size-3.5" />
+            </button>
+            {revealed ? null : <span data-done-total="" className="tabular-nums text-muted-foreground">{row.done}/{row.total}</span>}
+          </span>
+        </div>
+        <Dots row={row} />
       </div>
-      <Dots row={row} />
       {open ? (
-        <ul aria-label={`${row.shortName} agents`} className="mt-1 flex flex-col gap-px">
+        <ul aria-label={`${row.shortName} agents`} className="flex flex-col gap-px">
           {row.agents.map((agent) => (
             <AgentRow key={agent.threadId} agent={agent} thread={threads.get(agent.threadId)} now={now}
               isActive={agent.threadId === activeThreadId} onNavigate={onNavigate} />
@@ -189,13 +209,14 @@ function SpecRow({ row, threads, now, activeThreadId, onNavigate, onToggle }: {
   );
 }
 
+const ring = (colour: string): CSSProperties => ({ boxShadow: `inset 0 0 0 1px ${colour}` });
 const dotStyle: Record<DotStateV4, CSSProperties> = {
   done: { background: tokens.mutedAccent },
-  "done-recent": { background: tokens.mutedAccent, boxShadow: `0 0 0 1px ${tokens.accent}` },
-  building: { background: tokens.accent },
-  review: { boxShadow: `inset 0 0 0 1px ${tokens.accent}` },
+  "done-recent": { background: tokens.brightOlive },
+  building: ring(tokens.accent),
+  review: ring(tokens.accent),
   "needs-you": { background: tokens.warning },
-  held: { boxShadow: `inset 0 0 0 1px ${tokens.mutedText}` },
+  held: ring(tokens.quietRing),
   "not-started": { background: tokens.border },
 };
 const dotWords: Record<DotStateV4, string> = {
@@ -209,9 +230,10 @@ function Dots({ row }: { row: SpecRowV4 }) {
   for (const dot of row.dots) counts.set(dot.state, (counts.get(dot.state) ?? 0) + 1);
   const label = `${row.total} tickets: ${[...counts].map(([state, count]) => `${count} ${dotWords[state]}`).join(", ")}`;
   return (
-    <span role="img" aria-label={label} className="mt-1 flex flex-wrap gap-1">
+    <span role="img" aria-label={label} className="mt-[5px] flex flex-wrap gap-[3px]">
       {row.dots.map((dot) => (
-        <span key={dot.ticket} data-dot-state={dot.state} className="size-1.5 rounded-full" style={dotStyle[dot.state]} />
+        <span key={dot.ticket} data-dot-state={dot.state}
+          className={cn("size-[5px] rounded-full", dot.state === "building" && "motion-safe:animate-pulse")} style={dotStyle[dot.state]} />
       ))}
     </span>
   );
