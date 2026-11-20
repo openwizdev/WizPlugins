@@ -1,7 +1,7 @@
 // The specs producer (openwizdev/WizPlugins#110): writes `.openwiz/specs.v1.json`
 // under the bound factory home, in the format of specs-section.v1.md section 1,
 // from GitHub's REST API through the local `gh` login. Node's standard library
-// only; run it with Node 24 (`node producer.ts --home <dir> --repo <owner/name>`).
+// only; run it with Node 24 (`node producer.ts --home <dir> --repo <owner/name> [--gh <path>]`).
 //
 // Each run is one complete scan (the #110 decision after review R7): per
 // repository the open issues (specs are those with sub-issues) and open pull
@@ -20,7 +20,8 @@ export interface GitHubResponse { status: number; etag: string | null; next: str
 /** One REST read of `path` (relative to the API root), conditional when `etag` is not null. */
 export type GitHubRequest = (path: string, etag: string | null) => Promise<GitHubResponse>;
 /** A run either wrote the whole file, or wrote nothing and says why. */
-export type RunResult = { ok: true; calls: number; specs: number } | { ok: false; calls: number; error: string };
+/** `unchanged`: requests GitHub answered 304. They count toward `BUDGET`, not toward GitHub's rate limit. */
+export type RunResult = { ok: true; calls: number; specs: number; unchanged: number } | { ok: false; calls: number; error: string };
 
 export const OUTPUT = join(".openwiz", "specs.v1.json");
 export const CACHE = join(".openwiz", "specs.v1.etags.json");
@@ -131,6 +132,7 @@ function ticketOf(issue: Record<string, unknown>, repository: string, pulls: Pul
 /** One run's reads: every page through `request`, conditional on the last run's ETag, counted against the budget. */
 class Reader {
   calls = 0;
+  unchanged = 0;
   readonly pages: Record<string, CacheEntry> = {};
   readonly request: GitHubRequest;
   readonly cached: Record<string, CacheEntry>;
@@ -149,7 +151,7 @@ class Reader {
       const cached = this.cached[page];
       const response = await this.request(page, cached?.etag || null);
       let entry: CacheEntry;
-      if (response.status === 304 && cached) entry = cached;
+      if (response.status === 304 && cached) { entry = cached; this.unchanged += 1; }
       else if (response.status === 200) {
         if (!Array.isArray(response.body)) throw new ReadFailed(`GitHub answered something other than a list for ${page}`);
         entry = { etag: response.etag ?? "", next: response.next, body: response.body.map(slim) };
@@ -212,17 +214,25 @@ export async function runOnce(options: { home: string; repositories: readonly st
     await mkdir(join(options.home, ".openwiz"), { recursive: true });
     await writeAtomically(join(options.home, OUTPUT), `${JSON.stringify({ schema: "openwiz.specs.v1", generatedAt, specs }, null, 2)}\n`);
     await writeAtomically(cachePath, JSON.stringify({ version: 3, pages: reader.pages } satisfies Cache));
-    return { ok: true, calls: reader.calls, specs: specs.length };
+    return { ok: true, calls: reader.calls, specs: specs.length, unchanged: reader.unchanged };
   } catch (error) {
     return { ok: false, calls: reader.calls, error: error instanceof Error ? error.message : String(error) };
   }
 }
 
-/** The real request: `gh api --include`, which exits non-zero on a 304 but still prints the status line. */
-export const ghRequest: GitHubRequest = (path, etag) => new Promise((resolve, reject) => {
+/**
+ * The real request through the `gh` at `gh` (a path, or a name looked up on PATH): `gh api --include`,
+ * which exits non-zero on a 304 but still prints the status line. A systemd user service's PATH
+ * (`/usr/local/bin:/usr/bin`) often lacks `gh`'s folder (#153), so a missing `gh` says how to fix it.
+ */
+export const ghRequest = (gh = "gh"): GitHubRequest => (path, etag) => new Promise((resolve, reject) => {
   const args = ["api", "--include", "--method", "GET", path];
   if (etag) args.push("--header", `If-None-Match: ${etag}`);
-  execFile("gh", args, { maxBuffer: 64 * 1024 * 1024 }, (error, stdout) => {
+  execFile(gh, args, { maxBuffer: 64 * 1024 * 1024 }, (error, stdout) => {
+    if ((error as { code?: unknown } | null)?.code === "ENOENT") {
+      reject(new Error(`gh not found (${gh}): put gh's folder on PATH (find it with \`command -v gh\`), or pass --gh <path>`));
+      return;
+    }
     const split = stdout.search(/\r?\n\r?\n/);
     const head = split < 0 ? stdout : stdout.slice(0, split);
     const status = Number(/^HTTP\/[\d.]+ (\d{3})/.exec(head)?.[1]);
@@ -238,23 +248,25 @@ export const ghRequest: GitHubRequest = (path, etag) => new Promise((resolve, re
 });
 
 function usage(): never {
-  process.stderr.write("usage: node producer.ts --home <factory home> --repo <owner/name> [--repo <owner/name> ...]\n");
+  process.stderr.write("usage: node producer.ts --home <factory home> --repo <owner/name> [--repo <owner/name> ...] [--gh <path to gh>]\n");
   process.exit(2);
 }
 
 async function main(argv: readonly string[]): Promise<void> {
   let home: string | null = null;
+  let gh = "gh";
   const repositories: string[] = [];
   for (let i = 0; i < argv.length; i += 2) {
     const value = argv[i + 1];
     if (value === undefined) usage();
     if (argv[i] === "--home") home = value;
+    else if (argv[i] === "--gh" && value !== "") gh = value;
     else if (argv[i] === "--repo" && /^[\w.-]+\/[\w.-]+$/.test(value)) repositories.push(value);
     else usage();
   }
   if (home === null || repositories.length === 0) usage();
-  const result = await runOnce({ home, repositories, request: ghRequest });
-  if (result.ok) process.stdout.write(`wrote ${join(home, OUTPUT)}: ${result.specs} specs, ${result.calls} requests\n`);
+  const result = await runOnce({ home, repositories, request: ghRequest(gh) });
+  if (result.ok) process.stdout.write(`wrote ${join(home, OUTPUT)}: ${result.specs} specs, ${result.calls} requests (${result.unchanged} unchanged)\n`);
   else process.stderr.write(`kept the last file: ${result.error} (${result.calls} requests)\n`);
   process.exitCode = result.ok ? 0 : 1;
 }
