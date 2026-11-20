@@ -7,7 +7,7 @@
 
 **Cloudroom plugins for watching an [OpenWiz](https://github.com/openwizdev/OpenWiz) factory.** Optional: OpenWiz 0.1.0 needs no plugin, and these work only in Cloudroom.
 
-**Status:** one plugin, [WizBar](wizbar/README.md). Version 0.5.0 is the release being prepared: the marketplace serves it only once the `wizbar/v0.5.0` release tag exists and the registry's WizBar entry has the range `^0.5.0`. Until both, the listing serves 0.3.0.
+**Status:** one plugin, [WizBar](wizbar/README.md). Version 0.6.0 is the release being prepared, not published: the marketplace serves it only once the `wizbar/v0.6.0` release tag exists and the registry's WizBar entry has the range `^0.6.0`. Until then the listing serves what the registry's current range resolves to.
 
 ## Quick start
 
@@ -19,7 +19,7 @@ From source: see the [WizBar README](wizbar/README.md).
 
 <img alt="WizBar rendered with synthetic example rows" src="docs/images/wizbar.png" width="300">
 
-WizBar replaces Cloudroom's sidebar with one card per agent thread, newest first: its issue or pull request, its children, and a live "N running" line. Under the list, one row per running spec shows each ticket as a dot: done, building, in review, or needs you; open a spec to see its running builders and reviewers with their model and effort. A small producer keeps the specs file fresh from GitHub. Every WizBar action is also a `room-cli wizbar` command with JSON, so agents can use it too.
+WizBar replaces Cloudroom's sidebar with three sections you can reorder: Pinned, Specs and Unread. Each thread is a card with its issue or pull request and its children. Specs shows one row per spec, what needs you first, each ticket a dot: done, building, in review, or needs you; the dot of a ticket an agent is working on breathes, and finished or idle specs fold into a Quiet group. Open a spec to see its running builders and reviewers with their model and effort. Unread lists only threads with something new that are not working for a spec, and a "N running" line opens a steady card of the running threads. A small producer keeps the specs file fresh from GitHub. Every WizBar sidebar action except the sort picker and section order is also a `room-cli wizbar` command with JSON, so agents can use it too.
 
 (The picture is the real UI rendered with made-up data.)
 
