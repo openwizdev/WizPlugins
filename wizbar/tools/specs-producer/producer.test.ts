@@ -359,13 +359,20 @@ describe("P1: repositories never block each other", () => {
   const kernelSub = `repos/${FLEET}/issues/900/sub_issues?per_page=100`;
   const specOf = (file: typeof expectedFile, key: string) => file.specs.find((s) => s.spec === key);
   const readFileJson = async (dir: string) => JSON.parse(await readFile(output(dir), "utf8")) as typeof expectedFile;
-  /** sample-fleet turns inaccessible (every page 403) with spec 900's page answering 404; sample-tools changes. */
+  /**
+   * Spec 900's page answers 404, then sample-fleet turns inaccessible (every page 403), so its list
+   * re-read is left pending; sample-tools changes.
+   */
   function breakFleet(answers: Map<string, { body: unknown; next?: string }>) {
     answers.delete(kernelSub);
     const github = fakeGitHub(answers);
-    const request: typeof github.request = async (path, etag) =>
-      path.includes(FLEET) && path !== kernelSub ? { status: 403, etag: null, next: null, body: { message: "Forbidden" } } : github.request(path, etag);
-    answers.set(toolsPulls, { body: [{ number: 41, draft: true, body: "Closes #1071", state: "open" }] });
+    let forbidden = false;
+    const request: typeof github.request = async (path, etag) => {
+      if (path === kernelSub) forbidden = true;
+      else if (forbidden && path.includes(FLEET)) return { status: 403, etag: null, next: null, body: { message: "Forbidden" } };
+      return github.request(path, etag);
+    };
+    answers.set(toolsPulls, { body: [...(answers.get(toolsPulls)!.body as unknown[]), { number: 42, draft: true, body: "Closes #1071", state: "open" }] });
     return { request, calls: github.calls };
   }
 
@@ -380,8 +387,8 @@ describe("P1: repositories never block each other", () => {
     expect(result).toMatchObject({ ok: false, written: true });
     expect(result.errors.length).toBeGreaterThan(0);
     const after = await readFileJson(dir);
-    // sample-tools refreshed: its ticket 1071 is now building with draft pull 41.
-    expect(specOf(after, `${TOOLS}#1070`)!.tickets[0]).toMatchObject({ ticket: `${TOOLS}#1071`, state: "building", pulls: [41] });
+    // sample-tools refreshed: its ticket 1071 is now building with draft pull 42.
+    expect(specOf(after, `${TOOLS}#1070`)!.tickets[0]).toMatchObject({ ticket: `${TOOLS}#1071`, state: "building", pulls: [42] });
     expect(specOf(after, `${TOOLS}#1080`)).toEqual(specOf(before, `${TOOLS}#1080`));
     expect(github_calls_for(broken.calls, TOOLS)).toBeGreaterThan(0);
     // sample-fleet keeps its last data, and the file's age is its last read.
@@ -396,6 +403,9 @@ describe("P1: repositories never block each other", () => {
     await runOnce({ home: dir, repositories, request: fakeGitHub(answers).request, now: at(0) });
     const broken = breakFleet(answers);
     await runOnce({ home: dir, repositories, request: broken.request, now: at(10) });
+    // The pending re-read exists: spec 900's page waits, with sample-fleet's list cursor at page one.
+    const pending = JSON.parse(await readFile(join(dir, ".openwiz", "specs.v1.etags.json"), "utf8")) as { vanished: string[]; listCursor: Record<string, string> };
+    expect({ vanished: pending.vanished, cursor: pending.listCursor[FLEET] }).toEqual({ vanished: [kernelSub], cursor: fleetList });
     broken.calls.length = 0;
     const result = await runOnce({ home: dir, repositories: [TOOLS], request: broken.request, now: at(20) });
     expect(result).toMatchObject({ ok: true, written: true, errors: [] });
@@ -403,7 +413,9 @@ describe("P1: repositories never block each other", () => {
     const file = await readFileJson(dir);
     expect(file.specs.map((s) => s.spec)).toEqual([`${TOOLS}#1070`, `${TOOLS}#1080`]);
     expect(file.generatedAt).toBe("2026-11-20T12:20:00Z");
-    expect(await readFile(join(dir, ".openwiz", "specs.v1.etags.json"), "utf8")).not.toContain(FLEET);
+    const cache = JSON.parse(await readFile(join(dir, ".openwiz", "specs.v1.etags.json"), "utf8")) as
+      { pages: Record<string, unknown>; vanished: string[]; listCursor: Record<string, string>; complete: string[] };
+    expect([...Object.keys(cache.pages), ...cache.vanished, ...Object.keys(cache.listCursor), ...cache.complete].filter((k) => k.includes(FLEET))).toEqual([]);
   });
 
   // catches: a newly bound repository too big for one run holding back every write until its scan completes.
