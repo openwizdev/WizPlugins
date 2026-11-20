@@ -22,6 +22,7 @@ async function home() {
   return dir;
 }
 const output = (dir: string) => join(dir, ".openwiz", "specs.v1.json");
+const outputV2 = (dir: string) => join(dir, ".openwiz", "specs.v2.json");
 
 const t = (repo: string, n: number, code: string | null, title: string, state: string, closedAt: string | null = null, pulls: number[] = []) =>
   ({ ticket: `${repo}#${n}`, code, title, state, closedAt, pulls });
@@ -54,9 +55,23 @@ const filler = (i: number) => {
     tickets: [t(repo, n + 1, `F${i}1`, "0.2.0 F" + i + "1: Sample first", "not-started"), t(repo, n + 2, `F${i}2`, "0.2.0 F" + i + "2: Sample second", "done", "2026-11-19T11:00:00Z")],
   };
 };
+/** `.openwiz/specs.v2.json`: due now and later apart (#162). */
 const expectedFile = {
   schema: "openwiz.specs.v2", generatedAt: "2026-11-20T12:00:00Z",
   specs: [kernel, ...[0, 1, 2, 3, 4, 5, 6, 7, 8].map(filler)],
+};
+/** `.openwiz/specs.v1.json`, as the producer before #162 wrote it: a later ticket is needs-you (#164 R1). */
+const expectedV1File = {
+  ...expectedFile, schema: "openwiz.specs.v1",
+  specs: expectedFile.specs.map((spec) => spec === kernel ? {
+    ...kernel, tickets: kernel.tickets.map((ticket) => ticket.ticket === `${FLEET}#910` ? { ...ticket, state: "needs-you" } : ticket),
+  } : spec),
+};
+/** A pre-#162 WizBar: the base reader takes only `.openwiz/specs.v1.json`, and only schema v1 with no later state. */
+const oldWizBar = (text: string, now: Date) => {
+  const read = readSpecsFile({ kind: "content", text }, now.getTime());
+  return (JSON.parse(text) as { schema?: unknown }).schema === "openwiz.specs.v1" && read.status === "ready"
+    && read.file.specs.every((spec) => spec.tickets.every((ticket) => ticket.state !== "yours-later")) ? read : { status: "unavailable" };
 };
 
 describe("P1: one run writes a file WizBar reads as ready", () => {
@@ -65,9 +80,17 @@ describe("P1: one run writes a file WizBar reads as ready", () => {
     const dir = await home();
     const github = fakeGitHub();
     expect(await runOnce({ home: dir, repositories, request: github.request, now: () => NOW })).toEqual({ ok: true, calls: 15, specs: 10, unchanged: 0 });
-    const text = await readFile(output(dir), "utf8");
+    const text = await readFile(outputV2(dir), "utf8");
     expect(JSON.parse(text)).toEqual(expectedFile);
     expect(readSpecsFile({ kind: "content", text }, NOW.getTime())).toEqual({ status: "ready", file: expectedFile });
+    expect(JSON.parse(await readFile(output(dir), "utf8"))).toEqual(expectedV1File);
+  });
+
+  // catches (#164 R1): a producer that replaces the v1 file with v2, so a WizBar from before #162 shows Specs unavailable.
+  it("keeps a v1 file a WizBar from before #162 reads, with later tickets as needs you", async () => {
+    const dir = await home();
+    await runOnce({ home: dir, repositories, request: fakeGitHub().request, now: () => NOW });
+    expect(oldWizBar(await readFile(output(dir), "utf8"), NOW)).toEqual({ status: "ready", file: expectedV1File });
   });
 
   // catches: a ticket in another bound repository than its spec losing the pulls of its own repository (#122 R1).
@@ -113,7 +136,8 @@ describe("P1: unchanged answers cost nothing", () => {
     expect(await runOnce({ home: dir, repositories, request: github.request, now: () => LATER })).toEqual({ ok: true, calls: 15, specs: 10, unchanged: 15 });
     expect(github.calls.length).toBeLessThan(60);
     expect(github.calls.every((call) => call.etag !== null && call.status === 304)).toBe(true);
-    expect(JSON.parse(await readFile(output(dir), "utf8"))).toEqual({ ...expectedFile, generatedAt: "2026-11-20T12:10:00Z" });
+    expect(JSON.parse(await readFile(outputV2(dir), "utf8"))).toEqual({ ...expectedFile, generatedAt: "2026-11-20T12:10:00Z" });
+    expect(JSON.parse(await readFile(output(dir), "utf8"))).toEqual({ ...expectedV1File, generatedAt: "2026-11-20T12:10:00Z" });
   });
 });
 
@@ -130,11 +154,25 @@ describe("N1 (#162): the later state needs no extra request", () => {
     for (const page of Object.values(cache.pages)) for (const item of page.body) delete item.issue_dependencies_summary;
     await writeFile(cacheOf(dir), JSON.stringify({ ...cache, version: 3 }));
     expect(await runOnce({ home: dir, repositories, request: github.request, now: () => LATER })).toEqual({ ok: true, calls: 15, specs: 10, unchanged: 0 });
-    expect(JSON.parse(await readFile(output(dir), "utf8"))).toEqual({ ...expectedFile, generatedAt: "2026-11-20T12:10:00Z" });
+    expect(JSON.parse(await readFile(outputV2(dir), "utf8"))).toEqual({ ...expectedFile, generatedAt: "2026-11-20T12:10:00Z" });
   });
 });
 
 describe("P1: all or nothing", () => {
+  // catches (#164 R1): one of the two files written without the other, so v1 and v2 readers see different scans.
+  it("a run that cannot write one file writes neither", async () => {
+    const dir = await home();
+    await runOnce({ home: dir, repositories, request: fakeGitHub().request, now: () => NOW });
+    const before = { v1: await readFile(output(dir), "utf8"), cache: await readFile(cacheOf(dir), "utf8") };
+    // A folder where the v2 file goes: the v2 write fails after the v1 file is ready to go.
+    await rm(outputV2(dir));
+    await mkdir(join(outputV2(dir), "blocked"), { recursive: true });
+    const result = await runOnce({ home: dir, repositories, request: fakeGitHub().request, now: () => LATER });
+    expect(result.ok).toBe(false);
+    expect({ v1: await readFile(output(dir), "utf8"), cache: await readFile(cacheOf(dir), "utf8") }).toEqual(before);
+    expect((await readdir(join(dir, ".openwiz"))).sort()).toEqual(["specs.v1.etags.json", "specs.v1.json", "specs.v2.json"]);
+  });
+
   // catches: a partial or mixed file (R7: a server error in the middle of a paginated list), a temp file left
   // behind, a cache updated by a failed run, or an error page saved as data.
   it.each([
@@ -146,11 +184,11 @@ describe("P1: all or nothing", () => {
     const dir = await home();
     const github = fakeGitHub();
     await runOnce({ home: dir, repositories, request: github.request, now: () => NOW });
-    const before = { file: await readFile(output(dir), "utf8"), cache: await readFile(cacheOf(dir), "utf8"), files: await readdir(join(dir, ".openwiz")) };
+    const before = { file: await readFile(output(dir), "utf8"), v2: await readFile(outputV2(dir), "utf8"), cache: await readFile(cacheOf(dir), "utf8"), files: await readdir(join(dir, ".openwiz")) };
     github.failNext(path, status);
     const result = await runOnce({ home: dir, repositories, request: github.request, now: () => LATER });
     expect(result).toMatchObject({ ok: false, error: `GitHub answered ${status} for ${path}` });
-    expect({ file: await readFile(output(dir), "utf8"), cache: await readFile(cacheOf(dir), "utf8"), files: await readdir(join(dir, ".openwiz")) }).toEqual(before);
+    expect({ file: await readFile(output(dir), "utf8"), v2: await readFile(outputV2(dir), "utf8"), cache: await readFile(cacheOf(dir), "utf8"), files: await readdir(join(dir, ".openwiz")) }).toEqual(before);
   });
 
   it("a request that throws (no gh, no network) writes nothing on a first run", async () => {

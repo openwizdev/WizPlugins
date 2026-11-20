@@ -299,6 +299,28 @@ describe("0.5 C: the rule, the spec rows and the open panel", () => {
     expect(within(rowOf("Sample cache")).queryByText(/later/)).toBeNull();
   });
 
+  // catches (#164 R2): at 320 px the notes squeezing the name to nothing and running into done/total. jsdom has no layout,
+  // so this pins the layout rules; the 320 px harness render on #164 shows them in Chromium. The notes sit in one
+  // clipped, wrapping line in priority order, so the lowest note (the last) wraps out of sight first; the name keeps
+  // a minimum width; done/total never shrinks and sits outside the notes.
+  it("keeps the name and done/total, and drops notes lowest first: needs you, then later, then done in the last hour", async () => {
+    render({ read: () => ({ kind: "content", text: v4SpecsFileV2Text }) });
+    await screen.findByText("Sample palette");
+    const line = rowOf("Sample palette").querySelector("[data-spec-line]")!;
+    const notes = line.querySelector("[data-notes]") as HTMLElement;
+    expect([...notes.children].map((el) => el.textContent)).toEqual(["1 needs you", "· 1 later", "1 done in the last hour"]);
+    for (const rule of ["flex-wrap", "overflow-hidden", "min-w-0", "justify-end"]) expect(notes.className).toContain(rule);
+    expect(notes.className).toMatch(/\bh-\[/);
+    expect(notes.className).not.toContain("shrink-0");
+    for (const note of notes.children) expect(note.className).toContain("shrink-0");
+    const name = line.querySelector("[data-spec-name]") as HTMLElement;
+    expect(name.className).toMatch(/\bmin-w-\[/);
+    expect(name.className).toContain("truncate");
+    const total = line.querySelector("[data-done-total]")!.parentElement as HTMLElement;
+    expect(notes.contains(total)).toBe(false);
+    expect(total.className).toContain("shrink-0");
+  });
+
   // catches (#162): a spec whose only owner tickets are later still saying "needs you", or a stray leading dot.
   it("says only L later, muted, when nothing on the spec is due now", async () => {
     const file = JSON.parse(v4SpecsFileV2Text);
