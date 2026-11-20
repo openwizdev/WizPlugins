@@ -2,7 +2,7 @@
 // section 5, coloured from host theme variables only (section 9). Idea credited
 // to Conductor's workspace status matrix.
 import { useEffect, useState } from "react";
-import { matrixMarksV4, matrixRingV4, type MatrixColourV4, type MatrixStateV4 } from "./fixtures/v4";
+import { matrixMarksV4, matrixRingV4, matrixUnlitV4, type MatrixColourV4, type MatrixStateV4 } from "./fixtures/v4";
 import { cn } from "./lib/utils";
 import { tokens } from "./specs/theme";
 
@@ -14,13 +14,16 @@ const colours: Record<MatrixColourV4, string> = {
   // The contract names no fallback for destructive.
   destructive: "var(--destructive)",
   dim: "color-mix(in oklch, var(--muted-foreground, #b7b7b7) 35%, var(--sidebar, #161616))",
+  faint: "color-mix(in oklch, var(--muted-foreground, #b7b7b7) 65%, var(--sidebar, #161616))",
+  // The contract names no fallback for foreground.
+  bright: "var(--foreground)",
   border: tokens.border,
 };
 
 /** One chase step, in ms; every working mark steps together, from the clock. */
 const STEP = 150;
 const ringStep = () => Math.floor(Date.now() / STEP) % matrixRingV4.length;
-/** The ring index lit by the working chase, ticking while `active`. */
+/** The ring index of the working chase's lead, ticking while `active`. */
 function useChase(active: boolean): number {
   const [step, setStep] = useState(ringStep);
   useEffect(() => {
@@ -54,24 +57,33 @@ function useReducedMotion(): boolean {
 }
 
 export function MatrixMark({ state, className }: { state: MatrixStateV4; className?: string }) {
-  const { mask, colour, motion } = matrixMarksV4[state];
+  const { mask, colour, motion, tail } = matrixMarksV4[state];
   const reduced = useReducedMotion();
   const chase = motion === "chase" && !reduced;
   const pulse = motion === "pulse" && !reduced;
   const step = useChase(chase);
-  // The chase moves the still mask's one lit dot round the ring.
-  const lit = (index: number) => (chase ? index === matrixRingV4[step] : mask[index] === "1");
+  const ring = matrixRingV4 as readonly number[];
+  // Each dot's colour: the chase (or its still first frame) puts the lead and its
+  // fading tail round the ring; other marks show their mask. Unlit dots are dim.
+  const paint = (index: number): MatrixColourV4 => {
+    if (motion === "chase") {
+      const behind = (ring.indexOf(index) - (chase ? step : 0) + ring.length) % ring.length;
+      if (ring.includes(index) && behind === 0) return colour;
+      if (ring.includes(index) && ring.length - behind <= tail.length) return tail[ring.length - behind - 1];
+      return matrixUnlitV4;
+    }
+    return mask[index] === "1" ? colour : matrixUnlitV4;
+  };
   return (
     <span role="img" aria-label={matrixWords[state]} data-matrix={state}
       className={cn("grid shrink-0 content-center", className)}
       style={{ width: "11px", height: "11px", gridTemplateColumns: "repeat(3, 2.6px)", gap: "1.6px" }}>
       {Array.from({ length: 9 }, (_, index) => {
-        const on = lit(index);
-        const pulsing = pulse && on;
+        const pulsing = pulse && mask[index] === "1";
         return (
-          <span key={index} data-animated={(chase && (matrixRingV4 as readonly number[]).includes(index)) || pulsing ? "" : undefined}
+          <span key={index} data-animated={(chase && ring.includes(index)) || pulsing ? "" : undefined}
             className={cn("rounded-full", pulsing && "animate-pulse")}
-            style={{ width: "2.6px", height: "2.6px", background: on ? colours[colour] : tokens.border,
+            style={{ width: "2.6px", height: "2.6px", background: colours[paint(index)],
               // The middle row pulses left to right.
               animationDelay: pulsing ? `${(index % 3) * 200}ms` : undefined }} />
         );
