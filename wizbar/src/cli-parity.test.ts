@@ -265,7 +265,7 @@ describe("V5: children and stats JSON equal the UI for the same fixtures", () =>
     });
     fireEvent.pointerEnter(screen.getByRole("status", { name: /^\d+ running$/ }).parentElement!);
     const card = screen.getByRole("region", { name: "Running threads" });
-    await waitFor(() => expect(card.querySelectorAll("[data-spec-name]").length).toBe(4));
+    await waitFor(() => expect(card.querySelectorAll("[data-spec-name]").length).toBe(5));
     expect({
       summary: card.querySelector("p")?.textContent,
       harness: [...card.querySelectorAll("[data-harness]")].map((el) => ({ providerId: el.getAttribute("data-harness"), count: Number(el.getAttribute("data-count")) })),

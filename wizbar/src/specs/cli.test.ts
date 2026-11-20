@@ -243,10 +243,21 @@ describe("wizbar spec <n> --open|--close (sections 4 and 8)", () => {
     expect(JSON.parse(settings.stdout!).specs.map((s: { open: boolean }) => s.open)).toEqual([false, true, false]);
   });
 
-  // catches: a hidden, unknown or ambiguous reference opened anyway.
+  // S3 (#202): a finished spec is a quiet row from 0.6 (section 12), so `spec` opens and closes it like any other.
+  // #601 "Sample finished" has its running reviewer, so saved open it shows open (section 4).
+  // catches: a finished spec still answered `unknown_spec` (the 0.5 hidden rule), by full key or bare number.
+  it("opens and closes a finished spec", async () => {
+    const cli = await setup();
+    expect(await cli.json(["spec", "example/sample-plans#601", "--open"])).toEqual({ exitCode: 0, body: { spec: "example/sample-plans#601", open: true } });
+    const listed = await cli.json(["specs"]);
+    expect(listed.body.specs.find((s: { spec: string }) => s.spec === "example/sample-plans#601")).toMatchObject({ open: true, quiet: true });
+    expect(await cli.json(["spec", "601", "--close"])).toEqual({ exitCode: 0, body: { spec: "example/sample-plans#601", open: false } });
+  });
+
+  // catches: a spec with no tickets (still hidden in 0.6), an unknown or an ambiguous reference opened anyway.
   it.each([
     [["spec", "9", "--open"], "unknown_spec"],
-    [["spec", "example/sample-plans#601", "--open"], "unknown_spec"],
+    [["spec", "example/sample-docs#9", "--open"], "unknown_spec"],
     [["spec", "example/sample-plans#77", "--close"], "unknown_spec"],
     [["spec", "palette", "--open"], "unknown_spec"],
   ])("%j fails with %s", async (argv, code) => {

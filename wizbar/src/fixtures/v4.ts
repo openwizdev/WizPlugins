@@ -593,12 +593,12 @@ export const v4Stats: StatsV4 = {
   window: { timeZone: "UTC", start: Date.parse("2026-11-19T00:00:00Z"), end: Date.parse("2026-11-20T00:00:00Z") },
   coverage: { scope: "observable-sidebar", subagents: "not-counted", unseen: "possible" },
   harness: [{ providerId: "harness-a", count: 6 }, { providerId: "harness-b", count: 3 }],
-  // createdAt ascending. reviewer_c matches the hidden finished spec, so it shows no spec.
+  // createdAt ascending. reviewer_c matches the finished spec, quiet from 0.6, so it shows that spec (S3, #202).
   threads: [
     footer("thr_v4_fleet_a", "working", "harness-b", null),
     footer("thr_v4_builder_a", "working", "harness-a", `${PLANS}#501`),
     footer("thr_v4_ambiguous", "working", "harness-a", null),
-    footer("thr_v4_reviewer_c", "reviewing", "harness-b", null),
+    { ...footer("thr_v4_reviewer_c", "reviewing", "harness-b", `${PLANS}#601`), shortName: "Sample finished" },
     footer("thr_v4_stray", "working", "harness-a", null),
     footer("thr_v4_reviewer_a", "reviewing", "harness-b", `${PLANS}#501`),
     footer("thr_v4_parent_wins", "working", "harness-a", `${PLANS}#501`),

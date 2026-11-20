@@ -7,7 +7,7 @@ import type { SpecsResultV6 } from "../fixtures/v6";
 import { effectiveOpen, readOpenKeys, withOpen } from "./open-state";
 import { readSpecsFile } from "./read";
 import { readSpecsSort, specsSorts, type SpecsSort } from "../settings";
-import { isHidden, isRunning, needsYouSpecs, sectionRule, specRows, type SpecsThreadRow } from "./rows";
+import { isRunning, needsYouSpecs, sectionRule, specRows, type SpecsThreadRow } from "./rows";
 import type { CardModelsResultV3 } from "../v3-types";
 
 export interface SpecsCommands {
@@ -107,7 +107,8 @@ export function createSpecsCommands(sources: SpecsSources): SpecsCommands {
     const now = Date.now();
     const read = readSpecsFile(await sources.specsFile(), now);
     if (read.status !== "ready") return fail(json, unavailable(read.reason));
-    const visible = read.file.specs.filter((entry) => !isHidden(entry)).map((entry) => entry.spec);
+    // From 0.6 a finished spec is a quiet row like any other; only a spec with no tickets is hidden (section 12).
+    const visible = read.file.specs.filter((entry) => entry.tickets.length > 0).map((entry) => entry.spec);
     const matches = issueKey.test(reference) ? visible.filter((key) => key === reference)
       : /^[1-9][0-9]*$/.test(reference) ? visible.filter((key) => key.slice(key.lastIndexOf("#") + 1) === reference) : [];
     if (matches.length > 1) return fail(json, { code: "ambiguous_spec", message: "That number matches specs in several repositories." });
