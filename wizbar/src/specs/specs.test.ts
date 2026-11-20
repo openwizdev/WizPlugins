@@ -132,18 +132,14 @@ describe("WB4-6: missing fleet ids and failed running rows (sections 3 and 5)", 
     expect(matchSpec(v4SpecsFile, row)).toBe(expected);
   });
 
-  // catches: a running row with failed queued work shown as working because running rows were limited to working and reviewing.
-  it("a running row with failed queued work shows failed, in the app and on the server", () => {
-    const row = v4FleetIdThreads.find((t) => t.id === "thr_v4_failed_running")!;
-    expect({ app: matrixState(row, null), server: matrixState(row, null) }).toEqual({ app: "failed", server: "failed" });
-  });
-
-  // catches: the spec rows, the hover card's data or either CLI disagreeing with the contract on these rows.
-  it("spec rows and the hover card's data: no spec for the top-level row, failed for the failed one", () => {
-    expect(specRows(v4SpecsFile, rows, [...v4SpecRows.specs.filter((s) => s.open).map((s) => s.spec), "example/gone#1"], v4Now)).toEqual(expectedRows);
+  // catches: a running row with failed queued work shown as working (running rows limited to working and reviewing),
+  // or dropped from the running count; and the top-level row placed in the spec with no fleet thread.
+  it("spec rows and the hover card's data: no spec for the top-level row, counted and failed for the failed one", () => {
+    expect(specRows(v4SpecsFile, rows, readOpenKeys(v4OpenSetting), v4Now)).toEqual(expectedRows);
     expect(computeStatsV4(rows, v4SpecsFile, null, v4Now, v4TimeZone)).toEqual(v4FleetIdStats);
   });
 
+  // catches: the CLI readers dropping the null parent or the failed queued work, so the CLI and the app disagree.
   it("wizbar specs --json and wizbar stats --json give the same", async () => {
     expect(await cli(["specs"])).toEqual({ exitCode: 0, body: expectedRows });
     expect(await cli(["stats"])).toEqual({ exitCode: 0, body: v4FleetIdStats });
