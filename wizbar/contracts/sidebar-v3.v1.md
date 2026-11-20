@@ -249,10 +249,10 @@ The **Pinned**, **Inbox** and **Specs** section headers collapse and expand, lik
 
 - **Toggle.** The whole header line is one native button with `aria-expanded`, named by the section: `Pinned`, `Inbox`, or for Specs its full rule sentence. A click, or Enter or Space with it focused, toggles it.
 - **Collapsed.** The header and its rule line stay; the section's rows hide. Pinned and Inbox show their count, faint like `Settled 4`: `Pinned 3`, `Inbox 12`. Specs keeps its whole rule (`Specs 24 · 5 tickets need you (3 specs)`, or the narrow form), so what needs the owner stays visible.
-- **Inbox header.** Shown beside Pinned, as before, and also whenever Inbox is stored collapsed, so it can always be expanded again.
+- **Inbox header.** Shown whenever the Inbox section exists, with or without Pinned, so the Inbox can always be collapsed and expanded (#170 R1).
 - **Unchanged.** Order and placement: Specs stays under the shelves and the "N running" footer at the bottom. Each spec's open state (`specsOpen`, specs-section.v1.md section 4) is independent of the Specs section being collapsed.
 - **Drag to pin.** A collapsed Pinned is still the drop zone (section 5): a card dropped on its header is pinned at the end. Alt+Up and Alt+Down work as before.
-- **Search.** While the host's search query is non-empty, a collapsed Pinned or Inbox with matches shows them, expanded, for that search only; nothing is stored. Specs is not searched and stays as stored.
+- **Search.** While the host's search query is non-empty, a collapsed Pinned or Inbox with matches shows them, expanded, for that search only; nothing is stored. Meanwhile the Pinned and Inbox headers do not toggle: they are `aria-disabled` with the title `Clear the search to collapse`, and a click or key writes nothing, so clearing the search restores the stored choice (#170 R2). Specs is not searched and stays as stored.
 
 **The setting.**
 

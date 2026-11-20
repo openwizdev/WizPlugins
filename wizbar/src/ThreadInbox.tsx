@@ -200,7 +200,7 @@ export function ThreadInbox({
         ) : (
           <>
             {pinnedShown ? (
-              <Shelf label="Pinned" pinnedDropZone count={pinned.length} collapsed={isCollapsed("pinned")}
+              <Shelf label="Pinned" pinnedDropZone count={pinned.length} searching={searching} collapsed={isCollapsed("pinned")}
                 onToggle={() => sections.toggle("pinned")} saveFailed={sections.failed === "pinned"}>
                 {pinned.length === 0 ? (
                   <li className="list-none rounded-md border border-dashed border-sidebar-border px-2.5 py-2 text-xs text-muted-foreground">
@@ -225,8 +225,8 @@ export function ThreadInbox({
               </Shelf>
             ) : null}
             {inbox.length > 0 ? (
-              // The Inbox header shows beside Pinned, and whenever Inbox is stored collapsed, so it can be expanded again.
-              <Shelf label={pinnedShown || sections.collapsed.has("inbox") ? "Inbox" : null} count={inbox.length}
+              // #170 R1: the Inbox always has its header, so it can always be collapsed and expanded.
+              <Shelf label="Inbox" count={inbox.length} searching={searching}
                 collapsed={isCollapsed("inbox")} onToggle={() => sections.toggle("inbox")} saveFailed={sections.failed === "inbox"}>
                 {inbox.map((thread) => (
                   <ThreadCard
@@ -403,8 +403,9 @@ function Shelf({
   collapsed,
   onToggle,
   saveFailed,
+  searching,
 }: {
-  label: string | null;
+  label: string;
   children: React.ReactNode;
   /** Marks Pinned as the drop zone that pins, places and reorders (WZ21). */
   pinnedDropZone?: boolean;
@@ -412,25 +413,25 @@ function Shelf({
   collapsed: boolean;
   onToggle: () => void;
   saveFailed: boolean;
+  /** #170 R2: a search holds the section open, so its header does not toggle and nothing is written. */
+  searching: boolean;
 }) {
   return (
-    // A named section is exposed as a landmark region; an unnamed one is not,
-    // which is exactly right for the single unlabelled inbox list. A collapsed
-    // Pinned stays the drop zone: its header is inside the section.
-    <section {...(label ? { "aria-label": label } : {})} {...(pinnedDropZone ? { "data-wizbar-pinned": "" } : {})}>
-      {label ? (
-        // S1 (#169): the whole line toggles, like Settled; collapsed shows "Pinned 3", the count faint.
-        <button type="button" onClick={onToggle} aria-expanded={!collapsed}
-          className="flex w-full items-center gap-2 px-2.5 pb-1 pt-3 text-left">
-          <span className="text-[11.5px] font-medium text-muted-foreground">
-            {label}
-            {collapsed ? <>{" "}<span className="ml-1 font-normal text-muted-foreground/40">{count}</span></> : null}
-          </span>
-          <ShelfRule />
-        </button>
-      ) : null}
+    // Each shelf is a named landmark region. A collapsed Pinned stays the
+    // drop zone: its header is inside the section.
+    <section aria-label={label} {...(pinnedDropZone ? { "data-wizbar-pinned": "" } : {})}>
+      {/* S1 (#169): the whole line toggles, like Settled; collapsed shows "Pinned 3", the count faint. */}
+      <button type="button" onClick={searching ? undefined : onToggle} aria-expanded={!collapsed}
+        {...(searching ? { "aria-disabled": true, title: "Clear the search to collapse" } : {})}
+        className="flex w-full items-center gap-2 px-2.5 pb-1 pt-3 text-left aria-disabled:cursor-default">
+        <span className="text-[11.5px] font-medium text-muted-foreground">
+          {label}
+          {collapsed ? <>{" "}<span className="ml-1 font-normal text-muted-foreground/40">{count}</span></> : null}
+        </span>
+        <ShelfRule />
+      </button>
       {saveFailed ? <p role="status" className="px-2.5 text-xs text-muted-foreground">{SAVE_FAILED}</p> : null}
-      {label && collapsed ? null : <ul className="flex flex-col gap-px">{children}</ul>}
+      {collapsed ? null : <ul className="flex flex-col gap-px">{children}</ul>}
     </section>
   );
 }
