@@ -11,6 +11,7 @@ import plugin from "../server";
 import { v4Now, v4OpenSetting, v4SpecOpenCases, v4SpecRows, v4SpecsFileText, v4Threads, type SpecsFileReadV4 } from "../fixtures/v4";
 import { SpecsSection, type SpecsSectionProps } from "./SpecsSection";
 import { effectiveOpen, readOpenKeys } from "./open-state";
+import { tokens } from "./theme";
 import { rawRow } from "./testing";
 
 const binding = JSON.stringify([{ projectKey: "sample-factory", cloudroomProjectId: "prj_v4_atlas", repositories: ["example/sample-plans"],
@@ -48,7 +49,7 @@ describe("S1: the section shows one row per running spec", () => {
   it("shows the rule, names, counts, done/total and dots; finished and empty specs are hidden", async () => {
     render({ settings: { specsOpen: v4OpenSetting } });
     const region = await section();
-    expect(await within(region).findByText("Specs 2 · 2 need you")).toBeTruthy();
+    expect(await within(region).findByRole("heading", { name: "Specs 2 · 2 need you" })).toBeTruthy();
     expect([...region.querySelectorAll("[data-spec]")].map((el) => el.getAttribute("data-spec"))).toEqual(
       ["example/sample-plans#501", "example/sample-tools#77"]);
     const palette = rowOf("Sample palette");
@@ -148,6 +149,102 @@ describe("S2: open, closed and remembered", () => {
   });
 });
 
+// WizBar 0.5.0 C (openwizdev/WizPlugins#112): the round-5 look of the rule, the spec rows,
+// the dots and the open panel (specs-section.v1.md sections 2 and 9).
+describe("0.5 C: the rule, the spec rows and the open panel", () => {
+  // catches: the rule drawn as one grey string, so "need you" loses its warning colour and the count is as loud as the word.
+  it("shows Specs, then the count faint, then · M need you in the warning colour, with an olive line", async () => {
+    render();
+    const heading = within(await section()).getByRole("heading");
+    await waitFor(() => expect(heading.textContent).toBe("Specs 2 · 2 need you"));
+    expect(within(heading).getByText("Specs").className).toContain("text-muted-foreground");
+    const count = within(heading).getByText("2");
+    expect(count.className).toMatch(/text-muted-foreground\/\d+/);
+    expect(count.className).not.toBe(within(heading).getByText("Specs").className);
+    expect(within(heading).getByText("· 2 need you").style.color).toBe(tokens.warning);
+    expect((heading.querySelector("[data-rule-line]") as HTMLElement).style.background).toBe(tokens.rule);
+  });
+
+  // catches: a rule that still says "need you" when nothing waits on the owner.
+  it("leaves out · M need you when M is zero", async () => {
+    const none = JSON.parse(v4SpecsFileText);
+    for (const spec of none.specs) for (const ticket of spec.tickets) if (ticket.state === "needs-you") ticket.state = "not-started";
+    render({ read: () => ({ kind: "content", text: JSON.stringify(none) }) });
+    const heading = within(await section()).getByRole("heading");
+    await waitFor(() => expect(heading.textContent).toBe("Specs 2"));
+  });
+
+  // catches: the chevron trailing the name, or a spec with no agents whose name starts further left than its neighbours'.
+  it("leads with › closed or ⌄ open only where agents run, and a same-width placeholder otherwise", async () => {
+    render({ settings: { specsOpen: v4OpenSetting } });
+    await screen.findByText("Sample palette");
+    const lead = (name: string) => rowOf(name).querySelector("[data-spec-line]")!.querySelector("[data-chevron]") as HTMLElement;
+    const palette = rowOf("Sample palette");
+    const first = palette.querySelector("[data-spec-line]")!.querySelector("[data-chevron], [data-spec-name]");
+    expect(first?.hasAttribute("data-chevron")).toBe(true);
+    expect(lead("Sample palette").getAttribute("data-chevron")).toBe("open");
+    expect(within(palette).getByRole("button", { name: "Close Sample palette" }).contains(lead("Sample palette"))).toBe(true);
+    fireEvent.click(within(palette).getByRole("button", { name: "Close Sample palette" }));
+    await waitFor(() => expect(lead("Sample palette").getAttribute("data-chevron")).toBe("closed"));
+    const placeholder = lead("Sample cache");
+    expect(placeholder.getAttribute("data-chevron")).toBe("none");
+    expect(placeholder.querySelector("svg")).toBeNull();
+    expect(placeholder.className).toBe(lead("Sample palette").className);
+  });
+
+  // catches: the notes left inline after the name instead of on the right, before done/total.
+  it("puts the name on the left and K needs you, N done in the last hour, then done/total on the right", async () => {
+    render();
+    await screen.findByText("Sample palette");
+    const line = rowOf("Sample palette").querySelector("[data-spec-line]")!;
+    const order = [...line.querySelectorAll("[data-spec-name], [data-needs-you], [data-done-last-hour], [data-done-total]")]
+      .map((el) => el.textContent);
+    expect(order).toEqual(["Sample palette", "1 needs you", "1 done in the last hour", "4/10"]);
+    const name = line.querySelector("[data-spec-name]")!;
+    expect(name.contains(line.querySelector("[data-needs-you]"))).toBe(false);
+    expect(name.className).toContain("flex-1");
+    expect((line.querySelector("[data-needs-you]") as HTMLElement).style.color).toBe(tokens.warning);
+    expect((line.querySelector("[data-done-last-hour]") as HTMLElement).style.color).toBe(tokens.mutedAccent);
+    // The dots sit on the line below, outside the name line.
+    expect(line.querySelector("[data-dot-state]")).toBeNull();
+    expect(rowOf("Sample palette").querySelectorAll("[data-dot-state]").length).toBe(10);
+  });
+
+  // catches: building drawn as a solid accent dot, done in the last hour as a ringed olive, or a ring dot that never pulses.
+  it("draws each dot state in its own colour, ring and motion", async () => {
+    render();
+    await screen.findByText("Sample palette");
+    const dot = (state: string) => rowOf("Sample palette").querySelector(`[data-dot-state="${state}"]`) as HTMLElement;
+    const ring = (colour: string) => `inset 0 0 0 1px ${colour}`;
+    expect(dot("done").style.background).toBe(tokens.mutedAccent);
+    expect(dot("done-recent").style.background).toBe(tokens.brightOlive);
+    expect(dot("done-recent").style.boxShadow).toBe("");
+    expect(dot("building").style.background).toBe("");
+    expect(dot("building").style.boxShadow).toBe(ring(tokens.accent));
+    expect(dot("building").className).toContain("motion-safe:animate-pulse");
+    expect(dot("review").style.boxShadow).toBe(ring(tokens.accent));
+    expect(dot("review").className).not.toContain("animate-pulse");
+    expect(dot("needs-you").style.background).toBe(tokens.warning);
+    expect(dot("held").style.boxShadow).toBe(ring(tokens.quietRing));
+    expect(dot("held").style.background).toBe("");
+    expect(dot("not-started").style.background).toBe(tokens.border);
+    expect(tokens.brightOlive).not.toBe(tokens.mutedAccent);
+  });
+
+  // catches: an open spec whose agents float on the plain sidebar, or a closed spec drawn raised.
+  it("raises an open spec and its agents into one card panel", async () => {
+    render({ settings: { specsOpen: v4OpenSetting } });
+    const agents = await screen.findByRole("list", { name: "Sample palette agents" });
+    const panel = rowOf("Sample palette");
+    expect(panel.contains(agents)).toBe(true);
+    expect(panel.style.background).toBe(tokens.card);
+    expect(panel.className).toContain("rounded-lg");
+    expect(rowOf("Sample cache").style.background).toBe("");
+    fireEvent.click(within(panel).getByRole("button", { name: "Close Sample palette" }));
+    await waitFor(() => expect(rowOf("Sample palette").style.background).toBe(""));
+  });
+});
+
 const app = await loadPluginApp(() => import("../../app"));
 const hosts: FakePluginHost[] = [];
 afterEach(async () => { for (const host of hosts.splice(0)) await host.harness.lifecycle.dispose(); });
@@ -181,7 +278,7 @@ describe("parity: wizbar specs --json is what the section shows", () => {
           items: (input as { threadIds: string[] }).threadIds.map((threadId) => ({ threadId, model: null, effort: null })) }) },
     });
     const region = await section();
-    await within(region).findByText(/^Specs \d/);
+    await within(region).findByRole("heading", { name: /^Specs \d/ });
     const shown = {
       rule: within(region).getByRole("heading").textContent,
       specs: [...region.querySelectorAll<HTMLElement>("[data-spec]")].map((row) => ({
