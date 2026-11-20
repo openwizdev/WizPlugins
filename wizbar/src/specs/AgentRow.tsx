@@ -47,7 +47,7 @@ export function AgentRow({ agent, thread, now, isActive, onNavigate }: AgentRowP
   const actions = useSidebarThreadActions();
   const navigate = useBbNavigate();
   const { pullRequest } = useSidebarThreadPullRequest(agent.threadId);
-  const served = useCardModel(agent.threadId);
+  const served = useCardModel(agent.threadId, thread?.updatedAt ?? agent.updatedAt);
   const model = modelLabel(served?.model ?? null, served?.effort ?? null);
   const provider = useProviders().providers.find((p) => p.id === agent.providerId);
   // Hover and focus-within are separate, so a pointer leaving never hides the

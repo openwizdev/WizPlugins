@@ -59,7 +59,7 @@ describe("S3: the agent row (sections 3, 5 and 6)", () => {
   // catches: the quiet second line dropping a served model or effort.
   it("shows the harness logo, then model and effort when present", async () => {
     const { row } = show(builder, served("Sample model 2", "xhigh"));
-    const line = await within(row()).findByText("Sample model 2 · Xhigh");
+    const line = await within(row()).findByText("Sample model 2 · XHigh");
     expect(line.closest("[data-agent-meta]")!.querySelector("[data-provider]")?.getAttribute("data-provider")).toBe("harness-a");
     // Council round 1: one step larger than text-2xs, about 12 px, as in the target.
     expect(line.closest("[data-agent-meta]")!.className).toContain("text-xs");

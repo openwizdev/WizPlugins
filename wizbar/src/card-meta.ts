@@ -3,6 +3,7 @@
 // omitted, never invented.
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import { childrenOf } from "./inbox";
+import { modelEffortLabel } from "./model-names";
 import type { CardLinkV3, CardMetaV3, CardModelV3, CardModelsResultV3, EffortV3 } from "./v3-types";
 
 /** `room/<N>-…` → N; anything else (including an unsafe integer) → null. */
@@ -35,11 +36,9 @@ export function childCountLabel(count: number): string | null {
   return count === 1 ? "1 child" : `${count} children`;
 }
 
-/** `<model> · <Effort>`, `<model>` alone, or null when the model is unknown. */
+/** `Opus 5.5 · High`, the model alone, or null when the model is unknown (friendly names: model-names.ts, #111). */
 export function modelLabel(model: string | null, effort: EffortV3 | null): string | null {
-  const name = model?.trim();
-  if (!name) return null;
-  return effort ? `${name} · ${effort[0]!.toUpperCase()}${effort.slice(1)}` : name;
+  return modelEffortLabel(model, effort);
 }
 
 export function cardMeta(
