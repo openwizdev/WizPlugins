@@ -384,13 +384,13 @@ describe("R1 (#172): the open card updates in place, with no flashing", () => {
   const rowNode = (id: string) => card()?.querySelector(`[data-thread=${id}]`) ?? null;
   const modelNodes = () => new Map([...card()!.querySelectorAll("[data-model]")]
     .map((el) => [el.closest("[data-thread]")!.getAttribute("data-thread")!, el]));
-  async function pinned() {
+  async function pinned(rows: readonly PluginSidebarThread[] = snapshot(), cardModels: unknown = models("Sample model", "high")) {
     vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout", "setInterval", "clearInterval"] });
     vi.setSystemTime(v4Now);
-    liveFeed.rows = snapshot();
+    liveFeed.rows = rows;
     const rendered = renderSlot({ component: FooterCounter }, {}, {
       pluginId: `synthetic-172-${Math.random()}`, settings: { wizdeckFactories: binding },
-      rpc: { specsFile: () => ({ kind: "content", text: v4SpecsFileText }), cardModels: models("Sample model", "high") } as never,
+      rpc: { specsFile: () => ({ kind: "content", text: v4SpecsFileText }), cardModels } as never,
     });
     fireEvent.click(trigger());
     await tick(10);
@@ -445,6 +445,71 @@ describe("R1 (#172): the open card updates in place, with no flashing", () => {
     expect(rowNode("thr_v4_builder_a")?.hasAttribute("data-leaving")).toBe(false);
     await tick(5000);
     expect(rowNode("thr_v4_builder_a")).not.toBeNull();
+  });
+
+  // Owner steer on #175: a thread's model almost never changes, so its label is cached per thread for the session.
+  const modelCalls = (rendered: { rpcCalls: { method: string; input: unknown }[] }) => rendered.rpcCalls
+    .filter((c) => c.method === "cardModels").map((c) => [...(c.input as { threadIds: string[] }).threadIds].sort());
+
+  // catches: a reopened card that starts blank and reads every model again.
+  it("reopening the card shows every label at once, with no fetch", async () => {
+    const rendered = await pinned();
+    const before = modelCalls(rendered).length;
+    fireEvent.keyDown(trigger(), { key: "Escape" });
+    expect(card()).toBeNull();
+    fireEvent.click(trigger());
+    expect([...modelNodes().values()].map((el) => el.textContent)).toEqual(Array(9).fill("Sample model · High"));
+    await tick(1000);
+    expect(modelCalls(rendered)).toHaveLength(before);
+  });
+
+  // catches: a changed running set, or a new revision, reading every running thread's model again.
+  it("a running-set change fetches only the new thread; a new revision fetches nothing", async () => {
+    const rendered = await pinned(snapshot().filter((row) => row.id !== "thr_v4_code_a"));
+    const before = modelCalls(rendered).length;
+    await push(snapshot());
+    await tick(10);
+    expect(modelCalls(rendered).slice(before)).toEqual([["thr_v4_code_a"]]);
+    await tick(1000);
+    await push(snapshot());
+    await tick(1000);
+    await push(snapshot());
+    await tick(10);
+    expect(modelCalls(rendered)).toHaveLength(before + 1);
+  });
+
+  // catches: a null, failed or malformed answer blanking a known label, or a changed model never shown.
+  it("keeps a known label through null, failed and malformed answers; a different value replaces it", async () => {
+    let answer: (threadIds: string[]) => unknown = (threadIds) => models("Sample model", "high")({ threadIds });
+    const rendered = await pinned(snapshot(), ({ threadIds }: { threadIds: string[] }) => answer(threadIds));
+    const label = modelNodes().get("thr_v4_code_a")!;
+    const reads = () => modelCalls(rendered).filter((ids) => ids.includes("thr_v4_code_a")).length;
+    /** thr_v4_code_a ends its turn, then starts a new one: that alone reads its model again. */
+    const newTurn = async () => {
+      const before = reads();
+      await push(snapshot(["thr_v4_code_a"]));
+      await tick(500);
+      await push(snapshot());
+      await tick(10);
+      expect(reads()).toBe(before + 1);
+    };
+    for (const next of [
+      (ids: string[]) => models(null, null)({ threadIds: ids }),
+      () => { throw new Error("synthetic failure"); },
+      () => ({ source: "host", items: "malformed" }),
+      () => ({ source: "host", items: [{ threadId: "thr_v4_code_a", model: 7, effort: "high" }] }),
+      (ids: string[]) => models("Sample model", "high", "none")({ threadIds: ids }),
+    ]) {
+      answer = next;
+      await newTurn();
+      expect(modelNodes().get("thr_v4_code_a")).toBe(label);
+      expect(label.textContent).toBe("Sample model · High");
+    }
+    answer = (threadIds) => models("Other model", "low")({ threadIds });
+    await newTurn();
+    expect(modelNodes().get("thr_v4_code_a")).toBe(label);
+    expect(label.textContent).toBe("Other model · Low");
+    expect(modelNodes().get("thr_v4_builder_a")?.textContent).toBe("Sample model · High");
   });
 
   // catches: a leaving row that jumps to the end or the top of the list, so the rows below it shift twice.
