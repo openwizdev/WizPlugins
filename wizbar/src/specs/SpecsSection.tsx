@@ -131,8 +131,8 @@ export function SpecsSection({ threads, now, activeThreadId, onNavigate }: Specs
   );
 }
 
-/** Gap plus the shortest rule line kept beside the words, in px: under this the narrow form shows (#161). */
-const RULE_RESERVE = 8 + 16;
+/** The gap plus the shortest rule line worth drawing, in px; with less room left the line is left out (#167 R1). */
+const LINE_ROOM = 8 + 4;
 
 /**
  * #161: `Specs N · M tickets need you (K specs)`, or `Specs N · M for you` when the full sentence does not
@@ -144,17 +144,18 @@ function SpecsRule({ result }: { result: SpecsResultV4 }) {
   const sentence = sectionRule(result);
   const rule = useRef<HTMLHeadingElement>(null);
   const measure = useRef<HTMLSpanElement>(null);
-  const [fits, setFits] = useState(true);
+  // `room`: px left beside the full sentence; under 0 it does not fit (#167 R1: the line never forces the narrow form).
+  const [room, setRoom] = useState<number | null>(null);
   useLayoutEffect(() => {
     const box = rule.current;
     const full = measure.current;
     if (!box || !full) return;
     const check = () => {
       // Not laid out (hidden, or no layout at all): keep the full sentence.
-      if (box.clientWidth === 0) { setFits(true); return; }
+      if (box.clientWidth === 0) { setRoom(null); return; }
       const style = getComputedStyle(box);
       const inner = box.clientWidth - (parseFloat(style.paddingLeft) || 0) - (parseFloat(style.paddingRight) || 0);
-      setFits(full.offsetWidth + RULE_RESERVE <= inner);
+      setRoom(inner - full.offsetWidth);
     };
     check();
     if (typeof ResizeObserver === "undefined") return;
@@ -162,6 +163,9 @@ function SpecsRule({ result }: { result: SpecsResultV4 }) {
     observer.observe(box);
     return () => observer.disconnect();
   }, [sentence]);
+  const fits = room === null || room >= 0;
+  // With the narrow form the words are shorter than the measured copy, so there is room for the line.
+  const showLine = room === null || !fits || words === null || room >= LINE_ROOM;
   const label = (after: string | null) => (
     <>
       <span className="text-muted-foreground">Specs</span>{" "}
@@ -174,7 +178,7 @@ function SpecsRule({ result }: { result: SpecsResultV4 }) {
       <h2 ref={rule} aria-label={sentence} title={sentence}
         className="flex items-center gap-2 px-2.5 pb-1 pt-3 text-[11.5px] font-medium">
         <span data-rule-text="" className="shrink-0 whitespace-nowrap">{label(words === null ? null : fits ? words.full : words.short)}</span>
-        <span data-rule-line="" className="h-px flex-1" style={{ background: tokens.rule }} />
+        {showLine ? <span data-rule-line="" className="h-px min-w-0 flex-1" style={{ background: tokens.rule }} /> : null}
       </h2>
       {/* Outside the heading, so its text and name stay the shown words; same size and weight as the rule. */}
       <span ref={measure} data-rule-measure="" aria-hidden="true"
