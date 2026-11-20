@@ -5,7 +5,7 @@
 // 4 running, 1/2/1, 3 waiting).
 import { createElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, screen, waitFor } from "@testing-library/react";
 import { renderSlot } from "@get-bb/plugin-sdk/testing/app";
 import type { PluginSidebarThread, PluginSidebarThreadsState } from "@get-bb/plugin-sdk";
 import { v3Threads } from "./fixtures/v3";
@@ -168,11 +168,11 @@ describe("WB4-10: the card's spec names follow the bound factory", () => {
     settingsFeed.current = factory("/synthetic/home-c");
     rendered.rerender(createElement(Panel, props));
     await waitFor(() => expect(answers).toHaveLength(3));
+    // The old binding's answer settles first, on its own; then the current one.
+    await act(async () => { answers[1]!(v4SpecsFileText); });
+    expect(names()).toEqual([]);
     answers[2]!(fileB);
     await waitFor(() => expect(names()).toContain("Sample palette B"));
-    answers[1]!(v4SpecsFileText);
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(names()).toContain("Sample palette B");
     expect(names()).not.toContain("Sample palette");
   });
 });
