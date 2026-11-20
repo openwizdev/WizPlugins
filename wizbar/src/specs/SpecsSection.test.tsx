@@ -268,6 +268,26 @@ describe("WB4-8: GitHub by keyboard on a spec without agents (#1563)", () => {
   });
 });
 
+describe("WB4-8: pointer and focus reveal GitHub independently (#1563, review R1)", () => {
+  // catches: a pointer leave hiding the focused GitHub button, or a blur hiding it under the pointer, because hover and focus share one flag.
+  it.each([
+    ["the pointer leaves while focus stays", (row: HTMLElement, github: HTMLElement) => {
+      fireEvent.pointerEnter(row); act(() => github.focus()); fireEvent.pointerLeave(row);
+    }],
+    ["focus leaves while the pointer stays", (row: HTMLElement, github: HTMLElement) => {
+      act(() => github.focus()); fireEvent.pointerEnter(row); act(() => github.blur());
+    }],
+  ] as const)("keeps the GitHub action shown when %s", async (_name, steps) => {
+    render();
+    await screen.findByText("Sample cache");
+    const row = rowOf("Sample cache");
+    const github = within(row).getByRole("button", { name: "Open Sample cache on GitHub" });
+    steps(row, github);
+    expect(github.classList.contains("sr-only")).toBe(false);
+    expect(within(row).queryByText("0/3")).toBeNull();
+  });
+});
+
 describe("WB4-8: a changed factory clears the old rows at once (#1564)", () => {
   const other = JSON.stringify([{ ...JSON.parse(binding)[0], home: { hostId: "hst_v4_other", rootPath: "/synthetic/other" } }]);
   const onlyCache: SpecsFileReadV4 = { kind: "content", text: JSON.stringify({
