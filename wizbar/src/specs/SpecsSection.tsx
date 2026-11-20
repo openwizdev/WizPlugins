@@ -139,7 +139,11 @@ function SpecRow({ row, threads, now, activeThreadId, onNavigate, onToggle }: {
   onToggle: () => void;
 }) {
   const navigate = useBbNavigate();
+  // Hover and focus-within are separate, so a pointer leaving never hides the
+  // GitHub action while keyboard focus is still in the row, and a blur never hides it under the pointer.
   const [hover, setHover] = useState(false);
+  const [focusWithin, setFocusWithin] = useState(false);
+  const revealed = hover || focusWithin;
   const canOpen = row.agents.length > 0;
   const open = effectiveOpen(row);
   const name = (
@@ -152,8 +156,8 @@ function SpecRow({ row, threads, now, activeThreadId, onNavigate, onToggle }: {
   return (
     <li data-spec={row.spec} className="list-none rounded-md px-2.5 py-1 text-xs hover:bg-sidebar-accent/60"
       onPointerEnter={() => setHover(true)} onPointerLeave={() => setHover(false)}
-      onFocus={() => setHover(true)}
-      onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setHover(false); }}>
+      onFocus={() => setFocusWithin(true)}
+      onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setFocusWithin(false); }}>
       <div className="flex items-center gap-2">
         {canOpen ? (
           <button type="button" aria-expanded={open} aria-label={`${open ? "Close" : "Open"} ${row.shortName}`}
@@ -165,11 +169,11 @@ function SpecRow({ row, threads, now, activeThreadId, onNavigate, onToggle }: {
         <span className={cn(TRAILING_GLYPH_BOX_CLASS, "w-auto min-w-6 justify-end")}>
           {/* Always in the tab order, so a row with no chevron can still reach GitHub; shown on hover or focus. */}
           <button type="button" aria-label={`Open ${row.shortName} on GitHub`}
-            className={cn("text-muted-foreground hover:text-foreground", !hover && "sr-only")}
+            className={cn("text-muted-foreground hover:text-foreground", !revealed && "sr-only")}
             onClick={() => navigate.openUrl(row.url)}>
             <HugeiconsIcon icon={GithubIcon} className="size-3.5" />
           </button>
-          {hover ? null : <span data-done-total="" className="tabular-nums text-muted-foreground">{row.done}/{row.total}</span>}
+          {revealed ? null : <span data-done-total="" className="tabular-nums text-muted-foreground">{row.done}/{row.total}</span>}
         </span>
       </div>
       <Dots row={row} />
