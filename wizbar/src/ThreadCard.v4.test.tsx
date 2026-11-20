@@ -10,8 +10,9 @@ import { v4Now, v4PullRequests, v4Threads } from "./fixtures/v4";
 const app = await loadPluginApp(() => import("../app"));
 const inbox = app.threadLists[0]!;
 const ids = ["thr_v4_fleet_a", "thr_v4_reviewer_a", "thr_v4_waiting", "thr_v4_failed", "thr_v4_checks", "thr_v4_merged", "thr_v4_idle"];
-// As top-level cards: the inbox lists children under their parent, not as cards.
-const threads = v4Threads.filter((t) => ids.includes(t.id)).map((t) => ({ ...t, parentThreadId: null }));
+// As top-level cards: the inbox lists children under their parent, not as cards. Unread (E2, #188) shows
+// only rows with something new, so each is unread.
+const threads = v4Threads.filter((t) => ids.includes(t.id)).map((t) => ({ ...t, parentThreadId: null, isUnread: true }));
 
 function show(model: string | null) {
   renderSlot(inbox, { activeThreadId: null, activeProjectId: null, isCompactViewport: false, onNavigate: vi.fn(), searchQuery: "" }, {

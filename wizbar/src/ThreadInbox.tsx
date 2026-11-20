@@ -28,13 +28,16 @@ import { SpecsSection } from "./specs/SpecsSection";
 import { tokens } from "./specs/theme";
 import type { t3sidebarRpcContract } from "./server";
 import {
-  readCollapsedKeys,
+  readCollapsedSections,
   readSectionsOrder,
-  withCollapsed,
+  withSectionCollapsed,
   withSectionMoved,
-  type SectionKey,
   type SidebarSection,
 } from "./sections";
+import type { SpecsFileReadV4, SpecsFileV4 } from "./fixtures/v4";
+import { boundHome, readSpecsFile } from "./specs/read";
+import { readDeckFactories } from "./deck/data/binding";
+import type { specsRpcContract } from "./specs/server";
 import type { MovePositionV3 } from "./v3-types";
 import {
   dragPinOutcome,
@@ -54,6 +57,7 @@ import {
   sortByCreatedAtDescending,
   sortPinned,
   threadDisplayTitle,
+  unreadThreads,
   visibleInboxThreads,
 } from "./inbox";
 
@@ -93,22 +97,25 @@ export function ThreadInbox({
   const [showSettled, setShowSettled] = useState(false);
   const [showMuted, setShowMuted] = useState(false);
 
+  const specsFile = useSpecsFileForUnread(now);
+
   const projectNameById = useMemo(
     () => new Map(projects.map((project) => [project.id, project.name])),
     [projects],
   );
 
-  const { pinned, inbox, snoozed, settled, muted } = useMemo(() => {
+  const { pinned, inbox, snoozed, settled, muted, hiddenChildren } = useMemo(() => {
     const scoped = filterByProject(
       visibleInboxThreads(threads),
       scope === ALL_PROJECTS ? null : scope,
     );
     // Children live in their parent's header chip instead of the flat list;
-    // an orphan whose parent is not on screen stays here.
-    const matched = searchThreadsByTitle(
-      hideChildrenOfVisibleParents(scoped),
-      searchQuery,
-    );
+    // an orphan whose parent is not on screen stays here. #211 R1: a search
+    // matches every row by its own title, children included, so they show.
+    const searching = searchQuery.trim() !== "";
+    const listed = searching ? scoped : hideChildrenOfVisibleParents(scoped);
+    const listedIds = new Set(listed.map((thread) => thread.id));
+    const matched = searchThreadsByTitle(listed, searchQuery);
     const active: typeof matched = [];
     const onSnoozeShelf: typeof matched = [];
     const onSettledShelf: typeof matched = [];
@@ -134,15 +141,35 @@ export function ThreadInbox({
       ),
       settled: sortByCreatedAtDescending(onSettledShelf),
       muted: sortByCreatedAtDescending(onMutedShelf),
+      // #211 R1: the active children in their parents' chips; their news brings the parent into Unread.
+      hiddenChildren: scoped.filter((thread) => !listedIds.has(thread.id) && lifecycle.shelfFor(thread) === "active"),
     };
   }, [lifecycle, scope, searchQuery, threads]);
+  // E2 (#188): Unread. While a search is active every match shows, read or not, as the 0.5 Inbox did.
+  // #211 R2: the filtered list needs the plugin settings (the binding) and the first specs-file answer;
+  // until both are known the last filtered list stays on screen (none at first), so no spec agent or
+  // fleet loop run shows and then leaves.
+  const searchActive = searchQuery.trim() !== "";
+  const settingsState = useSettings();
+  const factories = settingsState.values?.wizdeckFactories;
+  // The fleet loops' names use the bound factories' repositories (section 10).
+  const repositories = useMemo(() => {
+    const binding = readDeckFactories(factories);
+    return binding.ok ? binding.factories.flatMap((factory) => factory.binding.repositories) : [];
+  }, [factories]);
+  const filtered = useMemo(() => settingsState.isLoading || specsFile === undefined ? null
+    : unreadThreads(inbox, specsFile, threads, repositories, hiddenChildren),
+  [hiddenChildren, inbox, repositories, settingsState.isLoading, specsFile, threads]);
+  const lastFiltered = useRef<typeof inbox>([]);
+  if (filtered !== null) lastFiltered.current = filtered;
+  const unread = searchActive ? inbox : (filtered ?? lastFiltered.current);
 
   const connection = useRealtimeConnectionState();
   const drag = useDragPins(status, connection, threads, pinned);
   const sections = useSectionsCollapsed();
   // While a search is active its matches show even in a collapsed section; nothing is stored.
   const searching = searchQuery.trim() !== "";
-  const isCollapsed = (key: SectionKey) => !searching && sections.collapsed.has(key);
+  const isCollapsed = (key: SidebarSection) => !searching && sections.collapsed.has(key);
   const pinnedShown = pinned.length > 0 || drag.draggingId !== null;
   const order = useSectionsOrder();
 
@@ -234,11 +261,11 @@ export function ThreadInbox({
                   ])}
                   {drag.markerAtEnd() ? <DropMarker /> : null}
                 </Shelf>
-              ) : null) : key === "unread" ? (inbox.length > 0 ? (
-                // #170 R1: the Inbox always has its header, so it can always be collapsed and expanded.
-                <Shelf label="Inbox" count={inbox.length} searching={searching}
-                  collapsed={isCollapsed("inbox")} onToggle={() => sections.toggle("inbox")} saveFailed={sections.failed === "inbox"}>
-                  {inbox.map((thread) => (
+              ) : null) : key === "unread" ? (unread.length > 0 ? (
+                // #170 R1: Unread always has its header, so it can always be collapsed and expanded.
+                <Shelf label="Unread" count={unread.length} searching={searching}
+                  collapsed={isCollapsed("unread")} onToggle={() => sections.toggle("unread")} saveFailed={sections.failed === "unread"}>
+                  {unread.map((thread) => (
                     <ThreadCard
                       key={thread.id}
                       thread={thread}
@@ -487,12 +514,48 @@ function useSectionSetting<Tag>(name: "sectionsCollapsed" | "sectionsOrder") {
   return { value, save, failed };
 }
 
+/**
+ * E2 (#188): the specs file Unread matches against (specs-section section 3), read
+ * for the bound factory like the Specs section's, on mount, on a binding change
+ * and once a minute. Undefined while the settings load and until the first answer for this binding; null with
+ * no binding or no readable file. The last answer stays until the next, so a
+ * refresh never empties Unread.
+ */
+function useSpecsFileForUnread(now: number): SpecsFileV4 | null | undefined {
+  const host = useSettings();
+  const loading = host.isLoading;
+  const rpc = useRpc<typeof specsRpcContract>();
+  const bound = boundHome(host.values?.wizdeckFactories);
+  const home = bound === null ? null : JSON.stringify([bound.hostId, bound.rootPath]);
+  const [read, setRead] = useState<{ home: string; read: SpecsFileReadV4 } | null>(null);
+  useEffect(() => {
+    if (home === null) return;
+    let live = true;
+    const load = () => rpc.call("specsFile", {}).then(
+      (result) => { if (live) setRead({ home, read: result }); },
+      () => { if (live) setRead({ home, read: { kind: "unreadable" } }); },
+    );
+    void load();
+    const timer = setInterval(load, 60_000);
+    return () => { live = false; clearInterval(timer); };
+  }, [home, rpc]);
+  return useMemo(() => {
+    // #211 R2: while the settings load, the binding is not known, so neither is the file.
+    if (loading) return undefined;
+    if (home === null) return null;
+    if (read?.home !== home) return undefined;
+    const file = readSpecsFile(read.read, now);
+    return file.status === "ready" ? file.file : null;
+  }, [home, loading, now, read]);
+}
+
 /** S1 (#169): `sectionsCollapsed`; a toggle names the section whose save failed. */
 function useSectionsCollapsed() {
-  const { value, save, failed } = useSectionSetting<SectionKey>("sectionsCollapsed");
-  const collapsed = useMemo(() => new Set(readCollapsedKeys(value)), [value]);
-  const toggle = useCallback((key: SectionKey) =>
-    save((raw) => withCollapsed(raw, key, !readCollapsedKeys(raw).includes(key)), key), [save]);
+  // E2 (#188): the 0.6 readers, so a stored 0.5 `inbox` reads as `unread` and every write stores `unread`.
+  const { value, save, failed } = useSectionSetting<SidebarSection>("sectionsCollapsed");
+  const collapsed = useMemo(() => new Set(readCollapsedSections(value)), [value]);
+  const toggle = useCallback((key: SidebarSection) =>
+    save((raw) => withSectionCollapsed(raw, key, !readCollapsedSections(raw).includes(key)), key), [save]);
   return { collapsed, toggle, failed };
 }
 

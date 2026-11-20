@@ -57,7 +57,7 @@ describe("N5 source availability and visibility at the rendered boundary", () =>
       }
       const rendered = renderSlot({ component: Fixture }, {}, {
         pluginId, settings: { machineIconsEnabled: enabled },
-        sidebarThreads: { status: "ready", threads: [syntheticThread()] },
+        sidebarThreads: { status: "ready", threads: [syntheticThread({ isUnread: true })] }, // E2 (#188): Unread shows rows with something new.
         rpc: { listLifecycle: () => ({ rows: [] }) },
       });
       const expectReady = () => {

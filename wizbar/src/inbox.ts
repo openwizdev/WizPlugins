@@ -1,4 +1,6 @@
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk";
+import type { SpecsFileV4 } from "./fixtures/v4";
+import { matchSpec } from "./specs/rows";
 
 /**
  * The sort that defines this sidebar: newest thread on top, and NOTHING moves
@@ -137,4 +139,51 @@ export function sortPinned<T extends PinnedSortable>(threads: readonly T[]): T[]
       right.createdAt - left.createdAt ||
       (left.id < right.id ? -1 : left.id > right.id ? 1 : 0);
   });
+}
+
+/**
+ * The host's attention markers: the indicator kinds that mean something new for
+ * the owner (unread finished or failed work, a question, a send that failed).
+ */
+const attentionIndicators: ReadonlySet<string> = new Set(["unread-error", "unread-success", "waiting-for-input", "queued-failed"]);
+
+/** Something new for the owner: `isUnread`, a pending question, or a host attention marker. */
+export function hasSomethingNew(thread: PluginSidebarThread): boolean {
+  return thread.isUnread || thread.hasPendingInteraction || attentionIndicators.has(thread.indicator);
+}
+
+/** A fleet wake's title form, the real `Fleet #S: …` title (specs-section section 3). */
+const fleetWakeTitle = /^Fleet #[1-9][0-9]*: /;
+
+/**
+ * A fleet loop run's title: exactly one of the fleet skill's loop names for one of
+ * `repositories` (`launch-fleet <owner>/<repo>`, `launch-fleet wakes <owner>/<repo>`,
+ * `launch-fleet #<N> <owner>/<repo>`). The host marks no loop run (SDK 0.6.33's
+ * `originKind` and `originPluginId` are null on every thread), so the title is the
+ * only record; any other loop's run is not recognised.
+ */
+export function isFleetLoopTitle(title: string, repositories: readonly string[]): boolean {
+  const match = /^launch-fleet (?:wakes |#[1-9][0-9]* )?(.+)$/.exec(title);
+  return match !== null && repositories.includes(match[1]!);
+}
+
+/**
+ * E2 (#188), Unread (sidebar-v3.v1.md section 10): of `threads`, in their order,
+ * those that match no spec (specs-section section 3, against `rows`, every
+ * sidebar row), are not fleet wakes and are not fleet loop runs for
+ * `repositories`, and have something new for the owner themselves or in a child
+ * hidden under them (`hiddenChildren`, shown in the parent's chip) that would
+ * itself qualify. With no specs file nothing matches a spec.
+ */
+export function unreadThreads<T extends PluginSidebarThread>(
+  threads: readonly T[], file: SpecsFileV4 | null, rows: readonly PluginSidebarThread[],
+  repositories: readonly string[] = [],
+  hiddenChildren: readonly PluginSidebarThread[] = [],
+): T[] {
+  const eligible = (thread: PluginSidebarThread) => !fleetWakeTitle.test(thread.displayTitle)
+    && !isFleetLoopTitle(thread.displayTitle, repositories)
+    && (file === null || matchSpec(file, thread, rows) === null);
+  const qualifies = (thread: PluginSidebarThread) => hasSomethingNew(thread) && eligible(thread);
+  const newsUnder = new Set(hiddenChildren.filter(qualifies).map((child) => child.parentThreadId));
+  return threads.filter((thread) => eligible(thread) && (hasSomethingNew(thread) || newsUnder.has(thread.id)));
 }

@@ -288,7 +288,18 @@ Exactly one known section and exactly one of `--collapse` / `--expand`, else usa
 
 Declared in `sectionsSettingDescriptors` beside `sectionsCollapsed`, off the settings page, with the same store and write rule. `readSectionsOrder`: the known keys in stored order, each once (a stored `inbox` is `unread`), unknown keys ignored, then any missing key in default order; a missing setting or a value that is not a JSON array of strings is the default (`v6OrderCases`). `withSectionMoved(raw, key, to)` moves one section to index `to`, clamped to the ends, and stores the full order (`v6OrderMoves`): a header dropped on another section's place, or Alt+Up and Alt+Down on a focused header (`to` is its index − 1 or + 1; at the end it stays). Only `sectionsOrder` is written. The Specs section's rule and the "N running" footer keep their places within and below the sections.
 
-**Unread** (#188) shows only threads with something new for the owner (`isUnread` or the host's attention markers) that match no spec (specs-section section 3), and never a thread whose origin is a loop or whose title is a fleet wake. #188 writes the exact rule here.
+**Unread** (#188, `unreadThreads` in `src/inbox.ts`). Of the active, unpinned rows (after the project scope, child hiding and parking, as before), in creation order newest first, Unread shows a row exactly when all of these hold:
+
+1. **Something new for the owner,** in the row itself or in an active child hidden under it (in its chip) that meets 1 to 4 itself: `isUnread`, or `hasPendingInteraction`, or `indicator` is one of the host's attention markers `unread-error`, `unread-success`, `waiting-for-input`, `queued-failed`.
+2. **Under no spec:** it matches no spec by specs-section section 3 (only running rows match). With no binding or no readable file, nothing matches a spec.
+3. **Not a fleet wake:** its `displayTitle` does not start with `Fleet #<N>: ` (specs-section section 3's real fleet title; `N` has no leading zero).
+4. **Not a fleet loop run:** its `displayTitle` is not, as the whole title, one of the fleet skill's loop names for a repository in `wizdeckFactories` (every readable factory's `repositories`): `launch-fleet <owner>/<repo>`, `launch-fleet wakes <owner>/<repo>` or `launch-fleet #<N> <owner>/<repo>`.
+
+**Waiting.** The list needs the plugin settings (the binding) and the sidebar's first specs-file answer for the bound factory. Until both are known (while settings load, or after a binding change), the last list stays on screen (none at first), so no spec agent or fleet loop run shows and then leaves. The last specs answer is kept across refreshes.
+
+Only these records decide; nothing is guessed. The host does not mark loop runs (SDK 0.6.33's `originKind` and `originPluginId` are null on every thread, loop runs included, and the plugin SDK has no loops area), so **any other loop's run can appear in Unread when it has something new**, until the host marks loop runs.
+
+**While a search is active** every row matching by its own title shows in Unread, read or not, spec agent, fleet wake, loop run or a child (child hiding is off during a search); the filter returns when the search clears. The header and `Unread N` count follow section 9. `wizbar section` takes `unread` and accepts `inbox` as the same section.
 
 **Settled** (#187) is reachable by search and by one quiet `Settled N` link at the very bottom; it is not a section, has no key, and is absent from `sectionsOrder`.
 
