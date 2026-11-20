@@ -8,9 +8,10 @@ import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-libra
 import { loadPluginApp, renderSlot } from "@get-bb/plugin-sdk/testing/app";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import {
-  v4CardPinCases, v4Now, v4OpenSetting, v4SpecRows, v4SpecsFile, v4SpecsFileText, v4Stats, v4Threads, v4TimeZone, type StatsV4,
+  v4CardPinCases, v4Now, v4OpenSetting, v4RealTitlesFile, v4RealTitleThreads, v4SpecRows, v4SpecsFile, v4SpecsFileText, v4Stats, v4Threads,
+  v4TimeZone, type StatsV4,
 } from "./fixtures/v4";
-import { cardPinNext, cardRowLabel, cardSummary, computeStatsV4, formatStatsText } from "./stats";
+import { cardPinNext, cardRowLabel, cardRowLabels, cardSummary, computeStatsV4, formatStatsText } from "./stats";
 import { createSpecsCommands } from "./specs/cli";
 
 type Ready = Extract<StatsV4, { status: "ready" }>;
@@ -57,6 +58,38 @@ describe("S4: the card's data is one computation (sections 7 and 8)", () => {
     expect(cardRowLabel("Builder · SP-2: Sample add keyboard paths")).toBe("Builder · SP-2");
     expect(cardRowLabel("Reviewer · SP-14: Sample review")).toBe("Reviewer · SP-14");
     expect(cardRowLabel("Sample palette fleet")).toBe("Sample palette fleet");
+  });
+
+  // catches (#118 R2): a fleet's child losing its spec on the card because the rows never reach the matcher,
+  // or the raw title rewritten in the stats JSON.
+  it("names the spec of a fleet's children, and keeps each raw title", () => {
+    const stats = computeStatsV4(v4RealTitleThreads, v4RealTitlesFile, null, v4Now, v4TimeZone) as Ready;
+    const byId = Object.fromEntries(stats.threads.map((t) => [t.id, [t.title, t.shortName]]));
+    expect(byId.thr_rt_builder).toEqual(["#902: Sample the driver", "Sample kernel"]);
+    expect(byId.thr_rt_helper).toEqual(["Sample helper sweep", "Sample kernel"]);
+    expect(byId.thr_rt_reviewer).toEqual(["Review #951 at abc1234", "Sample kernel"]);
+    expect(byId.thr_rt_lost_child).toEqual(["#5: Sample nothing", null]);
+  });
+
+  // catches (#118 R2): real `#N:` and `Review #P at` titles shown raw on the card instead of role and ticket code.
+  it("labels real titles by role and their ticket's code", () => {
+    const labels = cardRowLabels(v4RealTitleThreads, v4RealTitlesFile, v4Now);
+    expect(Object.fromEntries(v4RealTitleThreads.map((t) => [t.id, labels.get(t.id)]))).toEqual({
+      thr_rt_fleet: "Fleet #900: Sample kernel",
+      thr_rt_builder: "Builder · KN2",
+      thr_rt_reviewer: "Reviewer · KN3",
+      thr_rt_helper: "Sample helper sweep",
+      thr_rt_top_builder: "Builder · RL1",
+      thr_rt_old_form: "Builder · SP-9",
+      thr_rt_no_hyphen: "Builder · AP11",
+      thr_rt_uncoded: "Builder · #923",
+      thr_rt_lost_fleet: "Fleet #777: Sample gone spec",
+      thr_rt_lost_review: "Review #999 at def5678",
+      thr_rt_lost_child: "#5: Sample nothing",
+    });
+    // With no ready specs file, only the title's own form can give a code.
+    const bare = cardRowLabels(v4RealTitleThreads, null, v4Now);
+    expect([bare.get("thr_rt_builder"), bare.get("thr_rt_no_hyphen")]).toEqual(["#902: Sample the driver", "Builder · AP11"]);
   });
 
   // catches: the CLI text dropping the harness split or the threads.
@@ -148,6 +181,21 @@ describe("S4: no bolt; N running with its hover card", () => {
     const area = hitArea()!;
     expect([area.style.left, area.style.right]).toEqual(["8px", "8px"]);
     expect(card()!.style.width).toBe("100%");
+  });
+
+  // catches (#118 R2): the rendered card ignoring the resolved labels and spec names for real titles.
+  it("shows real titles' role, code and spec on the card", async () => {
+    renderSlot({ component: FooterCounter }, {}, {
+      pluginId: "synthetic-118-r2", settings: { wizdeckFactories: binding },
+      sidebarThreads: { status: "ready", threads: [...v4RealTitleThreads] },
+      rpc: { specsFile: () => ({ kind: "content", text: JSON.stringify(v4RealTitlesFile) }), cardModels: models(null, null, "none") } as never,
+    });
+    fireEvent.pointerEnter(counter().parentElement!);
+    const row = (id: string) => card()!.querySelector(`[data-thread=${id}]`)!;
+    await waitFor(() => expect(row("thr_rt_builder").querySelector("[data-spec-name]")?.textContent).toBe("Sample kernel"));
+    expect(row("thr_rt_builder").querySelector("[data-title]")?.textContent).toBe("Builder · KN2");
+    expect(row("thr_rt_reviewer").querySelector("[data-title]")?.textContent).toBe("Reviewer · KN3");
+    expect(row("thr_rt_helper").querySelector("[data-spec-name]")?.textContent).toBe("Sample kernel");
   });
 
   // catches (0.5 E): model · effort dropped from a one-line row, or put on a second line.
