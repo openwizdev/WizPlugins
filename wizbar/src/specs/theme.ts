@@ -9,8 +9,10 @@ export const tokens = {
   accent: primary,
   /** The olive rule line beside a section's name: quieter than the text olive. */
   rule: `color-mix(in oklch, ${warmAccent} 40%, ${sidebar})`,
-  /** The owner's "olive", raised to read on the sidebar: "N done in the last hour", done dots and done marks. */
-  mutedAccent: `color-mix(in oklch, ${warmAccent} 60%, ${sidebar})`,
+  /** The owner's "olive": done dots and done marks. */
+  mutedAccent: `color-mix(in oklch, ${warmAccent} 55%, ${sidebar})`,
+  /** A brighter olive for "N done in the last hour", 4.5:1 or better on the sidebar and the open card (#131 R1). */
+  doneNote: `color-mix(in oklch, ${warmAccent} 75%, ${sidebar})`,
   /** Bright olive: a ticket done in the last hour. */
   brightOlive: `color-mix(in oklch, ${primary} 85%, ${sidebar})`,
   warning,
