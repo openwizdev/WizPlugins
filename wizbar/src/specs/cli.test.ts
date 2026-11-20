@@ -7,7 +7,8 @@ import { createFakePluginHost, type FakePluginHost } from "@get-bb/plugin-sdk/te
 import type { BbPluginApi } from "@get-bb/plugin-sdk";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import plugin from "../server";
-import { v4Now, v4OpenSetting, v4SpecRows, v4SpecsFile, v4SpecsFileText, v4Threads } from "../fixtures/v4";
+import { v4Now, v4OpenSetting, v4SpecOpenCases, v4SpecRows, v4SpecsFile, v4SpecsFileText, v4Threads } from "../fixtures/v4";
+import { effectiveOpen, readOpenKeys } from "./open-state";
 import { rawRow } from "./testing";
 
 const factory = {
@@ -27,6 +28,17 @@ async function setup(options: { text?: string; read?: Read; list?: () => Promise
   const list = vi.fn(options.list ?? (async ({ offset = 0 }: { offset?: number } = {}) => v4Threads.map(rawRow).slice(offset, offset + 100)));
   const host = createFakePluginHost({ pluginId: "wizbar", sdk: { files: { read }, threads: { list, get: vi.fn() } } as never });
   hosts.push(host);
+  // The `specsOpen` handle: its stored value read directly, and a hook run before each plugin read.
+  const open: { get?: () => Promise<{ specsOpen?: unknown }>; beforeGet: () => Promise<void> } = { beforeGet: async () => {} };
+  const define = host.bb.settings.define.bind(host.bb.settings);
+  vi.spyOn(host.bb.settings, "define").mockImplementation(((descriptors: Record<string, unknown>) => {
+    const handle = define(descriptors as never);
+    if (!("specsOpen" in descriptors)) return handle;
+    const get = handle.get.bind(handle);
+    open.get = get as typeof open.get;
+    handle.get = async () => { await open.beforeGet(); return get(); };
+    return handle;
+  }) as BbPluginApi["settings"]["define"]);
   plugin(host.bb);
   await host.harness.behavior.setSettings({ wizdeckFactories: JSON.stringify([factory]), specsOpen: v4OpenSetting, ...options.settings });
   const run = async (argv: string[]) => {
@@ -37,7 +49,8 @@ async function setup(options: { text?: string; read?: Read; list?: () => Promise
     const result = await run([...argv, "--json"]);
     return { exitCode: result.exitCode, body: JSON.parse(result.stdout) };
   };
-  return { host, read, list, run, json };
+  const stored = async () => (await open.get!()).specsOpen;
+  return { host, read, list, run, json, open, stored };
 }
 
 beforeEach(() => {
@@ -147,7 +160,7 @@ describe("wizbar spec <n> --open|--close (sections 4 and 8)", () => {
   // catches: an open state that is not written to plugin settings, so a reload forgets it.
   it("opens and closes a spec, and the state survives a reload", async () => {
     const cli = await setup();
-    expect(await cli.json(["spec", "77", "--open"])).toEqual({ exitCode: 0, body: { spec: "example/sample-tools#77", open: true } });
+    expect(await cli.json(["spec", "77", "--open"])).toEqual({ exitCode: 0, body: { spec: "example/sample-tools#77", open: false } });
     const reloaded = await cli.host.harness.lifecycle.reload(plugin);
     hosts.push(reloaded);
     const after = await reloaded.harness.behavior.runCli(["specs", "--json"]);
@@ -179,7 +192,8 @@ describe("wizbar spec <n> --open|--close (sections 4 and 8)", () => {
     file.specs[1] = { ...file.specs[1]!, spec: "example/sample-tools#501", url: "https://github.com/example/sample-tools/issues/501" };
     const cli = await setup({ text: JSON.stringify(file) });
     expect((await cli.json(["spec", "501", "--open"])).body.error.code).toBe("ambiguous_spec");
-    expect(await cli.json(["spec", "example/sample-tools#501", "--open"])).toEqual({ exitCode: 0, body: { spec: "example/sample-tools#501", open: true } });
+    // The copied cache spec has no agents, so it reports closed (section 4: effective open state).
+    expect(await cli.json(["spec", "example/sample-tools#501", "--open"])).toEqual({ exitCode: 0, body: { spec: "example/sample-tools#501", open: false } });
   });
 
   // catches: a spec opened from an unavailable file.
@@ -216,5 +230,58 @@ describe("wizbar spec <n> --open|--close (sections 4 and 8)", () => {
   ])("treats %j as a usage error", async (...argv) => {
     const cli = await setup();
     expect((await cli.run(argv)).exitCode).toBe(2);
+  });
+
+  // catches: `wizbar spec 77 --open` reporting open for a spec with no agents, which the sidebar shows closed (#1539).
+  it.each(v4SpecOpenCases)("$argv exits $exitCode with the effective open state", async ({ argv, exitCode, result, text, stored }) => {
+    const cli = await setup();
+    expect(await cli.json([...argv])).toEqual({ exitCode, body: result });
+    expect(readOpenKeys(await cli.stored())).toEqual(stored);
+    const row = (await cli.json(["specs"])).body.specs.find((r: { spec: string }) => r.spec === result.spec);
+    expect(result.open).toBe(effectiveOpen(row));
+    expect(await (await setup()).run([...argv])).toEqual({ exitCode, stdout: text, stderr: "" });
+  });
+
+  // catches: a failed settings read taken as an empty list, so the write erases every other saved spec (#1560).
+  it("fails with settings_failed and writes nothing when the settings read fails", async () => {
+    const cli = await setup();
+    cli.open.beforeGet = async () => { throw new Error("settings offline"); };
+    expect(await cli.json(["spec", "77", "--open"])).toEqual({
+      exitCode: 1, body: { error: { code: "settings_failed", message: "The settings read failed." } },
+    });
+    expect(await cli.stored()).toBe(v4OpenSetting);
+    // Display still fails closed: every spec collapsed.
+    const specs = await cli.json(["specs"]);
+    expect(specs.exitCode).toBe(0);
+    expect(specs.body.specs.map((r: { open: boolean }) => r.open)).toEqual([false, false]);
+  });
+
+  // catches: a spec written and reported when its agents, and so what the sidebar shows, could not be read.
+  it("needs the thread rows and writes nothing without them", async () => {
+    const cli = await setup({ list: async () => { throw new Error("offline"); } });
+    expect(await cli.json(["spec", "77", "--open"])).toEqual({
+      exitCode: 1, body: { error: { code: "state_unavailable", message: "Thread state is unavailable." } },
+    });
+    expect(await cli.stored()).toBe(v4OpenSetting);
+  });
+
+  // catches: two overlapping commands reading the same snapshot, so the later write drops the earlier change (#1561).
+  it("keeps both changes when two commands overlap", async () => {
+    const cli = await setup({ settings: { specsOpen: "[]" } });
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    let reads = 0;
+    cli.open.beforeGet = () => { reads += 1; return gate; };
+    const both = Promise.all([cli.json(["spec", "501", "--open"]), cli.json(["spec", "77", "--open"])]);
+    // One command holds a settings read; after one task turn the other's read has started unless it waits its turn.
+    await vi.waitFor(() => expect(reads).toBeGreaterThan(0));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    release();
+    const results = await both;
+    expect(readOpenKeys(await cli.stored()).sort()).toEqual(["example/sample-plans#501", "example/sample-tools#77"]);
+    expect(results).toEqual([
+      { exitCode: 0, body: { spec: "example/sample-plans#501", open: true } },
+      { exitCode: 0, body: { spec: "example/sample-tools#77", open: false } },
+    ]);
   });
 });

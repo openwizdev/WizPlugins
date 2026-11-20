@@ -23,3 +23,13 @@ export function withOpen(raw: unknown, spec: string, open: boolean): string {
   if (open) return JSON.stringify(keys.includes(spec) ? keys : [...keys, spec]);
   return JSON.stringify(keys.filter((key) => key !== spec));
 }
+
+/**
+ * Whether a spec row shows open (section 4): its key is saved open and it has
+ * running agents. A visible spec with no agents has no chevron, so it shows
+ * closed whatever is saved; its saved key is kept for when agents return. The
+ * sidebar and `wizbar spec` both report this.
+ */
+export function effectiveOpen(row: { open: boolean; agents: readonly unknown[] }): boolean {
+  return row.open && row.agents.length > 0;
+}
