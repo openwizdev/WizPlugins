@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   act,
   cleanup,
@@ -13,6 +13,7 @@ import { loadPluginApp, renderSlot } from "@get-bb/plugin-sdk/testing/app";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk";
 import { createElement } from "react";
 import { tokens } from "./specs/theme";
+import { v4Now, v4SpecsFileText } from "./fixtures/v4";
 
 // Load through the harness so the plugin's `@get-bb/plugin-sdk/app` import binds
 // to the test runtime; importing the component directly would bind it to an
@@ -1110,7 +1111,8 @@ describe("round 5 shelves", () => {
   const rule = (region: HTMLElement) => region.querySelector<HTMLElement>(":scope > h2 > span:last-child, :scope > button > span:last-child")!;
 
   // catches: a shelf left on the grey border rule, or on the text olive, while Specs uses its quieter rule olive.
-  it.each(["Pinned", "Inbox", "Snoozed", "Muted", "Settled"])("draws the %s rule in the Specs rule olive", async (name) => {
+  // E1 (#187): Settled is a quiet link with no rule now, tested in the E1 block.
+  it.each(["Pinned", "Inbox", "Snoozed", "Muted"])("draws the %s rule in the Specs rule olive", async (name) => {
     renderShelves();
     const region = await screen.findByRole("region", { name });
     const specs = await screen.findByRole("region", { name: "Specs" });
@@ -1283,5 +1285,174 @@ describe("S1: collapsible Pinned and Inbox", () => {
     expect(screen.queryByRole("region", { name: "Pinned" })).toBeNull();
     await new Promise((resolve) => setTimeout(resolve, 10));
     expect(updates).toEqual([]);
+  });
+});
+
+// E1 (#187): the sections follow `sectionsOrder` and reorder by header drag or
+// Alt+Up/Alt+Down on a focused header; Settled leaves the list for one quiet
+// `Settled N` link at the very bottom (sidebar-v3.v1.md section 10). Synthetic rows.
+describe("E1: section order and the Settled link", () => {
+  const binding = JSON.stringify([{ projectKey: "sample-factory", cloudroomProjectId: "prj_v4_atlas", repositories: ["example/sample-plans"],
+    home: { hostId: "hst_v4_home", rootPath: "/synthetic/home" }, orchestratorThreadId: "thr_v4_orchestrator", statusWriterLogin: "sample-manager" }]);
+  const rows = () => [
+    thread({ id: "pin_b", title: "Pinned second", isPinned: true, pinnedAt: 50, pinSortKey: "a1", createdAt: 300 }),
+    thread({ id: "pin_a", title: "Pinned first", isPinned: true, pinnedAt: 40, pinSortKey: "a0", createdAt: 100 }),
+    thread({ id: "in_old", title: "Inbox older", createdAt: 10 }),
+    thread({ id: "in_new", title: "Inbox newer", createdAt: 20 }),
+    thread({ id: "set_a", title: "Settled alpha", createdAt: 5 }),
+  ];
+  const settledRows = [{ threadId: "set_a", settledAt: 200, snoozedUntil: null, snoozedAt: null }];
+  const ordered = (threads: PluginSidebarThread[]) => threads.filter((t) => t.isPinned)
+    .sort((a, b) => ((a.pinSortKey ?? "~") < (b.pinSortKey ?? "~") ? -1 : 1)).map((t) => t.id);
+  function renderOrder(options: { stored?: Record<string, string>; searchQuery?: string; specs?: boolean;
+    save?: (values: Record<string, unknown>) => unknown } = {}) {
+    const updates: { pluginId: string; values: Record<string, unknown> }[] = [];
+    const settings: Record<string, string> = { ...(options.specs ? { wizdeckFactories: binding } : {}), ...options.stored };
+    const threads = rows();
+    const rendered = renderSlot(inbox, { ...listProps, searchQuery: options.searchQuery ?? "" }, {
+      pluginId: "wizbar", settings,
+      sidebarThreads: { status: "ready", threads, projects: [] },
+      rpc: { listLifecycle: () => ({ rows: settledRows }), pin: () => ({ ok: true }), unpin: () => ({ ok: true }),
+        move: () => ({ ok: true }), pinnedOrder: () => ({ order: ordered(threads) }),
+        ...(options.specs ? { specsFile: () => ({ kind: "content", text: v4SpecsFileText }) } : {}) },
+      sdk: { plugins: { updateSettings: (async (args: { pluginId: string; values: Record<string, unknown> }) => {
+        updates.push(args);
+        return options.save?.(args.values) ?? { values: { ...settings, ...args.values } };
+      }) as never } },
+    });
+    return { rendered, updates };
+  }
+  // The three sections' regions, top to bottom (the 0.5 Inbox is the Unread place until #188 renames it).
+  const sectionOrder = () => screen.getAllByRole("region").map((r) => r.getAttribute("aria-label"))
+    .filter((name) => name === "Pinned" || name === "Specs" || name === "Inbox");
+  const header = (name: "Pinned" | "Inbox") =>
+    within(screen.getByRole("region", { name })).getByRole("button", { name: new RegExp(`^${name}( \\d+)?$`) });
+  const specsHeader = () => within(screen.getByRole("region", { name: "Specs" })).getAllByRole("button")
+    .find((b) => b.closest("h2") !== null)!;
+  const grip = (name: string) => screen.getByRole("region", { name })
+    .closest<HTMLElement>("[data-wizbar-section]")!.querySelector<HTMLElement>("[data-wizbar-section-grip]")!;
+  const orderWrites = (updates: { values: Record<string, unknown> }[]) =>
+    updates.filter((u) => "sectionsOrder" in u.values).map((u) => u.values);
+  const at = (event: Event, clientY: number) => Object.defineProperty(event, "clientY", { value: clientY });
+
+  beforeEach(() => { vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(v4Now); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  // catches: 0.5's fixed Pinned, Inbox, Specs order kept, so the approved Pinned, Specs, Unread default never shows.
+  it("draws Pinned, Specs, then the Unread place by default", async () => {
+    renderOrder();
+    await screen.findByRole("region", { name: "Specs" });
+    expect(sectionOrder()).toEqual(["Pinned", "Specs", "Inbox"]);
+  });
+
+  // catches: a stored order that is read but not drawn, or a malformed value that hides a section.
+  it.each([
+    ["[\"unread\",\"pinned\",\"specs\"]", ["Inbox", "Pinned", "Specs"]],
+    ["[\"inbox\",\"specs\"]", ["Inbox", "Specs", "Pinned"]],
+    ["garbage", ["Pinned", "Specs", "Inbox"]],
+  ])("draws the stored order %s", async (stored, expected) => {
+    renderOrder({ stored: { sectionsOrder: stored } });
+    await screen.findByRole("region", { name: "Specs" });
+    expect(sectionOrder()).toEqual(expected);
+  });
+
+  // catches: Alt+Up/Alt+Down that only work on cards, write the wrong key, or move the section without keeping focus.
+  it("moves a focused section header with Alt+Down and Alt+Up, keeping focus and saving only sectionsOrder", async () => {
+    const { updates } = renderOrder({ specs: true });
+    await waitFor(() => expect(specsHeader()).toBeDefined());
+    header("Pinned").focus();
+    fireEvent.keyDown(header("Pinned"), { key: "ArrowDown", altKey: true });
+    await waitFor(() => expect(sectionOrder()).toEqual(["Specs", "Pinned", "Inbox"]));
+    expect(document.activeElement).toBe(header("Pinned"));
+    expect(updates).toEqual([{ pluginId: "wizbar", values: { sectionsOrder: "[\"specs\",\"pinned\",\"unread\"]" } }]);
+    specsHeader().focus();
+    fireEvent.keyDown(specsHeader(), { key: "ArrowDown", altKey: true });
+    await waitFor(() => expect(sectionOrder()).toEqual(["Pinned", "Specs", "Inbox"]));
+    expect(document.activeElement).toBe(specsHeader());
+    fireEvent.keyDown(header("Inbox"), { key: "ArrowUp", altKey: true });
+    await waitFor(() => expect(sectionOrder()).toEqual(["Pinned", "Inbox", "Specs"]));
+    expect(orderWrites(updates).at(-1)).toEqual({ sectionsOrder: "[\"pinned\",\"unread\",\"specs\"]" });
+    // A plain arrow, or Alt at the top, moves nothing and toggles nothing.
+    fireEvent.keyDown(header("Pinned"), { key: "ArrowUp", altKey: true });
+    fireEvent.keyDown(header("Pinned"), { key: "ArrowDown" });
+    expect(orderWrites(updates)).toHaveLength(3);
+    expect(header("Pinned").getAttribute("aria-expanded")).toBe("true");
+  });
+
+  // catches: a header that cannot be dragged, or a drop that lands on the wrong side of its target.
+  it("reorders by dragging a header's grip onto another section", async () => {
+    const { updates } = renderOrder();
+    await screen.findByRole("region", { name: "Specs" });
+    const from = grip("Inbox");
+    expect(from.getAttribute("draggable")).toBe("true");
+    fireEvent.dragStart(from, { dataTransfer: { setData() {}, effectAllowed: "all" } });
+    const onto = header("Pinned");
+    fireEvent(onto, at(createEvent.dragOver(onto), 0));
+    fireEvent(onto, at(createEvent.drop(onto), 0));
+    fireEvent.dragEnd(from);
+    await waitFor(() => expect(sectionOrder()).toEqual(["Inbox", "Pinned", "Specs"]));
+    expect(orderWrites(updates)).toEqual([{ sectionsOrder: "[\"unread\",\"pinned\",\"specs\"]" }]);
+  });
+
+  // catches: section reordering that breaks card drag-to-pin, or a card drop read as a section move.
+  it("keeps card drag-to-pin working in a reordered list, writing no order", async () => {
+    const { rendered, updates } = renderOrder({ stored: { sectionsOrder: "[\"unread\",\"specs\",\"pinned\"]" } });
+    await screen.findByRole("region", { name: "Specs" });
+    const from = screen.getByRole("link", { name: "Inbox older" });
+    fireEvent.dragStart(from, { dataTransfer: { setData() {}, effectAllowed: "all" } });
+    const onto = screen.getByRole("link", { name: "Pinned second" }).closest("li")!;
+    fireEvent(onto, at(createEvent.dragOver(onto), 0));
+    fireEvent(onto, at(createEvent.drop(onto), 0));
+    fireEvent.dragEnd(from);
+    await waitFor(() => expect(rendered.rpcCalls.filter((c) => ["pin", "move"].includes(c.method)).map((c) => [c.method, c.input])).toEqual([
+      ["pin", { threadId: "in_old" }], ["move", { threadId: "in_old", position: { before: "pin_b" } }],
+    ]));
+    expect(orderWrites(updates)).toEqual([]);
+  });
+
+  // catches: a refused order save that snaps back silently.
+  it("keeps the moved order on screen and says so when the save fails", async () => {
+    renderOrder({ save: (values) => { if ("sectionsOrder" in values) throw new Error("refused"); return { values }; } });
+    await screen.findByRole("region", { name: "Specs" });
+    fireEvent.keyDown(header("Inbox"), { key: "ArrowUp", altKey: true });
+    expect(await screen.findByText("Could not save the section order. Try again.")).toBeTruthy();
+    expect(sectionOrder()).toEqual(["Pinned", "Inbox", "Specs"]);
+  });
+
+  // catches: Settled still drawn as a shelf, its threads in the list, or a link that is not last.
+  it("drops Settled from the list for one quiet Settled N link at the very bottom, which opens it", async () => {
+    renderOrder();
+    const link = await screen.findByRole("button", { name: "Settled 1" });
+    // Its landmark holds only the link: no section frame, no grip, no header rule.
+    const region = screen.getByRole("region", { name: "Settled" });
+    expect(region.closest("[data-wizbar-section]")).toBeNull();
+    expect(region.firstElementChild).toBe(link);
+    expect(region.querySelector("[aria-hidden='true'].h-px")).toBeNull();
+    expect(screen.queryByRole("link", { name: "Settled alpha" })).toBeNull();
+    // Nothing of the list comes after it: every other region is above.
+    for (const other of screen.getAllByRole("region").filter((r) => r !== region)) {
+      expect(other.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
+    expect(link.getAttribute("aria-expanded")).toBe("false");
+    fireEvent.click(link);
+    expect(link.getAttribute("aria-expanded")).toBe("true");
+    expect(screen.getByRole("link", { name: "Settled alpha" })).toBeDefined();
+  });
+
+  // catches: a search that no longer finds settled threads once Settled left the list.
+  it("finds a settled thread by search without opening the link", async () => {
+    renderOrder({ searchQuery: "alpha" });
+    expect(await screen.findByRole("link", { name: "Settled alpha" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Settled 1" }).getAttribute("aria-expanded")).toBe("true");
+  });
+
+  // catches: an empty Settled link left behind when nothing is settled.
+  it("shows no Settled link when nothing is settled", async () => {
+    renderSlot(inbox, listProps, {
+      sidebarThreads: { status: "ready", projects: [], threads: [thread({ id: "in_a", title: "Inbox alone" })] },
+      rpc: { listLifecycle: () => ({ rows: [] }) },
+    });
+    await screen.findByRole("link", { name: "Inbox alone" });
+    expect(screen.queryByRole("button", { name: /^Settled/ })).toBeNull();
   });
 });
