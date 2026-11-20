@@ -221,6 +221,24 @@ describe("#164 R1: either upgrade order", () => {
   it("a new producer (both files): the v2 rows, later apart", async () => {
     expect(await specs({ v1, v2 })).toEqual({ exitCode: 0, body: v4SpecRowsV2 });
   });
+  // catches (#164 R3): after a producer rollback, an older specs.v2.json winning over a newer specs.v1.json until it goes stale.
+  it("an older specs.v2.json loses to a newer specs.v1.json: a ticket now done shows done", async () => {
+    const newer = JSON.parse(at(v1, 2));
+    const ticket = newer.specs[0].tickets.find((t: { code: string }) => t.code === "SP-4");
+    Object.assign(ticket, { state: "done", closedAt: "2026-11-19T11:58:00Z" });
+    const result = await specs({ v1: JSON.stringify(newer, null, 2), v2: at(v2, 10) });
+    expect(result.exitCode).toBe(0);
+    expect(result.body.generatedAt).toBe(v4Now - 2 * 60_000);
+    const palette = result.body.specs[0];
+    expect({ needsYou: palette.needsYou, yoursLater: palette.yoursLater, done: palette.done, total: palette.total }).toEqual({ needsYou: 0, yoursLater: 0, done: 5, total: 10 });
+    expect(palette.dots.find((d: { code: string }) => d.code === "SP-4").state).toBe("done-recent");
+  });
+  // catches (#164 R3): equal or newer v2 times losing to v1, so later never shows from a current producer.
+  it.each([["equal", 5, 5], ["newer", 2, 5]] as const)("a specs.v2.json %s to specs.v1.json wins", async (_name, v2Age, v1Age) => {
+    const result = await specs({ v1: at(v1, v1Age), v2: at(v2, v2Age) });
+    expect(result).toEqual({ exitCode: 0, body: { ...v4SpecRowsV2, generatedAt: v4Now - v2Age * 60_000 } });
+  });
+
   // catches: a stale or broken specs.v2.json hiding a fresh specs.v1.json.
   it.each([
     ["stale", at(v2, 31)],
