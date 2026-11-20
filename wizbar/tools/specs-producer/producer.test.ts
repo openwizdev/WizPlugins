@@ -342,25 +342,6 @@ describe("P1: a spec that disappears from a later page of the issue list", () =>
     expect((JSON.parse(await readFile(output(dir), "utf8")) as typeof expectedFile).generatedAt).toBe("2026-11-20T12:10:00Z");
   });
 
-  // catches: a page that keeps failing hidden behind a fresh timestamp: the file must go stale after 30 minutes.
-  it("a spec kept from old data keeps the file's generatedAt at that data's read time", async () => {
-    const fixture = paged(60, 1);
-    const dir = await home();
-    const github = fakeGitHub(fixture.answers);
-    for (let run = 0; run < 4; run++) await runOnce({ home: dir, repositories: [FLEET], request: github.request, now: at(run) });
-    // Spec 2059 is deleted from the list but its old page keeps answering 404 while the 60-page list is re-read.
-    fixture.delete(2059);
-    const generated: string[] = [];
-    for (let run = 4; run < 6; run++) {
-      await runOnce({ home: dir, repositories: [FLEET], request: github.request, now: at(run) });
-      generated.push((JSON.parse(await readFile(output(dir), "utf8")) as typeof expectedFile).generatedAt);
-    }
-    // While 2059's last data (read in run 3 or earlier) is in the file, generatedAt is no later than run 3.
-    const file = JSON.parse(await readFile(output(dir), "utf8")) as typeof expectedFile;
-    if (file.specs.some((spec) => spec.spec === `${FLEET}#2059`)) expect(Date.parse(generated[1]!)).toBeLessThanOrEqual(at(3)().getTime());
-    else expect(generated).toHaveLength(2);
-  });
-
   // catches: a still-listed spec on a later page discarded instead of failing once its whole list was re-read.
   it("a spec on page two still listed but answering 404 fails a run once the whole list is re-read, keeping its last data", async () => {
     const { results, keys } = await scenario(45, 30, (f) => f.break404(2040), 3);

@@ -77,26 +77,30 @@ function slim(item: unknown): Record<string, unknown> {
   };
 }
 
-/** One cached page: its ETag and link, the slimmed items, and the run that last read it. */
-interface CacheEntry { etag: string; next: string | null; body: Record<string, unknown>[]; run: number }
+/** One cached page: its ETag and link, the slimmed items, the run that last read it and when (epoch ms). */
+interface CacheEntry { etag: string; next: string | null; body: Record<string, unknown>[]; run: number; at: number }
 /**
- * The cache file: the run counter and every page of the last scan. Each page's `run` is the resume
- * cursor: a run reads pages never read first, then the longest unread, so a scan bigger than one
- * run's budget continues where the last run stopped.
+ * The cache file: the run counter and every page of the last scan. Each page's `run` orders the
+ * scan: a run reads pages never read first, then the longest unread, so a scan bigger than one run's
+ * budget continues where the last run stopped. `vanished` holds spec pages that answered 404, and
+ * `listCursor` the next issue-list page each repository's re-read will read (#122 R5).
  */
-interface Cache { version: 1; run: number; pages: Record<string, CacheEntry>; vanished?: string[] }
+interface Cache { version: 2; run: number; pages: Record<string, CacheEntry>; vanished: string[]; listCursor: Record<string, string> }
 
 async function readCache(path: string): Promise<Cache> {
   try {
     const parsed = JSON.parse(await readFile(path, "utf8")) as Partial<Cache> | null;
-    if (parsed?.version === 1 && Number.isSafeInteger(parsed.run) && typeof parsed.pages === "object" && parsed.pages !== null) {
+    // An older cache has no read times: it starts a new scan.
+    if (parsed?.version === 2 && Number.isSafeInteger(parsed.run) && typeof parsed.pages === "object" && parsed.pages !== null) {
       const vanished = Array.isArray(parsed.vanished) ? parsed.vanished.filter((page) => typeof page === "string") : [];
-      return { version: 1, run: parsed.run!, pages: parsed.pages, vanished };
+      const cursor = typeof parsed.listCursor === "object" && parsed.listCursor !== null ? parsed.listCursor : {};
+      const listCursor = Object.fromEntries(Object.entries(cursor).filter(([, page]) => typeof page === "string"));
+      return { version: 2, run: parsed.run!, pages: parsed.pages, vanished, listCursor };
     }
   } catch {
     // No cache, or an unreadable one: start a new scan.
   }
-  return { version: 1, run: 0, pages: {}, vanished: [] };
+  return { version: 2, run: 0, pages: {}, vanished: [], listCursor: {} };
 }
 
 async function writeAtomically(path: string, text: string): Promise<void> {
@@ -112,13 +116,13 @@ async function writeAtomically(path: string, text: string): Promise<void> {
 class NotFound extends ReadFailed {}
 
 /** One conditional read of a page into the cache. */
-async function readPage(page: string, request: GitHubRequest, pages: Record<string, CacheEntry>, run: number): Promise<void> {
+async function readPage(page: string, request: GitHubRequest, pages: Record<string, CacheEntry>, run: number, at: number): Promise<void> {
   const cached = pages[page];
   const response = await request(page, cached?.etag || null);
-  if (response.status === 304 && cached) pages[page] = { ...cached, run };
+  if (response.status === 304 && cached) pages[page] = { ...cached, run, at };
   else if (response.status === 200) {
     if (!Array.isArray(response.body)) throw new ReadFailed(`GitHub answered something other than a list for ${page}`);
-    pages[page] = { etag: response.etag ?? "", next: response.next, body: response.body.map(slim), run };
+    pages[page] = { etag: response.etag ?? "", next: response.next, body: response.body.map(slim), run, at };
   } else if (response.status === 404) throw new NotFound(`GitHub answered 404 for ${page}`);
   else throw new ReadFailed(`GitHub answered ${response.status} for ${page}`);
 }
@@ -227,10 +231,14 @@ function scan(repositories: readonly string[], pages: Record<string, CacheEntry>
  * One producer run of at most `BUDGET` requests. It reads pages never read first, then those read
  * longest ago, so a scan over the budget resumes on the next run while unreached pages keep their
  * last good data. The file is written whole once every page has data; a failed read writes nothing.
+ * Its `generatedAt` is the read time of the oldest page in it, so data that cannot be refreshed
+ * makes the file stale for WizBar instead of hiding behind the run's time.
  *
- * A spec's sub-issues page answering 404 is `vanished` (#122 R5): its spec keeps its last data and its
- * repository's open-issues list is read next, before anything else, in this run or the next. Once that
- * list is read, a spec no longer listed leaves the scan; one still listed fails the run (a real 404).
+ * A spec's sub-issues page answering 404 is `vanished` (#122 R5) and never fails a run on its own:
+ * its spec keeps its last data, and its repository's issue list is re-read from page one before
+ * anything else, following GitHub's own links. A list longer than one run's budget resumes at the
+ * saved `listCursor` on the next run. Once the re-read reaches the last page, a spec no longer listed
+ * leaves the scan; one still listed fails the run (a real 404), keeping the last file.
  */
 export async function runOnce(options: { home: string; repositories: readonly string[]; request: GitHubRequest; now?: () => Date }): Promise<RunResult> {
   const { home, request } = options;
@@ -238,19 +246,20 @@ export async function runOnce(options: { home: string; repositories: readonly st
   const cachePath = join(home, CACHE);
   const cache = await readCache(cachePath);
   const run = cache.run + 1;
+  const now = () => (options.now?.() ?? new Date()).getTime();
   const pages = { ...cache.pages };
   const vanished = new Set(cache.vanished);
+  const firstList = (repository: string) => `repos/${repository}/issues?state=open&per_page=100`;
+  const cursors = new Map(Object.entries(cache.listCursor).filter(([repository]) => repositories.includes(repository)));
+  for (const page of vanished) {
+    const repository = subIssuesRepository(page)!;
+    if (!cursors.has(repository)) cursors.set(repository, firstList(repository));
+  }
   let calls = 0;
-  const listing = (current: Scan, repository: string) => current.issueLists.get(repository) ?? [];
-  /** Every page of the repository's issue list, as linked now, was read in this run. */
-  const listingRead = (current: Scan, repository: string) => listing(current, repository).every((page) => pages[page]?.run === run);
-  /**
-   * Settles each vanished page once its repository's whole issue list was re-read: a spec no longer
-   * listed leaves; one still listed has answered 404 with a fresh list, which fails the run.
-   */
+  /** Settles each vanished page whose repository's list re-read has finished. */
   const settle = (current: Scan) => {
     for (const page of vanished) {
-      if (!listingRead(current, subIssuesRepository(page)!)) continue;
+      if (cursors.has(subIssuesRepository(page)!)) continue;
       if (current.order.includes(page)) throw new ReadFailed(`GitHub answered 404 for ${page}`);
       vanished.delete(page);
     }
@@ -260,37 +269,46 @@ export async function runOnce(options: { home: string; repositories: readonly st
       const current = scan(repositories, pages, vanished);
       settle(current);
       const { order, missing } = current;
+      // A list re-read in progress goes first; it continues where the last read stopped.
+      const forced = [...cursors.values()][0];
       const due = order.filter((page) => pages[page]?.run !== run && !vanished.has(page));
-      if (due.length === 0) break;
-      // A vanished page makes every page of its repository's issue list due before anything else.
-      const waiting = new Set([...vanished].flatMap((page) => listing(current, subIssuesRepository(page)!)));
+      if (forced === undefined && due.length === 0) break;
       const absent = new Set(missing);
-      const age = (page: string) => (waiting.has(page) ? -2 : absent.has(page) ? -1 : pages[page]!.run);
-      const next = due.reduce((best, page) => (age(page) < age(best) ? page : best));
+      const age = (page: string) => (absent.has(page) ? -1 : pages[page]!.run);
+      const next = forced ?? due.reduce((best, page) => (age(page) < age(best) ? page : best));
       calls += 1;
       try {
-        await readPage(next, request, pages, run);
+        await readPage(next, request, pages, run, now());
       } catch (error) {
         const repository = subIssuesRepository(next);
         // A 404 alone never fails a run: only one after a full re-read of the list (settle) does.
         if (!(error instanceof NotFound) || repository === null) throw error;
         vanished.add(next);
-        // The list must be read after this 404: an earlier read in this run does not settle it.
-        for (const page of listing(current, repository)) if (pages[page]) pages[page] = { ...pages[page]!, run: 0 };
+        // The list must be read after this 404, from its first page: an earlier read does not settle it.
+        cursors.set(repository, firstList(repository));
+        continue;
+      }
+      for (const [repository, page] of cursors) {
+        if (page !== next) continue;
+        const after = pages[next]!.next;
+        if (after === null) cursors.delete(repository);
+        else cursors.set(repository, after);
       }
     }
     const final = scan(repositories, pages, vanished);
     settle(final);
     const { order, missing, specs } = final;
     await mkdir(join(home, ".openwiz"), { recursive: true });
+    const kept = Object.fromEntries(order.filter((page) => pages[page]).map((page) => [page, pages[page]!]));
     if (missing.length === 0) {
-      const generatedAt = (options.now?.() ?? new Date()).toISOString().replace(/\.\d+Z$/, "Z");
+      const oldest = Math.min(now(), ...Object.values(kept).map((entry) => entry.at));
+      const generatedAt = new Date(oldest).toISOString().replace(/\.\d+Z$/, "Z");
       await writeAtomically(join(home, OUTPUT), `${JSON.stringify({ schema: "openwiz.specs.v1", generatedAt, specs }, null, 2)}\n`);
     }
-    // Keep only the pages of this scan, and the vanished pages still waiting for their list.
-    const kept = Object.fromEntries(order.filter((page) => pages[page]).map((page) => [page, pages[page]!]));
+    // Keep only the pages of this scan, the vanished pages still waiting, and each re-read's cursor.
     const waiting = [...vanished].filter((page) => order.includes(page));
-    await writeAtomically(cachePath, JSON.stringify({ version: 1, run, pages: kept, vanished: waiting } satisfies Cache));
+    const listCursor = Object.fromEntries(cursors);
+    await writeAtomically(cachePath, JSON.stringify({ version: 2, run, pages: kept, vanished: waiting, listCursor } satisfies Cache));
     const written = missing.length === 0;
     return { ok: true, calls, specs: written ? specs.length : 0, written, pending: missing.length };
   } catch (error) {

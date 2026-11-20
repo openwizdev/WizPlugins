@@ -24,7 +24,7 @@ The factory map's specs file lists the running specs and their tickets. Its prod
 | Field | Rule |
 | --- | --- |
 | `schema` | Exactly `openwiz.specs.v1` |
-| `generatedAt` | UTC ISO timestamp ending `Z`: when the producer wrote the file |
+| `generatedAt` | UTC ISO timestamp ending `Z`: how fresh the file's data is. The 0.5.0 producer writes the read time of the oldest GitHub page whose data is in the file |
 | `specs` | The running specs, in the producer's order; may be empty |
 
 Each spec (`SpecEntryV4`):
