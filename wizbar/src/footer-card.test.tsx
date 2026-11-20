@@ -121,6 +121,7 @@ describe("S4: the card's data is one computation (sections 7 and 8)", () => {
 
 const app = await loadPluginApp(() => import("../app"));
 const { FooterCounter } = await import("./FooterCounter");
+const { MODEL_REFRESH_MS } = await import("./StatsPanel");
 const binding = JSON.stringify([{ projectKey: "sample-factory", cloudroomProjectId: "prj_v4_atlas", repositories: ["example/sample-plans"],
   home: { hostId: "hst_v4_home", rootPath: "/synthetic/home" }, orchestratorThreadId: "thr_v4_orchestrator", statusWriterLogin: "sample-manager" }]);
 
@@ -510,6 +511,31 @@ describe("R1 (#172): the open card updates in place, with no flashing", () => {
     expect(modelNodes().get("thr_v4_code_a")).toBe(label);
     expect(label.textContent).toBe("Other model · Low");
     expect(modelNodes().get("thr_v4_builder_a")?.textContent).toBe("Sample model · High");
+  });
+
+  // catches (#175 review R1): a transient per-thread lookup failure (a null model in a good answer) taking a
+  // still-running thread's label away when another thread stops; a later valid answer still applies.
+  it("keeps a still-running thread's label when its refresh lookup fails as another thread stops", async () => {
+    let answer = (threadIds: string[]) => models("Sample model", "high")({ threadIds });
+    const rendered = await pinned(snapshot(), ({ threadIds }: { threadIds: string[] }) => answer(threadIds));
+    const label = modelNodes().get("thr_v4_builder_a")!;
+    // Past the refresh window, the host's lookup for every thread fails: null model and effort.
+    answer = (threadIds) => models(null, null)({ threadIds });
+    await tick(MODEL_REFRESH_MS);
+    const before = modelCalls(rendered).length;
+    await push(snapshot(["thr_v4_code_a"]));
+    await tick(10);
+    expect(modelCalls(rendered).slice(before).flat()).toContain("thr_v4_builder_a");
+    expect(rowNode("thr_v4_builder_a")).not.toBeNull();
+    expect(modelNodes().get("thr_v4_builder_a")).toBe(label);
+    expect(label.textContent).toBe("Sample model · High");
+    // The lookup recovers with another value at the next refresh: it replaces the label in place.
+    answer = (threadIds) => models("Other model", "low")({ threadIds });
+    await tick(MODEL_REFRESH_MS);
+    await push(snapshot(["thr_v4_code_a", "thr_v4_stray"]));
+    await tick(10);
+    expect(modelNodes().get("thr_v4_builder_a")).toBe(label);
+    expect(label.textContent).toBe("Other model · Low");
   });
 
   // catches: a leaving row that jumps to the end or the top of the list, so the rows below it shift twice.
