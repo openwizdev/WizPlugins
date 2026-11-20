@@ -23,7 +23,7 @@ function show(agent = builder, cardModels: Models = served(null, null), pullRequ
   const props: AgentRowProps = { agent, thread: v4Threads.find((t) => t.id === agent.threadId), now: v4Now, isActive: false, onNavigate() {} };
   const rendered = renderSlot({ component: AgentRow }, props,
     { rpc: { cardModels } as never, sidebarPullRequests: pullRequests, providers: { status: "ready", providers: providers as never } });
-  return { rendered, row: () => screen.getByText(agent.title).closest("li")! };
+  return { rendered, row: () => screen.getByRole("link").closest("li")! };
 }
 afterEach(cleanup);
 
@@ -35,11 +35,34 @@ describe("S3: the agent row (sections 3, 5 and 6)", () => {
     expect(within(row()).getByText("50m")).toBeTruthy();
   });
 
+  // catches (0.5 C, #112): `Role · CODE:` as loud as the task, so the eye reads the bookkeeping before the work.
+  it("dims Role · CODE: and shows the task in the foreground colour, keeping the whole title as the link's text", () => {
+    const { row } = show(builder);
+    const link = within(row()).getByRole("link");
+    expect(link.textContent).toBe(builder.title);
+    const prefix = within(link).getByText("Builder · SP-2:");
+    expect(prefix.className).toContain("text-muted-foreground");
+    const task = within(link).getByText("Sample add keyboard paths");
+    expect(task.className).toContain("text-foreground");
+    expect(prefix.compareDocumentPosition(task) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  // catches: a title with no role dimmed whole, or a stray empty prefix, when it does not parse.
+  it("shows an unparsed title whole, in the foreground colour", () => {
+    const { row } = show({ ...builder, title: "Sample free-form task", role: null, code: null });
+    const link = within(row()).getByRole("link");
+    expect(link.textContent).toBe("Sample free-form task");
+    expect(link.querySelector(".text-muted-foreground")).toBeNull();
+    expect(within(link).getByText("Sample free-form task").className).toContain("text-foreground");
+  });
+
   // catches: the quiet second line dropping a served model or effort.
   it("shows the harness logo, then model and effort when present", async () => {
     const { row } = show(builder, served("Sample model 2", "xhigh"));
     const line = await within(row()).findByText("Sample model 2 · XHigh");
     expect(line.closest("[data-agent-meta]")!.querySelector("[data-provider]")?.getAttribute("data-provider")).toBe("harness-a");
+    // Council round 1: one step larger than text-2xs, about 12 px, as in the target.
+    expect(line.closest("[data-agent-meta]")!.className).toContain("text-xs");
   });
 
   // catches: a guessed model, a lone effort, or placeholder text when the source has nothing.
@@ -84,12 +107,15 @@ describe("S3: the agent row (sections 3, 5 and 6)", () => {
       cleanup();
       return show(agent, served(null, null), {}, directory).row().querySelector("[data-agent-meta]")!;
     };
+    // 0.5 C (#112): line 2 is quiet, the logo then model · effort; the display name is the logo's accessible name, not visible text.
     const logo = meta(reviewer);
     expect(logo.querySelector('[data-provider-id="harness-b"]')?.getAttribute("data-provider-logo")).toBe("/api/v1/system/providers/harness-b/logo");
-    expect(logo.textContent).toContain("Harness B");
+    expect(within(logo as HTMLElement).getByRole("img", { name: "Harness B" })).toBeTruthy();
+    expect(logo.textContent).not.toContain("Harness B");
     const glyph = meta({ ...reviewer, providerId: "harness-c" });
     expect(glyph.querySelector('[data-provider-id="harness-c"]')?.getAttribute("data-provider-glyph")).toBe("Sample glyph");
-    expect(glyph.textContent).toContain("Harness C");
+    expect(within(glyph as HTMLElement).getByRole("img", { name: "Harness C" })).toBeTruthy();
+    expect(glyph.textContent).not.toContain("Harness C");
     const unknown = meta(builder);
     expect(unknown.querySelector("[data-provider-id]")).toBeNull();
     expect(within(unknown as HTMLElement).getByRole("img", { name: "harness-a" })).toBeTruthy();
