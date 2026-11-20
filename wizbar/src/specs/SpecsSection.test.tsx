@@ -210,6 +210,47 @@ describe("0.5 C: the rule, the spec rows and the open panel", () => {
     }
   });
 
+  // catches (#167 R1): the decorative line's allowance forcing the narrow form where the full sentence fits (265 px in
+  // Chromium: 222 px inside, 209.6 px of text), or a choice that does not follow a resize in either direction.
+  it("shows the full sentence whenever it fits, dropping the line when too little room is left, and follows resizes", async () => {
+    let width = 150;
+    const observers: (() => void)[] = [];
+    vi.stubGlobal("ResizeObserver", class { constructor(callback: () => void) { observers.push(callback); } observe() {} disconnect() {} });
+    const restore = [
+      vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(function (this: HTMLElement) {
+        return this.tagName === "H2" ? width : 0;
+      }),
+      vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockImplementation(function (this: HTMLElement) {
+        return this.hasAttribute("data-rule-measure") ? 220 : 0;
+      }),
+    ];
+    const resize = (to: number) => act(() => { width = to; for (const callback of observers) callback(); });
+    try {
+      render();
+      const heading = within(await section()).getByRole("heading");
+      const text = () => heading.querySelector("[data-rule-text]")!.textContent;
+      const line = () => heading.querySelector("[data-rule-line]");
+      await waitFor(() => expect(text()).toBe("Specs 2 · 2 for you"));
+      // 230 px inside: the 220 px sentence fits with 10 px to spare, too little for the gap and a line.
+      await resize(230);
+      expect(text()).toBe("Specs 2 · 2 tickets need you (2 specs)");
+      expect(line()).toBeNull();
+      // Exactly the sentence's width still fits.
+      await resize(220);
+      expect(text()).toBe("Specs 2 · 2 tickets need you (2 specs)");
+      await resize(219);
+      expect(text()).toBe("Specs 2 · 2 for you");
+      await resize(300);
+      expect(text()).toBe("Specs 2 · 2 tickets need you (2 specs)");
+      expect(line()).not.toBeNull();
+      await resize(150);
+      expect(text()).toBe("Specs 2 · 2 for you");
+    } finally {
+      for (const spy of restore) spy.mockRestore();
+      vi.unstubAllGlobals();
+    }
+  });
+
   // catches: a rule that still says "need you" when nothing waits on the owner.
   it("leaves out · M need you when M is zero", async () => {
     const none = JSON.parse(v4SpecsFileText);
