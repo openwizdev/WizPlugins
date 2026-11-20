@@ -2,6 +2,7 @@
 // endpoints return that the producer reads, with synthetic owners, numbers and
 // titles. `fakeGitHub` serves them like GitHub: an ETag per page, 304 when the
 // caller sends the same ETag back, and a `next` page link.
+import { createHash } from "node:crypto";
 import type { GitHubRequest, GitHubResponse } from "../producer";
 
 const API = "https://api.github.com";
@@ -89,7 +90,8 @@ export function fakeGitHub(answers = recordedAnswers()) {
   let fail: { path: string; status: number } | null = null;
   const request: GitHubRequest = async (path, etag) => {
     const answer = answers.get(path);
-    const served = `W/"${path.length}-${JSON.stringify(answer?.body ?? null).length}"`;
+    // Like GitHub, the ETag changes whenever the page's content does.
+    const served = `W/"${createHash("sha256").update(`${path}\n${JSON.stringify(answer?.body ?? null)}\n${answer?.next ?? ""}`).digest("hex").slice(0, 16)}"`;
     let response: GitHubResponse;
     const failing = fail;
     if (failing?.path === path) response = { status: failing.status, etag: null, next: null, body: { message: "Server Error" } };

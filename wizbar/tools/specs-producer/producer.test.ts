@@ -266,7 +266,7 @@ describe("P1: a spec that disappears from a later page of the issue list", () =>
     }
     return { answers, delete(n: number) { setList(specs.filter((s) => s.number !== n)); answers.delete(sub(n)); }, break404(n: number) { answers.delete(sub(n)); } };
   }
-  async function scenario(count: number, perPage: number, change: (fixture: ReturnType<typeof paged>) => void, runs: number) {
+  async function scenario(count: number, perPage: number, change: (fixture: ReturnType<typeof paged>) => void, runs: number, extraRuns = 0) {
     const fixture = paged(count, perPage);
     const dir = await home();
     const github = fakeGitHub(fixture.answers);
@@ -275,6 +275,8 @@ describe("P1: a spec that disappears from a later page of the issue list", () =>
       const result = await runOnce({ home: dir, repositories: [FLEET], request: github.request, now: at(run) });
       if (result.ok && result.written) break;
     }
+    // More runs before the change shift which pages are oldest when it lands.
+    for (let i = 0; i < extraRuns; i++) await runOnce({ home: dir, repositories: [FLEET], request: github.request, now: at(++run) });
     change(fixture);
     const results = [];
     for (let i = 1; i <= runs; i++) results.push(await runOnce({ home: dir, repositories: [FLEET], request: github.request, now: at(run + i) }));
@@ -321,10 +323,10 @@ describe("P1: a spec that disappears from a later page of the issue list", () =>
 
   // catches: a list longer than one run's budget re-read from page one every run, so a spec deleted near its end is never dropped (#122 R5, third check).
   it("an issue list of 60 pages: the re-read resumes where the last run stopped and the deleted spec leaves", async () => {
-    for (const n of [2049, 2059]) {
-      const { results, keys } = await scenario(60, 1, (f) => f.delete(n), 5);
-      expect({ n, runs: results.map((r) => r.ok && r.calls <= 40), count: keys.length, listed: keys.includes(`${FLEET}#${n}`) })
-        .toEqual({ n, runs: [true, true, true, true, true], count: 59, listed: false });
+    for (let extra = 0; extra < 3; extra++) for (let n = 2000; n < 2060; n += 3) {
+      const { results, keys } = await scenario(60, 1, (f) => f.delete(n), 5, extra);
+      expect({ extra, n, runs: results.map((r) => r.ok && r.calls <= 40), count: keys.length, listed: keys.includes(`${FLEET}#${n}`) })
+        .toEqual({ extra, n, runs: [true, true, true, true, true], count: 59, listed: false });
     }
   });
 
