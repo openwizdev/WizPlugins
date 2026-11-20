@@ -370,6 +370,15 @@ describe("S1: the four sorts (section 11)", () => {
     expect(text).toEqual(body.specs.map((row: { spec: string }) => row.spec));
   });
 
+  // catches: the CLI ignoring the saved sort, or --sort not overriding it.
+  it("uses the saved specsSort without --sort, and --sort over it", async () => {
+    vi.setSystemTime(v6Now);
+    const cli = await setup({ text: v6SpecsFileText, list: async () => v6Threads.map(rawRow), settings: { specsOpen: "[]", specsSort: "closest" } });
+    const keys = async (argv: string[]) => (await cli.json(argv)).body.specs.map((row: { spec: string }) => row.spec);
+    expect(await keys(["specs"])).toEqual(v6SortOrders.closest.filter((key) => !finished.has(key)));
+    expect(await keys(["specs", "--sort", "recent"])).toEqual(v6SortOrders.recent.filter((key) => !finished.has(key)));
+  });
+
   // catches: the CLI's default order still the file's order.
   it("uses needs-you without --sort", async () => {
     vi.setSystemTime(v6Now);

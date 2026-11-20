@@ -258,7 +258,7 @@ describe("#164 R1: either upgrade order", () => {
     const result = await specs({ v1: JSON.stringify(newer, null, 2), v2: at(v2, 10) });
     expect(result.exitCode).toBe(0);
     expect(result.body.generatedAt).toBe(v4Now - 2 * 60_000);
-    const palette = result.body.specs[0];
+    const palette = result.body.specs.find((s: { spec: string }) => s.spec === "example/sample-plans#501");
     expect({ needsYou: palette.needsYou, yoursLater: palette.yoursLater, done: palette.done, total: palette.total }).toEqual({ needsYou: 0, yoursLater: 0, done: 5, total: 10 });
     expect(palette.dots.find((d: { code: string }) => d.code === "SP-4").state).toBe("done-recent");
   });
