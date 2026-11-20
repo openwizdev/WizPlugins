@@ -141,3 +141,11 @@ Source: [`.github/workflows/wizbar.yml`](../../.github/workflows/wizbar.yml), [`
 - **A pull request is never retargeted.** Pull requests are only ever opened against `openwizdev/WizPlugins`, never against the upstream repository or the previous fork. Nothing is ever force-pushed.
 
 Source: the WizBar spec, confirmed by Jake on 2026-11-10: tickets, reviews, CI and merges follow the normal Wiz rules ([private record](https://github.com/jparker2006/ClosedWiz/issues/325#issuecomment-6759599541)); Jake, 2026-10-30: plans authorize ticket merges after exact-head review and green CI, and the loop performs the merge; Jake, 2026-11-01: the base rule without a merge queue ([private record](https://github.com/jparker2006/ClosedWiz/issues/1275#issuecomment-6704671951)). The second row is the setup default for a rule whose CI precondition does not exist yet.
+
+## GitHub identity
+
+| Setting | Value |
+| --- | --- |
+| Record authors | `openwiz[bot]`, `jparker2006` |
+
+Source: [OpenWiz GitHub identity settings](https://github.com/openwizdev/OpenWiz/blob/main/docs/agents/fleet.md#github-identity) and the verified fallback account.
