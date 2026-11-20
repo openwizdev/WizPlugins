@@ -10,7 +10,7 @@ import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import {
   v4CardPinCases, v4Now, v4OpenSetting, v4SpecRows, v4SpecsFile, v4SpecsFileText, v4Stats, v4Threads, v4TimeZone, type StatsV4,
 } from "./fixtures/v4";
-import { cardPinNext, cardSummary, computeStatsV4, formatStatsText } from "./stats";
+import { cardPinNext, cardRowLabel, cardSummary, computeStatsV4, formatStatsText } from "./stats";
 import { createSpecsCommands } from "./specs/cli";
 
 type Ready = Extract<StatsV4, { status: "ready" }>;
@@ -48,8 +48,15 @@ describe("S4: the card's data is one computation (sections 7 and 8)", () => {
 
   // catches: the Unknown part shown at zero or dropped when non-zero.
   it("writes the one summary line, Unknown only when non-zero", () => {
-    expect(cardSummary(ready)).toBe("1 waiting on you · Cloud 7 · Local 1 · Unknown 1");
-    expect(cardSummary({ ...ready, running: { ...ready.running, unknown: 0 } })).toBe("1 waiting on you · Cloud 7 · Local 1");
+    expect(cardSummary(ready)).toBe("1 waiting on you · 7 cloud, 1 local, 1 unknown");
+    expect(cardSummary({ ...ready, running: { ...ready.running, unknown: 0 } })).toBe("1 waiting on you · 7 cloud, 1 local");
+  });
+
+  // catches (0.5 E): a row that repeats the whole task, or drops the title of a thread with no role.
+  it("labels a row by role and code, or by the full title when there is no role", () => {
+    expect(cardRowLabel("Builder · SP-2: Sample add keyboard paths")).toBe("Builder · SP-2");
+    expect(cardRowLabel("Reviewer · SP-14: Sample review")).toBe("Reviewer · SP-14");
+    expect(cardRowLabel("Sample palette fleet")).toBe("Sample palette fleet");
   });
 
   // catches: the CLI text dropping the harness split or the threads.
@@ -96,7 +103,7 @@ describe("S4: no bolt; N running with its hover card", () => {
   it("counts threads only, with a matrix mark", () => {
     render();
     expect(counter().getAttribute("aria-label")).toBe("9 running");
-    expect(counter().textContent).toBe("9");
+    expect(counter().textContent).toBe("9 running");
     expect(counter().querySelector("[data-matrix]")?.getAttribute("data-matrix")).toBe("working");
     cleanup();
     render([]);
@@ -116,7 +123,43 @@ describe("S4: no bolt; N running with its hover card", () => {
       id: el.getAttribute("data-thread"), matrix: el.querySelector("[data-matrix]")?.getAttribute("data-matrix"),
       title: el.querySelector("[data-title]")?.textContent, shortName: el.querySelector("[data-spec-name]")?.textContent ?? null,
     }));
-    expect(rows).toEqual(ready.threads.map((t) => ({ id: t.id, matrix: t.matrix, title: t.title, shortName: t.shortName })));
+    expect(rows).toEqual(ready.threads.map((t) => ({ id: t.id, matrix: t.matrix, title: cardRowLabel(t.title), shortName: t.shortName })));
+    expect(rows.find((r) => r.id === "thr_v4_builder_a")).toMatchObject({ title: "Builder · SP-2", shortName: "Sample palette" });
+  });
+
+  // catches (0.5 E): the harness split as a list of rows with no bar, or a bar not split by the counts.
+  it("shows the harness split as one bar, then each harness and its count on one line", () => {
+    render();
+    fireEvent.pointerEnter(counter().parentElement!);
+    const bar = card()!.querySelector("[data-harness-bar]")!;
+    expect([...bar.children].map((el) => [el.getAttribute("data-harness-segment"), (el as HTMLElement).style.flexGrow]))
+      .toEqual([["harness-a", "6"], ["harness-b", "3"]]);
+    const names = [...card()!.querySelectorAll("[data-harness]")].map((el) => el.textContent);
+    expect(names).toEqual(["harness-a 6", "harness-b 3"]);
+    expect(card()!.querySelector("[data-harness]")!.parentElement!.style.flexDirection).not.toBe("column");
+  });
+
+  // catches (0.5 E): the half-width card; it must fill the sidebar, inset 8 px each side.
+  it("fills the sidebar width, inset 8 px", () => {
+    render();
+    fireEvent.pointerEnter(counter().parentElement!);
+    const area = hitArea()!;
+    expect([area.style.left, area.style.right]).toEqual(["8px", "8px"]);
+    expect(card()!.style.width).toBe("100%");
+  });
+
+  // catches (0.5 E): model · effort dropped from a one-line row, or put on a second line.
+  it("puts model · effort on the row's one line, right-aligned", async () => {
+    renderSlot({ component: FooterCounter }, {}, {
+      pluginId: "synthetic-wb5-e", settings: { wizdeckFactories: binding },
+      sidebarThreads: { status: "ready", threads: [...v4Threads] },
+      rpc: { specsFile: () => ({ kind: "content", text: v4SpecsFileText }), cardModels: models("Sample model", "high") } as never,
+    });
+    fireEvent.pointerEnter(counter().parentElement!);
+    const row = () => card()!.querySelector("[data-thread=thr_v4_builder_a] button") as HTMLElement;
+    await waitFor(() => expect(row().querySelector("[data-model]")?.textContent).toBe("Sample model · High"));
+    expect(row().style.display).toBe("flex");
+    expect((row().querySelector("[data-model]") as HTMLElement).style.marginLeft).toBe("auto");
   });
 
   // catches: a pin that a leave undoes, a click that cannot unpin, keyboard users locked out, Escape ignored.
@@ -146,7 +189,7 @@ describe("S4: no bolt; N running with its hover card", () => {
   it("opens a thread clicked in the card and stays pinned", () => {
     const rendered = render();
     fireEvent.click(trigger());
-    fireEvent.click(within(card()!).getByText("Builder · SP-4: Sample wire shortcuts"));
+    fireEvent.click(within(card()!).getByText("Builder · SP-4"));
     expect(rendered.inspection.sidebarActionCalls).toContainEqual(expect.objectContaining({ threadId: "thr_v4_code_a" }));
     expect(card()).toBeTruthy();
   });

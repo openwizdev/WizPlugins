@@ -34,7 +34,7 @@ describe("W3: synthetic footer artwork through the SDK rendering harness", () =>
   it("shows a dim zero with an idle mark", () => {
     renderSlot(candidate, { source: empty });
     const counter = screen.getByRole("status", { name: "0 running" });
-    expect(counter.textContent).toBe("0");
+    expect(counter.textContent).toBe("0 running");
     expect(counter.style.color).toBe("var(--muted-foreground, #b7b7b7)");
     expect(counter.querySelector("[data-matrix]")?.getAttribute("data-matrix")).toBe("idle");
   });
@@ -71,7 +71,7 @@ describe("W3: synthetic footer artwork through the SDK rendering harness", () =>
     await screen.findByRole("region", { name: "Muted" });
     const shelf = await screen.findByRole("region", { name: "Settled" });
     fireEvent.click(shelf.querySelector("button")!);
-    expect(footer.container.querySelector('[role="status"]')?.textContent).toBe("2");
+    expect(footer.container.querySelector('[role="status"]')?.textContent).toBe("2 running");
     fireEvent.keyDown(screen.getByLabelText(/Project scope/), { key: "Enter" });
     fireEvent.click(screen.getByRole("option", { name: "Sample B" }));
     inbox.rerender(createElement(app.threadLists[0]!.component, {
@@ -79,7 +79,7 @@ describe("W3: synthetic footer artwork through the SDK rendering harness", () =>
       searchQuery: "no matching row", onNavigate() {},
     }));
     expect(inbox.container.querySelectorAll('[role="listitem"]')).toHaveLength(0);
-    expect(footer.container.querySelector('[role="status"]')?.textContent).toBe("2");
+    expect(footer.container.querySelector('[role="status"]')?.textContent).toBe("2 running");
   });
 });
 
@@ -94,7 +94,7 @@ describe("N4: approved observable footer route", () => {
       pluginId: "synthetic-running-source", sidebarThreads: { status: "ready", threads: [...positiveThreads, positiveThreads[0]!] },
     });
     const counter = screen.getByRole("status", { name: "2 running" });
-    expect(counter.textContent).toBe("2");
+    expect(counter.textContent).toBe("2 running");
     expect(getSourceStatuses("synthetic-running-source").footer).toBe("unverified");
     expect(rendered.sdkCalls).toEqual([]);
     expect(rendered.navigateCalls).toEqual([]);
