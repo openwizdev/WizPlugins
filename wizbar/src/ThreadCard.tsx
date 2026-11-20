@@ -19,8 +19,6 @@ import { resolveSnoozePresets } from "./lifecycle";
 import { cardLinkText, cardMeta, childCountLabel, modelLabel } from "./card-meta";
 import type { t3sidebarRpcContract } from "./server";
 import type { CardModelV3 } from "./v3-types";
-import { MatrixMark } from "./MatrixMark";
-import { matrixState } from "./specs/rows";
 
 /**
  * One thread as a three-line card: project and status, title, then model,
@@ -62,8 +60,6 @@ export function ThreadCard({
   const served = useCardModel(thread.id, thread.updatedAt);
   const meta = cardMeta(thread, threads, pullRequest, served);
   const model = modelLabel(meta.model, meta.effort);
-  // WB4-2: the matrix mark (specs-section.v1.md section 5); idle cards stay as 0.3 drew them.
-  const matrix = matrixState(thread, pullRequest);
   const children = childCountLabel(meta.childCount);
   // The branch, or the machine when there is no worktree, on hover only.
   const location = meta.branch ?? thread.host?.name ?? null;
@@ -77,7 +73,7 @@ export function ThreadCard({
       <li className="list-none">
         <div
           className={cn(
-            "group/card relative rounded-md px-2.5 py-2 transition-colors",
+            "group/card relative rounded-md px-2.5 pb-[9px] pt-2.5 transition-colors",
             isActive ? "bg-sidebar-accent" : "hover:bg-sidebar-accent/60",
             // A thread open in another pane gets a weaker tint than the active
             // row, so the two states stay distinguishable.
@@ -107,7 +103,7 @@ export function ThreadCard({
             className="absolute inset-0 cursor-pointer rounded-md"
           />
           <div className="pointer-events-none relative flex h-5 items-center gap-1.5">
-            <span className="min-w-0 flex-1 truncate text-2xs font-medium text-muted-foreground">
+            <span className="min-w-0 flex-1 truncate text-[11.5px] font-medium text-muted-foreground">
               {projectName ?? " "}
             </span>
             <MachineIcon environment={thread.environment} host={thread.host} runtimeStatus={thread.runtimeStatus} />
@@ -154,7 +150,6 @@ export function ThreadCard({
             aria-label="Thread details"
             className="pointer-events-none relative mt-1 flex min-w-0 flex-wrap items-center gap-1 text-2xs text-muted-foreground"
           >
-            {matrix === "idle" ? null : <MatrixMark state={matrix} />}
             {meta.link && pullRequest ? (
               <a
                 href={meta.link.pullRequest!.url}
@@ -196,8 +191,9 @@ export function ThreadCard({
               />
             ) : null}
             <span className="ml-auto" />
-            {/* WB4-2: model and effort beside the harness logo, omitted when missing. */}
-            {model ? <Chip>{model}</Chip> : null}
+            {/* WB4-2: model and effort beside the harness logo, omitted when missing;
+                round 5 A draws them as quiet text, not a chip. */}
+            {model ? <span className="truncate text-muted-foreground">{model}</span> : null}
             {/* Always drawn, so the line has a fixed right edge. */}
             <span data-provider={thread.providerId} className="contents"><ProviderGlyph providerId={thread.providerId} /></span>
           </div>
