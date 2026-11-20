@@ -11,7 +11,6 @@ import {
 } from "@testing-library/react";
 import { loadPluginApp, renderSlot } from "@get-bb/plugin-sdk/testing/app";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk";
-import { tokens } from "./specs/theme";
 
 // Load through the harness so the plugin's `@get-bb/plugin-sdk/app` import binds
 // to the test runtime; importing the component directly would bind it to an
@@ -1103,13 +1102,15 @@ describe("round 5 shelves", () => {
   // The heading's rule: the last thing in the shelf's header line.
   const rule = (region: HTMLElement) => region.querySelector<HTMLElement>(":scope > h2 > span:last-child, :scope > button > span:last-child")!;
 
-  // catches: a shelf left on the grey border rule while Specs is olive.
-  it.each(["Pinned", "Inbox", "Snoozed", "Muted", "Settled"])("draws the %s rule in the Specs olive", async (name) => {
+  // The Specs section's rule colour, `tokens.rule` in 0.5 C (#112, PR #120),
+  // copied from that branch until it merges; then this compares with tokens.rule
+  // and the Specs rule itself.
+  const SPECS_RULE = "color-mix(in oklch, var(--primary, #c0ff04) 40%, var(--sidebar, #161616))";
+  // catches: a shelf left on the grey border rule, or on the text olive, while Specs uses its quieter rule olive.
+  it.each(["Pinned", "Inbox", "Snoozed", "Muted", "Settled"])("draws the %s rule in the Specs rule olive", async (name) => {
     renderShelves();
     const region = await screen.findByRole("region", { name });
-    const specs = await screen.findByRole("region", { name: "Specs" });
-    expect(rule(region).style.background).toBe(tokens.mutedAccent);
-    expect(rule(region).style.background).toBe(rule(specs).style.background);
+    expect(rule(region).style.background).toBe(SPECS_RULE);
   });
 
   // catches: "Settled (1)" or a chevron back on a parked shelf, or a header that no longer expands.
