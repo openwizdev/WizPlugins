@@ -255,8 +255,8 @@ describe("0.5 C: the rule, the spec rows and the open panel", () => {
     expect(rowOf("Sample palette").querySelectorAll("[data-dot-state]").length).toBe(10);
   });
 
-  // catches: building drawn as a solid accent dot, done in the last hour as a ringed olive, or a ring dot that never pulses.
-  it("draws each dot state in its own colour, ring and motion", async () => {
+  // catches: building drawn as a solid accent dot, or done in the last hour as a ringed olive. Motion is A1's (below).
+  it("draws each dot state in its own colour and ring", async () => {
     render();
     await screen.findByText("Sample palette");
     const dot = (state: string) => rowOf("Sample palette").querySelector(`[data-dot-state="${state}"]`) as HTMLElement;
@@ -267,10 +267,8 @@ describe("0.5 C: the rule, the spec rows and the open panel", () => {
     expect(dot("building").style.background).toBe("");
     // Council round 1: a light grey ring, as in the target, which has no lime rings.
     expect(dot("building").style.boxShadow).toBe(ring(tokens.mutedText));
-    expect(dot("building").className).toContain("motion-safe:animate-pulse");
     // Lead, after council round 1: no lime rings, so review is the same grey ring, still.
     expect(dot("review").style.boxShadow).toBe(ring(tokens.mutedText));
-    expect(dot("review").className).not.toContain("animate-pulse");
     expect(dot("needs-you").style.background).toBe(tokens.warning);
     expect(dot("held").style.boxShadow).toBe(ring(tokens.quietRing));
     expect(dot("held").style.background).toBe("");
@@ -636,5 +634,145 @@ describe("S1: the Specs section collapses", () => {
     const lastCard = screen.getAllByRole("link").filter((link) => !region.contains(link)).at(-1)!;
     expect(before(lastCard, region)).toBe(true);
     expect(before(region, screen.getByRole("status", { name: /^\d+ running$/ }))).toBe(true);
+  });
+});
+
+// WizBar 0.6.0 A1 (#186): the activity look (specs-section.v1.md section 13). The browser's Web Animations call is the
+// seam: a fake `Element.prototype.animate` records what the section asks the browser for; the harness frame series
+// on the pull request shows the real breath in Chromium.
+describe("A1: active specs breathe, inactive names are muted", () => {
+  interface FakeAnimation { el: HTMLElement; keyframes: unknown; options: unknown; playState: "running" | "paused" | "idle"; startTime: number | null }
+  let animations: FakeAnimation[] = [];
+  let visibility: DocumentVisibilityState = "visible";
+  let observed: ((entries: { isIntersecting: boolean }[]) => void)[] = [];
+  function fakeAnimate(this: HTMLElement, keyframes: unknown, options: unknown) {
+    let start: number | null = null;
+    const animation = {
+      el: this, keyframes, options, playState: "running" as FakeAnimation["playState"],
+      get startTime() { return start; },
+      // As in the Web Animations spec: setting a start time plays a paused animation from that time.
+      set startTime(value: number | null) { start = value; if (value !== null && animation.playState !== "idle") animation.playState = "running"; },
+      play() { if (animation.playState !== "running") { animation.playState = "running"; start = null; } },
+      pause() { animation.playState = "paused"; start = null; },
+      cancel() { animation.playState = "idle"; start = null; },
+    };
+    animations.push(animation);
+    return animation;
+  }
+  function reducedMotion(reduce: boolean) {
+    vi.stubGlobal("matchMedia", (query: string) => ({
+      matches: reduce && query === "(prefers-reduced-motion: reduce)", media: query, addEventListener() {}, removeEventListener() {},
+    }));
+  }
+  beforeEach(() => {
+    animations = [];
+    visibility = "visible";
+    observed = [];
+    reducedMotion(false);
+    (HTMLElement.prototype as unknown as { animate: unknown }).animate = fakeAnimate;
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => visibility });
+    vi.stubGlobal("IntersectionObserver", class {
+      constructor(callback: (entries: { isIntersecting: boolean }[]) => void) { observed.push(callback); }
+      observe() {}
+      disconnect() {}
+      unobserve() {}
+    });
+  });
+  afterEach(() => {
+    delete (HTMLElement.prototype as unknown as { animate?: unknown }).animate;
+    delete (document as unknown as { visibilityState?: unknown }).visibilityState;
+    vi.unstubAllGlobals();
+  });
+  const dot = (spec: string, state: string) => rowOf(spec).querySelector(`[data-dot-state="${state}"]`) as HTMLElement;
+  const live = () => animations.filter((a) => a.playState !== "idle");
+  const setVisibility = (next: DocumentVisibilityState) => act(() => { visibility = next; document.dispatchEvent(new Event("visibilitychange")); });
+
+  // catches: 0.5's pulse on every building dot, a reviewed ticket breathing, dots each on their own clock, or a livelier breath.
+  it("breathes only the dots a working agent names, all on one clock, one soft breath every 2 s", async () => {
+    render();
+    await screen.findByText("Sample palette");
+    // Palette: SP-2 (building) and SP-4 (needs you) are each named by a working builder; SP-3 only by a reviewer.
+    const breathing = [dot("Sample palette", "building"), dot("Sample palette", "needs-you")];
+    await waitFor(() => expect(live().map((a) => a.el)).toEqual(breathing));
+    for (const animation of live()) {
+      expect(animation.keyframes).toEqual([{ opacity: 1 }, { opacity: 0.4 }, { opacity: 1 }]);
+      expect(animation.options).toEqual({ duration: 2000, iterations: Infinity, easing: "ease-in-out" });
+      // One shared clock: every breath starts at the document timeline's zero, so all are at the same phase.
+      expect(animation.startTime).toBe(0);
+      expect(animation.playState).toBe("running");
+    }
+    for (const still of [dot("Sample palette", "review"), dot("Sample cache", "building"), dot("Sample palette", "done")]) {
+      expect(animations.some((a) => a.el === still)).toBe(false);
+      expect(still.className).not.toMatch(/animate-/);
+    }
+    expect(document.querySelector("[class*='animate-pulse']")).toBeNull();
+  });
+
+  // catches: motion forced on someone who asked their system for less.
+  it("breathes nothing under reduced motion: every dot at full opacity", async () => {
+    reducedMotion(true);
+    render();
+    await screen.findByText("Sample palette");
+    expect(animations).toEqual([]);
+    expect(dot("Sample palette", "building").style.opacity).toBe("");
+  });
+
+  // catches: a breath burning frames while the sidebar is hidden or scrolled away, or dots out of step after it returns.
+  it("pauses while the document is hidden or the section is off screen, and resumes in step", async () => {
+    render();
+    await screen.findByText("Sample palette");
+    await waitFor(() => expect(live().length).toBe(2));
+    setVisibility("hidden");
+    expect(live().map((a) => a.playState)).toEqual(["paused", "paused"]);
+    setVisibility("visible");
+    expect(live().map((a) => [a.playState, a.startTime])).toEqual([["running", 0], ["running", 0]]);
+    expect(observed.length).toBeGreaterThan(0);
+    act(() => { for (const callback of observed) callback([{ isIntersecting: false }]); });
+    expect(live().map((a) => a.playState)).toEqual(["paused", "paused"]);
+    act(() => { for (const callback of observed) callback([{ isIntersecting: true }]); });
+    expect(live().map((a) => [a.playState, a.startTime])).toEqual([["running", 0], ["running", 0]]);
+    // Still the first two animations: nothing remounted or restarted out of step.
+    expect(animations.length).toBe(2);
+  });
+
+  // catches: a row or dot remounted (a flash) when its builder stops, or a breath left running on a dot nobody works on.
+  it("stops a dot's breath in place when its builder stops", async () => {
+    const { rendered } = render();
+    await screen.findByText("Sample palette");
+    const building = dot("Sample palette", "building");
+    const row = rowOf("Sample palette");
+    await waitFor(() => expect(live().length).toBe(2));
+    act(() => rendered.lifecycle.rerender(<SpecsSection {...props} threads={v4Threads.filter((t) => t.id !== "thr_v4_builder_a")} />));
+    await waitFor(() => expect(live().map((a) => a.el)).toEqual([dot("Sample palette", "needs-you")]));
+    expect(dot("Sample palette", "building")).toBe(building);
+    expect(rowOf("Sample palette")).toBe(row);
+  });
+
+  // catches: an idle spec as bright as a busy one, a later-only spec kept bright, or a running spec muted; a name colour from
+  // anything but the host's text variables; the row remounting when the spec goes quiet.
+  it("mutes the name of a spec with nothing running and nothing due now, in place", async () => {
+    // Nothing due now anywhere; palette keeps one later ticket, which does not keep its name bright.
+    const file = JSON.parse(v4SpecsFileV2Text);
+    for (const spec of file.specs) for (const ticket of spec.tickets) if (ticket.state === "needs-you") ticket.state = "not-started";
+    const { rendered } = render({ read: () => ({ kind: "content", text: JSON.stringify(file) }) });
+    await screen.findByText("Sample palette");
+    const name = (spec: string) => rowOf(spec).querySelector("[data-spec-name]") as HTMLElement;
+    // Palette has running agents: bright. Cache has none and nothing due now: muted.
+    expect(name("Sample palette").style.color).toBe("var(--foreground)");
+    expect(name("Sample cache").style.color).toBe("var(--muted-foreground, #b7b7b7)");
+    expect(tokens.mutedText).toBe("var(--muted-foreground, #b7b7b7)");
+    const before = name("Sample palette");
+    const row = rowOf("Sample palette");
+    act(() => rendered.lifecycle.rerender(<SpecsSection {...props} threads={[]} />));
+    await waitFor(() => expect(name("Sample palette").style.color).toBe("var(--muted-foreground, #b7b7b7)"));
+    expect(name("Sample palette")).toBe(before);
+    expect(rowOf("Sample palette")).toBe(row);
+  });
+
+  // catches: a spec with a ticket due now muted because nothing runs on it.
+  it("keeps a spec bright while a ticket is due now, even with nothing running", async () => {
+    render();
+    await screen.findByText("Sample cache");
+    expect((rowOf("Sample cache").querySelector("[data-spec-name]") as HTMLElement).style.color).toBe("var(--foreground)");
   });
 });
