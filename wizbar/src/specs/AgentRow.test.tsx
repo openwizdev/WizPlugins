@@ -110,7 +110,7 @@ describe("S3: the agent row (sections 3, 5 and 6)", () => {
     const { rendered, row } = show(reviewer);
     expect(takesClick(within(row()).getByText("50m"))).toBe(false);
     fireEvent.click(within(row()).getByRole("link"));
-    expect(rendered.inspection.sidebarActionCalls).toContainEqual(expect.objectContaining({ threadId: reviewer.threadId }));
+    expect(rendered.inspection.sidebarActionCalls).toEqual([expect.objectContaining({ threadId: reviewer.threadId })]);
     cleanup();
     const pr = v4PullRequests.thr_v4_builder_a!;
     const other = show(builder, served(null, null), { thr_v4_builder_a: pr });
@@ -118,7 +118,7 @@ describe("S3: the agent row (sections 3, 5 and 6)", () => {
     const button = within(other.row()).getByRole("button", { name: /GitHub/ });
     expect(takesClick(button)).toBe(true);
     fireEvent.click(button);
-    expect(other.rendered.inspection.navigateCalls).toContainEqual({ method: "openUrl", url: pr.url });
+    expect(other.rendered.inspection.navigateCalls).toEqual([{ method: "openUrl", url: pr.url }]);
     expect(other.rendered.inspection.sidebarActionCalls).toEqual([]);
   });
 
