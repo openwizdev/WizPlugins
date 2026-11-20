@@ -4,7 +4,8 @@
 import { describe, expect, it } from "vitest";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import { v3Now, v3Stats, v3Threads, v3TimeZone } from "./fixtures/v3";
-import { computeStats, formatStatsText, isRunning, statsWindow } from "./stats";
+import { v4Now, v4SpecsFile, v4Threads, type SpecsFileV4 } from "./fixtures/v4";
+import { computeStats, computeStatsV4, formatStatsText, isRunning, statsWindow } from "./stats";
 
 const byId = (id: string) => v3Threads.find((t) => t.id === id)!;
 const unavailable = {
@@ -78,5 +79,28 @@ describe("the waiting flag", () => {
   it.each([["missing", undefined], ["a string", "false"]])("is unavailable when %s", (_, flag) => {
     const row = { ...byId("thr_v3_child_working"), hasPendingInteraction: flag } as unknown as PluginSidebarThread;
     expect(computeStats([row], v3Now, v3TimeZone)).toEqual(unavailable);
+  });
+});
+
+// S3 (#202): from 0.6 a finished spec is a quiet row, not hidden (specs-section.v1.md sections 3 and 7), so the
+// "N running" card names it beside its agents. In the v4 fixture `thr_v4_reviewer_c` ("Reviewer · SF-2: …", child
+// of `thr_v4_fleet_c`) belongs to spec #601 "Sample finished", whose two tickets are both done.
+describe("S3: a finished spec's agents name it on the card", () => {
+  const reviewerC = (specs: SpecsFileV4) => {
+    const stats = computeStatsV4(v4Threads, specs, null, v4Now, "UTC");
+    if (stats.status !== "ready") throw new Error("fixture must be ready");
+    return stats.threads.find((t) => t.id === "thr_v4_reviewer_c");
+  };
+
+  // catches: the card still dropping the spec name once every ticket is done (the 0.5 hidden rule).
+  it("shows the finished spec's name", () => {
+    expect(reviewerC(v4SpecsFile)).toMatchObject({ spec: "example/sample-plans#601", shortName: "Sample finished" });
+  });
+
+  // catches: a spec with no tickets, still hidden in 0.6, named on the card.
+  it("names no spec when the matched spec has no tickets", () => {
+    const file = structuredClone(v4SpecsFile);
+    file.specs = file.specs.map((spec) => spec.spec === "example/sample-plans#601" ? { ...spec, tickets: [] } : spec);
+    expect(reviewerC(file)).toMatchObject({ spec: null, shortName: null });
   });
 });
