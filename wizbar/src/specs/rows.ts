@@ -30,12 +30,13 @@ type TitleRef =
   | { kind: "fleet"; role: null; number: number }
   | { kind: "none"; role: null };
 
+/** The anchored real forms come first, so free text holding ` · CODE:` never turns them into the old form. */
 function titleRef(title: string): TitleRef {
-  let match = titlePattern.exec(title);
-  if (match) return { kind: "code", role: match[1]!, code: match[2]! };
-  if ((match = fleetPattern.exec(title))) return { kind: "fleet", role: null, number: Number(match[1]) };
+  let match = fleetPattern.exec(title);
+  if (match) return { kind: "fleet", role: null, number: Number(match[1]) };
   if ((match = builderPattern.exec(title))) return { kind: "issue", role: "Builder", number: Number(match[1]) };
   if ((match = reviewPattern.exec(title))) return { kind: "pull", role: "Reviewer", number: Number(match[1]) };
+  if ((match = titlePattern.exec(title))) return { kind: "code", role: match[1]!, code: match[2]! };
   return { kind: "none", role: null };
 }
 
@@ -74,16 +75,18 @@ export function matrixState(row: SpecsThreadRow, pullRequest: PluginSidebarPullR
 const issueNumber = (key: string) => Number(key.slice(key.lastIndexOf("#") + 1));
 const only = <T>(items: readonly T[]): T | null => (items.length === 1 ? items[0]! : null);
 
-/** The spec's one ticket the title names, or null (none, or several). */
-function ticketOf(spec: SpecEntryV4, ref: TitleRef): TicketEntryV4 | null {
+/** The spec's tickets the title names: by code, issue number or pull. */
+function ticketsOf(spec: SpecEntryV4, ref: TitleRef): TicketEntryV4[] {
   switch (ref.kind) {
-    case "code": return only(spec.tickets.filter((t) => t.code === ref.code));
-    case "issue": return only(spec.tickets.filter((t) => issueNumber(t.ticket) === ref.number));
-    case "pull": return only(spec.tickets.filter((t) => t.pulls?.includes(ref.number) === true));
-    default: return null;
+    case "code": return spec.tickets.filter((t) => t.code === ref.code);
+    case "issue": return spec.tickets.filter((t) => issueNumber(t.ticket) === ref.number);
+    case "pull": return spec.tickets.filter((t) => t.pulls?.includes(ref.number) === true);
+    default: return [];
   }
 }
-const hasTicket = (spec: SpecEntryV4, ref: TitleRef) => ticketOf(spec, ref) !== null;
+/** The row's one ticket, or null: a pull closing two tickets still names its spec, but no single ticket. */
+const ticketOf = (spec: SpecEntryV4, ref: TitleRef) => only(ticketsOf(spec, ref));
+const hasTicket = (spec: SpecEntryV4, ref: TitleRef) => ticketsOf(spec, ref).length > 0;
 /** Among several candidate specs, the one holding the title's ticket. */
 const byTicket = (specs: readonly SpecEntryV4[], ref: TitleRef) => only(specs.filter((s) => hasTicket(s, ref)));
 

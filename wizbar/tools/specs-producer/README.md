@@ -2,14 +2,14 @@
 
 Writes `.openwiz/specs.v1.json` under your factory home, the file WizBar's Specs section reads ([contract section 1](../../contracts/specs-section.v1.md#1-the-specs-file)). It reads GitHub through your local `gh` login (REST only) and needs nothing else: Node 24 and `gh`, no packages.
 
-For each repository it reads the open issues (an issue with sub-issues is a running spec), each spec's sub-issues (its tickets) and the open pull requests. Each page is a conditional request with the ETag kept in `.openwiz/specs.v1.etags.json`, so an unchanged page costs nothing against your rate limit. A run with ten specs makes about 15 requests and stops before 60. The file is written whole, only when every read succeeded; a failed run keeps the last file and exits 1.
+For each repository it reads the open issues (an issue with sub-issues is a running spec), each spec's sub-issues (its tickets) and the open pull requests. Each page is a conditional request with the ETag kept in `.openwiz/specs.v1.etags.json`, so an unchanged page costs nothing against your rate limit. A run makes at most 40 requests: ten specs take about 15. A bigger scan resumes on the next run: it reads pages never read first, then those read longest ago, and the pages it did not reach keep their last data, so the file stays fresh. The file is written whole once every page has data (a very large first scan takes a few runs); a failed read writes nothing, keeps the last file and exits 1.
 
 | Field | From GitHub |
 | --- | --- |
 | Short name | The spec title after `spec: ` and before the next `: ` (`0.1.0 spec: The kernel: records v1…` → `The kernel`), else the whole title; at most 40 characters |
 | Ticket code | The `[A-Z]{1,3}[0-9]+` just before the title's first `:` (`0.1.0 KN3: the driver…` → `KN3`), else none |
 | State | Closed → `done` (with `closedAt`); label `ready-for-human` → `needs-you`; `held` or `needs-info` → `held`; an open pull request whose body closes it (`Closes #N`) → `review`, or `building` while every such pull is a draft; otherwise `not-started`. Closed as not planned: left out |
-| `pulls` | The open pull requests in the ticket's own repository whose body closes it |
+| `pulls` | The open pull requests in the ticket's own repository whose body closes it, when that repository is bound |
 
 ## Run it once
 

@@ -3,12 +3,13 @@
 // from GitHub's REST API through the local `gh` login. Node's standard library
 // only; run it with Node 24 (`node producer.ts --home <dir> --repo <owner/name>`).
 //
-// One run, per repository: the open issues (specs are those with sub-issues),
-// each spec's sub-issues (its tickets) and the open pull requests. Every page is
-// a conditional request with the ETag from the last run, kept in a cache file
-// beside the output, so an unchanged page costs nothing. The file is written
-// whole (temp file, then rename) and only when every read succeeded: a failed
-// read keeps the last file.
+// It reads, per repository, the open issues (specs are those with sub-issues)
+// and open pull requests, then each spec's sub-issues (its tickets). Every page
+// is a conditional request with the ETag kept in a cache file beside the output,
+// so an unchanged page costs nothing. A run makes at most 40 requests; a bigger
+// scan resumes on the next run, and pages it did not reach keep their last data.
+// The file is written whole (temp file, then rename) once every page has data;
+// a failed read keeps the last file.
 import { execFile } from "node:child_process";
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -17,12 +18,15 @@ import { pathToFileURL } from "node:url";
 export interface GitHubResponse { status: number; etag: string | null; next: string | null; body: unknown }
 /** One REST read of `path` (relative to the API root), conditional when `etag` is not null. */
 export type GitHubRequest = (path: string, etag: string | null) => Promise<GitHubResponse>;
-export type RunResult = { ok: true; calls: number; specs: number } | { ok: false; calls: number; error: string };
+/** `written` is false while some page has no data yet (`pending` pages); the last file then stays. */
+export type RunResult =
+  | { ok: true; calls: number; specs: number; written: boolean; pending: number }
+  | { ok: false; calls: number; error: string };
 
 export const OUTPUT = join(".openwiz", "specs.v1.json");
 export const CACHE = join(".openwiz", "specs.v1.etags.json");
-/** A run stops before this many requests: the ticket's budget is well under 60. */
-const MAX_CALLS = 59;
+/** Requests per run, well under the ticket's 60: a bigger scan resumes on the next run. */
+const BUDGET = 40;
 
 type State = "done" | "building" | "review" | "needs-you" | "held" | "not-started";
 interface Ticket { ticket: string; code: string | null; title: string; state: State; closedAt: string | null; pulls: number[] }
@@ -73,16 +77,25 @@ function slim(item: unknown): Record<string, unknown> {
   };
 }
 
-interface CacheEntry { etag: string; next: string | null; body: unknown }
-type Cache = Record<string, CacheEntry>;
+/** One cached page: its ETag and link, the slimmed items, and the run that last read it. */
+interface CacheEntry { etag: string; next: string | null; body: Record<string, unknown>[]; run: number }
+/**
+ * The cache file: the run counter and every page of the last scan. Each page's `run` is the resume
+ * cursor: a run reads pages never read first, then the longest unread, so a scan bigger than one
+ * run's budget continues where the last run stopped.
+ */
+interface Cache { version: 1; run: number; pages: Record<string, CacheEntry> }
 
 async function readCache(path: string): Promise<Cache> {
   try {
-    const parsed = JSON.parse(await readFile(path, "utf8")) as unknown;
-    return typeof parsed === "object" && parsed !== null && !Array.isArray(parsed) ? parsed as Cache : {};
+    const parsed = JSON.parse(await readFile(path, "utf8")) as Partial<Cache> | null;
+    if (parsed?.version === 1 && Number.isSafeInteger(parsed.run) && typeof parsed.pages === "object" && parsed.pages !== null) {
+      return { version: 1, run: parsed.run!, pages: parsed.pages };
+    }
   } catch {
-    return {};
+    // No cache, or an unreadable one: start a new scan.
   }
+  return { version: 1, run: 0, pages: {} };
 }
 
 async function writeAtomically(path: string, text: string): Promise<void> {
@@ -95,26 +108,15 @@ async function writeAtomically(path: string, text: string): Promise<void> {
   }
 }
 
-/** Every page of a list endpoint, from the cache on a 304. */
-async function readList(path: string, request: GitHubRequest, cache: Cache, next: Cache, count: () => void): Promise<Record<string, unknown>[]> {
-  const items: Record<string, unknown>[] = [];
-  let page: string | null = path;
-  while (page !== null) {
-    count();
-    const cached: CacheEntry | undefined = cache[page];
-    const response = await request(page, cached?.etag ?? null);
-    let entry: CacheEntry;
-    if (response.status === 304 && cached) entry = cached;
-    else if (response.status === 200) {
-      if (!Array.isArray(response.body)) throw new ReadFailed(`GitHub answered something other than a list for ${page}`);
-      entry = { etag: response.etag ?? "", next: response.next, body: response.body.map(slim) };
-    } else throw new ReadFailed(`GitHub answered ${response.status} for ${page}`);
-    if (!Array.isArray(entry.body)) throw new ReadFailed(`the cached page for ${page} is not a list`);
-    if (entry.etag) next[page] = entry;
-    items.push(...entry.body as Record<string, unknown>[]);
-    page = entry.next;
-  }
-  return items;
+/** One conditional read of a page into the cache. */
+async function readPage(page: string, request: GitHubRequest, pages: Record<string, CacheEntry>, run: number): Promise<void> {
+  const cached = pages[page];
+  const response = await request(page, cached?.etag || null);
+  if (response.status === 304 && cached) pages[page] = { ...cached, run };
+  else if (response.status === 200) {
+    if (!Array.isArray(response.body)) throw new ReadFailed(`GitHub answered something other than a list for ${page}`);
+    pages[page] = { etag: response.etag ?? "", next: response.next, body: response.body.map(slim), run };
+  } else throw new ReadFailed(`GitHub answered ${response.status} for ${page}`);
 }
 
 const text = (value: unknown): string => (typeof value === "string" ? value : "");
@@ -122,7 +124,9 @@ const repositoryOf = (issue: Record<string, unknown>, fallback: string) =>
   text(issue.repository_url).replace(/^https:\/\/api\.github\.com\/repos\//, "") || fallback;
 const labelsOf = (issue: Record<string, unknown>) => new Set((Array.isArray(issue.labels) ? issue.labels : []).map(text));
 
-function ticketOf(issue: Record<string, unknown>, repository: string, pulls: Map<string, { number: number; draft: boolean }[]>): Ticket | null {
+type PullIndex = Map<string, { number: number; draft: boolean }[]>;
+
+function ticketOf(issue: Record<string, unknown>, repository: string, pulls: PullIndex): Ticket | null {
   const number = Number(issue.number);
   const key = `${repository}#${number}`;
   const title = text(issue.title).trim() || `#${number}`;
@@ -140,62 +144,101 @@ function ticketOf(issue: Record<string, unknown>, repository: string, pulls: Map
   return { ticket: key, code: ticketCodeOf(title), title, state, closedAt, pulls: open.map((p) => p.number).sort((a, b) => a - b) };
 }
 
-/** One producer run. Writes the specs file only when every read succeeded. */
+interface Scan { order: string[]; missing: string[]; specs: Spec[] }
+
+/**
+ * The whole scan over the cached pages, in reading order: per repository its open issues and open
+ * pulls, then each spec's sub-issues. `missing` lists the pages with no data yet.
+ */
+function scan(repositories: readonly string[], pages: Record<string, CacheEntry>): Scan {
+  const order: string[] = [];
+  const missing: string[] = [];
+  const list = (path: string) => {
+    const items: Record<string, unknown>[] = [];
+    for (let page: string | null = path; page !== null && !order.includes(page);) {
+      order.push(page);
+      const entry: CacheEntry | undefined = pages[page];
+      if (!entry) { missing.push(page); break; }
+      items.push(...entry.body);
+      page = entry.next;
+    }
+    return items;
+  };
+  const issues = new Map<string, Record<string, unknown>[]>();
+  // Every bound repository's pulls first, keyed by the ticket's own repository and number, so a
+  // ticket under a spec in another bound repository keeps its pulls (#122 R1).
+  const pulls: PullIndex = new Map();
+  for (const repository of repositories) {
+    issues.set(repository, list(`repos/${repository}/issues?state=open&per_page=100`));
+    const own = `${repository.toLowerCase()}#`;
+    for (const pull of list(`repos/${repository}/pulls?state=open&per_page=100`)) {
+      for (const key of closedBy(text(pull.body), repository.toLowerCase())) {
+        // Only pulls in the ticket's own repository count, so a pull number names one pull.
+        if (key.startsWith(own)) pulls.set(key, [...(pulls.get(key) ?? []), { number: Number(pull.number), draft: pull.draft === true }]);
+      }
+    }
+  }
+  const specs: Spec[] = [];
+  for (const repository of repositories) {
+    for (const issue of issues.get(repository)!) {
+      const summary = issue.sub_issues_summary as { total?: unknown } | undefined;
+      if (issue.pull_request || typeof summary?.total !== "number" || summary.total <= 0) continue;
+      const number = Number(issue.number);
+      const tickets: Ticket[] = [];
+      const seen = new Set<string>();
+      const codes = new Set<string>();
+      for (const sub of list(`repos/${repository}/issues/${number}/sub_issues?per_page=100`)) {
+        const ticket = ticketOf(sub, repositoryOf(sub, repository), pulls);
+        if (!ticket || seen.has(ticket.ticket)) continue;
+        seen.add(ticket.ticket);
+        // A code twice in one spec would make the whole file malformed: the later one goes without.
+        if (ticket.code !== null && codes.has(ticket.code)) ticket.code = null;
+        if (ticket.code !== null) codes.add(ticket.code);
+        tickets.push(ticket);
+      }
+      specs.push({
+        spec: `${repository}#${number}`, shortName: shortNameOf(text(issue.title), number),
+        url: `https://github.com/${repository}/issues/${number}`, fleetThreadId: null, tickets,
+      });
+    }
+  }
+  return { order, missing, specs };
+}
+
+/**
+ * One producer run of at most `BUDGET` requests. It reads pages never read first, then those read
+ * longest ago, so a scan over the budget resumes on the next run while unreached pages keep their
+ * last good data. The file is written whole once every page has data; a failed read writes nothing.
+ */
 export async function runOnce(options: { home: string; repositories: readonly string[]; request: GitHubRequest; now?: () => Date }): Promise<RunResult> {
   const { home, request } = options;
   const repositories = [...new Set(options.repositories)];
   const cachePath = join(home, CACHE);
   const cache = await readCache(cachePath);
-  const nextCache: Cache = {};
+  const run = cache.run + 1;
+  const pages = { ...cache.pages };
   let calls = 0;
-  const count = () => {
-    if (calls >= MAX_CALLS) throw new ReadFailed(`over ${MAX_CALLS} requests in one run`);
-    calls += 1;
-  };
   try {
-    const specs: Spec[] = [];
-    for (const repository of repositories) {
-      const issues = await readList(`repos/${repository}/issues?state=open&per_page=100`, request, cache, nextCache, count);
-      const openPulls = await readList(`repos/${repository}/pulls?state=open&per_page=100`, request, cache, nextCache, count);
-      // Only pull requests in the ticket's own repository count, so a pull number names one pull.
-      const pulls = new Map<string, { number: number; draft: boolean }[]>();
-      for (const pull of openPulls) {
-        for (const key of closedBy(text(pull.body), repository.toLowerCase())) {
-          if (!key.startsWith(`${repository.toLowerCase()}#`)) continue;
-          pulls.set(key, [...(pulls.get(key) ?? []), { number: Number(pull.number), draft: pull.draft === true }]);
-        }
-      }
-      const sameRepoPulls = (issueRepository: string) => (issueRepository.toLowerCase() === repository.toLowerCase() ? pulls : new Map());
-      for (const issue of issues) {
-        const summary = issue.sub_issues_summary as { total?: unknown } | undefined;
-        if (issue.pull_request || typeof summary?.total !== "number" || summary.total <= 0) continue;
-        const number = Number(issue.number);
-        const subIssues = await readList(`repos/${repository}/issues/${number}/sub_issues?per_page=100`, request, cache, nextCache, count);
-        const tickets: Ticket[] = [];
-        const seen = new Set<string>();
-        const codes = new Set<string>();
-        for (const sub of subIssues) {
-          const subRepository = repositoryOf(sub, repository);
-          const ticket = ticketOf(sub, subRepository, sameRepoPulls(subRepository));
-          if (!ticket || seen.has(ticket.ticket)) continue;
-          seen.add(ticket.ticket);
-          // A code twice in one spec would make the whole file malformed: the later one goes without.
-          if (ticket.code !== null && codes.has(ticket.code)) ticket.code = null;
-          if (ticket.code !== null) codes.add(ticket.code);
-          tickets.push(ticket);
-        }
-        specs.push({
-          spec: `${repository}#${number}`, shortName: shortNameOf(text(issue.title), number),
-          url: `https://github.com/${repository}/issues/${number}`, fleetThreadId: null, tickets,
-        });
-      }
+    while (calls < BUDGET) {
+      const { order, missing } = scan(repositories, pages);
+      const due = order.filter((page) => pages[page]?.run !== run);
+      if (due.length === 0) break;
+      const age = (page: string) => (missing.includes(page) ? -1 : pages[page]!.run);
+      const next = due.reduce((best, page) => (age(page) < age(best) ? page : best));
+      calls += 1;
+      await readPage(next, request, pages, run);
     }
-    const generatedAt = (options.now?.() ?? new Date()).toISOString().replace(/\.\d+Z$/, "Z");
-    const file = { schema: "openwiz.specs.v1", generatedAt, specs };
+    const { order, missing, specs } = scan(repositories, pages);
     await mkdir(join(home, ".openwiz"), { recursive: true });
-    await writeAtomically(join(home, OUTPUT), `${JSON.stringify(file, null, 2)}\n`);
-    await writeAtomically(cachePath, JSON.stringify(nextCache));
-    return { ok: true, calls, specs: specs.length };
+    if (missing.length === 0) {
+      const generatedAt = (options.now?.() ?? new Date()).toISOString().replace(/\.\d+Z$/, "Z");
+      await writeAtomically(join(home, OUTPUT), `${JSON.stringify({ schema: "openwiz.specs.v1", generatedAt, specs }, null, 2)}\n`);
+    }
+    // Keep only the pages of this scan.
+    const kept = Object.fromEntries(order.filter((page) => pages[page]).map((page) => [page, pages[page]!]));
+    await writeAtomically(cachePath, JSON.stringify({ version: 1, run, pages: kept } satisfies Cache));
+    const written = missing.length === 0;
+    return { ok: true, calls, specs: written ? specs.length : 0, written, pending: missing.length };
   } catch (error) {
     return { ok: false, calls, error: error instanceof Error ? error.message : String(error) };
   }
@@ -237,7 +280,8 @@ async function main(argv: readonly string[]): Promise<void> {
   }
   if (home === null || repositories.length === 0) usage();
   const result = await runOnce({ home, repositories, request: ghRequest });
-  if (result.ok) process.stdout.write(`wrote ${join(home, OUTPUT)}: ${result.specs} specs, ${result.calls} requests\n`);
+  if (result.ok && result.written) process.stdout.write(`wrote ${join(home, OUTPUT)}: ${result.specs} specs, ${result.calls} requests\n`);
+  else if (result.ok) process.stdout.write(`scan continues next run: ${result.pending} pages left, ${result.calls} requests\n`);
   else process.stderr.write(`kept the last file: ${result.error} (${result.calls} requests)\n`);
   process.exitCode = result.ok ? 0 : 1;
 }

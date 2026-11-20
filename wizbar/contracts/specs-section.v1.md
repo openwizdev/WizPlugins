@@ -94,7 +94,7 @@ The input is the 0.3 rows (sidebar-v3.v1.md section 1). Only **running** rows ma
 
 **Title parse** (the thread-naming rule `Role · CODE: what it does`): the `displayTitle` matches `^(.+?) · ([A-Z][A-Z0-9]*-?[0-9]+): (.+)$` (the separator is a space, U+00B7, a space). Group 1 is the role, group 2 the code.
 
-**Real titles** (additive, 0.5.0 A), tried after that form:
+**Real titles** (additive, 0.5.0 A), tried first: a title in a real form is never read as the form above, even when its free text holds ` · CODE:`.
 
 | Title | Role | Names |
 | --- | --- | --- |
@@ -102,7 +102,7 @@ The input is the 0.3 rows (sidebar-v3.v1.md section 1). Only **running** rows ma
 | `^#([1-9][0-9]*): (.+)$` | `Builder` | The ticket whose issue number is N |
 | `^Review #([1-9][0-9]*) at [0-9a-f]{7,40}( .*)?$` | `Reviewer` | The ticket whose `pulls` holds P |
 
-Anything else gives no role and no code. A real title's code is its ticket's `code` in the matched spec.
+Anything else gives no role and no code. A real title's code is its ticket's `code` in the matched spec. A spec holds the title's ticket when any of its tickets matches; the agent's `ticket` (and its code) is set only when exactly one does, so a pull closing two tickets of one spec keeps its reviewer there with no ticket.
 
 **Which spec,** first match wins:
 
