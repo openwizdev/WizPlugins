@@ -46,7 +46,7 @@ are in the [v0.3 sidebar contract](contracts/sidebar-v3.v1.md) and the
   and the children of `Fleet #<S>: …` belong to spec S (the fleet thread
   itself is not listed); the older `Role · CODE: …` form still matches. An
   agent row reads
-  `Builder · KN3:` dimmed, then the task, then its age; its second line is the
+  `Builder · EN3:` dimmed, then the task, then its age; its second line is the
   harness logo and the model and effort.
 - **Model and effort** in friendly words: `Opus 5.5 · High`, `Sol 6.1 · XHigh`,
   from the host's resolved options for the thread's latest turn. On cards they
