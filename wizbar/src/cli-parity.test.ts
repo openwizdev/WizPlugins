@@ -279,11 +279,18 @@ describe("V5: children and stats JSON equal the UI for the same fixtures", () =>
   });
 });
 
-// S1 (#169): `wizbar section <pinned|inbox|specs> --collapse|--expand --json` does what a header click does.
+// S1 (#169), E2 (#188): `wizbar section <pinned|specs|unread> --collapse|--expand --json` does what a header
+// click does; a 0.5 `inbox` is accepted as Unread, and both store `unread`.
 describe("V5: section --json matches the sidebar's collapsible headers", () => {
-  // catches: the CLI and a header click storing different values, or the CLI's answer disagreeing with what the sidebar then shows.
-  it.each([["inbox", "--collapse", "[]"], ["pinned", "--expand", "[\"pinned\",\"inbox\"]"]] as const)(
-    "%s %s from %s", async (section, flag, start) => {
+  // catches: the CLI and a header click storing different values, the CLI's answer disagreeing with what the
+  // sidebar then shows, `unread` refused, or `inbox` written back instead of `unread`.
+  it.each([
+    ["unread", "--collapse", "[]", "unread"],
+    ["inbox", "--collapse", "[]", "unread"],
+    ["unread", "--expand", "[\"inbox\",\"pinned\"]", "unread"],
+    ["pinned", "--expand", "[\"pinned\",\"inbox\"]", "pinned"],
+  ] as const)(
+    "%s %s from %s", async (asked, flag, start, section) => {
       const host = createFakePluginHost({ pluginId: "wizbar" });
       hosts.push(host);
       // The real handle the server declares, to read what the command stored.
@@ -291,13 +298,14 @@ describe("V5: section --json matches the sidebar's collapsible headers", () => {
       plugin(host.bb);
       const handle = define.mock.results.find((r, i) => "sectionsCollapsed" in define.mock.calls[i]![0])!.value;
       await host.harness.behavior.setSettings({ sectionsCollapsed: start });
-      const result = await host.harness.behavior.runCli(["section", section, flag, "--json"]);
+      const result = await host.harness.behavior.runCli(["section", asked, flag, "--json"]);
       const collapsed = flag === "--collapse";
       expect({ exitCode: result.exitCode, json: JSON.parse(result.stdout!) }).toEqual({ exitCode: 0, json: { section, collapsed } });
       const stored = (await handle.get()).sectionsCollapsed;
+      expect(stored).not.toContain("inbox");
       // The same change through the UI: a header click on a sidebar mounted on the same stored value.
       const updates: { values: Record<string, unknown> }[] = [];
-      const name = section === "inbox" ? "Inbox" : "Pinned";
+      const name = section === "unread" ? "Unread" : "Pinned";
       renderSlot(app.threadLists[0]!, {
         activeThreadId: null, activeProjectId: null, isCompactViewport: true, onNavigate() {}, searchQuery: "",
       }, {

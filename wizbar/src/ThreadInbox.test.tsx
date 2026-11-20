@@ -1456,3 +1456,66 @@ describe("E1: section order and the Settled link", () => {
     expect(screen.queryByRole("button", { name: /^Settled/ })).toBeNull();
   });
 });
+
+// E2 (#188): Inbox becomes Unread (sidebar-v3.v1.md section 10): only threads with something new
+// for the owner that match no spec, and never a fleet wake. Every row is synthetic.
+describe("E2: Unread", () => {
+  const binding = JSON.stringify([{ projectKey: "sample-factory", cloudroomProjectId: "prj_v4_atlas", repositories: ["example/sample-plans"],
+    home: { hostId: "hst_v4_home", rootPath: "/synthetic/home" }, orchestratorThreadId: "thr_v4_orchestrator", statusWriterLogin: "sample-manager" }]);
+  const working = { status: "active", runtimeStatus: "active", indicator: "runtime" } as const;
+  const rows = () => [
+    thread({ id: "u_read", title: "Sample read", displayTitle: "Sample read", isUnread: false, createdAt: 60 }),
+    thread({ id: "u_new", title: "Sample new", displayTitle: "Sample new", isUnread: true, indicator: "unread-success", createdAt: 50 }),
+    thread({ id: "u_wait", title: "Sample waiting", displayTitle: "Sample waiting", hasPendingInteraction: true, indicator: "waiting-for-input", createdAt: 40 }),
+    thread({ id: "u_fleet", title: "Fleet #77: Sample cache", displayTitle: "Fleet #77: Sample cache", isUnread: true, createdAt: 30 }),
+    thread({ id: "u_agent", title: "Builder · SC-1: Sample borrowed code", displayTitle: "Builder · SC-1: Sample borrowed code", isUnread: true, ...working, createdAt: 20 }),
+    thread({ id: "u_stray", title: "Builder · ZZ-9: Sample stray", displayTitle: "Builder · ZZ-9: Sample stray", isUnread: true, ...working, createdAt: 10 }),
+  ];
+  function renderUnread(options: { stored?: string; specsFile?: () => unknown } = {}) {
+    const updates: unknown[] = [];
+    const settings: Record<string, string> = { wizdeckFactories: binding, ...(options.stored === undefined ? {} : { sectionsCollapsed: options.stored }) };
+    const rendered = renderSlot(inbox, listProps, {
+      pluginId: "wizbar", settings,
+      sidebarThreads: { status: "ready", threads: rows(), projects: [] },
+      rpc: { listLifecycle: () => ({ rows: [] }), specsFile: (options.specsFile ?? (() => ({ kind: "content", text: v4SpecsFileText }))) as never },
+      sdk: { plugins: { updateSettings: (async (args: { values: Record<string, unknown> }) => {
+        updates.push(args); return { values: { ...settings, ...args.values } };
+      }) as never } },
+    });
+    return { rendered, updates };
+  }
+  const unread = () => screen.getByRole("region", { name: "Unread" });
+  const header = () => within(unread()).getByRole("button", { name: /^Unread( \d+)?$/ });
+  const links = () => within(unread()).queryAllByRole("link").map((l) => l.getAttribute("aria-label"));
+
+  // catches: the 0.5 Inbox kept under a new name (every thread), a spec's running agent listed twice,
+  // a fleet wake let in, or a running thread that matches no spec dropped with them.
+  it("lists exactly the threads with something new that are under no spec and are not fleet wakes", async () => {
+    renderUnread();
+    await waitFor(() => expect(links()).toEqual(["Sample new", "Sample waiting", "Builder · ZZ-9: Sample stray"]));
+    expect(screen.queryByRole("region", { name: "Inbox" })).toBeNull();
+    expect(header().textContent).toBe("Unread");
+  });
+
+  // catches: a running spec agent shown in Unread until the specs file answers, then pulled out (a flash).
+  it("never shows a running thread before the specs file says whether it is a spec's", async () => {
+    let answer: (value: unknown) => void = () => {};
+    renderUnread({ specsFile: () => new Promise((resolve) => { answer = resolve; }) });
+    expect(links()).toEqual(["Sample new", "Sample waiting"]);
+    await act(async () => answer({ kind: "content", text: v4SpecsFileText }));
+    await waitFor(() => expect(links()).toEqual(["Sample new", "Sample waiting", "Builder · ZZ-9: Sample stray"]));
+  });
+
+  // catches: a 0.5 Inbox collapse lost on upgrade, or a write that still stores `inbox`.
+  it("reads a stored inbox collapse as Unread and writes unread", async () => {
+    const { updates } = renderUnread({ stored: "[\"inbox\"]" });
+    expect(header().getAttribute("aria-expanded")).toBe("false");
+    expect(links()).toEqual([]);
+    fireEvent.click(header());
+    await waitFor(() => expect(header().getAttribute("aria-expanded")).toBe("true"));
+    expect(updates).toEqual([{ pluginId: "wizbar", values: { sectionsCollapsed: "[]" } }]);
+    fireEvent.click(header());
+    await waitFor(() => expect(header().getAttribute("aria-expanded")).toBe("false"));
+    expect(updates.at(-1)).toEqual({ pluginId: "wizbar", values: { sectionsCollapsed: "[\"unread\"]" } });
+  });
+});

@@ -10,9 +10,11 @@ import {
   sortByCreatedAtDescending,
   sortPinned,
   threadDisplayTitle,
+  unreadThreads,
   visibleInboxThreads,
 } from "./inbox";
 import { v3PinnedOrder, v3Threads } from "./fixtures/v3";
+import { v4SpecsFile } from "./fixtures/v4";
 
 function thread(
   overrides: Partial<PluginSidebarThread> = {},
@@ -244,5 +246,48 @@ describe("sortPinned", () => {
     expect(sortPinned(rows).map((t) => t.id)).toEqual([
       "keyed_B", "keyed_b", "unkeyed_new", "unkeyed_tie_newer", "unkeyed_tie_a", "unkeyed_tie_b", "unkeyed_old",
     ]);
+  });
+});
+
+// E2 (#188): Unread (sidebar-v3.v1.md section 10). Every row is synthetic.
+describe("unreadThreads", () => {
+  const working = { status: "active", runtimeStatus: "active" } as const;
+  // catches: an Unread that keeps every thread (the 0.5 Inbox), drops an attention marker that is not
+  // `isUnread`, lists a spec's running agent twice, or lets a fleet thread in.
+  it.each([
+    ["a read thread", {}, false],
+    ["an unread thread", { isUnread: true }, true],
+    ["a thread waiting on you", { hasPendingInteraction: true, indicator: "waiting-for-input" }, true],
+    ["a failed unread thread", { indicator: "unread-error" }, true],
+    ["a finished unread thread", { indicator: "unread-success" }, true],
+    ["a queued message that failed to send", { indicator: "queued-failed", queuedWork: "failed" }, true],
+    ["a working read thread", { ...working, indicator: "runtime" }, false],
+    ["an unread spec agent, running", { ...working, isUnread: true, displayTitle: "Builder · SC-1: Sample borrowed code" }, false],
+    ["an unread spec agent, finished", { isUnread: true, displayTitle: "Builder · SC-1: Sample borrowed code" }, true],
+    ["an unread thread matching no spec, running", { ...working, isUnread: true, displayTitle: "Builder · ZZ-9: Sample stray" }, true],
+    ["an unread fleet wake", { isUnread: true, displayTitle: "Fleet #77: Sample cache" }, false],
+    ["a fleet wake waiting on you", { hasPendingInteraction: true, displayTitle: "Fleet #12: Sample anything" }, false],
+    ["a title only mentioning a fleet", { isUnread: true, displayTitle: "Sample notes on Fleet #77: later" }, true],
+  ] as const)("%s", (_name, changes, shown) => {
+    const row = thread({ id: "thr_x", ...(changes as Partial<PluginSidebarThread>) });
+    expect(unreadThreads([row], v4SpecsFile, [row]).map((t) => t.id)).toEqual(shown ? ["thr_x"] : []);
+  });
+
+  // catches: a spec match that ignores the fleet parent (section 3 rule 1), so a running agent under a
+  // spec's fleet thread is listed in Unread as well.
+  it("keeps out a running unread child of a spec's fleet thread", () => {
+    const child = thread({ id: "thr_child", status: "active", runtimeStatus: "active", isUnread: true,
+      parentThreadId: "thr_v4_fleet_a", displayTitle: "Builder · SC-1: Sample borrowed code" });
+    expect(unreadThreads([child], v4SpecsFile, [child])).toEqual([]);
+  });
+
+  // catches: an unreadable specs file that hides everything, or one that drops the order it was given.
+  it("matches no spec without a specs file, and keeps the order it is given", () => {
+    const rows = [
+      thread({ id: "b", isUnread: true, status: "active", runtimeStatus: "active", displayTitle: "Builder · SC-1: Sample borrowed code" }),
+      thread({ id: "a", isUnread: true }),
+      thread({ id: "c" }),
+    ];
+    expect(unreadThreads(rows, null, rows).map((t) => t.id)).toEqual(["b", "a"]);
   });
 });

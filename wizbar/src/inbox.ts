@@ -138,3 +138,8 @@ export function sortPinned<T extends PinnedSortable>(threads: readonly T[]): T[]
       (left.id < right.id ? -1 : left.id > right.id ? 1 : 0);
   });
 }
+
+/** E2 (#188): Unread. Stub: still the 0.5 Inbox, every thread. */
+export function unreadThreads<T extends PluginSidebarThread>(threads: readonly T[], _file: unknown, _rows: readonly PluginSidebarThread[]): T[] {
+  return [...threads];
+}
