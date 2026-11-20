@@ -11,10 +11,11 @@ matches real fleet thread titles to their spec, shows friendly model and effort
 labels, and takes the confirmed 0.4 design. The project lives in
 [openwizdev/WizPlugins](https://github.com/openwizdev/WizPlugins).
 
-![WizBar rendered with synthetic example rows](../docs/images/wizbar.png)
+<img alt="WizBar rendered with synthetic example rows" src="../docs/images/wizbar.png" width="300">
 
-The image shows the React UI rendered with synthetic fixture data and styling,
-not an installed app. Everything below is proved by fixture tests in CI unless
+The image shows WizBar's real sidebar component and compiled styles in a
+headless browser, with synthetic data and a copy of the host's chrome around
+it, not an installed app. Everything below is proved by fixture tests in CI unless
 it says otherwise. **Behaviour on a real host awaits the live check in
 [#9](https://github.com/openwizdev/WizPlugins/issues/9).** The rules and sources
 are in the [v0.3 sidebar contract](contracts/sidebar-v3.v1.md) and the
@@ -31,15 +32,20 @@ are in the [v0.3 sidebar contract](contracts/sidebar-v3.v1.md) and the
   you (warning), held (a grey ring), not started. Finished specs are hidden. A
   missing, malformed or stale file shows "Specs unavailable", never zero.
 - **The specs producer.** Nothing in Cloudroom writes the specs file, so
-  WizBar ships a small producer that writes it from GitHub every 10 minutes,
-  through your local `gh` login. To run it once, install it as a timer, or
-  remove it, follow the
-  [specs producer README](tools/specs-producer/README.md).
+  WizBar ships a small producer (`tools/specs-producer/`) that writes it from
+  GitHub through your local `gh` login, REST only. Each run is one complete
+  scan, all or nothing: any failed read, or a scan needing more than 59
+  requests, writes nothing and keeps the last file. Unchanged pages cost
+  nothing, by ETag. Run it every 10 minutes as a systemd user timer; how to run
+  it once, install the timer, remove it, and how many specs fit in 59 requests
+  are in the [specs producer README](tools/specs-producer/README.md).
 - **Open a spec.** Click a spec to open it in a raised panel with its running
   builders and reviewers; specs start collapsed and each one's open state is
   remembered. Real fleet titles match their spec: `#<N>: …` is ticket N's
   builder, `Review #<P> at <sha>` reviews the ticket whose pull request is P,
-  and the children of `Fleet #<S>: …` belong to spec S. An agent row reads
+  and the children of `Fleet #<S>: …` belong to spec S (the fleet thread
+  itself is not listed); the older `Role · CODE: …` form still matches. An
+  agent row reads
   `Builder · KN3:` dimmed, then the task, then its age; its second line is the
   harness logo and the model and effort.
 - **Model and effort** in friendly words: `Opus 5.5 · High`, `Sol 6.1 · XHigh`,
