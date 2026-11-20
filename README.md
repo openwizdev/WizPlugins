@@ -1,43 +1,32 @@
-# WizBar
-
-WizBar is the first plugin in WizPlugins: an agent-first OpenWiz sidebar for
-Cloudroom, in `wizbar/`, now at version 0.3.0. Its cards show the issue or
-pull request link and child count, with children on hover; a live "N running"
-line sits below the list, with a stats panel on the footer bolt; drag pins,
-unpins and reorders through the host's pins; and every WizBar action is a
-`room-cli wizbar` command with JSON. See the [WizBar README](wizbar/README.md).
-
-![WizBar rendered with synthetic example rows](docs/images/wizbar.png)
-
-Actual React UI rendered through the SDK fixture harness, with synthetic data and
-styling; this is not an installed-app screenshot. v0.3's behaviour is proved by
-fixture tests in CI; on a real host it awaits the live check in
-[#9](https://github.com/openwizdev/WizPlugins/issues/9).
-
-## Map
-
 <picture>
-  <source media="(max-width: 600px)" srcset="docs/images/map-phone.png">
-  <img alt="WizPlugins' parts: WizBar, WizDeck, their contracts, the marketplace entry, the docs and the changelog lines" src="docs/images/map.png" width="560">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/openwizdev/.github/main/profile/art/mark-dark.svg">
+  <img alt="OpenWiz mark" src="https://raw.githubusercontent.com/openwizdev/.github/main/profile/art/mark-light.svg" width="56">
 </picture>
 
-WizPlugins holds the factory's eyes inside Cloudroom: WizBar in the sidebar and WizDeck in the right panel. The [org map](https://github.com/openwizdev) shows how it fits with the other repos.
+# WizPlugins
 
-## Install
+**Cloudroom plugins for watching an [OpenWiz](https://github.com/openwizdev/OpenWiz) factory.** Optional: OpenWiz 0.1.0 needs no plugin, and these work only in Cloudroom.
 
-**BB Marketplace (BB app and Cloudroom): not listed yet.** Publication waits for
-Jake's go-ahead in [#45](https://github.com/openwizdev/WizPlugins/issues/45).
-Once listed, install **WizBar** from the marketplace. Until then, from source
-(Unverified; read the [install and rollback kit](https://github.com/openwizdev/WizPlugins/issues/9#issuecomment-6768833446) first):
+**Status:** one plugin, [WizBar](wizbar/README.md). Version 0.3.0 is live-checked and listed in the BB Marketplace; 0.4.0 is on `main`.
 
-```sh
-git clone https://github.com/openwizdev/WizPlugins.git && cd WizPlugins/wizbar && npm ci && room-cli plugin build . && room-cli plugin install .
-```
+## Quick start
 
-Then select WizBar in **Settings → Appearance → Sidebar**. The
-[WizBar README](wizbar/README.md#install) has the full steps and rollback notes.
-The draft marketplace entry is in [`marketplace/`](marketplace/wizbar.json) and
-the [marketplace research](docs/discovery/marketplaces.md) records how listing works.
+Install **WizBar** from the [BB Marketplace](https://getbb.app/marketplace/wizbar) in the BB app or Cloudroom, then pick it in **Settings → Appearance → Sidebar**.
+
+From source: see the [WizBar README](wizbar/README.md).
+
+## How it works
+
+<img alt="WizBar rendered with synthetic example rows" src="docs/images/wizbar.png" width="480">
+
+WizBar replaces Cloudroom's sidebar with one card per agent thread, newest first: its issue or pull request, its children, and a live "N running" line. Under the list, one row per running spec shows each ticket as a dot: done, building, in review, or needs you. Every WizBar action is also a `room-cli wizbar` command with JSON, so agents can use it too.
+
+(The picture is the real UI rendered with made-up data.)
+
+## Links
+
+- [WizBar README](wizbar/README.md) · [BB Marketplace listing](https://getbb.app/marketplace/wizbar) · [marketplace entry](marketplace/wizbar.json)
+- [OpenWiz](https://github.com/openwizdev/OpenWiz) · [openwiz.dev](https://openwiz.dev) · [all repos](https://github.com/openwizdev)
 
 ## Credit and licence
 
