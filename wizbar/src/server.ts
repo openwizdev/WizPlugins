@@ -391,8 +391,9 @@ const childrenRowSchema = z.object({
  * specs-section.v1.md section 6): the host's resolved execution options,
  * whatever their `source` (#156: the real host answers `{ model,
  * reasoningLevel }` with none), when the model is a non-empty string and the
- * level a known one. Only when the answer is null, the model of the context's
- * latest usage snapshot, effort omitted. Behind the adoption gate: closed, it
+ * level a known one. Only when the answer is an explicit null, the model of
+ * the context's latest usage snapshot, effort omitted; undefined is malformed
+ * (#160), so it gets nulls with no fallback. Behind the adoption gate: closed, it
  * reads nothing and serves source none. A thread whose read fails or answers
  * malformed gets nulls; the rest stand.
  */
@@ -417,7 +418,7 @@ const contextModelSchema = z.object({ usage: z.object({ snapshot: z.object({ mod
 async function readModel(read: ModelRead, readContext: ModelRead | undefined, threadId: string) {
   // A read that throws, synchronously or not, nulls only its own thread.
   const attempt = (reader: ModelRead) => Promise.resolve().then(() => reader({ threadId }))
-    .then((answer) => ({ answer: answer ?? null }), (error: unknown) => ({ error: { status: errorStatus(error) } }));
+    .then((answer: unknown) => ({ answer }), (error: unknown) => ({ error: { status: errorStatus(error) } }));
   const options = await attempt(read);
   const parsed = "answer" in options ? resolvedOptionsSchema.safeParse(options.answer) : null;
   let contextModel: string | null = null;
