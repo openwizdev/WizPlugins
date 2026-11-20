@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PluginSidebarThreadsState } from "@get-bb/plugin-sdk";
-import { syntheticThread } from "../../docs/evidence/wz5/fixtures";
+import { syntheticThread } from "./fixtures/wz5";
 import { countRunning } from "./running-count";
 import { readRunningSource } from "./running-source";
 

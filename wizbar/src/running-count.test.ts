@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { countRunning } from "./running-count";
-import { positiveSource, syntheticThread } from "../../docs/evidence/wz5/fixtures";
+import { positiveSource, syntheticThread } from "./fixtures/wz5";
 
 const idle = syntheticThread();
 
