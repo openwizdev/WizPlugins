@@ -104,7 +104,7 @@ export function FooterCounterArtwork({ source, className, card }: {
         display: "inline-flex", fontSize: 12, fontVariantNumeric: "tabular-nums", lineHeight: "20px",
         color: count.total === 0 ? "var(--muted-foreground, #b7b7b7)" : "var(--foreground)",
       }}>
-        <span role="button" tabIndex={0} aria-pressed={state === "pinned"} aria-expanded={open}
+        <span role="button" tabIndex={0} aria-label={`${count.total} running`} aria-pressed={state === "pinned"} aria-expanded={open}
           style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer" }}
           onClick={() => send("click")}
           onKeyDown={(event) => {
