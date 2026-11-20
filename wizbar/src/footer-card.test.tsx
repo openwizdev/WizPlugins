@@ -8,9 +8,10 @@ import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-libra
 import { loadPluginApp, renderSlot } from "@get-bb/plugin-sdk/testing/app";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import {
-  v4CardPinCases, v4Now, v4OpenSetting, v4SpecRows, v4SpecsFile, v4SpecsFileText, v4Stats, v4Threads, v4TimeZone, type StatsV4,
+  v4CardPinCases, v4Now, v4OpenSetting, v4RealTitlesFile, v4RealTitleThreads, v4SpecRows, v4SpecsFile, v4SpecsFileText, v4Stats, v4Threads,
+  v4TimeZone, type StatsV4,
 } from "./fixtures/v4";
-import { cardPinNext, cardSummary, computeStatsV4, formatStatsText } from "./stats";
+import { cardPinNext, cardRowLabel, cardRowLabels, cardSummary, computeStatsV4, formatStatsText } from "./stats";
 import { createSpecsCommands } from "./specs/cli";
 
 type Ready = Extract<StatsV4, { status: "ready" }>;
@@ -48,8 +49,47 @@ describe("S4: the card's data is one computation (sections 7 and 8)", () => {
 
   // catches: the Unknown part shown at zero or dropped when non-zero.
   it("writes the one summary line, Unknown only when non-zero", () => {
-    expect(cardSummary(ready)).toBe("1 waiting on you · Cloud 7 · Local 1 · Unknown 1");
-    expect(cardSummary({ ...ready, running: { ...ready.running, unknown: 0 } })).toBe("1 waiting on you · Cloud 7 · Local 1");
+    expect(cardSummary(ready)).toBe("1 waiting on you · 7 cloud, 1 local, 1 unknown");
+    expect(cardSummary({ ...ready, running: { ...ready.running, unknown: 0 } })).toBe("1 waiting on you · 7 cloud, 1 local");
+  });
+
+  // catches (0.5 E): a row that repeats the whole task, or drops the title of a thread with no role.
+  it("labels a row by role and code, or by the full title when there is no role", () => {
+    expect(cardRowLabel("Builder · SP-2: Sample add keyboard paths")).toBe("Builder · SP-2");
+    expect(cardRowLabel("Reviewer · SP-14: Sample review")).toBe("Reviewer · SP-14");
+    expect(cardRowLabel("Sample palette fleet")).toBe("Sample palette fleet");
+  });
+
+  // catches (#118 R2): a fleet's child losing its spec on the card because the rows never reach the matcher,
+  // or the raw title rewritten in the stats JSON.
+  it("names the spec of a fleet's children, and keeps each raw title", () => {
+    const stats = computeStatsV4(v4RealTitleThreads, v4RealTitlesFile, null, v4Now, v4TimeZone) as Ready;
+    const byId = Object.fromEntries(stats.threads.map((t) => [t.id, [t.title, t.shortName]]));
+    expect(byId.thr_rt_builder).toEqual(["#902: Sample the driver", "Sample kernel"]);
+    expect(byId.thr_rt_helper).toEqual(["Sample helper sweep", "Sample kernel"]);
+    expect(byId.thr_rt_reviewer).toEqual(["Review #951 at abc1234", "Sample kernel"]);
+    expect(byId.thr_rt_lost_child).toEqual(["#5: Sample nothing", null]);
+  });
+
+  // catches (#118 R2): real `#N:` and `Review #P at` titles shown raw on the card instead of role and ticket code.
+  it("labels real titles by role and their ticket's code", () => {
+    const labels = cardRowLabels(v4RealTitleThreads, v4RealTitlesFile, v4Now);
+    expect(Object.fromEntries(v4RealTitleThreads.map((t) => [t.id, labels.get(t.id)]))).toEqual({
+      thr_rt_fleet: "Fleet #900: Sample kernel",
+      thr_rt_builder: "Builder · KN2",
+      thr_rt_reviewer: "Reviewer · KN3",
+      thr_rt_helper: "Sample helper sweep",
+      thr_rt_top_builder: "Builder · RL1",
+      thr_rt_old_form: "Builder · SP-9",
+      thr_rt_no_hyphen: "Builder · AP11",
+      thr_rt_uncoded: "Builder · #923",
+      thr_rt_lost_fleet: "Fleet #777: Sample gone spec",
+      thr_rt_lost_review: "Review #999 at def5678",
+      thr_rt_lost_child: "#5: Sample nothing",
+    });
+    // With no ready specs file, only the title's own form can give a code.
+    const bare = cardRowLabels(v4RealTitleThreads, null, v4Now);
+    expect([bare.get("thr_rt_builder"), bare.get("thr_rt_no_hyphen")]).toEqual(["#902: Sample the driver", "Builder · AP11"]);
   });
 
   // catches: the CLI text dropping the harness split or the threads.
@@ -96,7 +136,9 @@ describe("S4: no bolt; N running with its hover card", () => {
   it("counts threads only, with a matrix mark", () => {
     render();
     expect(counter().getAttribute("aria-label")).toBe("9 running");
-    expect(counter().textContent).toBe("9");
+    expect(counter().textContent).toBe("9 running");
+    // catches (#118 R1): a screen reader hears only the mark ("Working") on the focusable trigger, not the count.
+    expect(within(counter()).getByRole("button", { name: "9 running" })).toBe(trigger());
     expect(counter().querySelector("[data-matrix]")?.getAttribute("data-matrix")).toBe("working");
     cleanup();
     render([]);
@@ -116,7 +158,58 @@ describe("S4: no bolt; N running with its hover card", () => {
       id: el.getAttribute("data-thread"), matrix: el.querySelector("[data-matrix]")?.getAttribute("data-matrix"),
       title: el.querySelector("[data-title]")?.textContent, shortName: el.querySelector("[data-spec-name]")?.textContent ?? null,
     }));
-    expect(rows).toEqual(ready.threads.map((t) => ({ id: t.id, matrix: t.matrix, title: t.title, shortName: t.shortName })));
+    expect(rows).toEqual(ready.threads.map((t) => ({ id: t.id, matrix: t.matrix, title: cardRowLabel(t.title), shortName: t.shortName })));
+    expect(rows.find((r) => r.id === "thr_v4_builder_a")).toMatchObject({ title: "Builder · SP-2", shortName: "Sample palette" });
+  });
+
+  // catches (0.5 E): the harness split as a list of rows with no bar, or a bar not split by the counts.
+  it("shows the harness split as one bar, then each harness and its count on one line", () => {
+    render();
+    fireEvent.pointerEnter(counter().parentElement!);
+    const bar = card()!.querySelector("[data-harness-bar]")!;
+    expect([...bar.children].map((el) => [el.getAttribute("data-harness-segment"), (el as HTMLElement).style.flexGrow]))
+      .toEqual([["harness-a", "6"], ["harness-b", "3"]]);
+    const names = [...card()!.querySelectorAll("[data-harness]")].map((el) => el.textContent);
+    expect(names).toEqual(["Harness A 6", "Harness B 3"]);
+    expect(card()!.querySelector("[data-harness]")!.parentElement!.style.flexDirection).not.toBe("column");
+  });
+
+  // catches (0.5 E): the half-width card; it must fill the sidebar, inset 8 px each side.
+  it("fills the sidebar width, inset 8 px", () => {
+    render();
+    fireEvent.pointerEnter(counter().parentElement!);
+    const area = hitArea()!;
+    expect([area.style.left, area.style.right]).toEqual(["8px", "8px"]);
+    expect(card()!.style.width).toBe("100%");
+  });
+
+  // catches (#118 R2): the rendered card ignoring the resolved labels and spec names for real titles.
+  it("shows real titles' role, code and spec on the card", async () => {
+    renderSlot({ component: FooterCounter }, {}, {
+      pluginId: "synthetic-118-r2", settings: { wizdeckFactories: binding },
+      sidebarThreads: { status: "ready", threads: [...v4RealTitleThreads] },
+      rpc: { specsFile: () => ({ kind: "content", text: JSON.stringify(v4RealTitlesFile) }), cardModels: models(null, null, "none") } as never,
+    });
+    fireEvent.pointerEnter(counter().parentElement!);
+    const row = (id: string) => card()!.querySelector(`[data-thread=${id}]`)!;
+    await waitFor(() => expect(row("thr_rt_builder").querySelector("[data-spec-name]")?.textContent).toBe("Sample kernel"));
+    expect(row("thr_rt_builder").querySelector("[data-title]")?.textContent).toBe("Builder · KN2");
+    expect(row("thr_rt_reviewer").querySelector("[data-title]")?.textContent).toBe("Reviewer · KN3");
+    expect(row("thr_rt_helper").querySelector("[data-spec-name]")?.textContent).toBe("Sample kernel");
+  });
+
+  // catches (0.5 E): model · effort dropped from a one-line row, or put on a second line.
+  it("puts model · effort on the row's one line, right-aligned", async () => {
+    renderSlot({ component: FooterCounter }, {}, {
+      pluginId: "synthetic-wb5-e", settings: { wizdeckFactories: binding },
+      sidebarThreads: { status: "ready", threads: [...v4Threads] },
+      rpc: { specsFile: () => ({ kind: "content", text: v4SpecsFileText }), cardModels: models("Sample model", "high") } as never,
+    });
+    fireEvent.pointerEnter(counter().parentElement!);
+    const row = () => card()!.querySelector("[data-thread=thr_v4_builder_a] button") as HTMLElement;
+    await waitFor(() => expect(row().querySelector("[data-model]")?.textContent).toBe("Sample model · High"));
+    expect(row().style.display).toBe("flex");
+    expect((row().querySelector("[data-model]") as HTMLElement).style.marginLeft).toBe("auto");
   });
 
   // catches: a pin that a leave undoes, a click that cannot unpin, keyboard users locked out, Escape ignored.
@@ -146,7 +239,7 @@ describe("S4: no bolt; N running with its hover card", () => {
   it("opens a thread clicked in the card and stays pinned", () => {
     const rendered = render();
     fireEvent.click(trigger());
-    fireEvent.click(within(card()!).getByText("Builder · SP-4: Sample wire shortcuts"));
+    fireEvent.click(within(card()!).getByText("Builder · SP-4"));
     expect(rendered.inspection.sidebarActionCalls).toContainEqual(expect.objectContaining({ threadId: "thr_v4_code_a" }));
     expect(card()).toBeTruthy();
   });

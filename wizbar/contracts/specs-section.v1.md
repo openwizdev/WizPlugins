@@ -172,11 +172,12 @@ A running row is working and not waiting, so it never shows `needs-you`, and it 
 ## 7. Footer and hover card
 
 - **No bolt.** WizBar registers no `experimental_sidebarFooter` item. The 0.3 `stats` disclosure and its `Zap` icon go; sidebar-v3 section 6 is replaced by this section.
-- **"N running"** stays the list-bottom line: `running.total` by the 0.3 running rule, threads only. Subagents (background agents) are never counted: a thread running background agents counts once (`thr_v4_builder_a` in the fixtures). `footerCountEnabled` still gates it; it is hidden while unavailable, as #37 left it.
+- **"N running"** stays the list-bottom line: a matrix mark, then `running.total` and the visible word, `6 running` (from 0.5), by the 0.3 running rule, threads only. Subagents (background agents) are never counted: a thread running background agents counts once (`thr_v4_builder_a` in the fixtures). `footerCountEnabled` still gates it; it is hidden while unavailable, as #37 left it.
 - **Hover card data** is exactly `wizbar stats --json` (section 8, `StatsV4`) for the same rows, at the same `now`:
-  1. one line: `<W> waiting on you · Cloud <C> · Local <L>`, then ` · Unknown <U>` only when U > 0;
-  2. the harness split: `harness`, running rows counted by `providerId`, count descending, then `providerId` ascending;
-  3. every running thread (`threads`): matrix mark, title, its spec's `shortName` (or nothing when it matches no spec, including a hidden spec), and model · effort when present. Order: `createdAt` ascending, then ID.
+  1. one quiet line: `<W> waiting on you · <C> cloud, <L> local`, then `, <U> unknown` only when U > 0 (from 0.5; 0.4 wrote `Cloud <C> · Local <L>`);
+  2. the harness split: `harness`, running rows counted by `providerId`, count descending, then `providerId` ascending; shown as one thin bar split by count, then one line of each harness's logo, name and count (`Claude Code 2   Codex 4`);
+  3. a rule, then every running thread (`threads`) on one line: matrix mark, its label (`Role · CODE` with the role and code section 3 resolves: the title's own code, or for a real `#N:` or `Review #P at` title of a visible spec's agent its ticket's code, `#N` when that ticket has none; otherwise the full title), ` · ` and its spec's `shortName` faint (nothing when it matches no spec, including a hidden spec), and model · effort right-aligned when present. Order: `createdAt` ascending, then ID. The label is the card's only: `threads[].title` stays the raw `displayTitle`. Spec matching (section 3) gets every row, so a fleet's children find its spec.
+- **The card's look** (from 0.5): raised (`--card`, the border, rounded), the full sidebar width less 8 px each side, its thread list scrolling within the space above the line.
 - **Hover and pin** (`v4CardPinCases`). The card is `closed`, `hover` or `pinned`. On "N running": pointer enter or keyboard focus opens `closed` to `hover`; pointer leave or blur closes `hover`; a click (or Enter or Space) pins `closed` or `hover`, and unpins `pinned` to `hover`; leave and blur keep `pinned`; Escape closes either. Clicking a thread in the card opens it with `experimental_useSidebarThreadActions().open(id)`.
 
 ## 8. CLI

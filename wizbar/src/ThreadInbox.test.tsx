@@ -725,7 +725,7 @@ describe("WZ16: visible list-bottom running count", () => {
     const counters = screen.getAllByRole("status", { name: "3 running" });
     expect(counters).toHaveLength(1);
     const counter = counters[0]!;
-    expect(counter.textContent).toBe("3");
+    expect(counter.textContent).toBe("3 running");
     // WB4-3 (#1437): the line sits in its card's wrapper, the list's last child.
     const line = counter.parentElement!;
     expect(line.parentElement).toBe(rendered.container.firstElementChild);
@@ -744,7 +744,7 @@ describe("WZ16: visible list-bottom running count", () => {
   it("shows dim zero on an empty list with an idle mark", () => {
     render([]);
     const counter = screen.getByRole("status", { name: "0 running" });
-    expect(counter.textContent).toBe("0");
+    expect(counter.textContent).toBe("0 running");
     expect(counter.style.color).toBe("var(--muted-foreground, #b7b7b7)");
     expect(counter.querySelector("[data-matrix]")?.getAttribute("data-matrix")).toBe("idle");
   });
