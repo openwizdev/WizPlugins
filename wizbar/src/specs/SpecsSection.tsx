@@ -175,10 +175,14 @@ export function SpecsSection({ threads, now, activeThreadId, onNavigate, collaps
       {collapseFailed ? <p role="status" className="px-2.5 text-xs text-muted-foreground">Could not save the collapsed section. Try again.</p> : null}
       {view === "unavailable" || collapsed ? null : (
         <ul className="flex flex-col gap-px">
-          {/* One flat list keyed by spec, so a spec moving into or out of Quiet changes in place. */}
-          {mainRows(view.specs).map(specRow)}
-          {quiet.length > 0 ? <QuietGroup key={QUIET_KEY} count={quiet.length} open={quietOpen} onToggle={() => toggle(QUIET_KEY, !quietOpen)} /> : null}
-          {quietOpen ? quiet.map(specRow) : null}
+          {/* #201 R1: one keyed array, the Quiet header placed at the split, so a spec moving between the main
+              list and the open group keeps its DOM node (separate arrays would remount it), and React puts
+              keyboard focus back on a kept node after a commit moves it. */}
+          {[
+            ...mainRows(view.specs).map(specRow),
+            ...(quiet.length > 0 ? [<QuietGroup key={QUIET_KEY} count={quiet.length} open={quietOpen} onToggle={() => toggle(QUIET_KEY, !quietOpen)} />] : []),
+            ...(quietOpen ? quiet.map(specRow) : []),
+          ]}
         </ul>
       )}
     </section>

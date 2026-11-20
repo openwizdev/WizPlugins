@@ -921,6 +921,23 @@ describe("S2: the Quiet group", () => {
   // catches (#201 R1): a spec crossing between the main list and the open group remounting, so keyboard focus
   // on its row drops to the page. Golf idled exactly 3 days: 1 ms later it is quiet; a running agent brings it back.
   it("keeps a row's node and keyboard focus when it moves into the open group and back", async () => {
+    // A browser blurs a focused node that is moved (a move is a removal, then an insertion); jsdom keeps its
+    // focus. Emulate the browser, so focus survives here only as it would there: the node is kept, and React
+    // focuses it again after the commit that moved it.
+    const insertBefore = Node.prototype.insertBefore;
+    const appendChild = Node.prototype.appendChild;
+    const blurIfMoved = (node: Node) => {
+      const active = document.activeElement;
+      if (node.isConnected && active instanceof HTMLElement && node.contains(active)) active.blur();
+    };
+    vi.spyOn(Node.prototype, "insertBefore").mockImplementation(function <T extends Node>(this: Node, node: T, child: Node | null): T {
+      blurIfMoved(node);
+      return insertBefore.call(this, node, child) as T;
+    });
+    vi.spyOn(Node.prototype, "appendChild").mockImplementation(function <T extends Node>(this: Node, node: T): T {
+      blurIfMoved(node);
+      return appendChild.call(this, node) as T;
+    });
     const { rendered } = renderV6({ specsOpen: "[\"quiet\"]" });
     const region = await section();
     const golf = "example/sample-sort#761";
