@@ -7,7 +7,7 @@
 
 **Cloudroom plugins for watching an [OpenWiz](https://github.com/openwizdev/OpenWiz) factory.** Optional: OpenWiz 0.1.0 needs no plugin, and these work only in Cloudroom.
 
-**Status:** one plugin, [WizBar](wizbar/README.md). Version 0.3.0 is live-checked and listed in the BB Marketplace; 0.5.0 is on `main`, not yet published.
+**Status:** one plugin, [WizBar](wizbar/README.md). Version 0.5.0 is the published version: the marketplace serves it once the registry's WizBar entry has the range `^0.5.0`.
 
 ## Quick start
 
