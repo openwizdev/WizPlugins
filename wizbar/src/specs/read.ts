@@ -101,14 +101,18 @@ function hasRepeatedKey(content: string): boolean {
 }
 
 /**
- * Which of the two reads WizBar shows (#164 R1): `specs.v2.json` when it reads ready at `now`, else
- * `specs.v1.json` when that does; otherwise v2's read, or v1's when v2 is missing, so the reason names
- * the file that is there. Pass `v1` as a function so it is read only when v2 is not usable.
+ * Which of the two reads WizBar shows (#164 R1, R3). When both read ready at `now`, `specs.v2.json` unless
+ * its `generatedAt` is older than v1's (a producer rolled back to one that writes only v1); when one does,
+ * that one; otherwise v2's read, or v1's when v2 is missing, so the reason names the file that is there.
  */
-export async function pickSpecsRead(v2: SpecsFileReadV4, v1: () => Promise<SpecsFileReadV4>, now: number): Promise<SpecsFileReadV4> {
-  if (readSpecsFile(v2, now).status === "ready") return v2;
-  const fallback = await v1();
-  if (readSpecsFile(fallback, now).status === "ready" || v2.kind === "missing") return fallback;
+export function pickSpecsRead(v2: SpecsFileReadV4, v1: SpecsFileReadV4, now: number): SpecsFileReadV4 {
+  const read2 = readSpecsFile(v2, now);
+  const read1 = readSpecsFile(v1, now);
+  if (read2.status === "ready" && read1.status === "ready") {
+    return Date.parse(read2.file.generatedAt) >= Date.parse(read1.file.generatedAt) ? v2 : v1;
+  }
+  if (read2.status === "ready") return v2;
+  if (read1.status === "ready" || v2.kind === "missing") return v1;
   return v2;
 }
 

@@ -135,7 +135,7 @@ export function registerSpecs(bb: BbPluginApi, handles: Handles): SpecsCommands 
     const now = Date.now();
     if (!cached || cached.key !== key || now - cached.at >= REFRESH_MS || now < cached.at) {
       const read = (path: string) => readOnce(bb.sdk.files.read, hostId, rootPath, path);
-      cached = { key, at: now, read: read(specsRelativePathV2).then((v2) => pickSpecsRead(v2, () => read(specsRelativePath), now)) };
+      cached = { key, at: now, read: Promise.all([read(specsRelativePathV2), read(specsRelativePath)]).then(([v2, v1]) => pickSpecsRead(v2, v1, now)) };
     }
     return cached.read;
   };

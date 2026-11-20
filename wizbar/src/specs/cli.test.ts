@@ -129,15 +129,17 @@ describe("wizbar specs (section 8)", () => {
   });
 
   // catches: a file read on every call instead of at most once per 60-second shared refresh.
-  it("reads the file at most once a minute", async () => {
+  // #164 R3: each refresh reads both files once, so the newer one can win.
+  it("reads the files at most once a minute", async () => {
     const cli = await setup();
+    const paths = () => cli.read.mock.calls.map(([args]) => (args as { path: string }).path.replace("/synthetic/home/.openwiz/", ""));
     await cli.run(["specs"]);
     vi.setSystemTime(v4Now + 59_999);
     await cli.run(["specs"]);
-    expect(cli.read).toHaveBeenCalledTimes(1);
+    expect(paths().sort()).toEqual(["specs.v1.json", "specs.v2.json"]);
     vi.setSystemTime(v4Now + 60_000);
     await cli.run(["specs"]);
-    expect(cli.read).toHaveBeenCalledTimes(2);
+    expect(paths().sort()).toEqual(["specs.v1.json", "specs.v1.json", "specs.v2.json", "specs.v2.json"]);
   });
 
   // catches: a failed settings read crashing the command instead of failing closed.
