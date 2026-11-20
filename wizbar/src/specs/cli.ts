@@ -5,7 +5,7 @@ import type { PluginCliResult } from "@get-bb/plugin-sdk";
 import type { SpecKeyV4, SpecOpenResultV4, SpecsFileReadV4, SpecsResultV4 } from "../fixtures/v4";
 import { effectiveOpen, readOpenKeys, withOpen } from "./open-state";
 import { readSpecsFile } from "./read";
-import { isHidden, isRunning, sectionRule, specRows, type SpecsThreadRow } from "./rows";
+import { isHidden, isRunning, needsYouSpecs, sectionRule, specRows, type SpecsThreadRow } from "./rows";
 import type { CardModelsResultV3 } from "../v3-types";
 
 export interface SpecsCommands {
@@ -82,7 +82,8 @@ export function createSpecsCommands(sources: SpecsSources): SpecsCommands {
     // A failed settings read shows every spec collapsed (section 4: fail closed).
     const openKeys = readOpenKeys(await sources.openSetting().catch(() => undefined));
     const result = specRows(read.file, rows, openKeys, now, models);
-    return { exitCode: 0, stdout: (json ? JSON.stringify(result) : formatSpecsText(result)) + "\n" };
+    // #161: `needsYouSpecs`, the visible specs with a ticket due now, beside `needsYou`.
+    return { exitCode: 0, stdout: (json ? JSON.stringify({ ...result, needsYouSpecs: needsYouSpecs(result) }) : formatSpecsText(result)) + "\n" };
   };
 
   const spec = async (reference: string, open: boolean, json: boolean, signal?: AbortSignal): Promise<PluginCliResult> => {

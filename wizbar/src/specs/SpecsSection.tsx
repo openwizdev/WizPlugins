@@ -5,7 +5,7 @@
 // `specRows`, the same computation `wizbar specs` prints. The round-5 look
 // (0.5 C, #112): a leading chevron, notes on the right, dots below, and an
 // open spec raised into one card panel with its agents.
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import {
   experimental_usePluginId,
   useBbNavigate,
@@ -18,10 +18,10 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { GithubIcon } from "@hugeicons/core-free-icons";
 import { cn } from "../lib/utils";
 import { TRAILING_GLYPH_BOX_CLASS } from "../StatusSlot";
-import type { DotStateV4, SpecRowV4, SpecsFileReadV4 } from "../fixtures/v4";
+import type { DotStateV4, SpecRowV4, SpecsFileReadV4, SpecsResultV4 } from "../fixtures/v4";
 import { effectiveOpen, readOpenKeys, withOpen } from "./open-state";
 import { boundHome, readSpecsFile } from "./read";
-import { specRows } from "./rows";
+import { needsYouWords, sectionRule, specRows } from "./rows";
 import type { specsRpcContract } from "./server";
 import { tokens } from "./theme";
 import { AgentRow } from "./AgentRow";
@@ -112,16 +112,12 @@ export function SpecsSection({ threads, now, activeThreadId, onNavigate }: Specs
   const byId = new Map(threads.map((thread) => [thread.id, thread]));
   return (
     <section aria-label="Specs">
-      <h2 className="flex items-center gap-2 px-2.5 pb-1 pt-3 text-[11.5px] font-medium">
-        {view === "unavailable" ? <span className="text-muted-foreground">Specs unavailable</span> : (
-          <span>
-            <span className="text-muted-foreground">Specs</span>{" "}
-            <span className="font-normal tabular-nums text-muted-foreground/60">{view.specs.length}</span>
-            {view.needsYou > 0 ? <>{" "}<span style={{ color: tokens.warning }}>· {view.needsYou} need you</span></> : null}
-          </span>
-        )}
-        <span data-rule-line="" className="h-px flex-1" style={{ background: tokens.rule }} />
-      </h2>
+      {view === "unavailable" ? (
+        <h2 className="flex items-center gap-2 px-2.5 pb-1 pt-3 text-[11.5px] font-medium">
+          <span className="text-muted-foreground">Specs unavailable</span>
+          <span data-rule-line="" className="h-px flex-1" style={{ background: tokens.rule }} />
+        </h2>
+      ) : <SpecsRule result={view} />}
       {failed ? <p role="status" className="px-2.5 text-xs text-muted-foreground">Could not save the open spec. Try again.</p> : null}
       {view === "unavailable" ? null : (
         <ul className="flex flex-col gap-px">
@@ -132,6 +128,60 @@ export function SpecsSection({ threads, now, activeThreadId, onNavigate }: Specs
         </ul>
       )}
     </section>
+  );
+}
+
+/** Gap plus the shortest rule line kept beside the words, in px: under this the narrow form shows (#161). */
+const RULE_RESERVE = 8 + 16;
+
+/**
+ * #161: `Specs N · M tickets need you (K specs)`, or `Specs N · M for you` when the full sentence does not
+ * fit on one line. The full sentence is always the rule's accessible name and tooltip. An invisible copy
+ * gives the full sentence's natural width, so the choice never flips on its own result.
+ */
+function SpecsRule({ result }: { result: SpecsResultV4 }) {
+  const words = needsYouWords(result);
+  const sentence = sectionRule(result);
+  const rule = useRef<HTMLHeadingElement>(null);
+  const measure = useRef<HTMLSpanElement>(null);
+  const [fits, setFits] = useState(true);
+  useLayoutEffect(() => {
+    const box = rule.current;
+    const full = measure.current;
+    if (!box || !full) return;
+    const check = () => {
+      // Not laid out (hidden, or no layout at all): keep the full sentence.
+      if (box.clientWidth === 0) { setFits(true); return; }
+      const style = getComputedStyle(box);
+      const inner = box.clientWidth - (parseFloat(style.paddingLeft) || 0) - (parseFloat(style.paddingRight) || 0);
+      setFits(full.offsetWidth + RULE_RESERVE <= inner);
+    };
+    check();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(check);
+    observer.observe(box);
+    return () => observer.disconnect();
+  }, [sentence]);
+  const label = (after: string | null) => (
+    <>
+      <span className="text-muted-foreground">Specs</span>{" "}
+      <span className="font-normal tabular-nums text-muted-foreground/60">{result.specs.length}</span>
+      {after !== null ? <>{" "}<span style={{ color: tokens.warning }}>· {after}</span></> : null}
+    </>
+  );
+  return (
+    <div className="relative">
+      <h2 ref={rule} aria-label={sentence} title={sentence}
+        className="flex items-center gap-2 px-2.5 pb-1 pt-3 text-[11.5px] font-medium">
+        <span data-rule-text="" className="shrink-0 whitespace-nowrap">{label(words === null ? null : fits ? words.full : words.short)}</span>
+        <span data-rule-line="" className="h-px flex-1" style={{ background: tokens.rule }} />
+      </h2>
+      {/* Outside the heading, so its text and name stay the shown words; same size and weight as the rule. */}
+      <span ref={measure} data-rule-measure="" aria-hidden="true"
+        className="pointer-events-none invisible absolute left-0 top-0 whitespace-nowrap text-[11.5px] font-medium">
+        {label(words?.full ?? null)}
+      </span>
+    </div>
   );
 }
 

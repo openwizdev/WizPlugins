@@ -188,7 +188,27 @@ export function specRows(file: SpecsFileV4, rows: readonly SpecsThreadRow[], ope
   };
 }
 
-/** Section 2: `Specs N`, then ` · M need you` when M (due now only, #162) is over zero. */
+/** #161: the visible specs with a ticket due now. */
+export function needsYouSpecs(result: SpecsResultV4): number {
+  return result.specs.filter((row) => row.needsYou > 0).length;
+}
+
+/**
+ * #161: what the rule says after the count, in full (`3 tickets need you (2 specs)`, singular at 1) and in
+ * the narrow form (`3 for you`); null when no ticket is due now (#162: later tickets never count).
+ */
+export function needsYouWords(result: SpecsResultV4): { full: string; short: string } | null {
+  const tickets = result.needsYou;
+  if (tickets === 0) return null;
+  const specs = needsYouSpecs(result);
+  return {
+    full: `${tickets} ${tickets === 1 ? "ticket needs" : "tickets need"} you (${specs} ${specs === 1 ? "spec" : "specs"})`,
+    short: `${tickets} for you`,
+  };
+}
+
+/** Section 2: `Specs N`, then ` · M tickets need you (K specs)` when M (due now only) is over zero (#161). */
 export function sectionRule(result: SpecsResultV4): string {
-  return `Specs ${result.specs.length}${result.needsYou > 0 ? ` · ${result.needsYou} need you` : ""}`;
+  const words = needsYouWords(result);
+  return `Specs ${result.specs.length}${words ? ` · ${words.full}` : ""}`;
 }

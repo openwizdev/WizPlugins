@@ -201,7 +201,8 @@ describe("0.5 C: the rule, the spec rows and the open panel", () => {
       expect(heading.getAttribute("aria-label")).toBe("Specs 2 · 2 tickets need you (2 specs)");
       expect(heading.getAttribute("title")).toBe("Specs 2 · 2 tickets need you (2 specs)");
       // The measuring copy is never seen or read.
-      const measure = heading.querySelector("[data-rule-measure]") as HTMLElement;
+      const measure = (await section()).querySelector("[data-rule-measure]") as HTMLElement;
+      expect(heading.contains(measure)).toBe(false);
       expect(measure.getAttribute("aria-hidden")).toBe("true");
       expect(measure.className).toContain("invisible");
     } finally {
