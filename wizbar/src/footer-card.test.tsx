@@ -4,7 +4,7 @@
 // mark; its hover card shows exactly the `wizbar stats --json` data for the
 // same rows and pins on click. Every row is synthetic (src/fixtures/v4.ts).
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { loadPluginApp, renderSlot } from "@get-bb/plugin-sdk/testing/app";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import {
@@ -161,5 +161,91 @@ describe("S4: no bolt; N running with its hover card", () => {
     const out = JSON.parse((await cli.run(["specs"], true))!.stdout!);
     expect(out.specs[0].agents.map((a: { threadId: string; model: string | null; effort: string | null }) => [a.threadId, a.model, a.effort]))
       .toEqual(v4SpecRows.specs[0]!.agents.map((a) => [a.threadId, "Sample model", "high"]));
+  });
+});
+
+// WB4-10 (openwizdev/OpenWiz#1585): the card can be reached, read and trusted.
+/** The card's hit area: the positioned box inside the trigger's wrapper that holds the card. */
+const hitArea = () => {
+  let el: HTMLElement | null = card();
+  while (el && el.style.position !== "absolute") el = el.parentElement;
+  return el;
+};
+/** Keyboard-focusable elements in Tab order (no positive tabindex is used). */
+const tabbables = () => [...document.querySelectorAll<HTMLElement>("button, [tabindex]")]
+  .filter((el) => el.tabIndex >= 0 && !(el as HTMLButtonElement).disabled);
+const manyThreads = (n: number) => Array.from({ length: n }, (_, i) => ({ ...v4Threads[0]!, id: `thr_v4_many_${i}`, title: `Sample many ${i}` }));
+
+describe("WB4-10: the running card stays reachable", () => {
+  // catches (#1531): the card floating 6px above its trigger, so the pointer crosses a gap that hits
+  // neither and the unpinned card closes on the way into it.
+  it("has one continuous hit area from the trigger into the card", () => {
+    render();
+    const wrapper = counter().parentElement!;
+    fireEvent.pointerEnter(wrapper);
+    const area = hitArea()!;
+    expect(wrapper.contains(area)).toBe(true);
+    expect(area.style.bottom).toBe("100%");
+    expect(area.style.marginBottom).toBe("");
+    expect(parseFloat(area.style.paddingBottom)).toBeGreaterThan(0);
+  });
+
+  // catches (#1532): the card mounted before its trigger, so Tab from the trigger leaves the card
+  // (and the blur closes it), or thread buttons that hide the focus ring.
+  it("Tab from the trigger reaches the first thread, with visible focus, and the card stays open", () => {
+    render();
+    act(() => trigger().focus());
+    expect(card()).toBeTruthy();
+    const order = tabbables();
+    const next = order[order.indexOf(trigger()) + 1]!;
+    const first = within(card()!).getAllByRole("button")[0]!;
+    expect(next).toBe(first);
+    fireEvent.blur(trigger(), { relatedTarget: next });
+    act(() => next.focus());
+    expect(card()).toBeTruthy();
+    expect(document.activeElement).toBe(first);
+    expect(first.style.getPropertyValue("all")).toBe("");
+    expect(["none", "unset", "0"]).not.toContain(first.style.outline);
+    expect(first.className).toMatch(/(^| )focus-visible:(ring|outline)/);
+  });
+
+  // catches (#1533): a card that grows above the viewport with many threads, its early rows unreachable.
+  it("bounds the card to the space above the trigger and scrolls its thread list", () => {
+    const rect = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+      return { top: this.getAttribute("role") === "status" || this.querySelector?.("[role=status]") ? 200 : 0 } as DOMRect;
+    });
+    try {
+      render(manyThreads(50));
+      fireEvent.click(trigger());
+      const area = hitArea()!;
+      expect(area.style.maxHeight).toMatch(/px$/);
+      expect(parseFloat(area.style.maxHeight)).toBeGreaterThan(0);
+      expect(parseFloat(area.style.maxHeight)).toBeLessThanOrEqual(200);
+      const threads = within(card()!).getByRole("list", { name: "Threads" });
+      expect(threads.style.overflowY).toBe("auto");
+      expect(threads.style.minHeight).toBe("0px");
+      expect(threads.querySelectorAll("[data-thread]")).toHaveLength(50);
+    } finally {
+      rect.mockRestore();
+    }
+  });
+
+  // catches (#1534): a pinned card that read the specs file once and keeps the old spec names.
+  it("while pinned, a refreshed specs file changes the spec names shown", async () => {
+    vi.useFakeTimers({ toFake: ["Date", "setInterval", "clearInterval"] });
+    vi.setSystemTime(v4Now);
+    let text = v4SpecsFileText;
+    renderSlot({ component: FooterCounter }, {}, {
+      pluginId: "synthetic-wb4-10", settings: { wizdeckFactories: binding },
+      sidebarThreads: { status: "ready", threads: [...v4Threads] },
+      rpc: { specsFile: () => ({ kind: "content", text }), cardModels: models(null, null, "none") } as never,
+    });
+    fireEvent.click(trigger());
+    const names = () => [...card()!.querySelectorAll("[data-spec-name]")].map((el) => el.textContent);
+    await waitFor(() => expect(names()).toContain("Sample palette"));
+    text = v4SpecsFileText.replaceAll("\"Sample palette\"", "\"Sample palette updated\"");
+    await vi.advanceTimersByTimeAsync(60_000);
+    await waitFor(() => expect(names()).toContain("Sample palette updated"));
+    expect(names()).not.toContain("Sample palette");
   });
 });
