@@ -9,6 +9,7 @@ import { createFakePluginHost, type FakePluginHost } from "@get-bb/plugin-sdk/te
 import { loadPluginApp, renderSlot } from "@get-bb/plugin-sdk/testing/app";
 import plugin from "../server";
 import { v4Now, v4OpenSetting, v4SpecOpenCases, v4SpecRows, v4SpecsFileText, v4Threads, type SpecsFileReadV4 } from "../fixtures/v4";
+import { strictRead } from "../testing/strict-files";
 import { SpecsSection, type SpecsSectionProps } from "./SpecsSection";
 import { effectiveOpen, readOpenKeys } from "./open-state";
 import { tokens } from "./theme";
@@ -278,7 +279,7 @@ describe("parity: wizbar specs --json is what the section shows", () => {
   it("for the fixture file, rows and open setting", async () => {
     const sha = (text: string) => createHash("sha256").update(text).digest("hex");
     const host = createFakePluginHost({ pluginId: "wizbar", sdk: {
-      files: { read: vi.fn(async ({ path }: { path: string }) => ({ content: v4SpecsFileText, contentEncoding: "utf8", path, sha256: sha(v4SpecsFileText), sizeBytes: 1 })) },
+      files: { read: vi.fn(strictRead(async ({ path }: { path: string }) => ({ content: v4SpecsFileText, contentEncoding: "utf8", path, sha256: sha(v4SpecsFileText), sizeBytes: 1 }))) },
       threads: { list: vi.fn(async () => v4Threads.map(rawRow)), get: vi.fn() },
     } as never });
     hosts.push(host);
