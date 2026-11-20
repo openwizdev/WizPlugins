@@ -197,6 +197,17 @@ describe("#156: a host answering like the real host", () => {
     expect(got.children).toEqual(expected);
   });
 
+  // catches: the real host's full answer (#160: `source: "client/turn/requested"` and extra fields) dropped or mislabelled.
+  it("labels the live-shaped answer, with its source and extra fields, Sol 6.2 · Medium", async () => {
+    const answer = { model: "gpt-6.2-sol", permissionMode: "full", reasoningLevel: "medium", serviceTier: "default", source: "client/turn/requested" };
+    const { host, json } = await setup((id) => id === "thr_v4_builder_a" ? answer : null);
+    expect(await host.harness.behavior.callRpc("cardModels", { threadIds: ["thr_v4_builder_a"] })).toEqual({
+      source: "host", items: [{ threadId: "thr_v4_builder_a", model: "gpt-6.2-sol", effort: "medium" }] });
+    const got = await labels(json);
+    expect(got.agents).toEqual({ thr_v4_builder_a: "Sol 6.2 · Medium" });
+    expect(got.children).toEqual({ thr_v4_builder_a: "Sol 6.2 · Medium" });
+  });
+
   // catches: a guessed label from an empty model, an unknown level, a wrong type or a failed read.
   it.each([
     ["an empty model", { model: "", reasoningLevel: "high" }],
@@ -226,6 +237,15 @@ describe("#156: a host answering like the real host", () => {
         { threadId: "thr_v4_ambiguous", model: null, effort: null },
       ] });
     expect((await labels(json)).agents).toEqual({ thr_v4_builder_a: "Sol 6.2", thr_v4_reviewer_a: "Opus 5.5 · High" });
+  });
+
+  // catches: an undefined answer (malformed, not the SDK's null) treated as null, so the context fallback guesses a model (#160).
+  it("shows no label and reads no context when the answer is undefined", async () => {
+    const context = vi.fn(async () => ({ usage: { snapshot: { model: "gpt-6.2-sol" } } }));
+    const { host } = await setup(() => undefined, context);
+    expect(await host.harness.behavior.callRpc("cardModels", { threadIds: ["thr_v4_builder_a"] })).toEqual({
+      source: "host", items: [{ threadId: "thr_v4_builder_a", model: null, effort: null }] });
+    expect(context).not.toHaveBeenCalled();
   });
 
   // catches: the owner's next live check needing more than one command, or the diagnostic hiding what the host said.
