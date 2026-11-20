@@ -6,7 +6,7 @@ import { classifyMachine } from "./machine-source";
 import type { PluginRealtimeConnectionState, PluginSidebarThreadsState } from "@get-bb/plugin-sdk";
 import type { CardModelsResultV3, StatsCoverageV3, StatsV3, StatsWindowV3, ThreadV3 } from "./v3-types";
 import type { CardEventV4, CardStateV4, FooterThreadV4, SpecsFileV4, StatsV4 } from "./fixtures/v4";
-import { isHidden, matchSpec, matrixState, type SpecsThreadRow } from "./specs/rows";
+import { isHidden, matchSpec, matrixState, parseTitle, type SpecsThreadRow } from "./specs/rows";
 
 /** SDK 0.6.33 `ThreadRuntimeDisplayStatus`; anything else cannot mean idle. */
 export const runtimeDisplayStatuses = [
@@ -181,9 +181,15 @@ export function computeStatsV4(
   return { ...v3, version: 2, harness, threads };
 }
 
-/** The card's first line (section 7): `<W> waiting on you · Cloud <C> · Local <L>`, then Unknown when over zero. */
+/** The card's first line (section 7): `<W> waiting on you · <C> cloud, <L> local`, then `, <U> unknown` when over zero. */
 export function cardSummary({ waitingOnYou, running }: Extract<StatsV4, { status: "ready" }>): string {
-  return `${waitingOnYou} waiting on you · Cloud ${running.cloud} · Local ${running.local}${running.unknown > 0 ? ` · Unknown ${running.unknown}` : ""}`;
+  return `${waitingOnYou} waiting on you · ${running.cloud} cloud, ${running.local} local${running.unknown > 0 ? `, ${running.unknown} unknown` : ""}`;
+}
+
+/** A card row's label (section 7): `Role · CODE` when the title parses (section 3), else the full title. */
+export function cardRowLabel(title: string): string {
+  const { role, code } = parseTitle(title);
+  return role && code ? `${role} · ${code}` : title;
 }
 
 /** The card's state on "N running" (section 7, `v4CardPinCases`). */

@@ -67,7 +67,7 @@ const CARD_MARGIN = 8;
 
 /**
  * "N running" (specs-section.v1.md section 7): threads only, with a matrix
- * mark. Hover or focus opens the card; a click (Enter or Space) pins it and
+ * mark and the visible word. The card fills the sidebar, inset 8 px. Hover or focus opens the card; a click (Enter or Space) pins it and
  * another unpins it; Escape closes it. Synthetic inputs are not host proof.
  */
 export function FooterCounterArtwork({ source, className, card }: {
@@ -113,14 +113,14 @@ export function FooterCounterArtwork({ source, className, card }: {
             send("click");
           }}>
           <MatrixMark state={count.total > 0 ? "working" : "idle"} />
-          <span>{count.total}</span>
+          <span aria-hidden="true">{count.total} running</span>
         </span>
       </span>
       {/* After the trigger, so Tab moves into the card. The padding bridges the gap to the
           trigger, one hit area, so pointing into the card never leaves the wrapper. */}
       {open ? (
         <div style={{
-          position: "absolute", bottom: "100%", left: 8, zIndex: 50, paddingBottom: CARD_GAP, boxSizing: "border-box",
+          position: "absolute", bottom: "100%", left: 8, right: 8, zIndex: 50, paddingBottom: CARD_GAP, boxSizing: "border-box",
           display: "flex", flexDirection: "column", maxHeight: room === null ? `calc(100vh - ${CARD_MARGIN}px)` : `${room}px`,
         }}>
           {card()}

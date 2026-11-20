@@ -177,7 +177,7 @@ describe("V3: the list-bottom line counts the one running rule", () => {
   const base = v3Threads.find(({ id }) => id === "thr_v3_pinned_idle")!;
   it("shows the stats panel's running total for the fixture rows", () => {
     renderSlot(line, {}, { sidebarThreads: { status: "ready", threads: v3Threads } });
-    expect(screen.getByRole("status", { name: "4 running" }).textContent).toBe("4");
+    expect(screen.getByRole("status", { name: "4 running" }).textContent).toBe("4 running");
   });
   it.each([
     ["busy but waiting on you", { hasPendingInteraction: true, indicator: "waiting-for-input" as const,
@@ -186,7 +186,7 @@ describe("V3: the list-bottom line counts the one running rule", () => {
     ["runtime work behind no indicator", { status: "active" as const, runtimeStatus: "active" as const }, "1"],
   ])("counts %s by runtime work, not the indicator", (_, overrides, expected) => {
     renderSlot(line, {}, { sidebarThreads: { status: "ready", threads: [{ ...base, ...overrides }] } });
-    expect(screen.getByRole("status", { name: `${expected} running` }).textContent).toBe(expected);
+    expect(screen.getByRole("status", { name: `${expected} running` }).textContent).toBe(`${expected} running`);
   });
   it("hides the number when a row's runtime status is unrecognised", () => {
     const rendered = renderSlot(line, {}, { sidebarThreads: { status: "ready",
