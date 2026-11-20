@@ -6,15 +6,17 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { matrixMarksV4, type MatrixStateV4 } from "./fixtures/v4";
 import { MatrixMark } from "./MatrixMark";
+import { tokens } from "./specs/theme";
 
-// Section 5's colours, written out from the contract.
-const ACCENT = "var(--primary, #c0ff04)";
-const BORDER = "var(--border, #292929)";
+// Section 5's colours: section 9's theme tokens (imported, so a token change in
+// specs/theme.ts carries through), and the mark's own colours written out.
+const ACCENT = tokens.accent;
+const BORDER = tokens.border;
 const colour = {
   accent: ACCENT,
-  "muted-accent": "color-mix(in oklch, var(--primary, #c0ff04) 45%, var(--sidebar, #161616))",
+  "muted-accent": tokens.mutedAccent,
   "muted-text": "var(--muted-foreground, #b7b7b7)",
-  warning: "var(--warning, #fc8c45)",
+  warning: tokens.warning,
   destructive: "var(--destructive)",
   dim: "color-mix(in oklch, var(--muted-foreground, #b7b7b7) 35%, var(--sidebar, #161616))",
   border: BORDER,
