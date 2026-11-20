@@ -137,7 +137,8 @@ describe("S2: open, closed and remembered", () => {
     const { rendered } = render();
     await screen.findByText("Sample palette");
     const row = rowOf("Sample palette");
-    expect(within(row).queryByRole("button", { name: "Open Sample palette on GitHub" })).toBeNull();
+    // The GitHub button stays mounted for keyboard users (#1563); before hover the row shows done/total.
+    expect(within(row).getByText("4/10")).toBeTruthy();
     fireEvent.pointerEnter(row);
     expect(within(row).queryByText("4/10")).toBeNull();
     fireEvent.click(within(row).getByRole("button", { name: "Open Sample palette on GitHub" }));

@@ -3,7 +3,7 @@
 // `Specs N · M need you` and one row per running spec, collapsed until
 // clicked, its open state kept per spec in plugin settings. Rows come from
 // `specRows`, the same computation `wizbar specs` prints.
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import {
   experimental_usePluginId,
   useBbNavigate,
@@ -18,7 +18,7 @@ import { Icon } from "../components/Icon";
 import { cn } from "../lib/utils";
 import { TRAILING_GLYPH_BOX_CLASS } from "../StatusSlot";
 import type { DotStateV4, SpecRowV4, SpecsFileReadV4 } from "../fixtures/v4";
-import { readOpenKeys, withOpen } from "./open-state";
+import { effectiveOpen, readOpenKeys, withOpen } from "./open-state";
 import { boundHome, readSpecsFile } from "./read";
 import { sectionRule, specRows } from "./rows";
 import type { specsRpcContract } from "./server";
@@ -35,52 +35,73 @@ export interface SpecsSectionProps {
   onNavigate: () => void;
 }
 
-/** The server's specs file read, asked for on mount and once a minute while a factory is bound; a failed call is unreadable. */
-function useSpecsFile(bound: boolean): SpecsFileReadV4 | null {
+/**
+ * The server's specs file read for the bound factory, asked for on mount, at once
+ * when the binding's host or root changes, and once a minute; a failed call is
+ * unreadable. A read is shown only under the binding it was asked for, so a
+ * switch clears the old rows at once and a late answer for the old one is dropped.
+ */
+function useSpecsFile(home: string | null): SpecsFileReadV4 | null {
   const rpc = useRpc<typeof specsRpcContract>();
-  const [read, setRead] = useState<SpecsFileReadV4 | null>(null);
+  const [read, setRead] = useState<{ home: string; read: SpecsFileReadV4 } | null>(null);
   useEffect(() => {
-    if (!bound) return;
+    if (home === null) return;
     let live = true;
     const load = () => rpc.call("specsFile", {}).then(
-      (result) => { if (live) setRead(result); },
-      () => { if (live) setRead({ kind: "unreadable" }); },
+      (result) => { if (live) setRead({ home, read: result }); },
+      () => { if (live) setRead({ home, read: { kind: "unreadable" } }); },
     );
     void load();
     const timer = setInterval(load, REFRESH_MS);
     return () => { live = false; clearInterval(timer); };
-  }, [bound, rpc]);
+  }, [home, rpc]);
   // With no bound factory there is nothing to read (section 1: no-binding).
-  return bound ? read : NO_BINDING;
+  if (home === null) return NO_BINDING;
+  return read?.home === home ? read.read : null;
 }
 
-/** `specsOpen` from plugin settings, with the last write shown until the host's values catch up. */
+/**
+ * `specsOpen` from plugin settings. Toggles show at once and save one at a time,
+ * in order: a toggle made while a save is out is folded into the next save, and
+ * only the newest toggle's answer is shown, so the latest choice wins on screen
+ * and in the store. After the last save the written value is shown until the
+ * host's values change.
+ */
 function useOpenSetting() {
   const pluginId = experimental_usePluginId();
   const host = useSettings();
   const sdk = useSdk();
-  const [written, setWritten] = useState<{ baseline: unknown; value: unknown } | null>(null);
+  const [written, setWritten] = useState<{ baseline: unknown; value: unknown; saving: boolean } | null>(null);
   const [failed, setFailed] = useState(false);
-  const value = written && written.baseline === host.values ? written.value : host.values?.specsOpen;
-  const toggle = useCallback(async (spec: string, open: boolean) => {
-    const baseline = host.values;
-    const next = withOpen(value, spec, open);
-    setWritten({ baseline, value: next });
+  const value = written && (written.saving || written.baseline === host.values) ? written.value : host.values?.specsOpen;
+  const latest = useRef({ value, hostValues: host.values, seq: 0 });
+  latest.current.value = value;
+  latest.current.hostValues = host.values;
+  const queue = useRef<Promise<void>>(Promise.resolve());
+  const toggle = useCallback((spec: string, open: boolean) => {
+    const next = withOpen(latest.current.value, spec, open);
+    const seq = ++latest.current.seq;
+    latest.current.value = next;
+    setWritten({ baseline: latest.current.hostValues, value: next, saving: true });
     setFailed(false);
-    try {
-      const result = await sdk.plugins.updateSettings({ pluginId, values: { specsOpen: next } });
-      setWritten({ baseline, value: result.values?.specsOpen ?? next });
-    } catch {
-      setWritten(null);
-      setFailed(true);
-    }
-  }, [host.values, pluginId, sdk, value]);
-  return { value, toggle, failed, bound: boundHome(host.values?.wizdeckFactories) !== null };
+    queue.current = queue.current.then(async () => {
+      // A newer toggle carries this one's change in its own save.
+      if (seq !== latest.current.seq) return;
+      try {
+        const result = await sdk.plugins.updateSettings({ pluginId, values: { specsOpen: next } });
+        if (seq === latest.current.seq) setWritten({ baseline: latest.current.hostValues, value: result.values?.specsOpen ?? next, saving: false });
+      } catch {
+        if (seq === latest.current.seq) { setWritten(null); setFailed(true); }
+      }
+    });
+  }, [pluginId, sdk]);
+  const home = boundHome(host.values?.wizdeckFactories);
+  return { value, toggle, failed, home: home === null ? null : JSON.stringify([home.hostId, home.rootPath]) };
 }
 
 export function SpecsSection({ threads, now, activeThreadId, onNavigate }: SpecsSectionProps) {
-  const { value, toggle, failed, bound } = useOpenSetting();
-  const read = useSpecsFile(bound);
+  const { value, toggle, failed, home } = useOpenSetting();
+  const read = useSpecsFile(home);
   const view = useMemo(() => {
     if (read === null) return null;
     const file = readSpecsFile(read, now);
@@ -120,7 +141,7 @@ function SpecRow({ row, threads, now, activeThreadId, onNavigate, onToggle }: {
   const navigate = useBbNavigate();
   const [hover, setHover] = useState(false);
   const canOpen = row.agents.length > 0;
-  const open = canOpen && row.open;
+  const open = effectiveOpen(row);
   const name = (
     <span className="flex min-w-0 flex-1 items-baseline gap-1.5">
       <span data-spec-name="" className="truncate text-foreground">{row.shortName}</span>
@@ -142,12 +163,13 @@ function SpecRow({ row, threads, now, activeThreadId, onNavigate, onToggle }: {
           </button>
         ) : name}
         <span className={cn(TRAILING_GLYPH_BOX_CLASS, "w-auto min-w-6 justify-end")}>
-          {hover ? (
-            <button type="button" aria-label={`Open ${row.shortName} on GitHub`} className="text-muted-foreground hover:text-foreground"
-              onClick={() => navigate.openUrl(row.url)}>
-              <HugeiconsIcon icon={GithubIcon} className="size-3.5" />
-            </button>
-          ) : <span data-done-total="" className="tabular-nums text-muted-foreground">{row.done}/{row.total}</span>}
+          {/* Always in the tab order, so a row with no chevron can still reach GitHub; shown on hover or focus. */}
+          <button type="button" aria-label={`Open ${row.shortName} on GitHub`}
+            className={cn("text-muted-foreground hover:text-foreground", !hover && "sr-only")}
+            onClick={() => navigate.openUrl(row.url)}>
+            <HugeiconsIcon icon={GithubIcon} className="size-3.5" />
+          </button>
+          {hover ? null : <span data-done-total="" className="tabular-nums text-muted-foreground">{row.done}/{row.total}</span>}
         </span>
       </div>
       <Dots row={row} />
