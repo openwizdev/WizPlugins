@@ -270,7 +270,7 @@ describe("V5: children and stats JSON equal the UI for the same fixtures", () =>
       threads: [...card.querySelectorAll("[data-thread]")].map((el) => ({ id: el.getAttribute("data-thread"),
         matrix: el.querySelector("[data-matrix]")?.getAttribute("data-matrix"), shortName: el.querySelector("[data-spec-name]")?.textContent ?? null })),
     }).toEqual({
-      summary: `${cli.waitingOnYou} waiting on you · Cloud ${cli.running.cloud} · Local ${cli.running.local} · Unknown ${cli.running.unknown}`,
+      summary: `${cli.waitingOnYou} waiting on you · ${cli.running.cloud} cloud, ${cli.running.local} local, ${cli.running.unknown} unknown`,
       harness: cli.harness,
       threads: cli.threads.map((t: { id: string; matrix: string; shortName: string | null }) => ({ id: t.id, matrix: t.matrix, shortName: t.shortName })),
     });
