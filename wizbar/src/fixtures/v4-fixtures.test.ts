@@ -43,10 +43,16 @@ export function hardCodedColours(source: string): string[] {
   return found;
 }
 
+// Build output (dist/) and the SDK declarations a plugin build refreshes (types/) are not WizBar's source.
+const notSource = new Set(["node_modules", "fixtures"]);
+const buildOutput = new Set(["dist", "types"]);
 function sourceFiles(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const path = join(dir, entry.name);
-    if (entry.isDirectory()) return entry.name === "node_modules" || entry.name === "fixtures" ? [] : sourceFiles(path);
+    if (entry.isDirectory()) {
+      if (notSource.has(entry.name) || (dir === root && buildOutput.has(entry.name))) return [];
+      return sourceFiles(path);
+    }
     return /\.(?:tsx?|css)$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name) ? [path] : [];
   });
 }
