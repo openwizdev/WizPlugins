@@ -133,17 +133,19 @@ A small 3 × 3 dot mark on each running thread (inside an open spec, and on the 
 
 A running row is working and not waiting, so it never shows `needs-you`, and it still counts as running when it shows `failed`: inside a spec, in the hover card and in `wizbar stats --json`, a running row shows `failed` (an error status or failed queued work), else `reviewing` or `working`. The server and the app compute these rows alike, so the CLI and the app agree there. The pull-request states appear only on 0.3 cards in the app.
 
-**Marks** (row-major masks, `1` lit; unlit dots use the border token). Reduced motion (`prefers-reduced-motion: reduce`) shows every mark static.
+**Marks** (0.5: quiet grey marks, idea credited to Conductor's workspace status matrix). Each mark is 3 × 3 dots in an 11 px square. Masks are row-major, `1` lit, and give the still pattern. Unlit dots are dim, a visible grey. No mark uses the accent: only needs you, failed and done are coloured.
 
-| State | Mask | Colour | Animated |
+| State | Mask | Colour | Motion |
 | --- | --- | --- | --- |
-| `working` | `111111111` | accent | yes |
-| `reviewing` | `111101111` | accent | yes |
-| `checks-running` | `000111000` | accent | yes |
-| `needs-you` | `010111010` | warning | no |
-| `failed` | `101010101` | destructive | no |
-| `done` | `000010000` | muted accent | no |
-| `idle` | `000000000` | border | no |
+| `working` | `100000000` | bright | `chase`: a bright lead dot steps clockwise round the outer ring (0, 1, 2, 5, 8, 7, 6, 3), 150 ms a step, with a tail of two fading dots behind it (muted text, then faint); every other dot stays dim |
+| `checks-running` | `000111000` | muted text | `pulse`: the middle row pulses, left to right |
+| `reviewing` | `101010101` | muted text | none |
+| `needs-you` | `111111111` | warning | none |
+| `failed` | `101010101` | destructive | none |
+| `done` | `111111111` | muted accent | none |
+| `idle` | `000010000` | faint | none |
+
+`reviewing` (corners and centre) and `failed` (an X) share a shape and differ by colour. Reduced motion (`prefers-reduced-motion: reduce`) shows each still pattern: `working` shows the chase's first frame, its lead on dot 0 and its tail on dots 3 and 6. Colours: muted accent and warning are section 9's tokens; bright is `var(--foreground)`; muted text is `var(--muted-foreground, #b7b7b7)`; faint is `color-mix(in oklch, var(--muted-foreground, #b7b7b7) 65%, var(--sidebar, #161616))`; dim is `color-mix(in oklch, var(--muted-foreground, #b7b7b7) 35%, var(--sidebar, #161616))`; destructive is `var(--destructive)`. Each fixture row keeps `animated` (true when it has motion) and adds `motion` (`chase`, `pulse` or null) and `tail` (the chase's fading colours, lead first; empty otherwise).
 
 ## 6. Harness, model and effort
 
