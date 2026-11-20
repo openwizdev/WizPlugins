@@ -141,15 +141,20 @@ export type StatsV4 = { version: 2; window: StatsWindowV3; coverage: StatsCovera
 export const specsOpenSettingV4 = { key: "specsOpen", type: "string", default: "[]" } as const;
 
 /** Section 5: 3 × 3 masks, row-major; unlit dots use the border token. */
-export const matrixMarksV4: Readonly<Record<MatrixStateV4, { mask: string; colour: "accent" | "muted-accent" | "warning" | "destructive" | "border"; animated: boolean }>> = {
-  working: { mask: "111111111", colour: "accent", animated: true },
-  reviewing: { mask: "111101111", colour: "accent", animated: true },
-  "checks-running": { mask: "000111000", colour: "accent", animated: true },
-  "needs-you": { mask: "010111010", colour: "warning", animated: false },
-  failed: { mask: "101010101", colour: "destructive", animated: false },
-  done: { mask: "000010000", colour: "muted-accent", animated: false },
-  idle: { mask: "000000000", colour: "border", animated: false },
+/** Section 5's quiet marks: the still mask, its colour and its motion (null when still). */
+export type MatrixColourV4 = "accent" | "muted-accent" | "muted-text" | "warning" | "destructive" | "dim" | "border";
+export type MatrixMotionV4 = "chase" | "pulse" | null;
+export const matrixMarksV4: Readonly<Record<MatrixStateV4, { mask: string; colour: MatrixColourV4; animated: boolean; motion: MatrixMotionV4 }>> = {
+  working: { mask: "100000000", colour: "accent", animated: true, motion: "chase" },
+  reviewing: { mask: "101010101", colour: "muted-text", animated: false, motion: null },
+  "checks-running": { mask: "000111000", colour: "muted-text", animated: true, motion: "pulse" },
+  "needs-you": { mask: "111111111", colour: "warning", animated: false, motion: null },
+  failed: { mask: "101010101", colour: "destructive", animated: false, motion: null },
+  done: { mask: "111111111", colour: "muted-accent", animated: false, motion: null },
+  idle: { mask: "000010000", colour: "dim", animated: false, motion: null },
 };
+/** Section 5: the working chase's clockwise ring order (row-major dot indexes). */
+export const matrixRingV4 = [0, 1, 2, 5, 8, 7, 6, 3] as const;
 
 /** Section 6: the model and effort source and its gate. Needs WB4-4's live observation. */
 export const modelSourceV4 = {
