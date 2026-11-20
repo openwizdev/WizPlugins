@@ -236,6 +236,23 @@ describe("0.5 C: the rule, the spec rows and the open panel", () => {
     expect(tokens.brightOlive).not.toBe(tokens.mutedAccent);
   });
 
+  // catches (0.5 P, #130): a lime-green rule or done olive, drawn from the accent and sidebar alone without the warning's warmth.
+  it("draws the rule, done dots and the last-hour note in the accent warmed by the warning, on the sidebar", async () => {
+    render();
+    await screen.findByText("Sample palette");
+    const heading = screen.getByRole("region", { name: "Specs" });
+    const shown = [
+      (heading.querySelector("[data-rule-line]") as HTMLElement).style.background,
+      (rowOf("Sample palette").querySelector("[data-done-last-hour]") as HTMLElement).style.color,
+      (rowOf("Sample palette").querySelector('[data-dot-state="done"]') as HTMLElement).style.background,
+    ];
+    expect(shown).toEqual([tokens.rule, tokens.mutedAccent, tokens.mutedAccent]);
+    const variables = (value: string) => [...new Set(value.match(/var\(--[a-z-]+/g))].sort();
+    for (const value of [tokens.rule, tokens.mutedAccent]) {
+      expect(variables(value)).toEqual(["var(--primary", "var(--sidebar", "var(--warning"]);
+    }
+  });
+
   // catches: an open spec whose agents float on the plain sidebar, or a closed spec drawn raised.
   it("raises an open spec and its agents into one card panel", async () => {
     render({ settings: { specsOpen: v4OpenSetting } });
