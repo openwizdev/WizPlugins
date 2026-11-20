@@ -37,7 +37,6 @@ import {
 import type { SpecsFileReadV4, SpecsFileV4 } from "./fixtures/v4";
 import { boundHome, readSpecsFile } from "./specs/read";
 import { readDeckFactories } from "./deck/data/binding";
-import { isRunning } from "./specs/rows";
 import type { specsRpcContract } from "./specs/server";
 import type { MovePositionV3 } from "./v3-types";
 import {
@@ -105,17 +104,18 @@ export function ThreadInbox({
     [projects],
   );
 
-  const { pinned, inbox, snoozed, settled, muted } = useMemo(() => {
+  const { pinned, inbox, snoozed, settled, muted, hiddenChildren } = useMemo(() => {
     const scoped = filterByProject(
       visibleInboxThreads(threads),
       scope === ALL_PROJECTS ? null : scope,
     );
     // Children live in their parent's header chip instead of the flat list;
-    // an orphan whose parent is not on screen stays here.
-    const matched = searchThreadsByTitle(
-      hideChildrenOfVisibleParents(scoped),
-      searchQuery,
-    );
+    // an orphan whose parent is not on screen stays here. #211 R1: a search
+    // matches every row by its own title, children included, so they show.
+    const searching = searchQuery.trim() !== "";
+    const listed = searching ? scoped : hideChildrenOfVisibleParents(scoped);
+    const listedIds = new Set(listed.map((thread) => thread.id));
+    const matched = searchThreadsByTitle(listed, searchQuery);
     const active: typeof matched = [];
     const onSnoozeShelf: typeof matched = [];
     const onSettledShelf: typeof matched = [];
@@ -141,21 +141,28 @@ export function ThreadInbox({
       ),
       settled: sortByCreatedAtDescending(onSettledShelf),
       muted: sortByCreatedAtDescending(onMutedShelf),
+      // #211 R1: the active children in their parents' chips; their news brings the parent into Unread.
+      hiddenChildren: scoped.filter((thread) => !listedIds.has(thread.id) && lifecycle.shelfFor(thread) === "active"),
     };
   }, [lifecycle, scope, searchQuery, threads]);
   // E2 (#188): Unread. While a search is active every match shows, read or not, as the 0.5 Inbox did.
-  // Until the specs file answers, a running thread (one that may be a spec's agent) is held back
-  // rather than shown and then pulled out.
+  // #211 R2: the filtered list needs the plugin settings (the binding) and the first specs-file answer;
+  // until both are known the last filtered list stays on screen (none at first), so no spec agent or
+  // fleet loop run shows and then leaves.
   const searchActive = searchQuery.trim() !== "";
-  const factories = useSettings().values?.wizdeckFactories;
+  const settingsState = useSettings();
+  const factories = settingsState.values?.wizdeckFactories;
   // The fleet loops' names use the bound factories' repositories (section 10).
   const repositories = useMemo(() => {
     const binding = readDeckFactories(factories);
     return binding.ok ? binding.factories.flatMap((factory) => factory.binding.repositories) : [];
   }, [factories]);
-  const unread = useMemo(() => searchActive ? inbox : specsFile === undefined
-    ? unreadThreads(inbox.filter((thread) => !isRunning(thread)), null, threads, repositories)
-    : unreadThreads(inbox, specsFile, threads, repositories), [inbox, repositories, searchActive, specsFile, threads]);
+  const filtered = useMemo(() => settingsState.isLoading || specsFile === undefined ? null
+    : unreadThreads(inbox, specsFile, threads, repositories, hiddenChildren),
+  [hiddenChildren, inbox, repositories, settingsState.isLoading, specsFile, threads]);
+  const lastFiltered = useRef<typeof inbox>([]);
+  if (filtered !== null) lastFiltered.current = filtered;
+  const unread = searchActive ? inbox : (filtered ?? lastFiltered.current);
 
   const connection = useRealtimeConnectionState();
   const drag = useDragPins(status, connection, threads, pinned);
@@ -510,12 +517,13 @@ function useSectionSetting<Tag>(name: "sectionsCollapsed" | "sectionsOrder") {
 /**
  * E2 (#188): the specs file Unread matches against (specs-section section 3), read
  * for the bound factory like the Specs section's, on mount, on a binding change
- * and once a minute. Undefined until the first answer for this binding; null with
+ * and once a minute. Undefined while the settings load and until the first answer for this binding; null with
  * no binding or no readable file. The last answer stays until the next, so a
  * refresh never empties Unread.
  */
 function useSpecsFileForUnread(now: number): SpecsFileV4 | null | undefined {
   const host = useSettings();
+  const loading = host.isLoading;
   const rpc = useRpc<typeof specsRpcContract>();
   const bound = boundHome(host.values?.wizdeckFactories);
   const home = bound === null ? null : JSON.stringify([bound.hostId, bound.rootPath]);
@@ -532,11 +540,13 @@ function useSpecsFileForUnread(now: number): SpecsFileV4 | null | undefined {
     return () => { live = false; clearInterval(timer); };
   }, [home, rpc]);
   return useMemo(() => {
+    // #211 R2: while the settings load, the binding is not known, so neither is the file.
+    if (loading) return undefined;
     if (home === null) return null;
     if (read?.home !== home) return undefined;
     const file = readSpecsFile(read.read, now);
     return file.status === "ready" ? file.file : null;
-  }, [home, now, read]);
+  }, [home, loading, now, read]);
 }
 
 /** S1 (#169): `sectionsCollapsed`; a toggle names the section whose save failed. */

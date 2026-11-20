@@ -169,16 +169,21 @@ export function isFleetLoopTitle(title: string, repositories: readonly string[])
 
 /**
  * E2 (#188), Unread (sidebar-v3.v1.md section 10): of `threads`, in their order,
- * those with something new for the owner that match no spec (specs-section
- * section 3, against `rows`, every sidebar row), are not fleet wakes and are not
- * fleet loop runs for `repositories`. With no specs file nothing matches a spec.
+ * those that match no spec (specs-section section 3, against `rows`, every
+ * sidebar row), are not fleet wakes and are not fleet loop runs for
+ * `repositories`, and have something new for the owner themselves or in a child
+ * hidden under them (`hiddenChildren`, shown in the parent's chip) that would
+ * itself qualify. With no specs file nothing matches a spec.
  */
 export function unreadThreads<T extends PluginSidebarThread>(
   threads: readonly T[], file: SpecsFileV4 | null, rows: readonly PluginSidebarThread[],
   repositories: readonly string[] = [],
-  _hiddenChildren: readonly PluginSidebarThread[] = [],
+  hiddenChildren: readonly PluginSidebarThread[] = [],
 ): T[] {
-  return threads.filter((thread) => hasSomethingNew(thread) && !fleetWakeTitle.test(thread.displayTitle)
+  const eligible = (thread: PluginSidebarThread) => !fleetWakeTitle.test(thread.displayTitle)
     && !isFleetLoopTitle(thread.displayTitle, repositories)
-    && (file === null || matchSpec(file, thread, rows) === null));
+    && (file === null || matchSpec(file, thread, rows) === null);
+  const qualifies = (thread: PluginSidebarThread) => hasSomethingNew(thread) && eligible(thread);
+  const newsUnder = new Set(hiddenChildren.filter(qualifies).map((child) => child.parentThreadId));
+  return threads.filter((thread) => eligible(thread) && (hasSomethingNew(thread) || newsUnder.has(thread.id)));
 }

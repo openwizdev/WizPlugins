@@ -1574,6 +1574,8 @@ describe("E2: Unread", () => {
   // catches: a 0.5 Inbox collapse lost on upgrade, or a write that still stores `inbox`.
   it("reads a stored inbox collapse as Unread and writes unread", async () => {
     const { updates } = renderUnread({ stored: "[\"inbox\"]" });
+    // Unread appears once the specs file has answered (#211 R2).
+    await screen.findByRole("region", { name: "Unread" });
     expect(header().getAttribute("aria-expanded")).toBe("false");
     expect(links()).toEqual([]);
     fireEvent.click(header());
