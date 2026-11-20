@@ -22,6 +22,7 @@ import { useFeatureSourceStatus } from "./SettingsPage";
 import { SlimRow } from "./SlimRow";
 import { useLifecycle } from "./useLifecycle";
 import { SpecsSection } from "./specs/SpecsSection";
+import { tokens } from "./specs/theme";
 import type { t3sidebarRpcContract } from "./server";
 import type { MovePositionV3 } from "./v3-types";
 import {
@@ -407,16 +408,9 @@ function Shelf({
   );
 }
 
-/**
- * The Specs section's rule colour: `tokens.rule`, added by 0.5 C (#112) in
- * specs/theme.ts. Copied with its exact value until that lands; then this
- * imports it instead.
- */
-const SPECS_RULE = "color-mix(in oklch, var(--primary, #c0ff04) 40%, var(--sidebar, #161616))";
-
-/** A shelf's rule: the Specs section's olive (round 5 A), so every shelf reads as one list. */
+/** A shelf's rule: the Specs section's rule olive (round 5 A), so every shelf reads as one list. */
 function ShelfRule() {
-  return <span aria-hidden="true" className="h-px flex-1" style={{ background: SPECS_RULE }} />;
+  return <span aria-hidden="true" className="h-px flex-1" style={{ background: tokens.rule }} />;
 }
 
 /** Where a dragged card would land inside Pinned; purely visual. */
