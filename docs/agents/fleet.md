@@ -92,6 +92,8 @@ Source: the fleet skills, `plan-graph` and `launch-fleet`, which put it on and t
 
 The plugin's current scripts in [`wizbar/package.json`](../../wizbar/package.json) (`build`, `test`, `typecheck`). Upstream names no Node version and has no lockfile-install script; the plugin folder has its own `package-lock.json`. A builder runs the red/green proof and the commands its change can affect, then opens the ready pull request.
 
+Evidence (red and green runs, screenshots, diffs, review captures) goes in the pull request's description or comments, never in the tree.
+
 | # | Folder | Command | CI check |
 | --- | --- | --- | --- |
 | 1 | `wizbar` | `npm ci` | `wizbar-checks` |
