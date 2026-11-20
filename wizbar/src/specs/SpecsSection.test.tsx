@@ -435,10 +435,14 @@ describe("parity: wizbar specs --json is what the section shows", () => {
         agents: [...row.querySelectorAll("[data-sidebar-thread-id]")].map((a) => a.getAttribute("data-sidebar-thread-id")),
       })),
     };
-    expect(cli).toEqual({ ...v4SpecRows, needsYouSpecs: 2 });
+    // S2 (#185): the CLI lists the quiet finished spec last; the section keeps it in its collapsed Quiet group.
+    const main = cli.specs.filter((s: { quiet: boolean }) => !s.quiet);
+    expect(main.map(({ activityAt: _a, quiet: _q, ...row }: { activityAt: unknown; quiet: unknown }) => row)).toEqual(v4SpecRows.specs);
+    expect(cli.specs.filter((s: { quiet: boolean }) => s.quiet).map((s: { spec: string }) => s.spec)).toEqual(["example/sample-plans#601"]);
+    expect(within(region).getByRole("button", { name: "Quiet 1" }).getAttribute("aria-expanded")).toBe("false");
     expect(shown).toEqual({
-      rule: `Specs ${cli.specs.length} · ${cli.needsYou} tickets need you (${cli.needsYouSpecs} specs)`,
-      specs: cli.specs.map((s: typeof v4SpecRows.specs[number]) => ({
+      rule: `Specs ${main.length} · ${cli.needsYou} tickets need you (${cli.needsYouSpecs} specs)`,
+      specs: main.map((s: typeof v4SpecRows.specs[number]) => ({
         spec: s.spec, shortName: s.shortName, doneTotal: `${s.done}/${s.total}`,
         doneLastHour: s.doneLastHour > 0 ? `${s.doneLastHour} done in the last hour` : null,
         needsYou: s.needsYou > 0 ? `${s.needsYou} needs you` : null,
@@ -646,9 +650,9 @@ describe("S1: the Specs sort", () => {
     const title = `${role} · SS${agent.ticket!.slice(agent.ticket!.lastIndexOf("#") + 1)}: Sample work`;
     return { ...v4Threads[2]!, id: agent.threadId, title, displayTitle: title, parentThreadId: null, createdAt: agent.updatedAt - 60_000, updatedAt: agent.updatedAt };
   });
-  // 0.5's hidden rule still hides a finished spec until S2 (#185) shows it as quiet.
-  const finished = new Set(v6Activity.filter((c) => c.done === c.total).map((c) => c.spec));
-  const expected = (sort: keyof typeof v6SortOrders) => v6SortOrders[sort].filter((key) => !finished.has(key));
+  // S2 (#185): quiet specs, the finished one included, sit in the collapsed Quiet group, so the list shows the rest.
+  const quietKeys = new Set(v6Activity.filter((c) => c.quiet).map((c) => c.spec));
+  const expected = (sort: keyof typeof v6SortOrders) => v6SortOrders[sort].filter((key) => !quietKeys.has(key));
   const v6Read = (): SpecsFileReadV4 => ({ kind: "content", text: v6SpecsFileText });
   function renderV6(settings: Record<string, string> = {}, updateSettings?: (args: unknown) => unknown) {
     vi.setSystemTime(v6Now);

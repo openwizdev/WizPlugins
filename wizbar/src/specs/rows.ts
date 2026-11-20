@@ -5,9 +5,9 @@ import type { PluginSidebarPullRequest, PluginSidebarThread } from "@get-bb/plug
 import { hasRuntimeWork } from "../lifecycle";
 import {
   dotOrderV4, type DotStateV4, type MatrixStateV4, type SpecAgentV4, type SpecEntryV4, type SpecKeyV4,
-  type SpecRowV4, type SpecsFileV4, type SpecsResultV4, type TicketEntryV4,
+  type SpecsFileV4, type TicketEntryV4,
 } from "../fixtures/v4";
-import type { SpecEntryV6, SpecsFileV6 } from "../fixtures/v6";
+import { quietAfterMsV6, type SpecEntryV6, type SpecRowV6, type SpecsFileV6, type SpecsResultV6 } from "../fixtures/v6";
 import type { SpecsSort } from "../settings";
 import type { CardModelsResultV3 } from "../v3-types";
 
@@ -129,7 +129,10 @@ function dotState(ticket: TicketEntryV4, now: number): DotStateV4 {
 const recent = (ticket: TicketEntryV4, now: number) =>
   ticket.state === "done" && ticket.closedAt !== null && Date.parse(ticket.closedAt) > now - HOUR;
 
-/** Section 2: a spec is hidden when it has no tickets or every ticket is done. */
+/**
+ * Section 2 as 0.5 had it: no tickets, or every ticket done. The hover card and `wizbar spec` still read
+ * it; from 0.6 the rows hide only a spec with no tickets, and a finished one is quiet (section 12).
+ */
 export function isHidden(spec: SpecEntryV4): boolean {
   return spec.tickets.every((ticket) => ticket.state === "done");
 }
@@ -161,19 +164,29 @@ function agentOf(spec: SpecEntryV4, row: SpecsThreadRow, models: CardModelsResul
   };
 }
 
-/** Sections 2, 3 and 11: the visible rows with their running agents, in `sort` (`newest`, the file's order, by default). */
+/**
+ * Section 12: no ticket due now, and either every ticket done or nothing moving for over 3 days
+ * (exactly 3 days is not quiet). A null activity time is quiet only when finished.
+ */
+export function isQuiet(row: SortableSpec, now: number): boolean {
+  if (row.needsYou > 0) return false;
+  return row.done === row.total || (row.activityAt !== null && now - row.activityAt > quietAfterMsV6);
+}
+
+/**
+ * Sections 2, 3, 11 and 12: the visible rows (every spec with a ticket) with their running agents, in `sort`
+ * (`newest`, the file's order, by default), then the quiet rows in the same order: a stable filter.
+ */
 export function specRows(
   file: SpecsFileV6, rows: readonly SpecsThreadRow[], openKeys: readonly string[], now: number,
   models: CardModelsResultV3 | null = null, sort: SpecsSort = "newest",
-): SpecsResultV4 {
+): SpecsResultV6 {
   const agents = new Map<SpecEntryV4, SpecAgentV4[]>();
   for (const row of rows) {
     const spec = matchEntry(file, row, rows);
     if (spec) agents.set(spec, [...(agents.get(spec) ?? []), agentOf(spec, row, models)]);
   }
-  const activity = new Map<string, number | null>();
-  const unsorted = file.specs.filter((spec) => !isHidden(spec)).map((spec): SpecRowV4 => {
-    activity.set(spec.spec, activityAt(spec, agents.get(spec) ?? []));
+  const unsorted = file.specs.filter((spec) => spec.tickets.length > 0).map((spec): SpecRowV6 => {
     const order = spec.tickets.map((ticket, index) => ({ ticket, index, state: dotState(ticket, now) }));
     order.sort((a, b) => dotOrderV4.indexOf(a.state) - dotOrderV4.indexOf(b.state) || a.index - b.index);
     return {
@@ -186,19 +199,28 @@ export function specRows(
       open: openKeys.includes(spec.spec),
       dots: order.map(({ ticket, state }) => ({ ticket: ticket.ticket, code: ticket.code, state })),
       agents: (agents.get(spec) ?? []).sort((a, b) => a.createdAt - b.createdAt || (a.threadId < b.threadId ? -1 : a.threadId > b.threadId ? 1 : 0)),
+      activityAt: activityAt(spec, agents.get(spec) ?? []), quiet: false,
     };
-  });
-  const specs = sortSpecs(unsorted.map((row) => ({ ...row, activityAt: activity.get(row.spec)! })), sort)
-    .map(({ activityAt: _activityAt, ...row }): SpecRowV4 => row);
+  }).map((row) => ({ ...row, quiet: isQuiet(row, now) }));
+  const sorted = sortSpecs(unsorted, sort);
+  const specs = [...sorted.filter((row) => !row.quiet), ...sorted.filter((row) => row.quiet)];
   return {
-    version: 1, status: "ready", generatedAt: Date.parse(file.generatedAt),
+    version: 1, status: "ready", sort, generatedAt: Date.parse(file.generatedAt),
     needsYou: specs.reduce((sum, row) => sum + row.needsYou, 0),
     yoursLater: specs.reduce((sum, row) => sum + row.yoursLater, 0), specs,
   };
 }
 
+/** What the rule reads: rows that may carry the Quiet mark (a 0.4 row never does). */
+type RuleInput = { needsYou: number; specs: readonly { needsYou: number; quiet?: boolean }[] };
+
+/** Section 12: the main list, the visible rows that are not quiet. */
+export function mainRows<T extends { quiet?: boolean }>(specs: readonly T[]): T[] {
+  return specs.filter((row) => row.quiet !== true);
+}
+
 /** #161: the visible specs with a ticket due now. */
-export function needsYouSpecs(result: SpecsResultV4): number {
+export function needsYouSpecs(result: RuleInput): number {
   return result.specs.filter((row) => row.needsYou > 0).length;
 }
 
@@ -206,7 +228,7 @@ export function needsYouSpecs(result: SpecsResultV4): number {
  * #161: what the rule says after the count, in full (`3 tickets need you (2 specs)`, singular at 1) and in
  * the narrow form (`3 for you`); null when no ticket is due now (#162: later tickets never count).
  */
-export function needsYouWords(result: SpecsResultV4): { full: string; short: string } | null {
+export function needsYouWords(result: RuleInput): { full: string; short: string } | null {
   const tickets = result.needsYou;
   if (tickets === 0) return null;
   const specs = needsYouSpecs(result);
@@ -216,10 +238,13 @@ export function needsYouWords(result: SpecsResultV4): { full: string; short: str
   };
 }
 
-/** Section 2: `Specs N`, then ` · M tickets need you (K specs)` when M (due now only) is over zero (#161). */
-export function sectionRule(result: SpecsResultV4): string {
+/**
+ * Section 2: `Specs N`, then ` · M tickets need you (K specs)` when M (due now only) is over zero (#161).
+ * N counts the main list only (section 12); quiet specs never have a ticket due now.
+ */
+export function sectionRule(result: RuleInput): string {
   const words = needsYouWords(result);
-  return `Specs ${result.specs.length}${words ? ` · ${words.full}` : ""}`;
+  return `Specs ${mainRows(result.specs).length}${words ? ` · ${words.full}` : ""}`;
 }
 
 /** What a sort reads of a spec (section 11). */
