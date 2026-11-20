@@ -33,9 +33,11 @@ are in the [v0.3 sidebar contract](contracts/sidebar-v3.v1.md) and the
   sits on the line below: done, done in the last hour (a brighter done dot),
   building (a pulsing ring), review (a ring), needs you (solid warning), later
   (a hollow ring), held (a grey ring), not started. Finished specs are hidden. A
-  missing, malformed or stale file shows "Specs unavailable", never zero.
-- **Due now and later.** A ticket that needs you is either due now (needs you)
-  or later (it has open blockers). Only due-now tickets count in
+  missing, malformed or stale specs file shows "Specs unavailable", never zero
+  (with two files, only when neither is ready; see the producer below).
+- **Due now and later.** Only an open ticket labelled `ready-for-human` splits:
+  due now (needs you) when it has no open blockers, later when it has open
+  blockers. A blocked ticket in any other state keeps that state. Only due-now tickets count in
   the rule and in "K needs you"; later tickets show as hollow rings and
   `· N later`, and `wizbar specs` reports both.
 - **Colours.** Done dots and the section rules use the host's success colour,
@@ -46,8 +48,10 @@ are in the [v0.3 sidebar contract](contracts/sidebar-v3.v1.md) and the
   WizBar ships a small producer (`tools/specs-producer/`) that writes it from
   GitHub through your local `gh` login, REST only. It writes both
   `.openwiz/specs.v2.json` (with the later state) and `.openwiz/specs.v1.json`
-  (as before, for an older WizBar), both or neither; WizBar reads v2 unless v1
-  is newer, so the producer and WizBar can be upgraded in either order. `--gh`
+  (as before, for an older WizBar), both or neither. WizBar uses the one that is
+  ready when only one is; when both are ready, the newer `generatedAt` wins,
+  v2 on a tie; when neither is ready, it shows "Specs unavailable". So the
+  producer and WizBar can be upgraded in either order. `--gh`
   names the `gh` to run (default: `gh` on `PATH`). Each run is one complete
   scan, all or nothing: any failed read, or a scan needing more than 59
   requests, writes nothing and keeps the last files. Unchanged pages cost
@@ -89,9 +93,9 @@ are in the [v0.3 sidebar contract](contracts/sidebar-v3.v1.md) and the
   rule as Specs. A parked shelf reads `Settled 4` with no chevron; a click
   still opens it. A running card shows its age (`now`) in the corner.
 - **Footer.** No bolt: a matrix mark and `6 running`, counting threads, never
-  subagents. Hover or focus it for a raised card across the sidebar: who is
-  waiting on you with the cloud and local split, a bar split by harness with
-  each harness's name and count, then one line per running thread with its
+  subagents. Hover or focus it for a raised card across the sidebar: how many
+  threads are waiting on you, the cloud and local split, a bar split by harness
+  with each harness's name and count, then the running threads, one line each with its
   mark, role and code, its spec, and model · effort. A click (or Enter or
   Space) pins the card open and another unpins it; Escape closes it; clicking a
   thread in the card opens it.
@@ -133,10 +137,11 @@ The matrix status idea is credited to Conductor's workspace status matrix
 
 ## Install
 
-**From the BB Marketplace:** the marketplace serves 0.5.0 once the registry's
-WizBar entry has the range `^0.5.0` (this repository's
-[marketplace entry](../marketplace/wizbar.json) has it). Until the registry
-entry is updated, the listing serves 0.3.0.
+**From the BB Marketplace:** 0.5.0 is the release being prepared. The
+marketplace serves it only once both hold: the `wizbar/v0.5.0` release tag
+exists, and the registry's WizBar entry has the range `^0.5.0` (this
+repository's [marketplace entry](../marketplace/wizbar.json) has it). Until
+both, the listing serves 0.3.0.
 
 **From source.** These steps were run for 0.5.0 on a real Cloudroom host for
 its live check: build, install, reload, and an upgrade from 0.3.0 that kept
@@ -193,7 +198,9 @@ wizbar models <id>... [--raw] [--json]
 ```
 
 **Exit codes**, every command: `0` success; `1` any thread or the whole command
-failed; `2` usage error. A usage error with `--json` prints
+failed; `2` usage error. The exception is `models`: a failed host read gives
+that thread a null model and effort with exit `0`, so check the returned
+fields, or the per-thread error status with `--raw`. A usage error with `--json` prints
 `{"error":{"code":"usage","message":"<usage>"}}`.
 
 **Per-ID commands** (`settle` to `unpin`) handle each ID on its own: one
