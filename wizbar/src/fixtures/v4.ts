@@ -486,6 +486,25 @@ export const v4SpecRows: SpecsResultV4 = {
   ],
 };
 
+/**
+ * Section 8: `wizbar spec` on each visible spec of `v4SpecsFile` with `v4Threads`,
+ * from `v4OpenSetting` at `v4Now`: the exit status, the JSON body and text, and the
+ * stored `specsOpen` after. The cache spec has no agents, so opening it saves its
+ * key but reports the effective state (section 4): closed, as the sidebar shows it.
+ */
+export const v4SpecOpenCases: ReadonlyArray<{
+  argv: readonly string[]; exitCode: 0; result: SpecOpenResultV4; text: string; stored: readonly string[];
+}> = [
+  { argv: ["spec", "501", "--open"], exitCode: 0, result: { spec: `${PLANS}#501`, open: true },
+    text: `${PLANS}#501: open\n`, stored: [`${PLANS}#501`, "example/gone#1"] },
+  { argv: ["spec", "501", "--close"], exitCode: 0, result: { spec: `${PLANS}#501`, open: false },
+    text: `${PLANS}#501: closed\n`, stored: ["example/gone#1"] },
+  { argv: ["spec", "77", "--open"], exitCode: 0, result: { spec: `${TOOLS}#77`, open: false },
+    text: `${TOOLS}#77: closed\n`, stored: [`${PLANS}#501`, "example/gone#1", `${TOOLS}#77`] },
+  { argv: ["spec", "77", "--close"], exitCode: 0, result: { spec: `${TOOLS}#77`, open: false },
+    text: `${TOOLS}#77: closed\n`, stored: [`${PLANS}#501`, "example/gone#1"] },
+];
+
 const footer = (id: string, matrix: MatrixStateV4, providerId: string, spec: SpecKeyV4 | null): FooterThreadV4 => ({
   id, title: v4Threads.find((t) => t.id === id)?.displayTitle ?? id, providerId, matrix, spec,
   shortName: spec === null ? null : "Sample palette", ...none,
