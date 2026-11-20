@@ -176,6 +176,7 @@ export function isFleetLoopTitle(title: string, repositories: readonly string[])
 export function unreadThreads<T extends PluginSidebarThread>(
   threads: readonly T[], file: SpecsFileV4 | null, rows: readonly PluginSidebarThread[],
   repositories: readonly string[] = [],
+  _hiddenChildren: readonly PluginSidebarThread[] = [],
 ): T[] {
   return threads.filter((thread) => hasSomethingNew(thread) && !fleetWakeTitle.test(thread.displayTitle)
     && !isFleetLoopTitle(thread.displayTitle, repositories)

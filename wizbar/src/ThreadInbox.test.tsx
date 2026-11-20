@@ -1505,10 +1505,11 @@ describe("E2: Unread", () => {
   });
 
   // catches: a running spec agent shown in Unread until the specs file answers, then pulled out (a flash).
+  // #211 R2: Unread's filtered list waits for the first specs answer; nothing shows and then leaves.
   it("never shows a running thread before the specs file says whether it is a spec's", async () => {
     let answer: (value: unknown) => void = () => {};
     renderUnread({ specsFile: () => new Promise((resolve) => { answer = resolve; }) });
-    expect(links()).toEqual(["Sample new", "Sample waiting", "Sample weekly loop"]);
+    expect(screen.queryByRole("region", { name: "Unread" })).toBeNull();
     await act(async () => answer({ kind: "content", text: v4SpecsFileText }));
     await waitFor(() => expect(links()).toEqual(["Sample new", "Sample waiting", "Builder · ZZ-9: Sample stray", "Sample weekly loop"]));
   });
@@ -1521,6 +1522,53 @@ describe("E2: Unread", () => {
       "Builder · SC-1: Sample borrowed code", "Builder · ZZ-9: Sample stray", "launch-fleet wakes example/sample-plans", "Sample weekly loop"]));
     rendered.rerender(createElement(inbox.component, { ...listProps, searchQuery: "" }));
     await waitFor(() => expect(links()).toEqual(["Sample new", "Sample waiting", "Builder · ZZ-9: Sample stray", "Sample weekly loop"]));
+  });
+
+  // #211 R2: catches the plugin settings' loading read as "no factory bound", so a running spec agent and the
+  // bound repository's fleet loop run flash into Unread until the binding arrives.
+  it("shows no filtered row while the plugin settings load, then the settled list", async () => {
+    const sdkApp = (globalThis as unknown as { __bbPluginRuntime: { pluginSdkApp: { useSettings: () => { values: unknown; isLoading: boolean } } } })
+      .__bbPluginRuntime.pluginSdkApp;
+    const real = sdkApp.useSettings;
+    let loading = true;
+    const spy = vi.spyOn(sdkApp, "useSettings").mockImplementation(() => {
+      const state = real();
+      return loading ? { values: undefined, isLoading: true } : state;
+    });
+    try {
+      const seen = new Set<string>();
+      const observer = new MutationObserver(() => {
+        for (const link of document.querySelectorAll("a[aria-label]")) seen.add(link.getAttribute("aria-label")!);
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+      const { rendered } = renderUnread();
+      await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)); });
+      expect(screen.queryByRole("region", { name: "Unread" })).toBeNull();
+      loading = false;
+      rendered.rerender(createElement(inbox.component, listProps));
+      await waitFor(() => expect(links()).toEqual(["Sample new", "Sample waiting", "Builder · ZZ-9: Sample stray", "Sample weekly loop"]));
+      observer.disconnect();
+      expect(seen.has("Builder · SC-1: Sample borrowed code")).toBe(false);
+      expect(seen.has("launch-fleet wakes example/sample-plans")).toBe(false);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  // #211 R1: catches a hand-back in a child of a read parent that shows nowhere: not in Unread (its parent is
+  // read, and the child lives in the parent's chip) and not in a search for the child's own title.
+  it("shows a read parent whose hidden child has something new, and finds the child by its own title", async () => {
+    const family = [
+      thread({ id: "f_parent", title: "Sample quiet parent", displayTitle: "Sample quiet parent", isUnread: false, createdAt: 70 }),
+      thread({ id: "f_child", title: "Sample child hand-back", displayTitle: "Sample child hand-back", parentThreadId: "f_parent", isUnread: true, createdAt: 71 }),
+    ];
+    const rendered = renderSlot(inbox, listProps, {
+      pluginId: "wizbar", sidebarThreads: { status: "ready", threads: family, projects: [] },
+      rpc: { listLifecycle: () => ({ rows: [] }) },
+    });
+    await waitFor(() => expect(links()).toEqual(["Sample quiet parent"]));
+    rendered.rerender(createElement(inbox.component, { ...listProps, searchQuery: "hand-back" }));
+    await waitFor(() => expect(screen.getByRole("link", { name: "Sample child hand-back" })).toBeDefined());
   });
 
   // catches: a 0.5 Inbox collapse lost on upgrade, or a write that still stores `inbox`.

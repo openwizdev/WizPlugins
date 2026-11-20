@@ -303,6 +303,30 @@ describe("unreadThreads", () => {
     expect(unreadThreads([child], v4SpecsFile, [child])).toEqual([]);
   });
 
+  // #211 R1: catches a read parent kept out of Unread although a child hidden under it (in the parent's chip)
+  // has something new, so the hand-back is unreachable; or a parent brought in by a child that Unread itself
+  // would keep out (a running spec agent, a fleet loop run), or by a child of another parent.
+  it.each([
+    ["an unread child", { isUnread: true }, "thr_parent", true],
+    ["a child waiting on you", { hasPendingInteraction: true }, "thr_parent", true],
+    ["a read child", {}, "thr_parent", false],
+    ["an unread running spec agent", { isUnread: true, status: "active", runtimeStatus: "active", displayTitle: "Builder · SC-1: Sample borrowed code" }, "thr_parent", false],
+    ["an unread fleet loop run", { isUnread: true, displayTitle: "launch-fleet wakes example/sample-plans" }, "thr_parent", false],
+    ["an unread child of another parent", { isUnread: true }, "thr_other", false],
+  ] as const)("a read parent with %s hidden under it", (_name, changes, parentThreadId, shown) => {
+    const parent = thread({ id: "thr_parent", displayTitle: "Sample quiet parent" });
+    const child = thread({ id: "thr_child", displayTitle: "Sample child", parentThreadId, ...(changes as Partial<PluginSidebarThread>) });
+    expect(unreadThreads([parent], v4SpecsFile, [parent, child], ["example/sample-plans"], [child]).map((t) => t.id))
+      .toEqual(shown ? ["thr_parent"] : []);
+  });
+
+  // catches: a parent Unread keeps out (a fleet wake) brought back in by its unread child.
+  it("keeps a fleet wake out even when a child under it is unread", () => {
+    const parent = thread({ id: "thr_parent", displayTitle: "Fleet #77: Sample cache" });
+    const child = thread({ id: "thr_child", displayTitle: "Sample child", parentThreadId: "thr_parent", isUnread: true });
+    expect(unreadThreads([parent], v4SpecsFile, [parent, child], [], [child])).toEqual([]);
+  });
+
   // catches: an unreadable specs file that hides everything, or one that drops the order it was given.
   it("matches no spec without a specs file, and keeps the order it is given", () => {
     const rows = [
