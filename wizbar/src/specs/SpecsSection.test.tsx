@@ -918,6 +918,30 @@ describe("S2: the Quiet group", () => {
     expect(group(region).getAttribute("aria-expanded")).toBe("true");
   });
 
+  // catches (#201 R1): a spec crossing between the main list and the open group remounting, so keyboard focus
+  // on its row drops to the page. Golf idled exactly 3 days: 1 ms later it is quiet; a running agent brings it back.
+  it("keeps a row's node and keyboard focus when it moves into the open group and back", async () => {
+    const { rendered } = renderV6({ specsOpen: "[\"quiet\"]" });
+    const region = await section();
+    const golf = "example/sample-sort#761";
+    await waitFor(() => expect(order(region)).toEqual([...v6QuietSplit.main, ...v6QuietSplit.quiet]));
+    const row = region.querySelector(`[data-spec="${golf}"]`)!;
+    const github = within(row as HTMLElement).getByRole("button", { name: "Open Sample golf on GitHub" });
+    github.focus();
+    expect(document.activeElement).toBe(github);
+
+    act(() => rendered.lifecycle.rerender(<SpecsSection {...props} threads={v6Threads} now={v6Now + 1} />));
+    expect(order(region)).toEqual([...v6QuietSplit.main.filter((key) => key !== golf), golf, ...v6QuietSplit.quiet]);
+    expect(region.querySelector(`[data-spec="${golf}"]`)).toBe(row);
+    expect(document.activeElement).toBe(github);
+
+    const builder = { ...v6Threads[0]!, id: "thr_v6_golf_builder", title: "Builder · SS763: Sample work", displayTitle: "Builder · SS763: Sample work", updatedAt: v6Now };
+    act(() => rendered.lifecycle.rerender(<SpecsSection {...props} threads={[...v6Threads, builder]} now={v6Now + 1} />));
+    expect(region.querySelector(`[data-spec="${golf}"]`)).toBe(row);
+    expect(order(region).indexOf(golf)).toBeLessThan(order(region).indexOf(v6QuietSplit.quiet[0]));
+    expect(document.activeElement).toBe(github);
+  });
+
   // catches: an empty group header drawn when nothing is quiet.
   it("shows no group when nothing is quiet", async () => {
     render({ settings: { specsOpen: v4OpenSetting }, now: v4Now });
