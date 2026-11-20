@@ -10,7 +10,6 @@ import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import { v4Now, v4SpecRows, v4Threads } from "./fixtures/v4";
 import { ThreadCard } from "./ThreadCard";
 import { AgentRow } from "./specs/AgentRow";
-import { StatsPanel } from "./StatsPanel";
 
 type Served = { model: string | null; effort: string | null };
 const id = "thr_v4_builder_a";
@@ -42,8 +41,9 @@ const surfaces = {
     thread, projectName: null, isActive: false, canPark: false, onNavigate() {}, onSettle() {}, onSnooze() {}, now: v4Now,
   }),
   "agent row": (thread: PluginSidebarThread) => createElement(AgentRow, { agent: { ...agent, updatedAt: thread.updatedAt }, thread, now: v4Now, isActive: false, onNavigate() {} }),
-  "pinned footer card": (thread: PluginSidebarThread) => createElement(StatsPanel, { rows: [thread] }),
 };
+// The pinned footer card reads a thread's model only for a new id, a new turn or after 5 minutes (#172, owner steer);
+// footer-card.test.tsx owns that rule.
 type Surface = keyof typeof surfaces;
 
 /** The host's row for the thread, changed in place so the surface stays mounted. */

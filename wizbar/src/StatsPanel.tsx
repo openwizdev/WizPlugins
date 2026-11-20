@@ -2,8 +2,9 @@
 // (specs-section.v1.md section 7). It shows exactly `wizbar stats --json`
 // for the same rows: `computeStatsV4` over the sidebar rows, the specs file
 // and the served model source. Colours are host theme variables only.
-import { useEffect, useState } from "react";
+import { useEffect, useReducer, useRef, useState, useSyncExternalStore } from "react";
 import {
+  experimental_usePluginId,
   experimental_useSidebarThreadActions as useSidebarThreadActions,
   useRpc,
   useSettings,
@@ -13,13 +14,13 @@ import { modelLabel } from "./card-meta";
 import { harnessName } from "./model-names";
 import { MatrixMark } from "./MatrixMark";
 import { ProviderGlyph } from "./ProviderGlyph";
-import { cardRowLabels, cardSummary, computeStatsV4, isRunning } from "./stats";
+import { cardBatch, cardRowLabels, cardSummary, computeStatsV4, emptyCardBatch, isRunning, type CardThread } from "./stats";
 import { boundHome, readSpecsFile } from "./specs/read";
 import { tokens } from "./specs/theme";
 import type { specsRpcContract } from "./specs/server";
 import type { t3sidebarRpcContract } from "./server";
-import type { SpecsFileReadV4 } from "./fixtures/v4";
-import type { CardModelsResultV3 } from "./v3-types";
+import type { FooterThreadV4, SpecsFileReadV4 } from "./fixtures/v4";
+import type { CardModelsResultV3, CardModelV3 } from "./v3-types";
 
 const REFRESH_MS = 60_000;
 
@@ -48,27 +49,148 @@ function useSpecsRead(): SpecsFileReadV4 | null {
   return read && read.key === key ? read.read : null;
 }
 
+/** How often one thread's model and effort may be read again (owner steer on #175). */
+export const MODEL_REFRESH_MS = 5 * 60_000;
+/** On opening, labels read longer ago than this are read again, in one batch (#175 R3). */
+export const MODEL_REOPEN_MS = 60_000;
+/** A failed read is tried again after this, by the open card's timer (#175 R4). */
+export const MODEL_RETRY_MS = 30_000;
+/** The open card's timer sends at most one batch per this (#175 R4). */
+export const MODEL_SWEEP_MS = 60_000;
+const MODEL_TICK_MS = 10_000;
+
 /**
- * Model and effort for the running threads, from the `cardModels` RPC; null until every batch answers.
- * `revision` (the rows' `updatedAt`) reads again on a newer turn; the last answer stays meanwhile,
- * and a late answer for an older read is ignored (#111 R1).
+ * Model and effort per thread for the session, one cache per plugin (like `gapStore`), so it outlives the
+ * card closing. A thread's model almost never changes: a known label shows at once, and only a host
+ * answer with another value changes it; a null, failed or malformed answer never does.
+ */
+interface ModelCache {
+  labels: Map<string, CardModelV3>;
+  /** When each thread was last asked, answered or not. */
+  readAt: Map<string, number>;
+  /** Threads whose last read failed: rejected, malformed, or a host answer with no model for them. */
+  failed: Set<string>;
+  inFlight: Set<string>;
+  /** The running threads last seen, to tell a new turn (not running, then running). */
+  running: Set<string> | null;
+  /** The open card timer's last batch. */
+  sweptAt: number;
+  version: number;
+  listeners: Set<() => void>;
+}
+const modelCaches = new Map<string, ModelCache>();
+const modelCache = (pluginId: string): ModelCache => {
+  let cache = modelCaches.get(pluginId);
+  if (!cache) {
+    modelCaches.set(pluginId, cache = {
+      labels: new Map(), readAt: new Map(), failed: new Set(), inFlight: new Set(), running: null, sweptAt: -Infinity, version: 0, listeners: new Set(),
+    });
+  }
+  return cache;
+};
+const label = (item: unknown, asked: ReadonlySet<string>): CardModelV3 | null => {
+  if (!item || typeof item !== "object") return null;
+  const { threadId, model, effort } = item as Record<string, unknown>;
+  if (typeof threadId !== "string" || !asked.has(threadId) || typeof model !== "string" || !model.trim()) return null;
+  if (!(effort === null || typeof effort === "string")) return null;
+  return { threadId, model, effort: effort as CardModelV3["effort"] };
+};
+
+/** Reads `ids` (not already being read) in batches of 100 and settles them into the cache. */
+function readModels(cache: ModelCache, rpc: ReturnType<typeof useRpc<typeof t3sidebarRpcContract>>, ids: readonly string[]) {
+  const due = ids.filter((id) => !cache.inFlight.has(id));
+  for (let i = 0; i < due.length; i += 100) {
+    const batch = due.slice(i, i + 100);
+    const asked = new Set(batch);
+    for (const id of batch) cache.inFlight.add(id);
+    // `items` null: the read failed. A host answer with no model for a thread failed for that thread;
+    // `source: "none"` is an answer (no models offered) and fails nothing.
+    const settle = (items: readonly unknown[] | null, host: boolean) => {
+      const answered = new Set<string>();
+      for (const item of items ?? []) {
+        const next = label(item, asked);
+        if (!next) continue;
+        answered.add(next.threadId);
+        const known = cache.labels.get(next.threadId);
+        if (!(known && known.model === next.model && known.effort === next.effort)) cache.labels.set(next.threadId, next);
+      }
+      for (const id of batch) {
+        cache.inFlight.delete(id);
+        cache.readAt.set(id, Date.now());
+        if (answered.has(id) || (items !== null && !host)) cache.failed.delete(id);
+        else cache.failed.add(id);
+      }
+      cache.version++;
+      for (const listener of cache.listeners) listener();
+    };
+    rpc.call("cardModels", { threadIds: batch }).then(
+      (result) => result?.source === "host" && Array.isArray(result.items) ? settle(result.items, true)
+        : result?.source === "none" ? settle([], false) : settle(null, true),
+      () => settle(null, true),
+    );
+  }
+}
+
+/**
+ * Model and effort for the running threads, from the cache. Reads `cardModels` only for a thread not yet
+ * asked, one that starts a new turn, or one last asked `MODEL_REFRESH_MS` ago; never every thread because
+ * the running set or a revision changed (`revision` only wakes the check). Opening the card reads again,
+ * in one batch, labels older than `MODEL_REOPEN_MS`, so a turn missed while it was closed shows (#175 R3).
+ * While it is open, a timer reads old labels and failed ones (after `MODEL_RETRY_MS`), at most one batch
+ * per `MODEL_SWEEP_MS`, with no sidebar change needed (#175 R4).
  */
 function useModels(threadIds: readonly string[], revision: string): CardModelsResultV3 | null {
   const rpc = useRpc<typeof t3sidebarRpcContract>();
-  const [served, setServed] = useState<{ key: string; result: CardModelsResultV3 } | null>(null);
+  const cache = modelCache(experimental_usePluginId());
+  useSyncExternalStore((listener) => { cache.listeners.add(listener); return () => { cache.listeners.delete(listener); }; }, () => cache.version);
   const key = threadIds.join("\n");
+  const latest = useRef(key);
+  latest.current = key;
+  const opened = useRef(false);
   useEffect(() => {
-    let live = true;
-    if (!key) return;
-    const ids = key.split("\n");
-    const batches: string[][] = [];
-    for (let i = 0; i < ids.length; i += 100) batches.push(ids.slice(i, i + 100));
-    Promise.all(batches.map((threadIds) => rpc.call("cardModels", { threadIds }))).then((results) => {
-      if (live) setServed({ key, result: { source: results.every((r) => r.source === "host") ? "host" : "none", items: results.flatMap((r) => r.items) } });
-    }, () => undefined);
-    return () => { live = false; };
-  }, [rpc, key, revision]);
-  return served && served.key === key ? served.result : null;
+    const ids = key ? key.split("\n") : [];
+    const now = Date.now();
+    const age = (id: string) => now - (cache.readAt.get(id) ?? -Infinity);
+    const reopen = !opened.current;
+    opened.current = true;
+    readModels(cache, rpc, ids.filter((id) => age(id) >= (reopen ? MODEL_REOPEN_MS : MODEL_REFRESH_MS) ||
+      (cache.running !== null && !cache.running.has(id))));
+    cache.running = new Set(ids);
+  }, [cache, rpc, key, revision]);
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const now = Date.now();
+      if (now - cache.sweptAt < MODEL_SWEEP_MS) return;
+      const due = (latest.current ? latest.current.split("\n") : []).filter((id) => {
+        const age = now - (cache.readAt.get(id) ?? -Infinity);
+        return !cache.inFlight.has(id) && (age >= MODEL_REFRESH_MS || (cache.failed.has(id) && age >= MODEL_RETRY_MS));
+      });
+      if (due.length === 0) return;
+      cache.sweptAt = now;
+      readModels(cache, rpc, due);
+    }, MODEL_TICK_MS);
+    return () => clearInterval(timer);
+  }, [cache, rpc]);
+  const items = threadIds.flatMap((id) => cache.labels.get(id) ?? []);
+  return items.length > 0 ? { source: "host", items } : null;
+}
+
+/**
+ * The open card's rows, batched (`cardBatch`, R1 #172): a thread that stops running stays, faded, until its
+ * batch is removed, at most once every few seconds. The batch is this mounted card's own.
+ */
+function useCardThreads(threads: readonly FooterThreadV4[] | null): readonly CardThread[] | null {
+  const batch = useRef(emptyCardBatch);
+  const [, wake] = useReducer((n: number) => n + 1, 0);
+  const next = threads ? cardBatch(batch.current, threads, Date.now()) : null;
+  if (next) batch.current = next.batch;
+  const flushAt = next?.flushAt ?? null;
+  useEffect(() => {
+    if (flushAt === null) return;
+    const timer = setTimeout(wake, Math.max(0, flushAt - Date.now()));
+    return () => clearTimeout(timer);
+  }, [flushAt]);
+  return next ? next.batch.threads : null;
 }
 
 const quiet = { margin: 0, color: tokens.mutedText } as const;
@@ -88,7 +210,7 @@ const segmentColour = (providerId: string, index: number): string => providerId 
  * and one line of names, a rule, then one line per running thread. It fills
  * the sidebar width; the hit area around it is inset 8 px.
  */
-export function StatsPanel({ rows }: { rows: readonly PluginSidebarThread[] | null }) {
+export function StatsPanel({ rows, stale = false }: { rows: readonly PluginSidebarThread[] | null; stale?: boolean }) {
   const actions = useSidebarThreadActions();
   const read = useSpecsRead();
   const running = rows?.filter(isRunning) ?? [];
@@ -98,15 +220,16 @@ export function StatsPanel({ rows }: { rows: readonly PluginSidebarThread[] | nu
   const file = specs?.status === "ready" ? specs.file : null;
   const stats = computeStatsV4(rows, file, models, now, Intl.DateTimeFormat().resolvedOptions().timeZone);
   const labels = cardRowLabels(rows ?? [], file, now);
+  const threads = useCardThreads(stats.threads);
   return (
-    <section aria-label="Running threads" style={{
+    <section aria-label="Running threads" data-stale={stale ? "true" : undefined} style={{
       display: "flex", flexDirection: "column", gap: 10, minHeight: 0, boxSizing: "border-box",
       width: "100%", padding: "10px 12px", borderRadius: 10, fontSize: 13, lineHeight: "20px",
       fontVariantNumeric: "tabular-nums", background: "var(--card, #222222)", color: "var(--foreground)", border: `1px solid ${tokens.border}`,
     }}>
       {stats.status !== "ready" ? <p style={quiet}>Stats unavailable</p> : (
         <>
-          <p style={{ ...quiet, flexShrink: 0 }}>{cardSummary(stats)}</p>
+          <p style={{ ...quiet, flexShrink: 0 }}>{cardSummary(stats)}{stale ? " · last known" : ""}</p>
           {stats.harness.length > 0 ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 8, flexShrink: 0 }}>
               <div data-harness-bar="" aria-hidden="true" style={{ display: "flex", gap: 3, height: 4 }}>
@@ -126,10 +249,11 @@ export function StatsPanel({ rows }: { rows: readonly PluginSidebarThread[] | nu
             </div>
           ) : null}
           <ul aria-label="Threads" style={{ ...list, display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: 2, flexShrink: 1, minHeight: 0, overflowY: "auto", alignContent: "start", borderTop: `1px solid ${tokens.border}`, paddingTop: 8, margin: "0 -4px" }}>
-            {stats.threads.map((thread) => {
+            {(threads ?? []).map((thread) => {
               const model = modelLabel(thread.model, thread.effort);
               return (
-                <li key={thread.id} data-thread={thread.id}>
+                <li key={thread.id} data-thread={thread.id} data-leaving={thread.leaving ? "true" : undefined}
+                  style={{ opacity: thread.leaving ? 0.45 : 1, transition: "opacity 300ms" }}>
                   <button type="button" className="bg-transparent hover:bg-sidebar-accent/60 focus-visible:ring-1 focus-visible:ring-inset"
                     style={{ appearance: "none", margin: 0, border: 0, color: "inherit", font: "inherit", textAlign: "left", boxSizing: "border-box", width: "100%", display: "flex", alignItems: "center", gap: 6, minWidth: 0, padding: "0 4px", borderRadius: 4, cursor: "pointer" }}
                     onClick={(event) => actions.open(thread.id, { split: event.metaKey || event.ctrlKey })}>

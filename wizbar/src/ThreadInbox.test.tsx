@@ -781,6 +781,7 @@ describe("WZ16: visible list-bottom running count", () => {
   });
 
   it("honors the footer switch and hides stale numbers on disconnect", async () => {
+    vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] });
     const hidden = renderSlot(inbox, listProps, {
       settings: { footerCountEnabled: false },
       sidebarThreads: { status: "ready", threads: [thread({ indicator: "runtime", runtimeStatus: "active" })] },
@@ -792,8 +793,12 @@ describe("WZ16: visible list-bottom running count", () => {
     const counter = screen.getByRole("status", { name: "1 running" });
     fireEvent.mouseEnter(counter);
     await connected.setRealtimeConnectionState("reconnecting");
+    // #172: a brief gap keeps the last count; past the 5 s hold, with the card closed, it is dropped.
+    expect(screen.getByRole("status", { name: "1 running" })).toBeTruthy();
+    act(() => { vi.advanceTimersByTime(5_000); });
     expect(screen.queryByRole("status", { name: "1 running" })).toBeNull();
     expect(screen.queryByRole("tooltip")).toBeNull();
+    vi.useRealTimers();
   });
 });
 
