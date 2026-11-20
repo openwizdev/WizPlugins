@@ -167,7 +167,7 @@ describe("S4: no bolt; N running with its hover card", () => {
     expect(within(region).getByText(cardSummary(ready))).toBeTruthy();
     expect([...region.querySelectorAll("[data-harness]")].map((el) => [el.getAttribute("data-harness"), el.getAttribute("data-count")]))
       .toEqual(ready.harness.map((h) => [h.providerId, String(h.count)]));
-    await waitFor(() => expect(region.querySelectorAll("[data-spec-name]").length).toBe(4));
+    await waitFor(() => expect(region.querySelectorAll("[data-spec-name]").length).toBe(5));
     const rows = [...region.querySelectorAll("[data-thread]")].map((el) => ({
       id: el.getAttribute("data-thread"), matrix: el.querySelector("[data-matrix]")?.getAttribute("data-matrix"),
       title: el.querySelector("[data-title]")?.textContent, shortName: el.querySelector("[data-spec-name]")?.textContent ?? null,

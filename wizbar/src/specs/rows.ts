@@ -130,8 +130,8 @@ const recent = (ticket: TicketEntryV4, now: number) =>
   ticket.state === "done" && ticket.closedAt !== null && Date.parse(ticket.closedAt) > now - HOUR;
 
 /**
- * Section 2 as 0.5 had it: no tickets, or every ticket done. The hover card and `wizbar spec` still read
- * it; from 0.6 the rows hide only a spec with no tickets, and a finished one is quiet (section 12).
+ * Section 2 as 0.5 had it: no tickets, or every ticket done. Nothing in 0.6 reads it: the rows, the hover
+ * card and `wizbar spec` hide only a spec with no tickets, and a finished one is quiet (sections 3, 8 and 12).
  */
 export function isHidden(spec: SpecEntryV4): boolean {
   return spec.tickets.every((ticket) => ticket.state === "done");
