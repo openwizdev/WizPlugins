@@ -120,7 +120,7 @@ Declared in `wizbarSettingDescriptors` (by WB4-1) with the settings.v1.md store 
 
 ## 5. Matrix status
 
-A small 3 × 3 dot mark on each running thread (inside an open spec, and on the 0.3 running thread cards). Inputs: the row, and in the app only, the row's pull request (`experimental_useSidebarThreadPullRequest(id).pullRequest`; the server has no pull request, so it passes null). First match wins:
+A small 3 × 3 dot mark on each running thread inside an open spec, on the footer's running line and in its hover card. Thread cards no longer show one (0.5). Inputs: the row, and in the app only, the row's pull request (`experimental_useSidebarThreadPullRequest(id).pullRequest`; the server has no pull request, so it passes null). First match wins:
 
 | State | Rule |
 | --- | --- |
@@ -133,7 +133,7 @@ A small 3 × 3 dot mark on each running thread (inside an open spec, and on the 
 | `done` | Pull request `merged` |
 | `idle` | Otherwise |
 
-A running row is working and not waiting, so it never shows `needs-you`, and it still counts as running when it shows `failed`: inside a spec, in the hover card and in `wizbar stats --json`, a running row shows `failed` (an error status or failed queued work), else `reviewing` or `working`. The server and the app compute these rows alike, so the CLI and the app agree there. The pull-request states appear only on 0.3 cards in the app.
+A running row is working and not waiting, so it never shows `needs-you`, and it still counts as running when it shows `failed`: inside a spec, in the hover card and in `wizbar stats --json`, a running row shows `failed` (an error status or failed queued work), else `reviewing` or `working`. The server and the app compute these rows alike, so the CLI and the app agree there. Since cards no longer show a mark, every caller passes null and the pull-request states are not shown (0.5).
 
 **Marks** (0.5: quiet grey marks, idea credited to Conductor's workspace status matrix). Each mark is 3 × 3 dots in an 11 px square. Masks are row-major, `1` lit, and give the still pattern. Unlit dots are dim, a visible grey. No mark uses the accent: only needs you, failed and done are coloured.
 
