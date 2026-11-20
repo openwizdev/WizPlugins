@@ -5,8 +5,9 @@ import { z } from "zod";
 import { homeRootProblem, readDeckFactories } from "../deck/data/binding";
 import type { SpecsFileReadV4, SpecsFileV4, SpecsReadV4 } from "../fixtures/v4";
 
-/** Where the specs file lives, relative to the bound factory's home root. */
+/** Where the specs files live, relative to the bound factory's home root: v2 first, then v1 (#164 R1). */
 export const specsRelativePath = ".openwiz/specs.v1.json";
+export const specsRelativePathV2 = ".openwiz/specs.v2.json";
 export const specsSchemaId = "openwiz.specs.v1";
 /** v2 (#162) is v1 plus the `yours-later` ticket state; WizBar reads both, whichever the producer writes. */
 export const specsSchemaIdV2 = "openwiz.specs.v2";
@@ -97,6 +98,18 @@ function hasRepeatedKey(content: string): boolean {
     i += 1;
   }
   return false;
+}
+
+/**
+ * Which of the two reads WizBar shows (#164 R1): `specs.v2.json` when it reads ready at `now`, else
+ * `specs.v1.json` when that does; otherwise v2's read, or v1's when v2 is missing, so the reason names
+ * the file that is there. Pass `v1` as a function so it is read only when v2 is not usable.
+ */
+export async function pickSpecsRead(v2: SpecsFileReadV4, v1: () => Promise<SpecsFileReadV4>, now: number): Promise<SpecsFileReadV4> {
+  if (readSpecsFile(v2, now).status === "ready") return v2;
+  const fallback = await v1();
+  if (readSpecsFile(fallback, now).status === "ready" || v2.kind === "missing") return fallback;
+  return v2;
 }
 
 /** Section 1's reading table, first match wins. Every failure is unavailable, never zero. */

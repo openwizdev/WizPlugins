@@ -1,6 +1,6 @@
 # Specs producer
 
-Writes `.openwiz/specs.v1.json` under your factory home, the file WizBar's Specs section reads, with schema `openwiz.specs.v2` (v1 plus the later state, #162) ([contract section 1](../../contracts/specs-section.v1.md#1-the-specs-file)). It reads GitHub through your local `gh` login (REST only) and needs nothing else: Node 24 and `gh`, no packages.
+Writes two files under your factory home, the files WizBar's Specs section reads: `.openwiz/specs.v2.json` (schema `openwiz.specs.v2`, v1 plus the later state, #162) and `.openwiz/specs.v1.json` (schema `openwiz.specs.v1`, exactly as before #162, a later ticket written as `needs-you`). A WizBar from #162 on reads v2 first; an older WizBar reads v1. So the producer and WizBar can be updated in either order. Both files come from the same scan and are written together or not at all (#164 R1) ([contract section 1](../../contracts/specs-section.v1.md#1-the-specs-file)). It reads GitHub through your local `gh` login (REST only) and needs nothing else: Node 24 and `gh`, no packages.
 
 Each run is one complete scan. For each repository it reads the open issues (an issue with sub-issues is a running spec) and the open pull requests, then each spec's sub-issues (its tickets). Each page is a conditional request with the ETag and the page kept in `.openwiz/specs.v1.etags.json`, so an unchanged page costs nothing against GitHub's rate limit: GitHub answers it `304 Not Modified`, which still counts as one of the run's 59 requests. The file is written whole (temp file, then rename) with `generatedAt` the run's time, or not at all: any failed read, or a scan that would need more than 59 requests, writes nothing, keeps the last file and exits 1 naming the reason. A repository you remove from `--repo` is gone from the file and the cache after the next successful run.
 
@@ -28,7 +28,7 @@ Use the factory home and repositories of your WizDeck factory binding (the `wizd
 node wizbar/tools/specs-producer/producer.ts --home /path/to/factory-home --repo owner/name [--repo owner/other] [--gh /path/to/gh]
 ```
 
-It prints `wrote …/.openwiz/specs.v1.json: N specs, M requests (K unchanged)`, for example `25 specs, 31 requests (29 unchanged)`. `K` is how many of the `M` requests GitHub answered 304 unchanged: they count toward the 59-request budget, but not toward GitHub's rate limit. `--gh` is the `gh` to run, by default `gh` on `PATH`; a missing `gh` fails, keeps the last file and names `--gh` and `PATH`. WizBar calls a file older than 30 minutes stale, so run it on a timer.
+It prints `wrote …/.openwiz/specs.v2.json and …/.openwiz/specs.v1.json: N specs, M requests (K unchanged)`, for example `25 specs, 31 requests (29 unchanged)`. `K` is how many of the `M` requests GitHub answered 304 unchanged: they count toward the 59-request budget, but not toward GitHub's rate limit. `--gh` is the `gh` to run, by default `gh` on `PATH`; a missing `gh` fails, keeps the last file and names `--gh` and `PATH`. WizBar calls a file older than 30 minutes stale, so run it on a timer.
 
 ## Run it every 10 minutes (systemd user timer)
 
@@ -72,7 +72,7 @@ rm ~/.config/systemd/user/wizbar-specs.service ~/.config/systemd/user/wizbar-spe
 systemctl --user daemon-reload
 ```
 
-The last specs file stays until you delete `.openwiz/specs.v1.json` and `.openwiz/specs.v1.etags.json`; WizBar then shows "Specs unavailable".
+The last specs file stays until you delete `.openwiz/specs.v2.json`, `.openwiz/specs.v1.json` and `.openwiz/specs.v1.etags.json`; WizBar then shows "Specs unavailable".
 
 ## Tests
 

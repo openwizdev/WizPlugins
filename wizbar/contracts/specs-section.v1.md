@@ -17,13 +17,13 @@ Shapes and synthetic fixtures with hand-worked expected values: `src/fixtures/v4
 
 The factory map's specs file lists the running specs and their tickets. Its producer runs on the owner's computer and refreshes it every 10 minutes. This contract fixes the format WizBar reads. The producer is `wizbar/tools/specs-producer/` (0.5.0 A, openwizdev/WizPlugins#110; its README says how it reads GitHub and how to run it on a timer); installing it on the owner's computer stays the owner's step.
 
-**Location and read.** UTF-8 JSON at `.openwiz/specs.v1.json`, relative to `home.rootPath` of the one factory bound in the `wizdeckFactories` setting (factory-view.v1.md section 1). WizBar's server reads it with `bb.sdk.files.read({ hostId, rootPath, path })`, the factory contract's read, at most once per 60-second shared refresh. `path` is the absolute path, `rootPath` joined with the relative path (a Windows root joins with `\`): a real host refuses a relative `path` with HTTP 400 "Path must be absolute" (#153). The host may report the read's path in either form, relative or absolute. With no bound factory, or more than one, the result is unavailable (`no-binding`).
+**Location and read.** Two UTF-8 JSON files (#164 R1): `.openwiz/specs.v2.json` (schema v2) and `.openwiz/specs.v1.json` (schema v1, a later ticket written as `needs-you`, as before #162), relative to `home.rootPath` of the one factory bound in the `wizdeckFactories` setting (factory-view.v1.md section 1). The producer writes both from one scan, together or not at all. WizBar's server reads them with `bb.sdk.files.read({ hostId, rootPath, path })`, the factory contract's read, at most once per 60-second shared refresh. **Which wins:** `specs.v2.json` when it reads `ready` (the table below); otherwise `specs.v1.json` when that reads `ready`. When neither does, the result is v2's, or v1's when `specs.v2.json` is missing, so the reason names the file that is there. A WizBar from before #162 reads only `specs.v1.json`, so either upgrade order keeps Specs available. `path` is the absolute path, `rootPath` joined with the relative path (a Windows root joins with `\`): a real host refuses a relative `path` with HTTP 400 "Path must be absolute" (#153). The host may report the read's path in either form, relative or absolute. With no bound factory, or more than one, the result is unavailable (`no-binding`).
 
 **Fields** (`SpecsFileV4`). Every object is closed: an unknown field is malformed.
 
 | Field | Rule |
 | --- | --- |
-| `schema` | `openwiz.specs.v1` or `openwiz.specs.v2` (#162). v2 is v1 plus the `yours-later` ticket state; the 0.5.x producer writes v2, and WizBar reads both, so the upgrade order does not matter |
+| `schema` | `openwiz.specs.v1` or `openwiz.specs.v2` (#162). v2 is v1 plus the `yours-later` ticket state; `specs.v2.json` holds v2 and `specs.v1.json` holds v1 |
 | `generatedAt` | UTC ISO timestamp ending `Z`: when the producer wrote the file. The 0.5.0 producer writes a file only from one complete scan, so this is also when all its data was read |
 | `specs` | The running specs, in the producer's order; may be empty |
 

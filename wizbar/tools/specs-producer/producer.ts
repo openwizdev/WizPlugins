@@ -1,6 +1,7 @@
-// The specs producer (openwizdev/WizPlugins#110): writes `.openwiz/specs.v1.json`
-// under the bound factory home, in the format of specs-section.v1.md section 1
-// (schema `openwiz.specs.v2` since #162: v1 plus the `yours-later` state),
+// The specs producer (openwizdev/WizPlugins#110): writes `.openwiz/specs.v2.json`
+// (v1 plus the `yours-later` state, #162) and `.openwiz/specs.v1.json` (v1, a later
+// ticket as needs-you, for a WizBar from before #162) under the bound factory home,
+// in the format of specs-section.v1.md section 1,
 // from GitHub's REST API through the local `gh` login. Node's standard library
 // only; run it with Node 24 (`node producer.ts --home <dir> --repo <owner/name> [--gh <path>]`).
 //
@@ -13,7 +14,7 @@
 // last file stays and the run exits 1 naming the reason. Otherwise the file is
 // written whole (temp file, then rename) with `generatedAt` the run's time.
 import { execFile } from "node:child_process";
-import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { link, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -24,7 +25,10 @@ export type GitHubRequest = (path: string, etag: string | null) => Promise<GitHu
 /** `unchanged`: requests GitHub answered 304. They count toward `BUDGET`, not toward GitHub's rate limit. */
 export type RunResult = { ok: true; calls: number; specs: number; unchanged: number } | { ok: false; calls: number; error: string };
 
+/** v1 as before #162, a later ticket written as needs-you, so a WizBar from before #162 keeps working (#164 R1). */
 export const OUTPUT = join(".openwiz", "specs.v1.json");
+/** v2 (#162): due now and later apart. A WizBar from #162 on reads it first. */
+export const OUTPUT_V2 = join(".openwiz", "specs.v2.json");
 export const CACHE = join(".openwiz", "specs.v1.etags.json");
 /** Requests per run (the ticket's "under 60"). A scan that needs more fails loudly. */
 export const BUDGET = 59;
@@ -97,14 +101,41 @@ async function readCache(path: string): Promise<Record<string, CacheEntry>> {
   return {};
 }
 
-async function writeAtomically(path: string, text: string): Promise<void> {
-  const temp = `${path}.${process.pid}.tmp`;
+/**
+ * Every file whole (temp file, then rename), or none (#164 R1): all temp files are written first, and when
+ * a later rename fails, the files already renamed go back to their last contents (kept as hard links).
+ */
+async function writeAllOrNothing(files: readonly (readonly [path: string, text: string])[]): Promise<void> {
+  const temp = (path: string) => `${path}.${process.pid}.tmp`;
+  const kept = (path: string) => `${path}.${process.pid}.last`;
+  const renamed: { path: string; hadLast: boolean }[] = [];
   try {
-    await writeFile(temp, text, "utf8");
-    await rename(temp, path);
+    for (const [path, text] of files) await writeFile(temp(path), text, "utf8");
+    try {
+      for (const [path] of files) {
+        let hadLast = true;
+        await link(path, kept(path)).catch((error: { code?: unknown }) => {
+          if (error?.code !== "ENOENT") throw error;
+          hadLast = false;
+        });
+        await rename(temp(path), path);
+        renamed.push({ path, hadLast });
+      }
+    } catch (error) {
+      for (const { path, hadLast } of renamed.reverse()) await (hadLast ? rename(kept(path), path) : rm(path, { force: true }));
+      throw error;
+    }
   } finally {
-    await rm(temp, { force: true });
+    for (const [path] of files) {
+      await rm(temp(path), { force: true });
+      await rm(kept(path), { force: true });
+    }
   }
+}
+
+/** The v1 file: v2 with every later ticket as needs-you, as the producer wrote it before #162. */
+function asV1(specs: Spec[]): Spec[] {
+  return specs.map((spec) => ({ ...spec, tickets: spec.tickets.map((t) => (t.state === "yours-later" ? { ...t, state: "needs-you" as const } : t)) }));
 }
 
 const text = (value: unknown): string => (typeof value === "string" ? value : "");
@@ -222,8 +253,11 @@ export async function runOnce(options: { home: string; repositories: readonly st
     }
     const generatedAt = (options.now?.() ?? new Date()).toISOString().replace(/\.\d+Z$/, "Z");
     await mkdir(join(options.home, ".openwiz"), { recursive: true });
-    await writeAtomically(join(options.home, OUTPUT), `${JSON.stringify({ schema: "openwiz.specs.v2", generatedAt, specs }, null, 2)}\n`);
-    await writeAtomically(cachePath, JSON.stringify({ version: 4, pages: reader.pages } satisfies Cache));
+    await writeAllOrNothing([
+      [join(options.home, OUTPUT), `${JSON.stringify({ schema: "openwiz.specs.v1", generatedAt, specs: asV1(specs) }, null, 2)}\n`],
+      [join(options.home, OUTPUT_V2), `${JSON.stringify({ schema: "openwiz.specs.v2", generatedAt, specs }, null, 2)}\n`],
+    ]);
+    await writeAllOrNothing([[cachePath, JSON.stringify({ version: 4, pages: reader.pages } satisfies Cache)]]);
     return { ok: true, calls: reader.calls, specs: specs.length, unchanged: reader.unchanged };
   } catch (error) {
     return { ok: false, calls: reader.calls, error: error instanceof Error ? error.message : String(error) };
@@ -276,7 +310,7 @@ async function main(argv: readonly string[]): Promise<void> {
   }
   if (home === null || repositories.length === 0) usage();
   const result = await runOnce({ home, repositories, request: ghRequest(gh) });
-  if (result.ok) process.stdout.write(`wrote ${join(home, OUTPUT)}: ${result.specs} specs, ${result.calls} requests (${result.unchanged} unchanged)\n`);
+  if (result.ok) process.stdout.write(`wrote ${join(home, OUTPUT_V2)} and ${join(home, OUTPUT)}: ${result.specs} specs, ${result.calls} requests (${result.unchanged} unchanged)\n`);
   else process.stderr.write(`kept the last file: ${result.error} (${result.calls} requests)\n`);
   process.exitCode = result.ok ? 0 : 1;
 }

@@ -66,11 +66,17 @@ afterEach(async () => {
 describe("wizbar specs (section 8)", () => {
   // catches: a CLI reader that drops the provider, the parent or hidden rows, or reads another path or host.
   it("prints the contract's rows as JSON, read from the bound factory's specs file", async () => {
-    const cli = await setup();
+    // A producer from before #162 wrote only specs.v1.json: WizBar tries specs.v2.json, then reads it (#164 R1).
+    const v1Only: Read = async (args) => {
+      if (args.path.endsWith("specs.v2.json")) throw Object.assign(new Error("gone"), { status: 404 });
+      return contentRead(v4SpecsFileText)(args);
+    };
+    const cli = await setup({ read: v1Only });
     expect(await cli.json(["specs"])).toEqual({ exitCode: 0, body: v4SpecRows });
-    expect(cli.read).toHaveBeenCalledWith(expect.objectContaining({
-      hostId: "hst_v4_home", rootPath: "/synthetic/home", path: "/synthetic/home/.openwiz/specs.v1.json",
-    }));
+    expect(cli.read.mock.calls.map(([args]) => args)).toEqual([
+      expect.objectContaining({ hostId: "hst_v4_home", rootPath: "/synthetic/home", path: "/synthetic/home/.openwiz/specs.v2.json" }),
+      expect.objectContaining({ hostId: "hst_v4_home", rootPath: "/synthetic/home", path: "/synthetic/home/.openwiz/specs.v1.json" }),
+    ]);
   });
 
   // catches: text that shows zero parts, or omits the running count of a spec with agents.
