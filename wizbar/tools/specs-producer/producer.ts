@@ -1,5 +1,7 @@
-// The specs producer (openwizdev/WizPlugins#110): writes `.openwiz/specs.v1.json`
-// under the bound factory home, in the format of specs-section.v1.md section 1,
+// The specs producer (openwizdev/WizPlugins#110): writes `.openwiz/specs.v2.json`
+// (v1 plus the `yours-later` state, #162) and `.openwiz/specs.v1.json` (v1, a later
+// ticket as needs-you, for a WizBar from before #162) under the bound factory home,
+// in the format of specs-section.v1.md section 1,
 // from GitHub's REST API through the local `gh` login. Node's standard library
 // only; run it with Node 24 (`node producer.ts --home <dir> --repo <owner/name> [--gh <path>]`).
 //
@@ -12,7 +14,7 @@
 // last file stays and the run exits 1 naming the reason. Otherwise the file is
 // written whole (temp file, then rename) with `generatedAt` the run's time.
 import { execFile } from "node:child_process";
-import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { link, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -23,12 +25,15 @@ export type GitHubRequest = (path: string, etag: string | null) => Promise<GitHu
 /** `unchanged`: requests GitHub answered 304. They count toward `BUDGET`, not toward GitHub's rate limit. */
 export type RunResult = { ok: true; calls: number; specs: number; unchanged: number } | { ok: false; calls: number; error: string };
 
+/** v1 as before #162, a later ticket written as needs-you, so a WizBar from before #162 keeps working (#164 R1). */
 export const OUTPUT = join(".openwiz", "specs.v1.json");
+/** v2 (#162): due now and later apart. A WizBar from #162 on reads it first. */
+export const OUTPUT_V2 = join(".openwiz", "specs.v2.json");
 export const CACHE = join(".openwiz", "specs.v1.etags.json");
 /** Requests per run (the ticket's "under 60"). A scan that needs more fails loudly. */
 export const BUDGET = 59;
 
-type State = "done" | "building" | "review" | "needs-you" | "held" | "not-started";
+type State = "done" | "building" | "review" | "needs-you" | "yours-later" | "held" | "not-started";
 interface Ticket { ticket: string; code: string | null; title: string; state: State; closedAt: string | null; pulls: number[] }
 interface Spec { spec: string; shortName: string; url: string; fleetThreadId: null; tickets: Ticket[] }
 
@@ -70,10 +75,12 @@ class ReadFailed extends Error {}
 function slim(item: unknown): Record<string, unknown> {
   const raw = (typeof item === "object" && item !== null ? item : {}) as Record<string, unknown>;
   const summary = raw.sub_issues_summary as { total?: unknown } | undefined;
+  const dependencies = raw.issue_dependencies_summary as { blocked_by?: unknown } | undefined;
   return {
     number: raw.number, title: raw.title, state: raw.state, state_reason: raw.state_reason, closed_at: raw.closed_at,
     labels: Array.isArray(raw.labels) ? raw.labels.map((l) => (typeof l === "string" ? l : (l as { name?: unknown })?.name)) : [],
-    repository_url: raw.repository_url, sub_issues_summary: { total: summary?.total }, pull_request: raw.pull_request ? true : undefined,
+    repository_url: raw.repository_url, sub_issues_summary: { total: summary?.total },
+    issue_dependencies_summary: { blocked_by: dependencies?.blocked_by }, pull_request: raw.pull_request ? true : undefined,
     draft: raw.draft, body: typeof raw.body === "string" ? [...raw.body.matchAll(closing)].map((m) => m[0]).join("\n") : null,
   };
 }
@@ -81,33 +88,66 @@ function slim(item: unknown): Record<string, unknown> {
 /** One cached page from the last successful run: its ETag, link and slimmed items. */
 interface CacheEntry { etag: string; next: string | null; body: Record<string, unknown>[] }
 /** The cache file: exactly the pages of the last successful scan, so an unbound repository leaves no trace. */
-interface Cache { version: 3; pages: Record<string, CacheEntry> }
+interface Cache { version: 4; pages: Record<string, CacheEntry> }
 
 async function readCache(path: string): Promise<Record<string, CacheEntry>> {
   try {
     const parsed = JSON.parse(await readFile(path, "utf8")) as Partial<Cache> | null;
-    // An older cache format starts again with unconditional reads.
-    if (parsed?.version === 3 && typeof parsed.pages === "object" && parsed.pages !== null) return parsed.pages;
+    // An older cache format starts again with unconditional reads (version 3 kept no blockers, #162).
+    if (parsed?.version === 4 && typeof parsed.pages === "object" && parsed.pages !== null) return parsed.pages;
   } catch {
     // No cache, or an unreadable one.
   }
   return {};
 }
 
-async function writeAtomically(path: string, text: string): Promise<void> {
-  const temp = `${path}.${process.pid}.tmp`;
+/**
+ * Every file whole (temp file, then rename), or none (#164 R1): all temp files are written first, and when
+ * a later rename fails, the files already renamed go back to their last contents (kept as hard links).
+ */
+async function writeAllOrNothing(files: readonly (readonly [path: string, text: string])[]): Promise<void> {
+  const temp = (path: string) => `${path}.${process.pid}.tmp`;
+  const kept = (path: string) => `${path}.${process.pid}.last`;
+  const renamed: { path: string; hadLast: boolean }[] = [];
   try {
-    await writeFile(temp, text, "utf8");
-    await rename(temp, path);
+    for (const [path, text] of files) await writeFile(temp(path), text, "utf8");
+    try {
+      for (const [path] of files) {
+        let hadLast = true;
+        await link(path, kept(path)).catch((error: { code?: unknown }) => {
+          if (error?.code !== "ENOENT") throw error;
+          hadLast = false;
+        });
+        await rename(temp(path), path);
+        renamed.push({ path, hadLast });
+      }
+    } catch (error) {
+      for (const { path, hadLast } of renamed.reverse()) await (hadLast ? rename(kept(path), path) : rm(path, { force: true }));
+      throw error;
+    }
   } finally {
-    await rm(temp, { force: true });
+    for (const [path] of files) {
+      await rm(temp(path), { force: true });
+      await rm(kept(path), { force: true });
+    }
   }
+}
+
+/** The v1 file: v2 with every later ticket as needs-you, as the producer wrote it before #162. */
+function asV1(specs: Spec[]): Spec[] {
+  return specs.map((spec) => ({ ...spec, tickets: spec.tickets.map((t) => (t.state === "yours-later" ? { ...t, state: "needs-you" as const } : t)) }));
 }
 
 const text = (value: unknown): string => (typeof value === "string" ? value : "");
 const repositoryOf = (issue: Record<string, unknown>, fallback: string) =>
   text(issue.repository_url).replace(/^https:\/\/api\.github\.com\/repos\//, "") || fallback;
 const labelsOf = (issue: Record<string, unknown>) => new Set((Array.isArray(issue.labels) ? issue.labels : []).map(text));
+
+/** Open blockers from the sub-issues answer's own `issue_dependencies_summary` (#162), so no extra request. */
+function openBlockers(issue: Record<string, unknown>): number {
+  const count = (issue.issue_dependencies_summary as { blocked_by?: unknown } | undefined)?.blocked_by;
+  return typeof count === "number" && Number.isFinite(count) ? count : 0;
+}
 
 type PullIndex = Map<string, { number: number; draft: boolean }[]>;
 
@@ -121,7 +161,8 @@ function ticketOf(issue: Record<string, unknown>, repository: string, pulls: Pul
   const open = pulls.get(key.toLowerCase()) ?? [];
   let state: State = "not-started";
   if (closed) state = "done";
-  else if (labels.has("ready-for-human")) state = "needs-you";
+  // The owner's ticket is due now unless the record names an open blocker (#162); a title is never read for it.
+  else if (labels.has("ready-for-human")) state = openBlockers(issue) > 0 ? "yours-later" : "needs-you";
   else if (labels.has("held") || labels.has("needs-info")) state = "held";
   else if (open.some((p) => !p.draft)) state = "review";
   else if (open.length > 0) state = "building";
@@ -212,8 +253,11 @@ export async function runOnce(options: { home: string; repositories: readonly st
     }
     const generatedAt = (options.now?.() ?? new Date()).toISOString().replace(/\.\d+Z$/, "Z");
     await mkdir(join(options.home, ".openwiz"), { recursive: true });
-    await writeAtomically(join(options.home, OUTPUT), `${JSON.stringify({ schema: "openwiz.specs.v1", generatedAt, specs }, null, 2)}\n`);
-    await writeAtomically(cachePath, JSON.stringify({ version: 3, pages: reader.pages } satisfies Cache));
+    await writeAllOrNothing([
+      [join(options.home, OUTPUT), `${JSON.stringify({ schema: "openwiz.specs.v1", generatedAt, specs: asV1(specs) }, null, 2)}\n`],
+      [join(options.home, OUTPUT_V2), `${JSON.stringify({ schema: "openwiz.specs.v2", generatedAt, specs }, null, 2)}\n`],
+    ]);
+    await writeAllOrNothing([[cachePath, JSON.stringify({ version: 4, pages: reader.pages } satisfies Cache)]]);
     return { ok: true, calls: reader.calls, specs: specs.length, unchanged: reader.unchanged };
   } catch (error) {
     return { ok: false, calls: reader.calls, error: error instanceof Error ? error.message : String(error) };
@@ -266,7 +310,7 @@ async function main(argv: readonly string[]): Promise<void> {
   }
   if (home === null || repositories.length === 0) usage();
   const result = await runOnce({ home, repositories, request: ghRequest(gh) });
-  if (result.ok) process.stdout.write(`wrote ${join(home, OUTPUT)}: ${result.specs} specs, ${result.calls} requests (${result.unchanged} unchanged)\n`);
+  if (result.ok) process.stdout.write(`wrote ${join(home, OUTPUT_V2)} and ${join(home, OUTPUT)}: ${result.specs} specs, ${result.calls} requests (${result.unchanged} unchanged)\n`);
   else process.stderr.write(`kept the last file: ${result.error} (${result.calls} requests)\n`);
   process.exitCode = result.ok ? 0 : 1;
 }

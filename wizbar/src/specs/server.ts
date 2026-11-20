@@ -1,5 +1,5 @@
 // The specs reader on WizBar's server (WB4-1, openwizdev/OpenWiz#1435):
-// specs-section.v1.md section 1. It reads one file, `.openwiz/specs.v1.json`,
+// specs-section.v1.md section 1. It reads `.openwiz/specs.v2.json`, else `.openwiz/specs.v1.json` (#164 R1),
 // under the home of the one factory bound in `wizdeckFactories`, at most once
 // per 60-second shared refresh, and serves the raw read to the app (through
 // `specsRpcContract`) and to `wizbar specs`. Both judge it with
@@ -12,7 +12,7 @@ import type { SpecsFileReadV4 } from "../fixtures/v4";
 import type { CardModelsResultV3 } from "../v3-types";
 import { createSpecsCommands, type SpecsCommands } from "./cli";
 import { isReportedPath, pathInRoot } from "../deck/data/binding";
-import { boundHome, specsRelativePath } from "./read";
+import { boundHome, pickSpecsRead, specsRelativePath, specsRelativePathV2 } from "./read";
 import type { SpecsThreadRow } from "./rows";
 
 const REFRESH_MS = 60_000;
@@ -40,7 +40,7 @@ const statusOf = (error: unknown): unknown =>
   typeof error === "object" && error !== null ? (error as { status?: unknown }).status ?? (error as { code?: unknown }).code : undefined;
 
 /** One read of the specs file through the host's file API, every failure named. */
-async function readOnce(read: BbPluginApi["sdk"]["files"]["read"], hostId: string, rootPath: string, signal?: AbortSignal): Promise<SpecsFileReadV4> {
+async function readOnce(read: BbPluginApi["sdk"]["files"]["read"], hostId: string, rootPath: string, specsRelativePath: string, signal?: AbortSignal): Promise<SpecsFileReadV4> {
   let result: Awaited<ReturnType<typeof read>>;
   try {
     // The host refuses a relative path with 400 "Path must be absolute" (#153).
@@ -134,7 +134,8 @@ export function registerSpecs(bb: BbPluginApi, handles: Handles): SpecsCommands 
     const key = `${hostId}|${rootPath}`;
     const now = Date.now();
     if (!cached || cached.key !== key || now - cached.at >= REFRESH_MS || now < cached.at) {
-      cached = { key, at: now, read: readOnce(bb.sdk.files.read, hostId, rootPath) };
+      const read = (path: string) => readOnce(bb.sdk.files.read, hostId, rootPath, path);
+      cached = { key, at: now, read: Promise.all([read(specsRelativePathV2), read(specsRelativePath)]).then(([v2, v1]) => pickSpecsRead(v2, v1, now)) };
     }
     return cached.read;
   };

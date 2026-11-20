@@ -7,7 +7,7 @@ import { createFakePluginHost, type FakePluginHost } from "@get-bb/plugin-sdk/te
 import type { BbPluginApi } from "@get-bb/plugin-sdk";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import plugin from "../server";
-import { v4Now, v4OpenSetting, v4SpecOpenCases, v4SpecRows, v4SpecsFile, v4SpecsFileText, v4Threads } from "../fixtures/v4";
+import { v4Now, v4OpenSetting, v4SpecOpenCases, v4SpecRows, v4SpecRowsV2, v4SpecsFile, v4SpecsFileText, v4SpecsFileV2Text, v4Threads } from "../fixtures/v4";
 import { effectiveOpen, readOpenKeys } from "./open-state";
 import { rawRow } from "./testing";
 
@@ -66,11 +66,17 @@ afterEach(async () => {
 describe("wizbar specs (section 8)", () => {
   // catches: a CLI reader that drops the provider, the parent or hidden rows, or reads another path or host.
   it("prints the contract's rows as JSON, read from the bound factory's specs file", async () => {
-    const cli = await setup();
+    // A producer from before #162 wrote only specs.v1.json: WizBar tries specs.v2.json, then reads it (#164 R1).
+    const v1Only: Read = async (args) => {
+      if (args.path.endsWith("specs.v2.json")) throw Object.assign(new Error("gone"), { status: 404 });
+      return contentRead(v4SpecsFileText)(args);
+    };
+    const cli = await setup({ read: v1Only });
     expect(await cli.json(["specs"])).toEqual({ exitCode: 0, body: v4SpecRows });
-    expect(cli.read).toHaveBeenCalledWith(expect.objectContaining({
-      hostId: "hst_v4_home", rootPath: "/synthetic/home", path: "/synthetic/home/.openwiz/specs.v1.json",
-    }));
+    expect(cli.read.mock.calls.map(([args]) => args)).toEqual([
+      expect.objectContaining({ hostId: "hst_v4_home", rootPath: "/synthetic/home", path: "/synthetic/home/.openwiz/specs.v2.json" }),
+      expect.objectContaining({ hostId: "hst_v4_home", rootPath: "/synthetic/home", path: "/synthetic/home/.openwiz/specs.v1.json" }),
+    ]);
   });
 
   // catches: text that shows zero parts, or omits the running count of a spec with agents.
@@ -79,6 +85,18 @@ describe("wizbar specs (section 8)", () => {
     expect(await cli.run(["specs"])).toEqual({ exitCode: 0, stderr: "", stdout: [
       "Specs 2 · 2 need you",
       "example/sample-plans#501 Sample palette: 4/10 · 1 done in the last hour · 1 needs you · 4 running",
+      "example/sample-tools#77 Sample cache: 0/3 · 1 needs you",
+      "",
+    ].join("\n") });
+  });
+
+  // catches (#162): a v2 file refused, or its later tickets missing from the JSON, folded into needs you, or left out of the text.
+  it("prints later tickets apart from needs you, in JSON and text", async () => {
+    const cli = await setup({ text: v4SpecsFileV2Text });
+    expect(await cli.json(["specs"])).toEqual({ exitCode: 0, body: v4SpecRowsV2 });
+    expect(await cli.run(["specs"])).toEqual({ exitCode: 0, stderr: "", stdout: [
+      "Specs 2 · 2 need you",
+      "example/sample-plans#501 Sample palette: 4/11 · 1 done in the last hour · 1 needs you · 1 later · 4 running",
       "example/sample-tools#77 Sample cache: 0/3 · 1 needs you",
       "",
     ].join("\n") });
@@ -111,15 +129,17 @@ describe("wizbar specs (section 8)", () => {
   });
 
   // catches: a file read on every call instead of at most once per 60-second shared refresh.
-  it("reads the file at most once a minute", async () => {
+  // #164 R3: each refresh reads both files once, so the newer one can win.
+  it("reads the files at most once a minute", async () => {
     const cli = await setup();
+    const paths = () => cli.read.mock.calls.map(([args]) => (args as { path: string }).path.replace("/synthetic/home/.openwiz/", ""));
     await cli.run(["specs"]);
     vi.setSystemTime(v4Now + 59_999);
     await cli.run(["specs"]);
-    expect(cli.read).toHaveBeenCalledTimes(1);
+    expect(paths().sort()).toEqual(["specs.v1.json", "specs.v2.json"]);
     vi.setSystemTime(v4Now + 60_000);
     await cli.run(["specs"]);
-    expect(cli.read).toHaveBeenCalledTimes(2);
+    expect(paths().sort()).toEqual(["specs.v1.json", "specs.v1.json", "specs.v2.json", "specs.v2.json"]);
   });
 
   // catches: a failed settings read crashing the command instead of failing closed.

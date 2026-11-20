@@ -175,6 +175,7 @@ export function specRows(file: SpecsFileV4, rows: readonly SpecsThreadRow[], ope
       total: spec.tickets.length,
       doneLastHour: spec.tickets.filter((t) => recent(t, now)).length,
       needsYou: spec.tickets.filter((t) => t.state === "needs-you").length,
+      yoursLater: spec.tickets.filter((t) => t.state === "yours-later").length,
       open: openKeys.includes(spec.spec),
       dots: order.map(({ ticket, state }) => ({ ticket: ticket.ticket, code: ticket.code, state })),
       agents: (agents.get(spec) ?? []).sort((a, b) => a.createdAt - b.createdAt || (a.threadId < b.threadId ? -1 : a.threadId > b.threadId ? 1 : 0)),
@@ -182,11 +183,12 @@ export function specRows(file: SpecsFileV4, rows: readonly SpecsThreadRow[], ope
   });
   return {
     version: 1, status: "ready", generatedAt: Date.parse(file.generatedAt),
-    needsYou: specs.reduce((sum, row) => sum + row.needsYou, 0), specs,
+    needsYou: specs.reduce((sum, row) => sum + row.needsYou, 0),
+    yoursLater: specs.reduce((sum, row) => sum + row.yoursLater, 0), specs,
   };
 }
 
-/** Section 2: `Specs N`, then ` · M need you` when M is over zero. */
+/** Section 2: `Specs N`, then ` · M need you` when M (due now only, #162) is over zero. */
 export function sectionRule(result: SpecsResultV4): string {
   return `Specs ${result.specs.length}${result.needsYou > 0 ? ` · ${result.needsYou} need you` : ""}`;
 }

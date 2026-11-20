@@ -162,13 +162,22 @@ function SpecRow({ row, threads, now, activeThreadId, onNavigate, onToggle }: {
       ) : null}
     </span>
   );
-  const name = <span data-spec-name="" className="min-w-0 flex-1 truncate text-[13px] text-foreground">{row.shortName}</span>;
-  const notes = (
-    <>
-      {row.needsYou > 0 ? <span data-needs-you="" className="shrink-0 text-[11.5px]" style={{ color: tokens.warning }}>{row.needsYou} needs you</span> : null}
-      {row.doneLastHour > 0 ? <span data-done-last-hour="" className="shrink-0 text-[11.5px]" style={{ color: tokens.doneNote }}>{row.doneLastHour} done in the last hour</span> : null}
-    </>
-  );
+  // A minimum width, so the notes can never squeeze the name to nothing (#164 R2).
+  const name = <span data-spec-name="" className="min-w-[6rem] flex-1 truncate text-[13px] text-foreground">{row.shortName}</span>;
+  // One clipped, wrapping line in priority order (#164 R2): when space is short the last note wraps out of
+  // sight first, so done in the last hour goes, then later, and needs you stays longest.
+  const notes = row.needsYou > 0 || row.yoursLater > 0 || row.doneLastHour > 0 ? (
+    <span data-notes="" className="flex h-[18px] min-w-0 flex-wrap justify-end gap-x-2 overflow-hidden text-[11.5px] leading-[18px]">
+      {row.needsYou > 0 ? <span data-needs-you="" className="shrink-0" style={{ color: tokens.warning }}>{row.needsYou} needs you</span> : null}
+      {/* #162: tickets the owner gets once their blockers close, quiet beside the due-now count. */}
+      {row.yoursLater > 0 ? (
+        <span data-yours-later="" className="shrink-0 text-muted-foreground">
+          {row.needsYou > 0 ? `· ${row.yoursLater} later` : `${row.yoursLater} later`}
+        </span>
+      ) : null}
+      {row.doneLastHour > 0 ? <span data-done-last-hour="" className="shrink-0" style={{ color: tokens.doneNote }}>{row.doneLastHour} done in the last hour</span> : null}
+    </span>
+  ) : null;
   return (
     <li data-spec={row.spec} className={cn("list-none text-xs", open && "my-0.5 rounded-lg pb-1")}
       style={open ? { background: tokens.card } : undefined}
@@ -216,12 +225,14 @@ const dotStyle: Record<DotStateV4, CSSProperties> = {
   building: ring(tokens.mutedText),
   review: ring(tokens.mutedText),
   "needs-you": { background: tokens.warning },
+  // #162: hollow and quiet, the warning hue only as a ring at partial strength.
+  "yours-later": ring(`color-mix(in oklab, ${tokens.warning} 60%, transparent)`),
   held: ring(tokens.quietRing),
   "not-started": { background: tokens.border },
 };
 const dotWords: Record<DotStateV4, string> = {
   done: "done", "done-recent": "done in the last hour", building: "being built", review: "in review",
-  "needs-you": "needs you", held: "held", "not-started": "not started",
+  "needs-you": "needs you", "yours-later": "later", held: "held", "not-started": "not started",
 };
 
 /** One dot per ticket, in the contract's dot order (section 2). */

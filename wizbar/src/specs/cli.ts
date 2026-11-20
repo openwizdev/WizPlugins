@@ -39,6 +39,7 @@ export function formatSpecsText(result: SpecsResultV4): string {
     `${row.spec} ${row.shortName}: ${row.done}/${row.total}`,
     ...(row.doneLastHour > 0 ? [`${row.doneLastHour} done in the last hour`] : []),
     ...(row.needsYou > 0 ? [`${row.needsYou} needs you`] : []),
+    ...(row.yoursLater > 0 ? [`${row.yoursLater} later`] : []),
     ...(row.agents.length > 0 ? [`${row.agents.length} running`] : []),
   ].join(" · "))].join("\n");
 }

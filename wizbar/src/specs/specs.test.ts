@@ -6,7 +6,7 @@ import { createFakePluginHost, type FakePluginHost } from "@get-bb/plugin-sdk/te
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   v4FailedRunningAgent, v4FleetIdMatching, v4FleetIdStats, v4FleetIdThreads, v4Matching, v4Matrix, v4Now, v4OpenSetting,
-  v4OpenSettingCases, v4PullRequests, v4SpecRows, v4SpecsFile, v4SpecsFileText, v4SpecsReadCases, v4Threads, v4TimeZone,
+  v4OpenSettingCases, v4PullRequests, v4SpecRows, v4SpecRowsV2, v4SpecsFile, v4SpecsFileV2, v4SpecsFileV2Text, v4SpecsFileText, v4SpecsReadCases, v4Threads, v4TimeZone,
   v4TitleCases,
 } from "../fixtures/v4";
 import plugin from "../server";
@@ -36,6 +36,13 @@ describe("S1: spec rows, dots, last hour and needs you (section 2)", () => {
   it("writes the section rule from visible rows only", () => {
     expect(sectionRule(v4SpecRows)).toBe("Specs 2 · 2 need you");
     expect(sectionRule({ ...v4SpecRows, needsYou: 0, specs: [v4SpecRows.specs[0]!].map((s) => ({ ...s, needsYou: 0 })) })).toBe("Specs 1");
+  });
+
+  // catches (#162): a later ticket counted as needs you, in the rule, or with its dot outside its place after needs you.
+  it("counts later tickets apart from needs you, with their dots right after needs you", () => {
+    const result = specRows(v4SpecsFileV2, v4Threads, readOpenKeys(v4OpenSetting), v4Now);
+    expect(result).toEqual(v4SpecRowsV2);
+    expect(sectionRule(result)).toBe("Specs 2 · 2 need you");
   });
 
   // catches: a fresh file with only finished specs shown as unavailable or with rows.
@@ -110,7 +117,11 @@ describe("WB4-6: missing fleet ids and failed running rows (sections 3 and 5)", 
     vi.setSystemTime(v4Now);
     const sha = createHash("sha256").update(v4SpecsFileText).digest("hex");
     // The real host's rule (#153): a relative path is refused with 400 "Path must be absolute".
-    read = vi.fn(strictRead(async ({ path }: { path: string }) => ({ content: v4SpecsFileText, contentEncoding: "utf8", path, sha256: sha, sizeBytes: 1 })));
+    // A producer from before #162: no `.openwiz/specs.v2.json` (#164 R1).
+    read = vi.fn(strictRead(async ({ path }: { path: string }) => {
+      if (/specs\.v2\.json$/.test(path)) throw Object.assign(new Error("gone"), { status: 404 });
+      return { content: v4SpecsFileText, contentEncoding: "utf8", path, sha256: sha, sizeBytes: 1 };
+    }));
     const host = createFakePluginHost({ pluginId: "wizbar", sdk: {
       files: { read },
       threads: { list: vi.fn(async ({ offset = 0 }: { offset?: number } = {}) => rows.map(rawRow).slice(offset, offset + 100)), get: vi.fn() },
@@ -156,7 +167,93 @@ describe("WB4-6: missing fleet ids and failed running rows (sections 3 and 5)", 
     ["C:\\synthetic\\home", "C:\\synthetic\\home\\.openwiz\\specs.v1.json"],
   ])("through the real host's absolute-path rule, root %s reads %s as ready", async (rootPath, absolute) => {
     expect(await cli(["specs"], rootPath)).toEqual({ exitCode: 0, body: expectedRows });
-    expect(read).toHaveBeenCalledTimes(1);
-    expect(read.mock.calls[0]![0]).toMatchObject({ hostId: "hst_v4_home", rootPath, path: absolute });
+    // specs.v2.json first (missing here), then specs.v1.json (#164 R1).
+    expect(read).toHaveBeenCalledTimes(2);
+    expect(read.mock.calls[0]![0]).toMatchObject({ hostId: "hst_v4_home", rootPath, path: absolute.replace("specs.v1.json", "specs.v2.json") });
+    expect(read.mock.calls[1]![0]).toMatchObject({ hostId: "hst_v4_home", rootPath, path: absolute });
+  });
+});
+
+// #164 R1: the producer writes specs.v1.json (v1, later as needs you) and specs.v2.json; WizBar takes
+// specs.v2.json when it is usable, else specs.v1.json, and is unavailable only when neither is.
+describe("#164 R1: either upgrade order", () => {
+  const hosts: FakePluginHost[] = [];
+  afterEach(async () => {
+    for (const host of hosts.splice(0)) await host.harness.lifecycle.dispose();
+    vi.useRealTimers(); vi.unstubAllEnvs();
+  });
+  const at = (text: string, minutesOld: number) => text.replace(/"generatedAt": "[^"]+"/, `"generatedAt": "${new Date(v4Now - minutesOld * 60_000).toISOString().replace(".000Z", "Z")}"`);
+  const v1 = v4SpecsFileText;
+  const v2 = v4SpecsFileV2Text;
+  async function specs(files: { v1?: string; v2?: string }) {
+    vi.stubEnv("TZ", v4TimeZone);
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(v4Now);
+    const read = vi.fn(strictRead(async ({ path }: { path: string }) => {
+      const text = path.endsWith("/.openwiz/specs.v2.json") ? files.v2 : path.endsWith("/.openwiz/specs.v1.json") ? files.v1 : undefined;
+      if (text === undefined) throw Object.assign(new Error("gone"), { status: 404 });
+      return { content: text, contentEncoding: "utf8", path, sha256: createHash("sha256").update(text).digest("hex"), sizeBytes: text.length };
+    }));
+    const host = createFakePluginHost({ pluginId: "wizbar", sdk: {
+      files: { read },
+      threads: { list: vi.fn(async ({ offset = 0 }: { offset?: number } = {}) => v4Threads.map(rawRow).slice(offset, offset + 100)), get: vi.fn() },
+    } as never });
+    hosts.push(host);
+    plugin(host.bb);
+    await host.harness.behavior.setSettings({
+      specsOpen: v4OpenSetting,
+      wizdeckFactories: JSON.stringify([{
+        projectKey: "sample-factory", cloudroomProjectId: "prj_v4_atlas", repositories: ["example/sample-plans"],
+        home: { hostId: "hst_v4_home", rootPath: "/synthetic/home" }, orchestratorThreadId: "thr_v4_orchestrator",
+        statusWriterLogin: "sample-manager",
+      }]),
+    });
+    const result = await host.harness.behavior.runCli(["specs", "--json"]);
+    return { exitCode: result.exitCode, body: JSON.parse(result.stdout ?? "") };
+  }
+  const unavailable = (reason: string) => ({ exitCode: 1, body: { error: { code: "specs_unavailable", message: "Specs unavailable.", reason } } });
+
+  // catches: a new WizBar that needs specs.v2.json, so an old producer's file shows Specs unavailable.
+  it("an old producer (specs.v1.json only): the v1 rows", async () => {
+    expect(await specs({ v1 })).toEqual({ exitCode: 0, body: v4SpecRows });
+  });
+  // catches: a new WizBar that still reads only specs.v1.json, so later never shows.
+  it("a new producer (both files): the v2 rows, later apart", async () => {
+    expect(await specs({ v1, v2 })).toEqual({ exitCode: 0, body: v4SpecRowsV2 });
+  });
+  // catches (#164 R3): after a producer rollback, an older specs.v2.json winning over a newer specs.v1.json until it goes stale.
+  it("an older specs.v2.json loses to a newer specs.v1.json: a ticket now done shows done", async () => {
+    const newer = JSON.parse(at(v1, 2));
+    const ticket = newer.specs[0].tickets.find((t: { code: string }) => t.code === "SP-4");
+    Object.assign(ticket, { state: "done", closedAt: "2026-11-19T11:58:00Z" });
+    const result = await specs({ v1: JSON.stringify(newer, null, 2), v2: at(v2, 10) });
+    expect(result.exitCode).toBe(0);
+    expect(result.body.generatedAt).toBe(v4Now - 2 * 60_000);
+    const palette = result.body.specs[0];
+    expect({ needsYou: palette.needsYou, yoursLater: palette.yoursLater, done: palette.done, total: palette.total }).toEqual({ needsYou: 0, yoursLater: 0, done: 5, total: 10 });
+    expect(palette.dots.find((d: { code: string }) => d.code === "SP-4").state).toBe("done-recent");
+  });
+  // catches (#164 R3): equal or newer v2 times losing to v1, so later never shows from a current producer.
+  it.each([["equal", 5, 5], ["newer", 2, 5]] as const)("a specs.v2.json %s to specs.v1.json wins", async (_name, v2Age, v1Age) => {
+    const result = await specs({ v1: at(v1, v1Age), v2: at(v2, v2Age) });
+    expect(result).toEqual({ exitCode: 0, body: { ...v4SpecRowsV2, generatedAt: v4Now - v2Age * 60_000 } });
+  });
+
+  // catches: a stale or broken specs.v2.json hiding a fresh specs.v1.json.
+  it.each([
+    ["stale", at(v2, 31)],
+    ["malformed", "{\"schema\":"],
+    ["of an unknown schema", v2.replace("openwiz.specs.v2", "openwiz.specs.v3")],
+  ])("a specs.v2.json that is %s falls back to a fresh specs.v1.json", async (_name, text) => {
+    expect(await specs({ v1, v2: text })).toEqual({ exitCode: 0, body: v4SpecRows });
+  });
+  // catches: unavailable files read as zero, or a reason from the wrong file.
+  it.each([
+    ["neither file: missing", {}, "missing"],
+    ["v2 missing, v1 stale: v1's reason", { v1: at(v1, 31) }, "stale"],
+    ["v2 stale, v1 missing: v2's reason", { v2: at(v2, 31) }, "stale"],
+    ["v2 malformed, v1 stale: v2's reason", { v1: at(v1, 31), v2: "{" }, "malformed"],
+  ] as const)("%s", async (_name, files, reason) => {
+    expect(await specs(files)).toEqual(unavailable(reason));
   });
 });

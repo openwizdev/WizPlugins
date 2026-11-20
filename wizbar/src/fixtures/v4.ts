@@ -40,7 +40,8 @@ export const hostTokensV4: readonly HostTokenV4[] = [
 
 /** `owner/name#N`. */
 export type SpecKeyV4 = `${string}/${string}#${number}`;
-export type TicketStateV4 = "done" | "building" | "review" | "needs-you" | "held" | "not-started";
+/** `yours-later` (#162): `ready-for-human` with an open blocker; only a v2 file has it. */
+export type TicketStateV4 = "done" | "building" | "review" | "needs-you" | "yours-later" | "held" | "not-started";
 
 export interface TicketEntryV4 {
   ticket: SpecKeyV4;
@@ -59,9 +60,9 @@ export interface SpecEntryV4 {
   fleetThreadId: string | null;
   tickets: TicketEntryV4[];
 }
-/** `.openwiz/specs.v1.json` under the bound factory home (section 1). */
+/** `.openwiz/specs.v1.json` under the bound factory home (section 1). v2 is v1 plus `yours-later` (#162). */
 export interface SpecsFileV4 {
-  schema: "openwiz.specs.v1";
+  schema: "openwiz.specs.v1" | "openwiz.specs.v2";
   generatedAt: string;
   specs: SpecEntryV4[];
 }
@@ -78,7 +79,7 @@ export type SpecsReadV4 =
   | { status: "unavailable"; reason: SpecsUnavailableReasonV4 };
 
 /** Dot order, left to right (section 2). */
-export const dotOrderV4 = ["done", "done-recent", "building", "review", "needs-you", "held", "not-started"] as const;
+export const dotOrderV4 = ["done", "done-recent", "building", "review", "needs-you", "yours-later", "held", "not-started"] as const;
 export type DotStateV4 = (typeof dotOrderV4)[number];
 export interface DotV4 { ticket: SpecKeyV4; code: string | null; state: DotStateV4 }
 
@@ -106,6 +107,8 @@ export interface SpecRowV4 {
   total: number;
   doneLastHour: number;
   needsYou: number;
+  /** Tickets in state `yours-later` (#162). */
+  yoursLater: number;
   open: boolean;
   dots: DotV4[];
   agents: SpecAgentV4[];
@@ -119,6 +122,8 @@ export interface SpecsResultV4 {
   generatedAt: number;
   /** Sum of `needsYou` over the visible rows. */
   needsYou: number;
+  /** Sum of `yoursLater` over the visible rows (#162). */
+  yoursLater: number;
   specs: SpecRowV4[];
 }
 /** `wizbar spec <n> --open|--close --json` success body. */
@@ -246,6 +251,17 @@ export const v4SpecsFile: SpecsFileV4 = {
 };
 export const v4SpecsFileText = JSON.stringify(v4SpecsFile, null, 2);
 
+/**
+ * A v2 file (#162): `v4SpecsFile` plus one later ticket in the palette, placed
+ * first in file order so a reader that forgets the later dot's place fails.
+ */
+export const v4SpecsFileV2: SpecsFileV4 = {
+  ...v4SpecsFile,
+  schema: "openwiz.specs.v2",
+  specs: v4SpecsFile.specs.map((spec, index) => (index === 0 ? { ...spec, tickets: [ticket(PLANS, 512, "SP-10", "yours-later"), ...spec.tickets] } : spec)),
+};
+export const v4SpecsFileV2Text = JSON.stringify(v4SpecsFileV2, null, 2);
+
 const withFile = (change: (file: Record<string, unknown>) => void): string => {
   const copy = JSON.parse(v4SpecsFileText) as Record<string, unknown>;
   change(copy);
@@ -299,11 +315,21 @@ export const v4SpecsReadCases: ReadonlyArray<{ name: string; read: SpecsFileRead
   },
   {
     name: "unknown schema: and a field the v1 rules refuse", now: v4Now, expected: { status: "unavailable", reason: "unknown-schema" },
-    read: { kind: "content", text: withFile((f) => { f.schema = "openwiz.specs.v2"; f.extra = true; }) },
+    read: { kind: "content", text: withFile((f) => { f.schema = "openwiz.specs.v3"; f.extra = true; }) },
   },
   {
     name: "unknown schema", now: v4Now, expected: { status: "unavailable", reason: "unknown-schema" },
+    read: { kind: "content", text: withFile((f) => { f.schema = "openwiz.specs.v3"; }) },
+  },
+  // #162: v2 is v1 plus the later state; v1 has no later state.
+  { name: "ready: a v2 file with a later ticket", read: { kind: "content", text: v4SpecsFileV2Text }, now: v4Now, expected: { status: "ready", file: v4SpecsFileV2 } },
+  {
+    name: "ready: a v2 file with no later ticket", now: v4Now, expected: { status: "ready", file: { ...v4SpecsFile, schema: "openwiz.specs.v2" } },
     read: { kind: "content", text: withFile((f) => { f.schema = "openwiz.specs.v2"; }) },
+  },
+  {
+    name: "malformed: a later ticket in a v1 file", now: v4Now, expected: { status: "unavailable", reason: "malformed" },
+    read: { kind: "content", text: v4SpecsFileV2Text.replace('"schema": "openwiz.specs.v2"', '"schema": "openwiz.specs.v1"') },
   },
   {
     // A fresh file with no running specs is a real zero: ready, no rows.
@@ -484,11 +510,12 @@ export const v4SpecRows: SpecsResultV4 = {
   status: "ready",
   generatedAt: v4Now - 5 * MINUTE,
   needsYou: 2,
+  yoursLater: 0,
   specs: [
     {
       spec: `${PLANS}#501`, shortName: "Sample palette", url: `https://github.com/${PLANS}/issues/501`,
       // 502, 503, 509 and 510 are done; only 503 closed inside the last hour (510 closed exactly an hour ago).
-      done: 4, total: 10, doneLastHour: 1, needsYou: 1, open: true,
+      done: 4, total: 10, doneLastHour: 1, needsYou: 1, yoursLater: 0, open: true,
       dots: [
         dot(PLANS, 502, "SP-0", "done"), dot(PLANS, 509, "SP-7", "done"), dot(PLANS, 510, "SP-8", "done"),
         dot(PLANS, 503, "SP-1", "done-recent"), dot(PLANS, 504, "SP-2", "building"), dot(PLANS, 505, "SP-3", "review"),
@@ -505,10 +532,30 @@ export const v4SpecRows: SpecsResultV4 = {
     },
     {
       spec: `${TOOLS}#77`, shortName: "Sample cache", url: `https://github.com/${TOOLS}/issues/77`,
-      done: 0, total: 3, doneLastHour: 0, needsYou: 1, open: false,
+      done: 0, total: 3, doneLastHour: 0, needsYou: 1, yoursLater: 0, open: false,
       dots: [dot(TOOLS, 78, "SC-1", "building"), dot(TOOLS, 79, "SH-1", "needs-you"), dot(TOOLS, 80, null, "not-started")],
       agents: [],
     },
+  ],
+};
+
+/** `wizbar specs --json` for `v4SpecsFileV2` (#162): the later ticket counts apart from needs you, its dot right after needs you. */
+export const v4SpecRowsV2: SpecsResultV4 = {
+  ...v4SpecRows,
+  needsYou: 2,
+  yoursLater: 1,
+  specs: [
+    {
+      ...v4SpecRows.specs[0]!,
+      done: 4, total: 11, doneLastHour: 1, needsYou: 1, yoursLater: 1,
+      dots: [
+        dot(PLANS, 502, "SP-0", "done"), dot(PLANS, 509, "SP-7", "done"), dot(PLANS, 510, "SP-8", "done"),
+        dot(PLANS, 503, "SP-1", "done-recent"), dot(PLANS, 504, "SP-2", "building"), dot(PLANS, 505, "SP-3", "review"),
+        dot(PLANS, 506, "SP-4", "needs-you"), dot(PLANS, 512, "SP-10", "yours-later"), dot(PLANS, 508, "SP-6", "held"),
+        dot(PLANS, 507, "SP-5", "not-started"), dot(PLANS, 511, "SH-1", "not-started"),
+      ],
+    },
+    v4SpecRows.specs[1]!,
   ],
 };
 

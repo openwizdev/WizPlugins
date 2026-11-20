@@ -17,13 +17,13 @@ Shapes and synthetic fixtures with hand-worked expected values: `src/fixtures/v4
 
 The factory map's specs file lists the running specs and their tickets. Its producer runs on the owner's computer and refreshes it every 10 minutes. This contract fixes the format WizBar reads. The producer is `wizbar/tools/specs-producer/` (0.5.0 A, openwizdev/WizPlugins#110; its README says how it reads GitHub and how to run it on a timer); installing it on the owner's computer stays the owner's step.
 
-**Location and read.** UTF-8 JSON at `.openwiz/specs.v1.json`, relative to `home.rootPath` of the one factory bound in the `wizdeckFactories` setting (factory-view.v1.md section 1). WizBar's server reads it with `bb.sdk.files.read({ hostId, rootPath, path })`, the factory contract's read, at most once per 60-second shared refresh. `path` is the absolute path, `rootPath` joined with the relative path (a Windows root joins with `\`): a real host refuses a relative `path` with HTTP 400 "Path must be absolute" (#153). The host may report the read's path in either form, relative or absolute. With no bound factory, or more than one, the result is unavailable (`no-binding`).
+**Location and read.** Two UTF-8 JSON files (#164 R1): `.openwiz/specs.v2.json` (schema v2) and `.openwiz/specs.v1.json` (schema v1, a later ticket written as `needs-you`, as before #162), relative to `home.rootPath` of the one factory bound in the `wizdeckFactories` setting (factory-view.v1.md section 1). The producer writes both from one scan, together or not at all. WizBar's server reads them with `bb.sdk.files.read({ hostId, rootPath, path })`, the factory contract's read, at most once per 60-second shared refresh. **Which wins:** when both read `ready` (the table below), `specs.v2.json` if its `generatedAt` is equal to or newer than `specs.v1.json`'s, else `specs.v1.json` (#164 R3: after a rollback to a producer that writes only v1, an older v2 never hides a newer v1); when only one reads `ready`, that one. When neither does, the result is v2's, or v1's when `specs.v2.json` is missing, so the reason names the file that is there. A WizBar from before #162 reads only `specs.v1.json`, so either upgrade order keeps Specs available. `path` is the absolute path, `rootPath` joined with the relative path (a Windows root joins with `\`): a real host refuses a relative `path` with HTTP 400 "Path must be absolute" (#153). The host may report the read's path in either form, relative or absolute. With no bound factory, or more than one, the result is unavailable (`no-binding`).
 
 **Fields** (`SpecsFileV4`). Every object is closed: an unknown field is malformed.
 
 | Field | Rule |
 | --- | --- |
-| `schema` | Exactly `openwiz.specs.v1` |
+| `schema` | `openwiz.specs.v1` or `openwiz.specs.v2` (#162). v2 is v1 plus the `yours-later` ticket state; `specs.v2.json` holds v2 and `specs.v1.json` holds v1 |
 | `generatedAt` | UTC ISO timestamp ending `Z`: when the producer wrote the file. The 0.5.0 producer writes a file only from one complete scan, so this is also when all its data was read |
 | `specs` | The running specs, in the producer's order; may be empty |
 
@@ -44,11 +44,11 @@ Each ticket (`TicketEntryV4`):
 | `ticket` | `owner/name#N`, distinct within its spec |
 | `code` | The ticket code (`^[A-Z][A-Z0-9]*-?[0-9]+$`, for example `KN3` or `WB4-1`), or null. Distinct within its spec when not null |
 | `title` | Nonempty |
-| `state` | `done`, `building`, `review`, `needs-you`, `held` or `not-started` (below) |
+| `state` | `done`, `building`, `review`, `needs-you`, `yours-later` (v2 only), `held` or `not-started` (below) |
 | `closedAt` | The close time, a UTC ISO timestamp ending `Z`, for `done`; null for a `done` ticket closed before close times were recorded; always null for every other state |
 | `pulls` | Optional (additive, 0.5.0 A): the numbers (positive safe integers) of the open pull requests in the ticket's repository that close it |
 
-Ticket states, set by the producer, first match wins: `done` closed (as completed); `needs-you` the `ready-for-human` label; `held` the `held` or `needs-info` label; `review` an open pull request closes it; `building` only draft pull requests close it; `not-started` anything else that is open. A ticket closed as not planned is left out of the file. The producer writes `fleetThreadId` null (it reads GitHub only), a spec's `shortName` from its title after `spec: ` and before the next `: `, and a ticket's `code` from the `[A-Z]{1,3}[0-9]+` just before its title's first `:`.
+Ticket states, set by the producer, first match wins: `done` closed (as completed); `needs-you` (due now) the `ready-for-human` label with no open blockers; `yours-later` (#162) the `ready-for-human` label with one or more open blockers, read from `issue_dependencies_summary.blocked_by` in the sub-issues answer the producer already reads (no added requests; a missing summary names no blocker, and a title is never read for it); `held` the `held` or `needs-info` label; `review` an open pull request closes it; `building` only draft pull requests close it; `not-started` anything else that is open. A ticket closed as not planned is left out of the file. The producer writes `fleetThreadId` null (it reads GitHub only), a spec's `shortName` from its title after `spec: ` and before the next `: `, and a ticket's `code` from the `[A-Z]{1,3}[0-9]+` just before its title's first `:`.
 
 **Reading** (`readSpecsFile(read, now)`), first match wins. Every failure is unavailable, never zero:
 
@@ -58,8 +58,8 @@ Ticket states, set by the producer, first match wins: `done` closed (as complete
 | The file does not exist | `unavailable`, `missing` |
 | The read failed | `unavailable`, `unreadable` |
 | Not JSON, a repeated key in any object, a top level that is not an object, or no `schema` string | `unavailable`, `malformed` |
-| A `schema` string other than `openwiz.specs.v1` | `unavailable`, `unknown-schema` |
-| Once the schema matches: wrong shape, an unknown field, a broken field rule above, or `generatedAt` more than 5 minutes after `now` | `unavailable`, `malformed` |
+| A `schema` string other than `openwiz.specs.v1` or `openwiz.specs.v2` | `unavailable`, `unknown-schema` |
+| Once the schema matches: wrong shape, an unknown field, a broken field rule above, a `yours-later` ticket in a v1 file, or `generatedAt` more than 5 minutes after `now` | `unavailable`, `malformed` |
 | `now − generatedAt` over 30 minutes (exactly 30 minutes is fresh) | `unavailable`, `stale` |
 | Otherwise | `ready`, with the file |
 
@@ -75,20 +75,21 @@ One row per visible spec, in file order (`SpecRowV4`). All counts are over the s
 | `done` | Tickets in state `done` |
 | `total` | All tickets in the file for this spec |
 | `doneLastHour` | `done` tickets whose `closedAt` is not null and `closedAt > now − 60 minutes` (a close time just after `now`, from clock skew, counts) |
-| `needsYou` | Tickets in state `needs-you` |
+| `needsYou` | Tickets in state `needs-you` (due now) |
+| `yoursLater` | Tickets in state `yours-later` (#162) |
 | `dots` | One dot per ticket, ordered by dot state (below), then by file order |
 | `agents` | The spec's running agents (section 3) |
 | `open` | The open-state setting for this spec (section 4) |
 
-**Dot states,** in this order: `done` (done, not in the last hour, including a null `closedAt`), `done-recent` (done in the last hour), `building`, `review`, `needs-you`, `held`, `not-started`. "Being worked on" is `building` and `review`; "the owner's" is `needs-you`.
+**Dot states,** in this order: `done` (done, not in the last hour, including a null `closedAt`), `done-recent` (done in the last hour), `building`, `review`, `needs-you`, `yours-later`, `held`, `not-started`. "Being worked on" is `building` and `review`; "the owner's" is `needs-you` (due now, a filled warning dot) and `yours-later` (later, a quiet hollow warning ring).
 
-**Text.** `N done in the last hour` appears only when `doneLastHour > 0`; `K needs you` (amber) only when `needsYou > 0`; done/total is `<done>/<total>`.
+**Text.** `N done in the last hour` appears only when `doneLastHour > 0`; `K needs you` (amber) only when `needsYou > 0`, then `· L later` in muted text only when `yoursLater > 0` (just `L later` when `needsYou` is 0); done/total is `<done>/<total>`.
 
 **Layout (display only, 0.5.0 C, #112).** A spec row leads with a chevron (`›` closed, `⌄` open) only when the spec has agents, and a placeholder of the same width otherwise, so names line up. The name sits on the left; on the right come `K needs you`, then `N done in the last hour`, then done/total. The dots sit on the line below. An open spec and its agents sit in one raised panel (the card colour, rounded corners). An agent row's first line is its matrix mark, its title with `Role · CODE:` dimmed and the task in the foreground colour, and its age on the right; its second line is quiet: the harness logo (its display name as the logo's label), then the shared model label, omitted when unknown.
 
 **Hidden.** A spec is hidden when `total === 0` or `done === total` (finished). A hidden spec has no row and counts nowhere, in the UI and the CLI.
 
-**Section rule.** `Specs N` where N is the number of visible rows, then ` · M need you` when M (the sum of `needsYou` over visible rows) is over zero. On screen (0.5.0 C) the label is about 11.5 px, weight 500, in muted text, the count is faint, ` · M need you` is in the warning colour, and an olive rule line follows.
+**Section rule.** `Specs N` where N is the number of visible rows, then ` · M need you` when M (the sum of `needsYou` over visible rows: due now only, never later) is over zero. On screen (0.5.0 C) the label is about 11.5 px, weight 500, in muted text, the count is faint, ` · M need you` is in the warning colour, and an olive rule line follows.
 
 ## 3. Matching running threads to a spec
 
@@ -202,7 +203,7 @@ New error codes:
 No arguments, else usage. The visible rows of section 2 with their agents.
 
 ```json
-{"version":1,"status":"ready","generatedAt":1795089300000,"needsYou":1,"specs":[{"spec":"example/sample-plans#501","shortName":"Sample palette","url":"https://github.com/example/sample-plans/issues/501","done":2,"total":6,"doneLastHour":1,"needsYou":1,"open":true,"dots":[{"ticket":"example/sample-plans#502","code":"SP-0","state":"done"}],"agents":[{"threadId":"thr_v4_builder_a","title":"Builder · SP-2: Sample add keyboard paths","role":"Builder","code":"SP-2","ticket":"example/sample-plans#504","providerId":"sample-harness","model":null,"effort":null,"matrix":"working","createdAt":1795081200000,"updatedAt":1795089540000}]}]}
+{"version":1,"status":"ready","generatedAt":1795089300000,"needsYou":1,"yoursLater":0,"specs":[{"spec":"example/sample-plans#501","shortName":"Sample palette","url":"https://github.com/example/sample-plans/issues/501","done":2,"total":6,"doneLastHour":1,"needsYou":1,"yoursLater":0,"open":true,"dots":[{"ticket":"example/sample-plans#502","code":"SP-0","state":"done"}],"agents":[{"threadId":"thr_v4_builder_a","title":"Builder · SP-2: Sample add keyboard paths","role":"Builder","code":"SP-2","ticket":"example/sample-plans#504","providerId":"sample-harness","model":null,"effort":null,"matrix":"working","createdAt":1795081200000,"updatedAt":1795089540000}]}]}
 ```
 
 (The example's `dots` and `agents` are shortened.) `generatedAt` is epoch ms. Unavailable file: `{"error":{"code":"specs_unavailable","message":"Specs unavailable.","reason":"stale"}}`, exit 1. Text:
@@ -212,7 +213,7 @@ Specs 1 · 1 need you
 example/sample-plans#501 Sample palette: 2/6 · 1 done in the last hour · 1 needs you · 1 running
 ```
 
-The two middle parts appear only when non-zero; `· N running` only when agents exist. Unavailable: `Specs unavailable (stale)` on stderr, exit 1.
+`yoursLater` (#162) counts later tickets per row and in total, apart from `needsYou`; the text adds `· L later` after `· K needs you` when `L > 0`. The two middle parts and `· L later` appear only when non-zero; `· N running` only when agents exist. Unavailable: `Specs unavailable (stale)` on stderr, exit 1.
 
 ### `wizbar spec <n> (--open | --close) [--json]`
 

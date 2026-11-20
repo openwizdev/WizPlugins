@@ -13,14 +13,18 @@ interface Issue {
   number: number; title: string; state: "open" | "closed"; state_reason: string | null; closed_at: string | null;
   labels: { name: string }[]; repository_url: string; sub_issues_summary?: { total: number; completed: number; percent_completed: number };
   pull_request?: { url: string };
+  /** On every sub-issues answer (#162): `blocked_by` counts open blockers, `total_blocked_by` closed ones too. */
+  issue_dependencies_summary: { blocked_by: number; total_blocked_by: number; blocking: number; total_blocking: number };
 }
 const issue = (repo: string, number: number, title: string, extra: Partial<Issue> = {}): Issue => ({
-  number, title, state: "open", state_reason: null, closed_at: null, labels: [], repository_url: `${API}/repos/${repo}`, ...extra,
+  number, title, state: "open", state_reason: null, closed_at: null, labels: [], repository_url: `${API}/repos/${repo}`,
+  issue_dependencies_summary: { blocked_by: 0, total_blocked_by: 0, blocking: 0, total_blocking: 0 }, ...extra,
 });
 const spec = (repo: string, number: number, title: string, total: number) =>
   issue(repo, number, title, { sub_issues_summary: { total, completed: 0, percent_completed: 0 } });
 const closed = (at: string, reason = "completed"): Partial<Issue> => ({ state: "closed", state_reason: reason, closed_at: at });
 const labels = (...names: string[]): Partial<Issue> => ({ labels: names.map((name) => ({ name })) });
+const blockedBy = (open: number, total: number): Partial<Issue> => ({ issue_dependencies_summary: { blocked_by: open, total_blocked_by: total, blocking: 0, total_blocking: 0 } });
 const pull = (number: number, body: string | null, draft = false) => ({ number, draft, body, state: "open" });
 
 /** Spec 900, hand-worked in the test: every ticket state, a code with no hyphen, a not-planned ticket left out. */
@@ -28,7 +32,8 @@ const kernel = [
   issue(FLEET, 901, "0.1.0 KN1: Sample records shape", closed("2026-11-19T10:00:00Z")),
   issue(FLEET, 902, "0.1.0 KN2: Sample the driver"),
   issue(FLEET, 903, "0.1.0 KN3: Sample the reader"),
-  issue(FLEET, 904, "0.1.0 AP11: Sample app shell", labels("ready-for-human")),
+  // Its only blocker is closed: due now (#162).
+  issue(FLEET, 904, "0.1.0 AP11: Sample app shell", { ...labels("ready-for-human"), ...blockedBy(0, 1) }),
   issue(FLEET, 905, "0.1.0 KN5: Sample waits on a question", labels("needs-info", "ready-for-agent")),
   issue(FLEET, 906, "0.1.0 KN6: Sample dropped", closed("2026-11-19T09:00:00Z", "not_planned")),
   issue(FLEET, 907, "Sample uncoded work"),
@@ -36,6 +41,10 @@ const kernel = [
   issue(FLEET, 909, "0.1.0 KN9: Sample only mentioned"),
   // A sub-issue in another repository: its key names that repository.
   issue(TOOLS, 31, "0.1.0 KN10: Sample tool hook"),
+  // The owner's, but two blockers are still open: later (#162). Its title says nothing of it.
+  issue(FLEET, 910, "0.1.0 KN11: Sample sign-off", { ...labels("ready-for-human"), ...blockedBy(2, 3) }),
+  // Blocked, but not the owner's: not started, as before.
+  issue(FLEET, 911, "0.1.0 KN12: Sample after the sign-off", blockedBy(1, 1)),
 ];
 
 /** Nine more specs, two tickets each, so a run reads ten specs in all. */
