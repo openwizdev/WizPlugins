@@ -236,6 +236,78 @@ describe("P1: a spec that disappears", () => {
   });
 });
 
+// #122 R5 again: GitHub's continuation links are `repositories/<id>/issues?…`; a deleted spec on a later
+// page must still leave the scan, over as many runs as it takes, with every run writing.
+describe("P1: a spec that disappears from a later page of the issue list", () => {
+  const MINUTE = 60_000;
+  const at = (run: number) => () => new Date(NOW.getTime() + run * 10 * MINUTE);
+  const first = `repos/${FLEET}/issues?state=open&per_page=100`;
+  const later = (page: number) => `repositories/4242/issues?state=open&per_page=100&page=${page}`;
+  const sub = (n: number) => `repos/${FLEET}/issues/${n}/sub_issues?per_page=100`;
+  /** `count` one-ticket specs over issue-list pages of `perPage`, linked like GitHub's continuation pages. */
+  function paged(count: number, perPage: number) {
+    const answers = new Map<string, { body: unknown; next?: string }>([[`repos/${FLEET}/pulls?state=open&per_page=100`, { body: [] }]]);
+    const specs = Array.from({ length: count }, (_, i) => ({
+      number: 2000 + i, title: `spec: Sample ${i}`, state: "open", labels: [], repository_url: `https://api.github.com/repos/${FLEET}`,
+      sub_issues_summary: { total: 1 },
+    }));
+    const setList = (list: typeof specs) => {
+      const pageCount = Math.ceil(list.length / perPage);
+      for (let p = 1; p <= Math.max(pageCount, 3); p++) answers.delete(p === 1 ? first : later(p));
+      for (let p = 1; p <= pageCount; p++) {
+        answers.set(p === 1 ? first : later(p), { body: list.slice((p - 1) * perPage, p * perPage), ...(p < pageCount ? { next: later(p + 1) } : {}) });
+      }
+    };
+    setList(specs);
+    for (const s of specs) {
+      answers.set(sub(s.number), {
+        body: [{ number: 3000 + s.number, title: `S${s.number % 100}: Sample task`, state: "open", labels: [], repository_url: `https://api.github.com/repos/${FLEET}` }],
+      });
+    }
+    return { answers, delete(n: number) { setList(specs.filter((s) => s.number !== n)); answers.delete(sub(n)); }, break404(n: number) { answers.delete(sub(n)); } };
+  }
+  async function scenario(count: number, perPage: number, change: (fixture: ReturnType<typeof paged>) => void, runs: number) {
+    const fixture = paged(count, perPage);
+    const dir = await home();
+    const github = fakeGitHub(fixture.answers);
+    let run = 0;
+    for (; run < 4; run++) {
+      const result = await runOnce({ home: dir, repositories: [FLEET], request: github.request, now: at(run) });
+      if (result.ok && result.written) break;
+    }
+    change(fixture);
+    const results = [];
+    for (let i = 1; i <= runs; i++) results.push(await runOnce({ home: dir, repositories: [FLEET], request: github.request, now: at(run + i) }));
+    const keys = (JSON.parse(await readFile(output(dir), "utf8")) as typeof expectedFile).specs.map((s) => s.spec);
+    return { results, keys, cache: await readFile(join(dir, ".openwiz", "specs.v1.etags.json"), "utf8") };
+  }
+
+  // catches: page one re-read taken for the whole list, so a spec deleted from page two fails every run (the reviewer's case).
+  it("45 specs over two pages: a spec deleted from page two leaves, and every run writes", async () => {
+    for (let n = 2030; n < 2045; n++) {
+      const { results, keys, cache } = await scenario(45, 30, (f) => f.delete(n), 3);
+      expect({ n, runs: results.map((r) => r.ok && r.written && r.calls <= 40), count: keys.length, listed: keys.includes(`${FLEET}#${n}`), cached: cache.includes(sub(n)) })
+        .toEqual({ n, runs: [true, true, true], count: 44, listed: false, cached: false });
+    }
+  });
+
+  // catches: a recovery that only works when the list fits one run, with the 404 landing at the end of a run's 40 requests.
+  it("120 specs over three pages: a spec deleted from page three leaves within four runs, every run writing", async () => {
+    for (let n = 2080; n < 2120; n++) {
+      const { results, keys } = await scenario(120, 40, (f) => f.delete(n), 4);
+      expect({ n, runs: results.map((r) => r.ok && r.written && r.calls <= 40), count: keys.length, listed: keys.includes(`${FLEET}#${n}`) })
+        .toEqual({ n, runs: [true, true, true, true], count: 119, listed: false });
+    }
+  });
+
+  // catches: a still-listed spec on a later page discarded instead of failing once its whole list was re-read.
+  it("a spec on page two still listed but answering 404 fails a run once the whole list is re-read, keeping its last data", async () => {
+    const { results, keys } = await scenario(45, 30, (f) => f.break404(2040), 3);
+    expect(results.find((r) => !r.ok)).toMatchObject({ ok: false, error: `GitHub answered 404 for ${sub(2040)}` });
+    expect(keys.includes(`${FLEET}#2040`)).toBe(true);
+  });
+});
+
 describe("P1: a failed read keeps the last file", () => {
   it.each([
     ["a server error on the pull requests", (g: ReturnType<typeof fakeGitHub>) => g.failNext(`repos/${TOOLS}/pulls?state=open&per_page=100`)],
