@@ -2,7 +2,8 @@
 // specs-section.v1.md section 8. Same parser rules as the 0.3 commands: one
 // `--json`, `--` before literal arguments, unknown flags are usage errors.
 import type { PluginCliResult } from "@get-bb/plugin-sdk";
-import type { SpecKeyV4, SpecOpenResultV4, SpecsFileReadV4, SpecsResultV4 } from "../fixtures/v4";
+import type { SpecKeyV4, SpecOpenResultV4, SpecsFileReadV4 } from "../fixtures/v4";
+import type { SpecsResultV6 } from "../fixtures/v6";
 import { effectiveOpen, readOpenKeys, withOpen } from "./open-state";
 import { readSpecsFile } from "./read";
 import { readSpecsSort, specsSorts, type SpecsSort } from "../settings";
@@ -36,14 +37,15 @@ const fail = (json: boolean, error: Failure): PluginCliResult => ({
 });
 const unavailable = (reason: string): Failure => ({ code: "specs_unavailable", message: "Specs unavailable.", reason });
 
-/** The text form: the rule, then one line per visible spec. */
-export function formatSpecsText(result: SpecsResultV4): string {
+/** The text form: the rule, then one line per visible spec; S2 (#185): a quiet row ends ` · quiet`. */
+export function formatSpecsText(result: SpecsResultV6): string {
   return [sectionRule(result), ...result.specs.map((row) => [
     `${row.spec} ${row.shortName}: ${row.done}/${row.total}`,
     ...(row.doneLastHour > 0 ? [`${row.doneLastHour} done in the last hour`] : []),
     ...(row.needsYou > 0 ? [`${row.needsYou} needs you`] : []),
     ...(row.yoursLater > 0 ? [`${row.yoursLater} later`] : []),
     ...(row.agents.length > 0 ? [`${row.agents.length} running`] : []),
+    ...(row.quiet ? ["quiet"] : []),
   ].join(" · "))].join("\n");
 }
 
