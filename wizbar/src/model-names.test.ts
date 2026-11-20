@@ -51,6 +51,10 @@ describe("harness names", () => {
     ["codex", "Codex"],
     ["some-new-agent", "Some New Agent"],
     ["cursor_agent", "Cursor Agent"],
+    // #127: an inherited object key is an ordinary unknown id, never a function or object.
+    ["constructor", "Constructor"],
+    ["__proto__", "Proto"],
+    ["toString", "ToString"],
   ])("%s → %s", (id, name) => {
     expect(harnessName(id)).toBe(name);
   });
