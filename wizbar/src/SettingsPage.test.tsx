@@ -6,7 +6,7 @@ import manifest from "../package.json";
 import { reportFeatureSourceStatus } from "./settings";
 import { FooterCounterArtwork } from "./FooterCounter";
 import { MachineIcon } from "./MachineIcon";
-import { positiveSource } from "../../docs/evidence/wz5/fixtures";
+import { positiveSource } from "./fixtures/wz5";
 
 const app = await loadPluginApp(() => import("../app"));
 afterEach(cleanup);

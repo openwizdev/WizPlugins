@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, screen, within } from "@testing-library/react";
 import { loadPluginApp, renderSlot } from "@get-bb/plugin-sdk/testing/app";
 import { experimental_useSidebarThreads as useSidebarThreads } from "@get-bb/plugin-sdk/app";
-import { syntheticThread } from "../../docs/evidence/wz5/fixtures";
+import { syntheticThread } from "./fixtures/wz5";
 import { MachineIcon } from "./MachineIcon";
 import { getSourceStatuses } from "./settings";
 
