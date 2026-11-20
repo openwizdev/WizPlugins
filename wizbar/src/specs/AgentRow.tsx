@@ -61,12 +61,13 @@ export function AgentRow({ agent, thread, now, isActive, onNavigate }: AgentRowP
             actions.open(agent.threadId, { split: event.metaKey || event.ctrlKey });
             onNavigate();
           }}>{agent.title}</a>
-        {/* Only the GitHub button is its own target above the link; the age
-            alone passes pointer events through, so clicking it opens the thread (#1551). */}
-        <span className={cn(TRAILING_GLYPH_BOX_CLASS, "w-auto min-w-6 justify-end", github ? "relative" : "pointer-events-none")}>
+        {/* The trailing slot always passes pointer events through to the link,
+            so the age and the space around the GitHub button open the thread;
+            only the button itself is its own target above the link (#1551). */}
+        <span className={cn(TRAILING_GLYPH_BOX_CLASS, "pointer-events-none w-auto min-w-6 justify-end")}>
           {github ? (
             <button type="button" aria-label={`Open pull request #${github.number} on GitHub`}
-              className="text-muted-foreground hover:text-foreground"
+              className="pointer-events-auto relative text-muted-foreground hover:text-foreground"
               onClick={() => navigate.openUrl(github.url)}>
               <HugeiconsIcon icon={GithubIcon} className="size-3.5" />
             </button>
