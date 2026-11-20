@@ -114,3 +114,8 @@ export function reportFeatureSourceStatus(pluginId: string, feature: Feature, st
     refresh();
   };
 }
+
+// RED STUB (C0, #182): replaced in the next commit.
+export function readSpecsSort(_raw: unknown): string {
+  return "needs-you";
+}

@@ -93,3 +93,20 @@ export function withSectionCommand(cli: PluginCliRegistration, settings: Section
     },
   };
 }
+
+// ---- 0.6 (C0, #182): sidebar-v3.v1.md section 10 ------------------------------
+// RED STUBS: 0.5 behaviour, replaced in the next commit.
+export const sidebarSections = ["pinned", "specs", "unread"] as const;
+export type SidebarSection = (typeof sidebarSections)[number];
+export function readCollapsedSections(raw: unknown): string[] {
+  return readCollapsedKeys(raw);
+}
+export function withSectionCollapsed(raw: unknown, key: SidebarSection, collapsed: boolean): string {
+  return withCollapsed(raw, key as SectionKey, collapsed);
+}
+export function readSectionsOrder(_raw: unknown): SidebarSection[] {
+  return [...sidebarSections];
+}
+export function withSectionMoved(_raw: unknown, _key: SidebarSection, _to: number): string {
+  return JSON.stringify(sidebarSections);
+}
