@@ -175,7 +175,7 @@ interface Scan {
  * The whole scan over the cached pages, in reading order: per repository its open issues and open
  * pulls, then each spec's sub-issues. `missing` lists the pages with no data yet.
  */
-function scan(repositories: readonly string[], pages: Record<string, CacheEntry>, vanished: ReadonlySet<string> = new Set()): Scan {
+function scan(repositories: readonly string[], pages: Record<string, CacheEntry>, vanished: ReadonlySet<string> = new Set(), withSpecs = true): Scan {
   const order: string[] = [];
   const seen = new Set<string>();
   const missing: string[] = [];
@@ -225,7 +225,8 @@ function scan(repositories: readonly string[], pages: Record<string, CacheEntry>
       // A vanished page with no data yet cannot block the write: its spec waits for its list.
       if (vanished.has(subPath) && !pages[subPath]) { seen.add(subPath); order.push(subPath); owners.set(subPath, repository); continue; }
       const subIssues = list(subPath, repository);
-      if (!subIssues.complete) continue;
+      // Choosing the next page needs only the pages: tickets are built for the file alone.
+      if (!subIssues.complete || !withSpecs) continue;
       const tickets: Ticket[] = [];
       const ticketKeys = new Set<string>();
       const codes = new Set<string>();
@@ -276,7 +277,7 @@ export async function runOnce(options: { home: string; repositories: readonly st
   const firstList = (repository: string) => `repos/${repository}/issues?state=open&per_page=100`;
   // Drop the state of repositories no longer bound: pages outside the bound scan, their re-reads and cursors.
   const pages: Record<string, CacheEntry> = {};
-  for (const page of scan(repositories, cache.pages).order) if (cache.pages[page]) pages[page] = cache.pages[page]!;
+  for (const page of scan(repositories, cache.pages, new Set(), false).order) if (cache.pages[page]) pages[page] = cache.pages[page]!;
   const vanished = new Set(cache.vanished.filter((page) => bound.has(subIssuesRepository(page) ?? "")));
   const cursors = new Map(Object.entries(cache.listCursor).filter(([repository]) => bound.has(repository)));
   const complete = new Set(cache.complete.filter((repository) => bound.has(repository)));
@@ -298,7 +299,7 @@ export async function runOnce(options: { home: string; repositories: readonly st
     }
   };
   while (calls < BUDGET) {
-    const current = scan(repositories, pages, vanished);
+    const current = scan(repositories, pages, vanished, false);
     settle(current);
     const { order, missing, owners } = current;
     const live = (page: string) => !failed.has(owners.get(page) ?? "");

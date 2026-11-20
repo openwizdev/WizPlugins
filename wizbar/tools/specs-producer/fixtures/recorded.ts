@@ -84,14 +84,25 @@ export function recordedAnswers(): Map<string, { body: unknown; next?: string }>
   return answers;
 }
 
+const tags = new WeakMap<object, string>();
+function tagOf(path: string, answer: { body: unknown; next?: string }): string {
+  let tag = tags.get(answer);
+  if (tag === undefined) {
+    tag = `W/"${createHash("sha256").update(`${path}\n${JSON.stringify(answer.body)}\n${answer.next ?? ""}`).digest("hex").slice(0, 16)}"`;
+    tags.set(answer, tag);
+  }
+  return tag;
+}
+
 /** A GitHub stand-in over `answers`; `fail` makes one path answer with an error status. */
 export function fakeGitHub(answers = recordedAnswers()) {
   const calls: { path: string; etag: string | null; status: number }[] = [];
   let fail: { path: string; status: number } | null = null;
   const request: GitHubRequest = async (path, etag) => {
     const answer = answers.get(path);
-    // Like GitHub, the ETag changes whenever the page's content does.
-    const served = `W/"${createHash("sha256").update(`${path}\n${JSON.stringify(answer?.body ?? null)}\n${answer?.next ?? ""}`).digest("hex").slice(0, 16)}"`;
+    // Like GitHub, the ETag changes whenever the page's content does. Answers are replaced, never
+    // edited in place, so each answer's tag is worked out once.
+    const served = answer ? tagOf(path, answer) : null;
     let response: GitHubResponse;
     const failing = fail;
     if (failing?.path === path) response = { status: failing.status, etag: null, next: null, body: { message: "Server Error" } };

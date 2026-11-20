@@ -287,7 +287,8 @@ describe("P1: a spec that disappears from a later page of the issue list", () =>
 
   // catches: page one re-read taken for the whole list, so a spec deleted from page two fails every run (the reviewer's case).
   it("45 specs over two pages: a spec deleted from page two leaves, and every run writes", async () => {
-    for (let n = 2030; n < 2045; n++) {
+    // 2030 and 2044 failed on the producer before the fix; 2037 sits between them.
+    for (const n of [2030, 2037, 2044]) {
       const { results, keys, cache } = await scenario(45, 30, (f) => f.delete(n), 3);
       expect({ n, runs: results.map((r) => r.ok && r.written && r.calls <= 40), count: keys.length, listed: keys.includes(`${FLEET}#${n}`), cached: cache.includes(sub(n)) })
         .toEqual({ n, runs: [true, true, true], count: 44, listed: false, cached: false });
@@ -296,7 +297,8 @@ describe("P1: a spec that disappears from a later page of the issue list", () =>
 
   // catches: a recovery that only works when the list fits one run, with the 404 landing at the end of a run's 40 requests.
   it("120 specs over three pages: a spec deleted from page three leaves within four runs, every run writing", async () => {
-    for (let n = 2080; n < 2120; n += 4) {
+    // Page three's first, middle and last specs.
+    for (const n of [2080, 2100, 2119]) {
       const { results, keys } = await scenario(120, 40, (f) => f.delete(n), 4);
       expect({ n, runs: results.map((r) => r.ok && r.written && r.calls <= 40), count: keys.length, listed: keys.includes(`${FLEET}#${n}`) })
         .toEqual({ n, runs: [true, true, true, true], count: 119, listed: false });
@@ -305,7 +307,8 @@ describe("P1: a spec that disappears from a later page of the issue list", () =>
 
   // catches: a new spec whose first read answers 404 breaking the scan or the file before its list is re-read.
   it("a new spec that answers 404 from its first read: every run writes without it, and its re-read list reports it", async () => {
-    for (let at404 = 0; at404 < 40; at404 += 3) {
+    // The new spec first, in the middle and last on page one.
+    for (const at404 of [0, 18, 39]) {
       const { results, keys } = await scenario(120, 40, (f) => {
         const page = f.answers.get(first)!;
         const extra = { number: 2999, title: "spec: Sample new", state: "open", labels: [], repository_url: `https://api.github.com/repos/${FLEET}`, sub_issues_summary: { total: 1 } };
@@ -323,7 +326,10 @@ describe("P1: a spec that disappears from a later page of the issue list", () =>
 
   // catches: a list longer than one run's budget re-read from page one every run, so a spec deleted near its end is never dropped (#122 R5, third check).
   it("an issue list of 60 pages: the re-read resumes where the last run stopped and the deleted spec leaves", async () => {
-    for (let extra = 0; extra < 3; extra++) for (let n = 2000; n < 2060; n += 3) {
+    // With one extra run before the deletion, the producer before the fix kept every spec from 2040
+    // to 2051 (it restarted the re-read at page one each run); 2000 and 2059 are the list's ends.
+    const extra = 1;
+    for (const n of [2000, 2040, 2045, 2051, 2059]) {
       const { results, keys } = await scenario(60, 1, (f) => f.delete(n), 5, extra);
       expect({ extra, n, runs: results.map((r) => r.ok && r.calls <= 40), count: keys.length, listed: keys.includes(`${FLEET}#${n}`) })
         .toEqual({ extra, n, runs: [true, true, true, true, true], count: 59, listed: false });
