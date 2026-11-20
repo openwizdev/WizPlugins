@@ -259,12 +259,57 @@ describe("0.5 C: the rule, the spec rows and the open panel", () => {
       rule: `color-mix(in oklab, ${success} 40%, ${sidebar})`,
       mutedAccent: `color-mix(in oklab, ${success} 55%, ${sidebar})`,
       brightOlive: `color-mix(in oklab, ${success} 85%, ${sidebar})`,
-      doneNote: `color-mix(in oklab, ${success} 50%, var(--foreground, var(--muted-foreground, #b7b7b7)))`,
+      doneNote: `color-mix(in oklab, ${success} 25%, var(--foreground, var(--muted-foreground, #b7b7b7)))`,
       warning: "var(--warning, #fc8c45)",
     };
     for (const [role, value] of Object.entries(roles)) expect.soft(tokens[role as keyof typeof tokens], role).toBe(value);
     const usesWarning = Object.entries(tokens).filter(([, value]) => value.includes("--warning")).map(([role]) => role);
     expect(usesWarning).toEqual(["warning"]);
+  });
+
+  // catches (#159 R1): a done note with so much --success in it that a tinted light surface (a lavender theme tint)
+  // pulls it under 4.5:1 while the host's own text stays readable. The note's mix is evaluated here with the
+  // CSS Color 4 oklab maths and the WCAG 2 contrast formula, on stock and tinted synthetic surfaces.
+  it("keeps the done note 4.5:1 or better on stock and tinted sidebars and cards", () => {
+    const share = Number(/^color-mix\(in oklab, var\(--success, [^)]*\)\) (\d+)%, var\(--foreground, /.exec(tokens.doneNote)?.[1]);
+    expect(share).toBeGreaterThan(0);
+    type Lab = [number, number, number];
+    const toLinear = (v: number) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+    const toGamma = (v: number) => (v <= 0.0031308 ? 12.92 * v : 1.055 * v ** (1 / 2.4) - 0.055);
+    const hex = (h: string): Lab => [1, 3, 5].map((i) => toLinear(parseInt(h.slice(i, i + 2), 16) / 255)) as Lab;
+    const oklabToLinear = ([L, a, b]: Lab): Lab => {
+      const [l, m, s] = [L + 0.3963377774 * a + 0.2158037573 * b, L - 0.1055613458 * a - 0.0638541728 * b, L - 0.0894841775 * a - 1.291485548 * b].map((x) => x ** 3);
+      return [4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s, -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s, -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s];
+    };
+    const linearToOklab = ([r, g, b]: Lab): Lab => {
+      const [l, m, s] = [0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b, 0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b, 0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b].map(Math.cbrt);
+      return [0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s, 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s, 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s];
+    };
+    const oklch = (L: number, C: number, H: number): Lab => oklabToLinear([L, C * Math.cos((H * Math.PI) / 180), C * Math.sin((H * Math.PI) / 180)]);
+    // Clamp to the sRGB gamut and back, as a screen shows it.
+    const shown = (c: Lab): Lab => c.map((v) => toLinear(Math.round(Math.min(1, Math.max(0, toGamma(v))) * 255) / 255)) as Lab;
+    const luminance = ([r, g, b]: Lab) => 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    const contrast = (x: Lab, y: Lab) => { const [hi, lo] = [luminance(x), luminance(y)].sort((p, q) => q - p); return (hi + 0.05) / (lo + 0.05); };
+    const mix = (x: Lab, p: number, y: Lab): Lab => {
+      const [a, b] = [linearToOklab(x), linearToOklab(y)];
+      return shown(oklabToLinear(a.map((v, i) => (v * p) / 100 + (b[i] * (100 - p)) / 100) as Lab));
+    };
+    // bb-app 0.37.0's success, ink and muted text, dark and light; the lavender surfaces are synthetic tints.
+    const dark = { success: oklch(0.74, 0.15, 155), muted: oklch(0.78, 0, 0), foreground: oklch(0.81, 0, 0) };
+    const light = { success: oklch(0.70, 0.15, 155), muted: oklch(0.44, 0, 0), foreground: oklch(0.3211, 0, 0) };
+    const fallback = { success: hex("#b7b7b7"), muted: hex("#b7b7b7"), foreground: hex("#e9e9e9") };
+    const themes: [string, typeof dark, Lab[]][] = [
+      ["fallback", fallback, [hex("#161616"), hex("#222222")]],
+      ["bb dark", dark, [hex("#1b1b1b"), hex("#151515")]],
+      ["bb light", light, [hex("#fafafa"), hex("#ffffff")]],
+      ["bb light, lavender tint", light, [hex("#dfd5ec")]],
+      ["bb light, deep lavender tint", light, [oklch(0.82, 0.06, 300), oklch(0.85, 0.05, 300)]],
+      ["dark, lavender tint", dark, [oklch(0.24, 0.04, 300), oklch(0.29, 0.05, 300), oklch(0.36, 0.06, 300), oklch(0.40, 0.06, 300)]],
+    ];
+    for (const [name, theme, surfaces] of themes) for (const success of [theme.success, theme.muted]) for (const surface of surfaces) {
+      const ratio = contrast(mix(success, share, theme.foreground), shown(surface));
+      expect.soft(ratio, `${name}${success === theme.muted ? ", no --success" : ""}`).toBeGreaterThanOrEqual(4.5);
+    }
   });
 
   // catches: an open spec whose agents float on the plain sidebar, or a closed spec drawn raised.
