@@ -11,6 +11,7 @@ import {
 } from "@testing-library/react";
 import { loadPluginApp, renderSlot } from "@get-bb/plugin-sdk/testing/app";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk";
+import { createElement } from "react";
 import { tokens } from "./specs/theme";
 
 // Load through the harness so the plugin's `@get-bb/plugin-sdk/app` import binds
@@ -1224,6 +1225,49 @@ describe("S1: collapsible Pinned and Inbox", () => {
     await waitFor(() => expect(pinCalls(rendered)).toEqual([
       ["pin", { threadId: "in_old" }], ["move", { threadId: "in_old", position: { after: "pin_b" } }],
     ]));
+  });
+
+  // #170 R1: catches an Inbox with no pinned rows that has no header, so it can never be collapsed.
+  it("gives an Inbox-only list a native Inbox header that collapses and expands", async () => {
+    const updates: unknown[] = [];
+    renderSlot(inbox, listProps, {
+      pluginId: "wizbar", settings: {},
+      sidebarThreads: { status: "ready", projects: [], threads: [thread({ id: "in_a", title: "Inbox alone" })] },
+      rpc: { listLifecycle: () => ({ rows: [] }) },
+      sdk: { plugins: { updateSettings: (async (args: { values: Record<string, unknown> }) => {
+        updates.push(args); return { values: args.values };
+      }) as never } },
+    });
+    expect(screen.queryByRole("region", { name: "Pinned" })).toBeNull();
+    const button = header("Inbox");
+    expect(button.tagName).toBe("BUTTON");
+    expect(button.getAttribute("aria-expanded")).toBe("true");
+    fireEvent.click(button);
+    await waitFor(() => expect(header("Inbox").getAttribute("aria-expanded")).toBe("false"));
+    expect(header("Inbox").textContent).toBe("Inbox 1");
+    expect(screen.queryByRole("link", { name: "Inbox alone" })).toBeNull();
+    expect(updates).toEqual([{ pluginId: "wizbar", values: { sectionsCollapsed: "[\"inbox\"]" } }]);
+  });
+
+  // #170 R2: catches a header click during a search that saves a collapse the owner cannot see,
+  // which then hides the section once the search clears.
+  it.each(["Pinned", "Inbox"] as const)("leaves %s untoggleable while a search holds it open, and writes nothing", async (name) => {
+    const { rendered, updates } = renderSections({ searchQuery: name === "Pinned" ? "first" : "older" });
+    const button = header(name);
+    expect(button.getAttribute("aria-disabled")).toBe("true");
+    expect(button.getAttribute("title")).toBe("Clear the search to collapse");
+    fireEvent.click(button);
+    fireEvent.keyDown(button, { key: "Enter" });
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(header(name).getAttribute("aria-expanded")).toBe("true");
+    expect(links(name)).toHaveLength(1);
+    expect(updates).toEqual([]);
+    // Clearing the search restores the stored choice: still expanded, and the header toggles again.
+    rendered.rerender(createElement(inbox.component, { ...listProps, searchQuery: "" }));
+    expect(header(name).getAttribute("aria-disabled")).toBeNull();
+    expect(header(name).getAttribute("title")).toBeNull();
+    expect(header(name).getAttribute("aria-expanded")).toBe("true");
+    expect(links(name)).toHaveLength(2);
   });
 
   // catches: a search that finds nothing inside a collapsed section, or one that writes the expansion to the store.
