@@ -4,7 +4,7 @@
 // Putting it on the thread would mean a schema change, a wire change, and a
 // HOST_DAEMON_PROTOCOL_VERSION bump for something only this sidebar
 // understands. Here, uninstalling the plugin removes its state with it.
-import { defineRpcContract, type BbPluginApi } from "@get-bb/plugin-sdk";
+import { defineRpcContract, type BbPluginApi, type PluginCliRegistration } from "@get-bb/plugin-sdk";
 import { z } from "zod";
 import { specsSettingDescriptors, wizbarSettingDescriptors } from "./settings";
 import { canMute, canPark, hasRuntimeWork, resolveShelf, type ThreadActivitySignals } from "./lifecycle";
@@ -388,28 +388,86 @@ const childrenRowSchema = z.object({
 
 /**
  * Model and effort for `cardModels` and `wizbar children` (WB4-2,
- * specs-section.v1.md section 6): the host's resolved execution options, used
- * only when they come from the latest turn start. Behind the adoption gate:
- * until WB4-4's live observation it reads nothing and serves source none.
- * A thread whose read fails or has another source gets nulls; the rest stand.
+ * specs-section.v1.md section 6): the host's resolved execution options,
+ * whatever their `source` (#156: the real host answers `{ model,
+ * reasoningLevel }` with none), when the model is a non-empty string and the
+ * level a known one. Only when the answer is null, the model of the context's
+ * latest usage snapshot, effort omitted. Behind the adoption gate: closed, it
+ * reads nothing and serves source none. A thread whose read fails or answers
+ * malformed gets nulls; the rest stand.
  */
 export async function cardModelsFrom(
-  read: (args: { threadId: string }) => Promise<unknown>,
+  read: ModelRead,
   threadIds: readonly string[],
   adopted: boolean = modelSourceV4.adopted,
+  readContext?: ModelRead,
 ): Promise<CardModelsResultV3> {
   if (!adopted) return cardModelsNone(threadIds);
   const items = await Promise.all(threadIds.map(async (threadId) => {
-    // A read that throws, synchronously or not, nulls only its own thread.
-    const options = await Promise.resolve().then(() => read({ threadId })).catch(() => null);
-    const parsed = resolvedOptionsSchema.safeParse(options);
-    return parsed.success && parsed.data.source === modelSourceV4.acceptedSource
-      ? { threadId, model: parsed.data.model, effort: parsed.data.reasoningLevel }
-      : { threadId, model: null, effort: null };
+    const { model, effort } = await readModel(read, readContext, threadId);
+    return { threadId, model, effort };
   }));
   return { source: "host", items };
 }
-const resolvedOptionsSchema = z.object({ model: z.string(), reasoningLevel: effortSchema, source: z.string() });
+type ModelRead = (args: { threadId: string }) => Promise<unknown>;
+const resolvedOptionsSchema = z.object({ model: z.string().regex(/\S/), reasoningLevel: effortSchema });
+const contextModelSchema = z.object({ usage: z.object({ snapshot: z.object({ model: z.string().regex(/\S/) }) }) });
+
+/** One thread's model and effort, and the host's raw answers behind them (`wizbar models --raw`). */
+async function readModel(read: ModelRead, readContext: ModelRead | undefined, threadId: string) {
+  // A read that throws, synchronously or not, nulls only its own thread.
+  const attempt = (reader: ModelRead) => Promise.resolve().then(() => reader({ threadId }))
+    .then((answer) => ({ answer: answer ?? null }), (error: unknown) => ({ error: { status: errorStatus(error) } }));
+  const options = await attempt(read);
+  const parsed = "answer" in options ? resolvedOptionsSchema.safeParse(options.answer) : null;
+  let contextModel: string | null = null;
+  if (!parsed?.success && "answer" in options && options.answer === null && readContext) {
+    const context = await attempt(readContext);
+    const found = "answer" in context ? contextModelSchema.safeParse(context.answer) : null;
+    contextModel = found?.success ? found.data.usage.snapshot.model : null;
+  }
+  return {
+    model: parsed?.success ? parsed.data.model : contextModel,
+    effort: parsed?.success ? parsed.data.reasoningLevel : null,
+    raw: { defaultExecutionOptions: "answer" in options ? options.answer : { error: options.error }, contextModel },
+  };
+}
+const errorStatus = (error: unknown) =>
+  typeof error === "object" && error !== null && "status" in error && typeof error.status === "number" ? error.status : null;
+
+const modelsUsage = "wizbar models <id>... [--raw] [--json]";
+/**
+ * #156: `wizbar models <id>... [--raw] [--json]`, a read-only diagnostic: each
+ * thread's model and effort as the cards get them, and with `--raw` the host's
+ * raw `defaultExecutionOptions` answer (or its error status) and any context
+ * fallback model.
+ */
+function withModelsCommand(cli: PluginCliRegistration, readOptions: ModelRead, readContext: ModelRead): PluginCliRegistration {
+  return {
+    ...cli,
+    commands: [...(cli.commands ?? []), { name: "models", summary: "each thread's model and effort, as WizBar reads them", usage: "models <id>... [--raw] [--json]" }],
+    async run(argv, ctx) {
+      if (argv[0] !== "models") return cli.run(argv, ctx);
+      const flags = argv.slice(1).filter((arg) => arg.startsWith("--"));
+      const ids = argv.slice(1).filter((arg) => !arg.startsWith("--"));
+      const json = flags.includes("--json");
+      const raw = flags.includes("--raw");
+      if (!ids.length || flags.some((flag) => flag !== "--json" && flag !== "--raw") || new Set(flags).size !== flags.length) {
+        return { exitCode: 2, ...(json ? { stdout: JSON.stringify({ error: { code: "usage", message: modelsUsage } }) + "\n" } : { stderr: modelsUsage + "\n" }) };
+      }
+      const models = await Promise.all(ids.map(async (threadId) => {
+        const read = await readModel(readOptions, readContext, threadId);
+        const known = modelSourceV4.adopted ? { model: read.model, effort: read.effort } : { model: null, effort: null };
+        return { threadId, ...withModelLabel(known), ...(raw ? { raw: read.raw } : {}) };
+      }));
+      if (json) return { exitCode: 0, stdout: JSON.stringify({ models }) + "\n" };
+      return { exitCode: 0, stdout: models.map((m) => `${JSON.stringify(m.threadId)}: ${m.modelLabel ?? "none"}${raw ? ` ${JSON.stringify(m.raw)}` : ""}`).join("\n") + "\n" };
+    },
+  };
+}
+
+const hostOptions = (bb: BbPluginApi): ModelRead => (args) => bb.sdk.threads.defaultExecutionOptions(args);
+const hostContext = (bb: BbPluginApi): ModelRead => (args) => bb.sdk.threads.context(args);
 
 export async function readChildren(bb: BbPluginApi, rawId: string, signal?: AbortSignal, adopted: boolean = modelSourceV4.adopted) {
   const threadId = validId(rawId);
@@ -440,7 +498,7 @@ export async function readChildren(bb: BbPluginApi, rawId: string, signal?: Abor
   }
   // Model and effort: the same source the cardModels RPC serves, read for the children only.
   const childIds = rows.filter((row) => row.parentThreadId === threadId).map((row) => row.id);
-  const result = childrenList(rows, threadId, await cardModelsFrom((args) => bb.sdk.threads.defaultExecutionOptions(args), childIds, adopted));
+  const result = childrenList(rows, threadId, await cardModelsFrom(hostOptions(bb), childIds, adopted, hostContext(bb)));
   if (!result) throw stateUnavailable();
   return { ...result, children: result.children.map(withModelLabel) };
 }
@@ -471,7 +529,7 @@ export default function plugin(bb: BbPluginApi) {
   // WizDeck 0.1 (#74): the one steer path to the bound orchestrator.
   registerDeckActions(bb, { settings: deckReaders.settings });
   // WB4-1 (#1435): the specs reader, its RPC and `wizbar specs` / `wizbar spec`.
-  const models = (threadIds: readonly string[]) => cardModelsFrom((args) => bb.sdk.threads.defaultExecutionOptions(args), threadIds);
+  const models = (threadIds: readonly string[]) => cardModelsFrom(hostOptions(bb), threadIds, modelSourceV4.adopted, hostContext(bb));
   const specs = registerSpecs(bb, { settings: bb.settings.define(specsSettingDescriptors), factories: deckReaders.settings, models });
   const db = bb.storage.database();
   bb.storage.migrate(db, migrations);
@@ -669,7 +727,7 @@ export default function plugin(bb: BbPluginApi) {
     async unmute({ threadId }) { await perform("unmute", threadId); return { ok: true }; },
     // WB4-2: the gated source. Before adoption every item is null with no host
     // read; after it, one failed read nulls only its own card's chip.
-    async cardModels({ threadIds }) { return cardModelsFrom((args) => bb.sdk.threads.defaultExecutionOptions(args), threadIds); },
+    async cardModels({ threadIds }) { return models(threadIds); },
     async pin({ threadId }) { await pins.pin("pin", threadId); return { ok: true }; },
     async unpin({ threadId }) { await pins.pin("unpin", threadId); return { ok: true }; },
     async move({ threadId, position }) { await pins.place(threadId, position); return { ok: true }; },
@@ -677,7 +735,7 @@ export default function plugin(bb: BbPluginApi) {
   });
   // WB4-3 (#1437): the hover card's computation over the same rows, the specs
   // file (a spec only when it is ready) and the gated model source.
-  bb.cli.register(createLifecycleCommand(perform, async (signal) => {
+  bb.cli.register(withModelsCommand(createLifecycleCommand(perform, async (signal) => {
     const rows = await readStatsRows(bb, signal);
     const now = Date.now();
     const read = readSpecsFile(await specs.specsFile(), now);
@@ -686,7 +744,7 @@ export default function plugin(bb: BbPluginApi) {
       now, Intl.DateTimeFormat().resolvedOptions().timeZone);
     return stats.threads ? { ...stats, threads: stats.threads.map(withModelLabel) } : stats;
   }, pins,
-    (threadId, signal) => readChildren(bb, threadId, signal), withSpecsModelLabels(specs)));
+    (threadId, signal) => readChildren(bb, threadId, signal), withSpecsModelLabels(specs)), hostOptions(bb), hostContext(bb)));
 
   bb.events.on("interaction.pending", ({ thread }) => breakMute(thread.id));
   bb.events.on("thread.failed", ({ thread }) => breakMute(thread.id));

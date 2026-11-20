@@ -29,12 +29,12 @@ describe("S3: model and effort behind the adoption gate (section 6)", () => {
     expect(read).not.toHaveBeenCalled();
   });
 
-  // catches: options from a thread start or a requested turn taken as what runs, or one failed read hiding the rest.
-  it("uses only the latest turn start once adopted; anything else is omitted", async () => {
+  // catches: options from a thread start or a requested turn dropped (#156: every fleet thread starts with an explicit model).
+  it("uses the resolved options whatever their source; null, failed or malformed answers are omitted", async () => {
     const ids = ["thr_v4_builder_a", "thr_v4_reviewer_a", "thr_v4_parent_wins", "thr_v4_code_a", "thr_v4_ambiguous"];
     expect(await cardModelsFrom(read, ids, true)).toEqual({ source: "host", items: [
-      { threadId: "thr_v4_builder_a", model: "Sample model 2", effort: "xhigh" },
-      ...ids.slice(1).map((threadId) => ({ threadId, model: null, effort: null })),
+      ...ids.slice(0, 3).map((threadId) => ({ threadId, model: "Sample model 2", effort: "xhigh" })),
+      ...ids.slice(3).map((threadId) => ({ threadId, model: null, effort: null })),
     ] });
   });
 
@@ -62,7 +62,8 @@ describe("S3: model and effort behind the adoption gate (section 6)", () => {
     const result = await readChildren(host.bb, "thr_v4_fleet_a", undefined, true);
     const children = result.children.map(({ id, model, effort }) => ({ id, model, effort }));
     expect(children).toContainEqual({ id: "thr_v4_builder_a", model: "Sample model 2", effort: "xhigh" });
-    expect(children.filter((c) => c.model !== null)).toHaveLength(1);
+    expect(children.filter((c) => c.model !== null).map((c) => c.id).sort()).toEqual(
+      ["thr_v4_builder_a", "thr_v4_parent_wins", "thr_v4_reviewer_a"].filter((id) => children.some((c) => c.id === id)));
     expect(read.mock.calls.map(([args]) => args.threadId).sort()).toEqual(children.map((c) => c.id).sort());
   });
 });
@@ -127,5 +128,124 @@ describe("#111: the open gate and friendly labels in wizbar JSON", () => {
       expect(pick(byId.get("thr_v4_builder_a")!), where).toEqual(named);
       for (const [id, item] of byId) if (id !== "thr_v4_builder_a") expect(pick(item), `${where} ${id}`).toEqual({ model: null, effort: null });
     }
+  });
+});
+
+// #156: on the owner's real host the per-thread read answers with exactly
+// `{ model, reasoningLevel }` (no `source`), and the list rows carry no model.
+// The values below are the live answer's shape with public model ids.
+describe("#156: a host answering like the real host", () => {
+  const live: Record<string, unknown> = {
+    thr_v4_builder_a: { model: "gpt-6.2-sol", reasoningLevel: "medium" },
+    thr_v4_reviewer_a: { model: "claude-opus-5-5", reasoningLevel: "high" },
+  };
+  const hosts: FakePluginHost[] = [];
+  afterEach(async () => { vi.useRealTimers(); for (const host of hosts.splice(0)) await host.harness.lifecycle.dispose(); });
+  const binding = JSON.stringify([{ projectKey: "sample-factory", cloudroomProjectId: "prj_v4_atlas", repositories: ["example/sample-plans"],
+    home: { hostId: "hst_v4_home", rootPath: "/synthetic/home" }, orchestratorThreadId: "thr_v4_orchestrator", statusWriterLogin: "sample-manager" }]);
+
+  async function setup(options: (threadId: string) => unknown, context: (threadId: string) => unknown = () => ({ usage: null })) {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(v4Now);
+    const rows = v4Threads.map(rawRow);
+    for (const row of rows) expect(Object.keys(row)).not.toEqual(expect.arrayContaining(["model"]));
+    const sha = createHash("sha256").update(v4SpecsFileText).digest("hex");
+    const host = createFakePluginHost({ pluginId: "wizbar", sdk: {
+      files: { read: vi.fn(async ({ path }: { path: string }) => ({ content: v4SpecsFileText, contentEncoding: "utf8", path, sha256: sha, sizeBytes: 1 })) },
+      threads: {
+        get: vi.fn(async ({ threadId }: { threadId: string }) => rows.find((r) => r.id === threadId)),
+        list: vi.fn(async ({ offset = 0 }: { offset?: number } = {}) => rows.slice(offset, offset + 100)),
+        defaultExecutionOptions: vi.fn(async ({ threadId }: { threadId: string }) => options(threadId)),
+        context: vi.fn(async ({ threadId }: { threadId: string }) => context(threadId)),
+      },
+    } as never });
+    hosts.push(host);
+    plugin(host.bb);
+    await host.harness.behavior.setSettings({ wizdeckFactories: binding });
+    const cli = (argv: string[]) => host.harness.behavior.runCli(argv);
+    const json = async (argv: string[]) => {
+      const result = await cli([...argv, "--json"]);
+      expect(result.exitCode, result.stdout ?? result.stderr).toBe(0);
+      return JSON.parse(result.stdout!);
+    };
+    return { host, cli, json };
+  }
+  /** Each labelled thread in the cards' RPC, the agent rows (specs), the running card (stats) and children. */
+  async function labels(json: (argv: string[]) => Promise<any>) {
+    const label = (items: { model?: unknown; modelLabel?: unknown }[], id: (i: any) => string) =>
+      Object.fromEntries(items.filter((i) => i.modelLabel !== undefined).map((i) => [id(i), i.modelLabel]));
+    return {
+      agents: label((await json(["specs"])).specs.flatMap((s: { agents: unknown[] }) => s.agents), (a) => a.threadId),
+      running: label((await json(["stats"])).threads, (t) => t.id),
+      children: label((await json(["children", "thr_v4_fleet_a"])).children, (c) => c.id),
+    };
+  }
+  const expected = { thr_v4_builder_a: "Sol 6.2 · Medium", thr_v4_reviewer_a: "Opus 5.5 · High" };
+
+  // catches: the live answer (no source) dropped, so every card, agent row and the running card stay blank.
+  it("labels cards, agent rows, the running card and children from a source-less answer", async () => {
+    const { host, json } = await setup((id) => live[id] ?? null);
+    expect(await host.harness.behavior.callRpc("cardModels", { threadIds: ["thr_v4_builder_a", "thr_v4_reviewer_a", "thr_v4_code_a"] })).toEqual({
+      source: "host", items: [
+        { threadId: "thr_v4_builder_a", model: "gpt-6.2-sol", effort: "medium" },
+        { threadId: "thr_v4_reviewer_a", model: "claude-opus-5-5", effort: "high" },
+        { threadId: "thr_v4_code_a", model: null, effort: null },
+      ] });
+    const got = await labels(json);
+    expect(got.agents).toEqual(expected);
+    expect(got.running).toEqual(expect.objectContaining({ thr_v4_builder_a: expected.thr_v4_builder_a }));
+    expect(got.children).toEqual(expected);
+  });
+
+  // catches: a guessed label from an empty model, an unknown level, a wrong type or a failed read.
+  it.each([
+    ["an empty model", { model: "", reasoningLevel: "high" }],
+    ["an unknown level", { model: "claude-opus-5-5", reasoningLevel: "turbo" }],
+    ["a missing level", { model: "claude-opus-5-5" }],
+    ["a model that is not a string", { model: 5, reasoningLevel: "high" }],
+    ["a string answer", "claude-opus-5-5"],
+  ])("shows no label for %s", async (_name, answer) => {
+    const { host } = await setup((id) => id === "thr_v4_builder_a" ? answer : null,
+      () => ({ usage: { snapshot: { model: "should-not-be-read" } } }));
+    expect(await host.harness.behavior.callRpc("cardModels", { threadIds: ["thr_v4_builder_a"] })).toEqual({
+      source: "host", items: [{ threadId: "thr_v4_builder_a", model: null, effort: null }] });
+  });
+
+  // catches: a null answer left blank although the host's context knows the model, or an effort guessed for it.
+  it("falls back to the context's snapshot model, effort omitted, only when the answer is null", async () => {
+    const { host, json } = await setup((id) => id === "thr_v4_reviewer_a" ? live[id] : null, (id) => {
+      if (id === "thr_v4_builder_a") return { usage: { estimated: false, modelContextWindow: 1, usedTokens: 1, snapshot: { model: "gpt-6.2-sol" } } };
+      if (id === "thr_v4_code_a") throw new Error("synthetic host failure");
+      return { usage: null };
+    });
+    expect(await host.harness.behavior.callRpc("cardModels", { threadIds: ["thr_v4_builder_a", "thr_v4_reviewer_a", "thr_v4_code_a", "thr_v4_ambiguous"] })).toEqual({
+      source: "host", items: [
+        { threadId: "thr_v4_builder_a", model: "gpt-6.2-sol", effort: null },
+        { threadId: "thr_v4_reviewer_a", model: "claude-opus-5-5", effort: "high" },
+        { threadId: "thr_v4_code_a", model: null, effort: null },
+        { threadId: "thr_v4_ambiguous", model: null, effort: null },
+      ] });
+    expect((await labels(json)).agents).toEqual({ thr_v4_builder_a: "Sol 6.2", thr_v4_reviewer_a: "Opus 5.5 · High" });
+  });
+
+  // catches: the owner's next live check needing more than one command, or the diagnostic hiding what the host said.
+  it("wizbar models --raw prints each raw answer, or its error, beside what WizBar makes of it", async () => {
+    const { json, cli } = await setup((id) => {
+      if (id === "thr_v4_code_a") throw Object.assign(new Error("synthetic"), { status: 503 });
+      return live[id] ?? null;
+    }, () => ({ usage: null }));
+    expect(await json(["models", "thr_v4_builder_a", "thr_v4_code_a", "thr_v4_ambiguous", "--raw"])).toEqual({ models: [
+      { threadId: "thr_v4_builder_a", model: "gpt-6.2-sol", effort: "medium", modelLabel: "Sol 6.2 · Medium",
+        raw: { defaultExecutionOptions: { model: "gpt-6.2-sol", reasoningLevel: "medium" }, contextModel: null } },
+      { threadId: "thr_v4_code_a", model: null, effort: null,
+        raw: { defaultExecutionOptions: { error: { status: 503 } }, contextModel: null } },
+      { threadId: "thr_v4_ambiguous", model: null, effort: null,
+        raw: { defaultExecutionOptions: null, contextModel: null } },
+    ] });
+    expect(await json(["models", "thr_v4_reviewer_a"])).toEqual({ models: [
+      { threadId: "thr_v4_reviewer_a", model: "claude-opus-5-5", effort: "high", modelLabel: "Opus 5.5 · High" }] });
+    const text = await cli(["models", "thr_v4_reviewer_a", "thr_v4_ambiguous"]);
+    expect(text).toMatchObject({ exitCode: 0, stdout: '"thr_v4_reviewer_a": Opus 5.5 · High\n"thr_v4_ambiguous": none\n' });
+    expect((await cli(["models", "--json"])).exitCode).toBe(2);
   });
 });

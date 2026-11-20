@@ -160,10 +160,14 @@ export const matrixUnlitV4: MatrixColourV4 = "dim";
 /** Section 5: the working chase's clockwise ring order (row-major dot indexes). */
 export const matrixRingV4 = [0, 1, 2, 5, 8, 7, 6, 3] as const;
 
-/** Section 6: the model and effort source and its gate, open from 0.5.0 (#111); the owner's look at the candidate is the live check. */
+/**
+ * Section 6: the model and effort source and its gate, open from 0.5.0 (#111);
+ * the owner's look at the candidate is the live check. Every `source` is
+ * accepted, or none (#156); `fallback` serves the model alone when the read is null.
+ */
 export const modelSourceV4 = {
   read: "bb.sdk.threads.defaultExecutionOptions",
-  acceptedSource: "client/turn/start",
+  fallback: "bb.sdk.threads.context usage.snapshot.model",
   adopted: true,
 } as const;
 
