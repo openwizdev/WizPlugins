@@ -17,7 +17,7 @@ Shapes and synthetic fixtures with hand-worked expected values: `src/fixtures/v4
 
 The factory map's specs file lists the running specs and their tickets. Its producer runs on the owner's computer and refreshes it every 10 minutes. This contract fixes the format WizBar reads. The producer is `wizbar/tools/specs-producer/` (0.5.0 A, openwizdev/WizPlugins#110; its README says how it reads GitHub and how to run it on a timer); installing it on the owner's computer stays the owner's step.
 
-**Location and read.** UTF-8 JSON at `.openwiz/specs.v1.json`, relative to `home.rootPath` of the one factory bound in the `wizdeckFactories` setting (factory-view.v1.md section 1). WizBar's server reads it with `bb.sdk.files.read({ hostId, rootPath, path })`, the factory contract's read, at most once per 60-second shared refresh. With no bound factory, or more than one, the result is unavailable (`no-binding`).
+**Location and read.** UTF-8 JSON at `.openwiz/specs.v1.json`, relative to `home.rootPath` of the one factory bound in the `wizdeckFactories` setting (factory-view.v1.md section 1). WizBar's server reads it with `bb.sdk.files.read({ hostId, rootPath, path })`, the factory contract's read, at most once per 60-second shared refresh. `path` is the absolute path, `rootPath` joined with the relative path (a Windows root joins with `\`): a real host refuses a relative `path` with HTTP 400 "Path must be absolute" (#153). The host may report the read's path in either form, relative or absolute. With no bound factory, or more than one, the result is unavailable (`no-binding`).
 
 **Fields** (`SpecsFileV4`). Every object is closed: an unknown field is malformed.
 
