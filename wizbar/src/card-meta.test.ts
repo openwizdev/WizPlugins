@@ -39,7 +39,11 @@ describe("model chip", () => {
   it.each([
     ["Opus 5.5", "medium", "Opus 5.5 · Medium"],
     ["Sol 6.1", "high", "Sol 6.1 · High"],
-    ["Sol 6.1", "xhigh", "Sol 6.1 · Xhigh"],
+    ["Sol 6.1", "xhigh", "Sol 6.1 · XHigh"],
+    // #111: host ids read as friendly names on every surface that calls this.
+    ["claude-opus-5-5", "high", "Opus 5.5 · High"],
+    ["gpt-6.1-sol", "xhigh", "Sol 6.1 · XHigh"],
+    ["gpt-6.1-terra", null, "Terra 6.1"],
     ["Opus 5.5", null, "Opus 5.5"],
     [null, "high", null],
     [null, null, null],

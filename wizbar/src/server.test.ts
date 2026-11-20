@@ -447,13 +447,13 @@ describe("wizbar stats", () => {
     });
 });
 
-// WZ18 (#40): cardModels serves model and effort; no host field is adopted
-// yet, so every item is null. No host read is needed or made.
+// WZ18 (#40): cardModels serves model and effort. From 0.5.0 (#111) the gate is
+// open: a host with no options for a thread gives that thread nulls.
 describe("cardModels RPC", () => {
-  it("returns source none with one null item per ID, in input order, unknown IDs included", async () => {
+  it("returns source host with one null item per ID the host has no options for, in input order, unknown IDs included", async () => {
     const host = setup();
     const result = await host.harness.behavior.callRpc("cardModels", { threadIds: ["example-b", " example-a ", "unknown-z"] });
-    expect(result).toEqual({ source: "none", items: [
+    expect(result).toEqual({ source: "host", items: [
       { threadId: "example-b", model: null, effort: null },
       { threadId: "example-a", model: null, effort: null },
       { threadId: "unknown-z", model: null, effort: null },

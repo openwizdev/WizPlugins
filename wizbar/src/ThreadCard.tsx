@@ -59,7 +59,7 @@ export function ThreadCard({
   const { pullRequest } = useSidebarThreadPullRequest(thread.id);
   // The same active-lifecycle rows the children chip reads (sidebar-v3 §3).
   const { threads } = useSidebarThreads();
-  const served = useCardModel(thread.id);
+  const served = useCardModel(thread.id, thread.updatedAt);
   const meta = cardMeta(thread, threads, pullRequest, served);
   const model = modelLabel(meta.model, meta.effort);
   // WB4-2: the matrix mark (specs-section.v1.md section 5); idle cards stay as 0.3 drew them.
@@ -225,23 +225,25 @@ export function ThreadCard({
 /**
  * Model and effort from the `cardModels` RPC. Null until it answers, and on
  * failure: a missing source omits the chip, never shows placeholder text.
+ * `revision` (the row's `updatedAt`) reads again when the host reports a newer
+ * turn; the last answer stays until the new one lands, and a late answer for an
+ * older read is ignored (#111 R1).
  */
-export function useCardModel(threadId: string): CardModelV3 | null {
+export function useCardModel(threadId: string, revision: number | string = ""): CardModelV3 | null {
   const rpc = useRpc<typeof t3sidebarRpcContract>();
-  const [served, setServed] = useState<CardModelV3 | null>(null);
+  const [served, setServed] = useState<{ threadId: string; item: CardModelV3 | null } | null>(null);
   useEffect(() => {
     let current = true;
-    setServed(null);
     rpc.call("cardModels", { threadIds: [threadId] }).then(
       (result) => {
         const item = result.items.find((candidate) => candidate.threadId === threadId);
-        if (current) setServed(result.source === "host" && item ? item : null);
+        if (current) setServed({ threadId, item: result.source === "host" && item ? item : null });
       },
       () => undefined,
     );
     return () => { current = false; };
-  }, [rpc, threadId]);
-  return served;
+  }, [rpc, threadId, revision]);
+  return served?.threadId === threadId ? served.item : null;
 }
 
 const CHIP_CLASS = "max-w-full rounded border border-border px-1 leading-4 [overflow-wrap:anywhere]";
