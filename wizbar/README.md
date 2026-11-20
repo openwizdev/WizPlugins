@@ -62,7 +62,7 @@ are in the [v0.3 sidebar contract](contracts/sidebar-v3.v1.md) and the
   rule as Specs. A parked shelf reads `Settled 4` with no chevron; a click
   still opens it. A running card shows its age (`now`) in the corner.
 - **Footer.** No bolt: a matrix mark and `6 running`, counting threads, never
-  subagents. Hover or focus it for a card as wide as the sidebar: who is
+  subagents. Hover or focus it for a raised card across the sidebar: who is
   waiting on you with the cloud and local split, a bar split by harness with
   each harness's name and count, then one line per running thread with its
   mark, role and code, its spec, and model · effort. A click (or Enter or
