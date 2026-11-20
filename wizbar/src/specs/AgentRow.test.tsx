@@ -95,17 +95,29 @@ describe("S3: the agent row (sections 3, 5 and 6)", () => {
     expect(within(unknown as HTMLElement).getByRole("img", { name: "harness-a" })).toBeTruthy();
   });
 
-  // catches (#1551): the age sitting outside the thread link, so clicking it opens nothing,
-  // and the GitHub button opening the thread as well as (or instead of) the pull request.
-  it("opens the thread from the age; the GitHub button opens only the pull request", () => {
+  // catches (#1551): the age's trailing box stacked over the stretched link, so a click on the age
+  // lands on it and opens nothing; or the GitHub button made click-through and so unclickable.
+  // jsdom has no hit-testing, so this reads the stacking rule a browser applies: inside the row,
+  // only the stretched link and `relative` boxes take a click unless they pass pointer events.
+  it("lets a click on the age reach the thread link; the GitHub button keeps its own target", () => {
+    const takesClick = (el: Element) => {
+      for (let at: Element | null = el; at && at.tagName !== "LI"; at = at.parentElement) {
+        if (at.classList.contains("pointer-events-none")) return false;
+        if (at.classList.contains("relative") || at.tagName === "A") return true;
+      }
+      return false;
+    };
     const { rendered, row } = show(reviewer);
-    fireEvent.click(within(row()).getByText("50m"));
+    expect(takesClick(within(row()).getByText("50m"))).toBe(false);
+    fireEvent.click(within(row()).getByRole("link"));
     expect(rendered.inspection.sidebarActionCalls).toContainEqual(expect.objectContaining({ threadId: reviewer.threadId }));
     cleanup();
     const pr = v4PullRequests.thr_v4_builder_a!;
     const other = show(builder, served(null, null), { thr_v4_builder_a: pr });
     fireEvent.pointerEnter(other.row());
-    fireEvent.click(within(other.row()).getByRole("button", { name: /GitHub/ }));
+    const button = within(other.row()).getByRole("button", { name: /GitHub/ });
+    expect(takesClick(button)).toBe(true);
+    fireEvent.click(button);
     expect(other.rendered.inspection.navigateCalls).toContainEqual({ method: "openUrl", url: pr.url });
     expect(other.rendered.inspection.sidebarActionCalls).toEqual([]);
   });
