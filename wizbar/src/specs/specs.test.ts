@@ -9,6 +9,7 @@ import {
   v4OpenSettingCases, v4PullRequests, v4SpecRows, v4SpecRowsV2, v4SpecsFile, v4SpecsFileV2, v4SpecsFileV2Text, v4SpecsFileText, v4SpecsReadCases, v4Threads, v4TimeZone,
   v4TitleCases,
 } from "../fixtures/v4";
+import { v6Now, v6SpecsFile, v6SpecsFileText } from "../fixtures/v6";
 import plugin from "../server";
 import { computeStatsV4 } from "../stats";
 import { strictRead } from "../testing/strict-files";
@@ -23,6 +24,34 @@ describe("S1: reading the specs file (section 1)", () => {
   // catches: a stale, missing or malformed file read as zero specs, and the 30- and 5-minute edges off by one.
   it.each(v4SpecsReadCases.map((c) => [c.name, c] as const))("%s", (_name, c) => {
     expect(readSpecsFile(c.read, c.now)).toEqual(c.expected);
+  });
+});
+
+describe("P1 (#183): a ticket's updatedAt (section 10)", () => {
+  const content = (text: string) => ({ kind: "content" as const, text });
+  const withTicket = (schema: string, extra: Record<string, unknown>) => JSON.stringify({
+    ...JSON.parse(v6SpecsFileText) as object, schema,
+    specs: [{ ...v6SpecsFile.specs[0]!, tickets: [{ ...v6SpecsFile.specs[0]!.tickets[0]!, ...extra }] }],
+  });
+
+  // catches: a v2 file with update times read as malformed, or the times dropped before the spec rows get them.
+  it("reads a v2 file with update times as ready, each ticket keeping its own, absent ones absent", () => {
+    const read = readSpecsFile(content(v6SpecsFileText), v6Now);
+    expect(read).toEqual({ status: "ready", file: v6SpecsFile });
+    if (read.status !== "ready") return;
+    const foxtrot = read.file.specs.find((spec) => spec.shortName === "Sample foxtrot")!;
+    expect(foxtrot.tickets.map((ticket) => Object.hasOwn(ticket, "updatedAt"))).toEqual([false, false]);
+    expect(read.file.specs[0]!.tickets[0]!.updatedAt).toBe("2026-11-15T12:00:00.000Z");
+  });
+
+  // catches: v1 quietly widened (an old WizBar would call it malformed), or a time that is not UTC read as one.
+  it.each([
+    ["v1 with updatedAt", withTicket("openwiz.specs.v1", { updatedAt: "2026-11-20T11:00:00Z" })],
+    ["a local offset", withTicket("openwiz.specs.v2", { updatedAt: "2026-11-20T11:00:00+01:00" })],
+    ["not a time", withTicket("openwiz.specs.v2", { updatedAt: "yesterday" })],
+    ["null", withTicket("openwiz.specs.v2", { updatedAt: null })],
+  ])("%s is malformed", (_name, text) => {
+    expect(readSpecsFile(content(text), v6Now)).toEqual({ status: "unavailable", reason: "malformed" });
   });
 });
 
