@@ -6,7 +6,7 @@ import { classifyMachine } from "./machine-source";
 import type { PluginRealtimeConnectionState, PluginSidebarThreadsState } from "@get-bb/plugin-sdk";
 import type { CardModelsResultV3, StatsCoverageV3, StatsV3, StatsWindowV3, ThreadV3 } from "./v3-types";
 import type { CardEventV4, CardStateV4, FooterThreadV4, SpecsFileV4, StatsV4 } from "./fixtures/v4";
-import { isHidden, matchSpec, matrixState, parseTitle, type SpecsThreadRow } from "./specs/rows";
+import { isHidden, matchSpec, matrixState, parseTitle, specRows, type SpecsThreadRow } from "./specs/rows";
 
 /** SDK 0.6.33 `ThreadRuntimeDisplayStatus`; anything else cannot mean idle. */
 export const runtimeDisplayStatuses = [
@@ -168,7 +168,8 @@ export function computeStatsV4(
     .sort((a, b) => b.count - a.count || (a.providerId < b.providerId ? -1 : a.providerId > b.providerId ? 1 : 0));
   const served = new Map(models?.source === "host" ? models.items.map((item) => [item.threadId, item]) : []);
   const threads = running.map((row): FooterThreadV4 => {
-    const key = specs ? matchSpec(specs, row) : null;
+    // Every row goes in too, so a child of a `Fleet #S:` thread finds spec S (section 3).
+    const key = specs ? matchSpec(specs, row, rows ?? []) : null;
     // A hidden (finished) spec has no row, so its agents name no spec (section 3).
     const entry = key ? specs!.specs.find((spec) => spec.spec === key && !isHidden(spec)) ?? null : null;
     const model = served.get(row.id);
@@ -186,10 +187,28 @@ export function cardSummary({ waitingOnYou, running }: Extract<StatsV4, { status
   return `${waitingOnYou} waiting on you · ${running.cloud} cloud, ${running.local} local${running.unknown > 0 ? `, ${running.unknown} unknown` : ""}`;
 }
 
-/** A card row's label (section 7): `Role · CODE` when the title parses (section 3), else the full title. */
+/** A card row's label (section 7) from its title alone: `Role · CODE` when the title carries its code (section 3), else the full title. */
 export function cardRowLabel(title: string): string {
   const { role, code } = parseTitle(title);
   return role && code ? `${role} · ${code}` : title;
+}
+
+/**
+ * Every row's card label (section 7). An agent of a visible spec takes its role
+ * and its ticket's code from section 3's resolution (`#N` for a ticket with no
+ * code), so `#902: …` reads `Builder · KN2`; any other row `cardRowLabel`. The
+ * labels are the card's only: `wizbar stats --json` keeps the raw titles.
+ */
+export function cardRowLabels(rows: readonly StatsV4Row[], specs: SpecsFileV4 | null, now: number): Map<string, string> {
+  const labels = new Map(rows.map((row) => [row.id, cardRowLabel(row.displayTitle)]));
+  if (!specs) return labels;
+  for (const spec of specRows(specs, rows, [], now).specs) {
+    for (const agent of spec.agents) {
+      const code = agent.code ?? (agent.ticket ? `#${agent.ticket.slice(agent.ticket.lastIndexOf("#") + 1)}` : null);
+      if (agent.role && code) labels.set(agent.threadId, `${agent.role} · ${code}`);
+    }
+  }
+  return labels;
 }
 
 /** The card's state on "N running" (section 7, `v4CardPinCases`). */

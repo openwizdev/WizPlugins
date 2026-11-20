@@ -13,7 +13,7 @@ import { modelLabel } from "./card-meta";
 import { harnessName } from "./model-names";
 import { MatrixMark } from "./MatrixMark";
 import { ProviderGlyph } from "./ProviderGlyph";
-import { cardRowLabel, cardSummary, computeStatsV4, isRunning } from "./stats";
+import { cardRowLabels, cardSummary, computeStatsV4, isRunning } from "./stats";
 import { boundHome, readSpecsFile } from "./specs/read";
 import { tokens } from "./specs/theme";
 import type { specsRpcContract } from "./specs/server";
@@ -92,8 +92,9 @@ export function StatsPanel({ rows }: { rows: readonly PluginSidebarThread[] | nu
   const models = useModels(running.map((row) => row.id), running.map((row) => row.updatedAt).join());
   const now = Date.now();
   const specs = read ? readSpecsFile(read, now) : null;
-  const stats = computeStatsV4(rows, specs?.status === "ready" ? specs.file : null, models, now,
-    Intl.DateTimeFormat().resolvedOptions().timeZone);
+  const file = specs?.status === "ready" ? specs.file : null;
+  const stats = computeStatsV4(rows, file, models, now, Intl.DateTimeFormat().resolvedOptions().timeZone);
+  const labels = cardRowLabels(rows ?? [], file, now);
   return (
     <section aria-label="Running threads" style={{
       display: "flex", flexDirection: "column", gap: 10, minHeight: 0, boxSizing: "border-box",
@@ -131,7 +132,7 @@ export function StatsPanel({ rows }: { rows: readonly PluginSidebarThread[] | nu
                     onClick={(event) => actions.open(thread.id, { split: event.metaKey || event.ctrlKey })}>
                     <MatrixMark state={thread.matrix} />
                     <span style={{ ...oneLine, minWidth: 0, flexShrink: 1 }}>
-                      <span data-title="">{cardRowLabel(thread.title)}</span>
+                      <span data-title="">{labels.get(thread.id) ?? thread.title}</span>
                       {thread.shortName ? <span style={{ color: tokens.mutedText, opacity: 0.6 }}> · <span data-spec-name="">{thread.shortName}</span></span> : null}
                     </span>
                     {model ? <span data-model="" style={{ marginLeft: "auto", paddingLeft: 8, flexShrink: 0, whiteSpace: "nowrap", color: tokens.mutedText }}>{model}</span> : null}
