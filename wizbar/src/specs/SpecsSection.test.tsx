@@ -631,8 +631,8 @@ describe("S1: the Specs section collapses", () => {
   });
 
   // catches: a stored collapse ignored on a fresh mount, or Specs moved above the shelves or below the footer.
-  it("restores a collapsed Specs on a fresh mount, under the shelves and above the footer", async () => {
-    renderSidebar({ sectionsCollapsed: "[\"specs\"]", specsOpen: v4OpenSetting });
+  it("restores a collapsed Specs on a fresh mount, under the sections stored above it and above the footer", async () => {
+    renderSidebar({ sectionsCollapsed: "[\"specs\"]", specsOpen: v4OpenSetting, sectionsOrder: "[\"pinned\",\"unread\",\"specs\"]" });
     const region = await section();
     await waitFor(() => expect(toggle(region).getAttribute("aria-expanded")).toBe("false"));
     expect(region.querySelectorAll("[data-spec]").length).toBe(0);
