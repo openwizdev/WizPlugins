@@ -11,6 +11,7 @@ import {
 } from "@testing-library/react";
 import { loadPluginApp, renderSlot } from "@get-bb/plugin-sdk/testing/app";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk";
+import { tokens } from "./specs/theme";
 
 // Load through the harness so the plugin's `@get-bb/plugin-sdk/app` import binds
 // to the test runtime; importing the component directly would bind it to an
@@ -288,7 +289,7 @@ describe("parking threads", () => {
     });
     // The shelf renders once the lifecycle read resolves.
     const shelf = await screen.findByRole("region", { name: "Settled" });
-    expect(within(shelf).getByText(/Settled \(1\)/)).toBeDefined();
+    expect(within(shelf).getByRole("button", { name: "Settled 1" })).toBeDefined();
     // Collapsed by default: parked work is out of the way, never gone.
     expect(screen.queryByText("Finished work")).toBeNull();
     fireEvent.click(within(shelf).getByRole("button"));
@@ -496,12 +497,13 @@ describe("card metadata", () => {
   });
 
   // Status and age share one slot. A row that shows both puts a variable-width
-  // label in the column, and no two rows line up.
-  it("replaces the age label with the status glyph while work runs", async () => {
+  // label in the column, and no two rows line up. (Plain live work, `runtime`,
+  // shows its age instead since round 5 A; see "attention states".)
+  it("replaces the age label with the status glyph while a workflow runs", async () => {
     render([
       thread({
         id: "thr_run",
-        indicator: "runtime",
+        indicator: "workflow",
         indicatorLabel: "Agent is working",
         updatedAt: Date.now() - (3 * 3_600_000 + 60_000),
       }),
@@ -549,18 +551,22 @@ describe("attention states", () => {
     });
   }
 
-  // Running work is the one state the user does NOT have to act on, so it gets
-  // the neutral spinner and no notification dot.
-  it("shows the spinner, not a dot, while work runs", async () => {
+  // Round 5 A (#115): running work is the one state the user does NOT have to
+  // act on, so its card reads like an idle one: the age, no spinner, no dot.
+  // catches: the spinner back in the corner, or the age dropped for live work.
+  it("shows the age, not a spinner or a dot, while work runs", async () => {
     render([
       thread({
         id: "thr_busy",
         isUnread: true,
         indicator: "runtime",
         indicatorLabel: "Thread working",
+        updatedAt: Date.now(),
       }),
     ]);
-    expect(await screen.findByLabelText("Thread working")).toBeDefined();
+    const card = (await screen.findByRole("link", { name: "A thread" })).closest("li")!;
+    expect(within(card).getByText("now")).toBeDefined();
+    expect(card.querySelector(".animate-spin")).toBeNull();
     expect(screen.queryByLabelText("Unread thread succeeded")).toBeNull();
   });
 });
@@ -655,7 +661,7 @@ describe("explicit muted shelf", () => {
     });
     const shelf = await screen.findByRole("region", { name: "Muted" });
     expect(screen.queryByText("Write guide")).toBeNull();
-    fireEvent.click(within(shelf).getByRole("button", { name: "Muted (1)" }));
+    fireEvent.click(within(shelf).getByRole("button", { name: "Muted 1" }));
     await rendered.emitRealtime("lifecycle", {});
     fireEvent.click(within(shelf).getByRole("link", { name: "Write guide" }), { metaKey: true });
     expect(rendered.sidebarActionCalls).toContainEqual({ method: "open", threadId: "sample-mute", options: { split: true } });
@@ -699,7 +705,7 @@ describe("explicit muted shelf", () => {
     await screen.findByRole("region", { name: "Muted" });
     first.unmount();
     renderSlot(inbox, listProps, options);
-    await screen.findByRole("button", { name: "Muted (1)" });
+    await screen.findByRole("button", { name: "Muted 1" });
     expect(screen.queryByText("Write guide")).toBeNull();
   });
 });
@@ -1038,7 +1044,7 @@ describe("WZ21: drag to pin, unpin and reorder", () => {
   ] as const)("R3 pins an expanded %s row with Alt+Up", async (shelf, stored, extra) => {
     const rendered = renderDrag([...rows(), thread({ id: "parked", title: "Parked row", createdAt: 5, ...extra })], {}, [stored]);
     const region = await screen.findByRole("region", { name: shelf });
-    fireEvent.click(within(region).getByRole("button", { name: `${shelf} (1)` }));
+    fireEvent.click(within(region).getByRole("button", { name: `${shelf} 1` }));
     fireEvent.keyDown(within(region).getByRole("link", { name: "Parked row" }), { key: "ArrowUp", altKey: true });
     await waitFor(() => expect(pinCalls(rendered)).toEqual([
       ["pin", { threadId: "parked" }], ["move", { threadId: "parked", position: { after: "pin_b" } }],
@@ -1070,5 +1076,55 @@ describe("WZ21: drag to pin, unpin and reorder", () => {
     const pinned = screen.getByRole("region", { name: "Pinned" });
     expect(within(pinned).getByText("Pinned busy")).toBeDefined();
     expect(within(pinned).queryByRole("button", { name: /settle|snooze/i })).toBeNull();
+  });
+});
+
+// Round 5 A (#115): every shelf rule is the Specs section's olive, and a parked
+// shelf reads "Settled 4" with its rule to the edge and no chevron.
+describe("round 5 shelves", () => {
+  const parked = [
+    { threadId: "thr_set", settledAt: 200, snoozedUntil: null, snoozedAt: null },
+    { threadId: "thr_snz", settledAt: null, snoozedUntil: Date.now() + 3_600_000, snoozedAt: 200 },
+    { threadId: "thr_mut", settledAt: null, snoozedUntil: null, snoozedAt: null, mutedAt: 1000, muteAttentionAt: 100 },
+  ];
+  const busy = { indicator: "runtime", status: "active", runtimeStatus: "active" } as const;
+  function renderShelves() {
+    return renderSlot(inbox, listProps, {
+      sidebarThreads: { status: "ready", projects: [], threads: [
+        thread({ id: "thr_pin", title: "Pinned one", isPinned: true, pinnedAt: 1 }),
+        thread({ id: "thr_inb", title: "Inbox one" }),
+        thread({ id: "thr_set", title: "Settled one" }),
+        thread({ id: "thr_snz", title: "Snoozed one" }),
+        thread({ id: "thr_mut", title: "Muted one", ...busy }),
+      ] },
+      rpc: { listLifecycle: () => ({ rows: parked }) },
+    });
+  }
+  // The heading's rule: the last thing in the shelf's header line.
+  const rule = (region: HTMLElement) => region.querySelector<HTMLElement>(":scope > h2 > span:last-child, :scope > button > span:last-child")!;
+
+  // catches: a shelf left on the grey border rule, or on the text olive, while Specs uses its quieter rule olive.
+  it.each(["Pinned", "Inbox", "Snoozed", "Muted", "Settled"])("draws the %s rule in the Specs rule olive", async (name) => {
+    renderShelves();
+    const region = await screen.findByRole("region", { name });
+    const specs = await screen.findByRole("region", { name: "Specs" });
+    const specsRule = specs.querySelector<HTMLElement>("[data-rule-line]")!;
+    expect(specsRule.style.background).toBe(tokens.rule);
+    expect(rule(region).style.background).toBe(specsRule.style.background);
+  });
+
+  // catches: "Settled (1)" or a chevron back on a parked shelf, or a header that no longer expands.
+  it.each(["Snoozed", "Muted", "Settled"])("labels %s with a faint count, no chevron, and still expands", async (name) => {
+    renderShelves();
+    const region = await screen.findByRole("region", { name });
+    const header = within(region).getByRole("button", { name: `${name} 1` });
+    expect(header.querySelector("svg")).toBeNull();
+    expect(header.textContent).not.toMatch(/[()]/);
+    const count = within(header).getByText("1");
+    expect(count.className).toMatch(/\/50|\/40|opacity/);
+    expect(header.getAttribute("aria-expanded")).toBe("false");
+    fireEvent.click(header);
+    expect(header.getAttribute("aria-expanded")).toBe("true");
+    expect(within(region).getByRole("link", { name: `${name} one` })).toBeDefined();
   });
 });

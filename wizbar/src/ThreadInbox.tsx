@@ -7,7 +7,6 @@ import {
   type PluginSidebarThread,
   type PluginThreadListProps,
 } from "@get-bb/plugin-sdk/app";
-import { Icon } from "./components/Icon";
 import { cn } from "./lib/utils";
 import {
   Select,
@@ -23,7 +22,7 @@ import { useFeatureSourceStatus } from "./SettingsPage";
 import { SlimRow } from "./SlimRow";
 import { useLifecycle } from "./useLifecycle";
 import { SpecsSection } from "./specs/SpecsSection";
-import { TRAILING_GLYPH_BOX_CLASS } from "./StatusSlot";
+import { tokens } from "./specs/theme";
 import type { t3sidebarRpcContract } from "./server";
 import type { MovePositionV3 } from "./v3-types";
 import {
@@ -306,23 +305,15 @@ function ParkedShelf({
         type="button"
         onClick={onToggle}
         aria-expanded={expanded}
-        // Padded like a card, so the chevron ends on the same right edge as
-        // every row's status and provider glyph.
+        // Round 5 A: "Settled 4", the count faint, the rule running to the
+        // edge like every shelf's, and no chevron; the whole line toggles.
         className="mt-3 flex w-full items-center gap-2 px-2.5 pb-1 text-left"
       >
-        <span className="text-2xs font-medium text-muted-foreground/70">
-          {expanded ? label : `${label} (${threads.length})`}
+        <span className="text-[11.5px] font-medium text-muted-foreground">
+          {label}{" "}
+          <span className="ml-1 font-normal text-muted-foreground/40">{threads.length}</span>
         </span>
-        <span className="h-px flex-1 bg-sidebar-border" />
-        <span className={TRAILING_GLYPH_BOX_CLASS}>
-          <Icon
-            name="ChevronDown"
-            className={cn(
-              "size-3 text-muted-foreground/70 transition-transform",
-              expanded && "rotate-180",
-            )}
-          />
-        </span>
+        <ShelfRule />
       </button>
       {expanded ? (
         <ul className="flex flex-col gap-px">
@@ -406,15 +397,20 @@ function Shelf({
     <section {...(label ? { "aria-label": label } : {})} {...(pinnedDropZone ? { "data-wizbar-pinned": "" } : {})}>
       {label ? (
         <h2 className={cn("flex items-center gap-2 px-2.5 pb-1 pt-3")}>
-          <span className="text-2xs font-medium text-muted-foreground/70">
+          <span className="text-[11.5px] font-medium text-muted-foreground">
             {label}
           </span>
-          <span className="h-px flex-1 bg-sidebar-border" />
+          <ShelfRule />
         </h2>
       ) : null}
       <ul className="flex flex-col gap-px">{children}</ul>
     </section>
   );
+}
+
+/** A shelf's rule: the Specs section's rule olive (round 5 A), so every shelf reads as one list. */
+function ShelfRule() {
+  return <span aria-hidden="true" className="h-px flex-1" style={{ background: tokens.rule }} />;
 }
 
 /** Where a dragged card would land inside Pinned; purely visual. */
