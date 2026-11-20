@@ -15,7 +15,7 @@ Shapes and synthetic fixtures with hand-worked expected values: `src/fixtures/v4
 
 ## 1. The specs file
 
-The factory map's specs file lists the running specs and their tickets. Its producer runs on the owner's computer and refreshes it every 10 minutes. This contract fixes the format WizBar reads; WB4-4 step 1 deploys the producer that writes it (with close times) and confirms it.
+The factory map's specs file lists the running specs and their tickets. Its producer runs on the owner's computer and refreshes it every 10 minutes. This contract fixes the format WizBar reads. The producer is `wizbar/tools/specs-producer/` (0.5.0 A, openwizdev/WizPlugins#110; its README says how it reads GitHub and how to run it on a timer); installing it on the owner's computer stays the owner's step.
 
 **Location and read.** UTF-8 JSON at `.openwiz/specs.v1.json`, relative to `home.rootPath` of the one factory bound in the `wizdeckFactories` setting (factory-view.v1.md section 1). WizBar's server reads it with `bb.sdk.files.read({ hostId, rootPath, path })`, the factory contract's read, at most once per 60-second shared refresh. With no bound factory, or more than one, the result is unavailable (`no-binding`).
 
@@ -24,7 +24,7 @@ The factory map's specs file lists the running specs and their tickets. Its prod
 | Field | Rule |
 | --- | --- |
 | `schema` | Exactly `openwiz.specs.v1` |
-| `generatedAt` | UTC ISO timestamp ending `Z`: when the producer wrote the file |
+| `generatedAt` | UTC ISO timestamp ending `Z`: when the producer wrote the file. The 0.5.0 producer writes a file only from one complete scan, so this is also when all its data was read |
 | `specs` | The running specs, in the producer's order; may be empty |
 
 Each spec (`SpecEntryV4`):
@@ -42,12 +42,13 @@ Each ticket (`TicketEntryV4`):
 | Field | Rule |
 | --- | --- |
 | `ticket` | `owner/name#N`, distinct within its spec |
-| `code` | The ticket code (`^[A-Z][A-Z0-9]*-[0-9]+$`, for example `WB4-1`), or null. Distinct within its spec when not null |
+| `code` | The ticket code (`^[A-Z][A-Z0-9]*-?[0-9]+$`, for example `KN3` or `WB4-1`), or null. Distinct within its spec when not null |
 | `title` | Nonempty |
 | `state` | `done`, `building`, `review`, `needs-you`, `held` or `not-started` (below) |
 | `closedAt` | The close time, a UTC ISO timestamp ending `Z`, for `done`; null for a `done` ticket closed before close times were recorded; always null for every other state |
+| `pulls` | Optional (additive, 0.5.0 A): the numbers (positive safe integers) of the open pull requests in the ticket's repository that close it |
 
-Ticket states, set by the producer: `done` closed as completed; `building` a builder works on it; `review` its pull request is in review; `needs-you` it waits on the owner; `held` it carries the `held` label; `not-started` anything else that is open. A ticket closed as not planned is left out of the file.
+Ticket states, set by the producer, first match wins: `done` closed (as completed); `needs-you` the `ready-for-human` label; `held` the `held` or `needs-info` label; `review` an open pull request closes it; `building` only draft pull requests close it; `not-started` anything else that is open. A ticket closed as not planned is left out of the file. The producer writes `fleetThreadId` null (it reads GitHub only), a spec's `shortName` from its title after `spec: ` and before the next `: `, and a ticket's `code` from the `[A-Z]{1,3}[0-9]+` just before its title's first `:`.
 
 **Reading** (`readSpecsFile(read, now)`), first match wins. Every failure is unavailable, never zero:
 
@@ -93,16 +94,26 @@ One row per visible spec, in file order (`SpecRowV4`). All counts are over the s
 
 The input is the 0.3 rows (sidebar-v3.v1.md section 1). Only **running** rows match: working by the shared fact and `hasPendingInteraction` false.
 
-**Title parse** (the thread-naming rule `Role · CODE: what it does`): the `displayTitle` matches `^(.+?) · ([A-Z][A-Z0-9]*-[0-9]+): (.+)$` (the separator is a space, U+00B7, a space). Group 1 is the role, group 2 the code. Anything else gives no role and no code.
+**Title parse** (the thread-naming rule `Role · CODE: what it does`): the `displayTitle` matches `^(.+?) · ([A-Z][A-Z0-9]*-?[0-9]+): (.+)$` (the separator is a space, U+00B7, a space). Group 1 is the role, group 2 the code.
+
+**Real titles** (additive, 0.5.0 A), tried first: a title in a real form is never read as the form above, even when its free text holds ` · CODE:`.
+
+| Title | Role | Names |
+| --- | --- | --- |
+| `^Fleet #([1-9][0-9]*): (.+)$` | none | Spec S's fleet thread. It is never an agent and matches no spec |
+| `^#([1-9][0-9]*): (.+)$` | `Builder` | The ticket whose issue number is N |
+| `^Review #([1-9][0-9]*) at [0-9a-f]{7,40}( .*)?$` | `Reviewer` | The ticket whose `pulls` holds P |
+
+Anything else gives no role and no code. A real title's code is its ticket's `code` in the matched spec. A spec holds the title's ticket when any of its tickets matches; the agent's `ticket` (and its code) is set only when exactly one does, so a pull closing two tickets of one spec keeps its reviewer there with no ticket.
 
 **Which spec,** first match wins:
 
-1. **Fleet parent,** only when the row's `parentThreadId` is not null. The specs whose `fleetThreadId` is not null and equals it. Exactly one: that spec. Several: the one among them with a ticket whose `code` equals the title code; if not exactly one, no spec. None, or a top-level row: rule 2. A missing ID never matches a missing ID.
-2. **Ticket code.** The specs with a ticket whose `code` equals the title code. Exactly one: that spec. Zero or several: no spec.
+1. **Fleet parent,** only when the row's `parentThreadId` is not null. The specs whose `fleetThreadId` is not null and equals it; when there are none, and the parent row is titled `Fleet #S: …`, the specs whose issue number is S. Exactly one: that spec. Several: the one among them holding the title's ticket; if not exactly one, no spec. None, or a top-level row: rule 2. A missing ID never matches a missing ID.
+2. **The title's ticket.** The specs holding the ticket the title names: by `code` (`Role · CODE:`), by issue number (`#N:`) or by `pulls` (`Review #P at`). Exactly one: that spec. Zero or several: no spec.
 
 Hidden specs take part in matching, so an agent of a finished spec is matched to it and appears in no spec row (the hover card lists it with no spec). A row matching no spec appears in no spec; it still counts in "N running" and the hover card (section 7). The fleet thread itself matches only by rule 2.
 
-**Each agent** (`SpecAgentV4`): `threadId`, `title` (the `displayTitle`), `role` and `code` (from the parse, or null), `ticket` (the spec's ticket with that code, or null), `providerId` (the row's harness), `model` and `effort` (section 6), `matrix` (section 5), `createdAt` and `updatedAt`. Order: `createdAt` ascending, then `threadId`.
+**Each agent** (`SpecAgentV4`): `threadId`, `title` (the `displayTitle`; for a real `#N:` or `Review #P at` title whose ticket is in the spec, `<Role> · <code>: <ticket title without its version and code>`, with `#N` in place of a null code), `role` and `code` (from the parse, or the ticket's code, or null), `ticket` (the spec's ticket the title names, or null), `providerId` (the row's harness), `model` and `effort` (section 6), `matrix` (section 5), `createdAt` and `updatedAt`. Order: `createdAt` ascending, then `threadId`.
 
 A visible spec with no agents still has its row; it shows no chevron and cannot open.
 

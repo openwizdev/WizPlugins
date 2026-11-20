@@ -1,0 +1,76 @@
+# Specs producer
+
+Writes `.openwiz/specs.v1.json` under your factory home, the file WizBar's Specs section reads ([contract section 1](../../contracts/specs-section.v1.md#1-the-specs-file)). It reads GitHub through your local `gh` login (REST only) and needs nothing else: Node 24 and `gh`, no packages.
+
+Each run is one complete scan. For each repository it reads the open issues (an issue with sub-issues is a running spec) and the open pull requests, then each spec's sub-issues (its tickets). Each page is a conditional request with the ETag and the page kept in `.openwiz/specs.v1.etags.json`, so an unchanged page costs nothing against your rate limit. The file is written whole (temp file, then rename) with `generatedAt` the run's time, or not at all: any failed read, or a scan that would need more than 59 requests, writes nothing, keeps the last file and exits 1 naming the reason. A repository you remove from `--repo` is gone from the file and the cache after the next successful run.
+
+**Capacity.** A run makes at most 59 requests, one per page of 100:
+
+```text
+requests = for each repository: ⌈open issues and pull requests / 100⌉ + ⌈open pull requests / 100⌉
+         + for each spec:       ⌈its sub-issues / 100⌉
+```
+
+With one repository under 100 open issues and pull requests, and specs of up to 100 tickets, that is 2 + one per spec: **57 specs** fit (55 with two repositories). Ten specs in two repositories take 15 requests. A factory that outgrows this fails loudly with `the scan needs more than 59 requests`; it never writes part of a scan.
+
+| Field | From GitHub |
+| --- | --- |
+| Short name | The spec title after `spec: ` and before the next `: ` (`0.1.0 spec: The kernel: records v1…` → `The kernel`), else the whole title; at most 40 characters |
+| Ticket code | The `[A-Z]{1,3}[0-9]+` just before the title's first `:` (`0.1.0 KN3: the driver…` → `KN3`), else none |
+| State | Closed → `done` (with `closedAt`); label `ready-for-human` → `needs-you`; `held` or `needs-info` → `held`; an open pull request whose body closes it (`Closes #N`) → `review`, or `building` while every such pull is a draft; otherwise `not-started`. Closed as not planned: left out |
+| `pulls` | The open pull requests in the ticket's own repository whose body closes it, when that repository is bound |
+
+## Run it once
+
+Use the factory home and repositories of your WizDeck factory binding (the `wizdeckFactories` setting):
+
+```sh
+node wizbar/tools/specs-producer/producer.ts --home /path/to/factory-home --repo owner/name [--repo owner/other]
+```
+
+It prints `wrote …/.openwiz/specs.v1.json: N specs, M requests`. WizBar calls a file older than 30 minutes stale, so run it on a timer.
+
+## Run it every 10 minutes (systemd user timer)
+
+Replace the paths and repositories, then:
+
+```sh
+mkdir -p ~/.config/systemd/user
+cat > ~/.config/systemd/user/wizbar-specs.service <<'EOF'
+[Unit]
+Description=WizBar specs producer
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/env node /path/to/WizPlugins/wizbar/tools/specs-producer/producer.ts --home /path/to/factory-home --repo owner/name
+EOF
+cat > ~/.config/systemd/user/wizbar-specs.timer <<'EOF'
+[Unit]
+Description=Refresh the WizBar specs file every 10 minutes
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=10min
+
+[Install]
+WantedBy=timers.target
+EOF
+systemctl --user daemon-reload
+systemctl --user enable --now wizbar-specs.timer
+```
+
+Check it with `systemctl --user list-timers wizbar-specs.timer` and `journalctl --user -u wizbar-specs.service`. The service runs as you, so it uses your `gh` login; if `node` is not on the service's `PATH`, give its full path in `ExecStart`.
+
+## Remove it
+
+```sh
+systemctl --user disable --now wizbar-specs.timer
+rm ~/.config/systemd/user/wizbar-specs.service ~/.config/systemd/user/wizbar-specs.timer
+systemctl --user daemon-reload
+```
+
+The last specs file stays until you delete `.openwiz/specs.v1.json` and `.openwiz/specs.v1.etags.json`; WizBar then shows "Specs unavailable".
+
+## Tests
+
+`producer.test.ts` runs the producer against recorded synthetic GitHub answers (`fixtures/recorded.ts`) as part of `npm test` in `wizbar/`.
