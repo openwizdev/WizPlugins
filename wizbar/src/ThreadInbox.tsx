@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   experimental_usePluginId,
   experimental_useSidebarThreadActions as useSidebarThreadActions,
@@ -27,7 +27,14 @@ import { useLifecycle } from "./useLifecycle";
 import { SpecsSection } from "./specs/SpecsSection";
 import { tokens } from "./specs/theme";
 import type { t3sidebarRpcContract } from "./server";
-import { readCollapsedKeys, withCollapsed, type SectionKey } from "./sections";
+import {
+  readCollapsedKeys,
+  readSectionsOrder,
+  withCollapsed,
+  withSectionMoved,
+  type SectionKey,
+  type SidebarSection,
+} from "./sections";
 import type { MovePositionV3 } from "./v3-types";
 import {
   dragPinOutcome,
@@ -137,6 +144,7 @@ export function ThreadInbox({
   const searching = searchQuery.trim() !== "";
   const isCollapsed = (key: SectionKey) => !searching && sections.collapsed.has(key);
   const pinnedShown = pinned.length > 0 || drag.draggingId !== null;
+  const order = useSectionsOrder();
 
   const scopeLabel =
     scope === ALL_PROJECTS
@@ -189,60 +197,69 @@ export function ThreadInbox({
           >
             Could not load threads.
           </p>
-        ) : pinned.length + inbox.length + snoozed.length + settled.length + muted.length ===
-          0 ? (
-          <p
-            role="status"
-            className="px-2 py-6 text-center text-xs text-muted-foreground"
-          >
-            {searchQuery.trim() ? "No threads found" : "No threads yet"}
-          </p>
         ) : (
           <>
-            {pinnedShown ? (
-              <Shelf label="Pinned" pinnedDropZone count={pinned.length} searching={searching} collapsed={isCollapsed("pinned")}
-                onToggle={() => sections.toggle("pinned")} saveFailed={sections.failed === "pinned"}>
-                {pinned.length === 0 ? (
-                  <li className="list-none rounded-md border border-dashed border-sidebar-border px-2.5 py-2 text-xs text-muted-foreground">
-                    Drop here to pin
-                  </li>
-                ) : null}
-                {pinned.flatMap((thread, index) => [
-                  drag.markerBefore(thread.id, index) ? <DropMarker key={`marker-${thread.id}`} /> : null,
-                  <ThreadCard
-                    key={thread.id}
-                    thread={thread}
-                    projectName={projectNameById.get(thread.projectId) ?? null}
-                    isActive={thread.id === activeThreadId}
-                    canPark={lifecycle.canPark(thread)}
-                    onNavigate={onNavigate}
-                    onSettle={() => lifecycle.settle(thread.id)}
-                    onSnooze={(until) => lifecycle.snooze(thread.id, until)}
-                    now={now}
-                  />,
-                ])}
-                {drag.markerAtEnd() ? <DropMarker /> : null}
-              </Shelf>
+            {pinned.length + inbox.length + snoozed.length + settled.length + muted.length === 0 ? (
+              <p
+                role="status"
+                className="px-2 py-6 text-center text-xs text-muted-foreground"
+              >
+                {searchQuery.trim() ? "No threads found" : "No threads yet"}
+              </p>
             ) : null}
-            {inbox.length > 0 ? (
-              // #170 R1: the Inbox always has its header, so it can always be collapsed and expanded.
-              <Shelf label="Inbox" count={inbox.length} searching={searching}
-                collapsed={isCollapsed("inbox")} onToggle={() => sections.toggle("inbox")} saveFailed={sections.failed === "inbox"}>
-                {inbox.map((thread) => (
-                  <ThreadCard
-                    key={thread.id}
-                    thread={thread}
-                    projectName={projectNameById.get(thread.projectId) ?? null}
-                    isActive={thread.id === activeThreadId}
-                    canPark={lifecycle.canPark(thread)}
-                    onNavigate={onNavigate}
-                    onSettle={() => lifecycle.settle(thread.id)}
-                    onSnooze={(until) => lifecycle.snooze(thread.id, until)}
-                    now={now}
-                  />
-                ))}
-              </Shelf>
-            ) : null}
+            {order.failed ? <p role="status" className="px-2.5 text-xs text-muted-foreground">Could not save the section order. Try again.</p> : null}
+            {/* E1 (#187): Pinned, Specs and Unread in the owner's order (`sectionsOrder`). */}
+            {order.order.map((key) => {
+              const content = key === "pinned" ? (pinnedShown ? (
+                <Shelf label="Pinned" pinnedDropZone count={pinned.length} searching={searching} collapsed={isCollapsed("pinned")}
+                  onToggle={() => sections.toggle("pinned")} saveFailed={sections.failed === "pinned"}>
+                  {pinned.length === 0 ? (
+                    <li className="list-none rounded-md border border-dashed border-sidebar-border px-2.5 py-2 text-xs text-muted-foreground">
+                      Drop here to pin
+                    </li>
+                  ) : null}
+                  {pinned.flatMap((thread, index) => [
+                    drag.markerBefore(thread.id, index) ? <DropMarker key={`marker-${thread.id}`} /> : null,
+                    <ThreadCard
+                      key={thread.id}
+                      thread={thread}
+                      projectName={projectNameById.get(thread.projectId) ?? null}
+                      isActive={thread.id === activeThreadId}
+                      canPark={lifecycle.canPark(thread)}
+                      onNavigate={onNavigate}
+                      onSettle={() => lifecycle.settle(thread.id)}
+                      onSnooze={(until) => lifecycle.snooze(thread.id, until)}
+                      now={now}
+                    />,
+                  ])}
+                  {drag.markerAtEnd() ? <DropMarker /> : null}
+                </Shelf>
+              ) : null) : key === "unread" ? (inbox.length > 0 ? (
+                // #170 R1: the Inbox always has its header, so it can always be collapsed and expanded.
+                <Shelf label="Inbox" count={inbox.length} searching={searching}
+                  collapsed={isCollapsed("inbox")} onToggle={() => sections.toggle("inbox")} saveFailed={sections.failed === "inbox"}>
+                  {inbox.map((thread) => (
+                    <ThreadCard
+                      key={thread.id}
+                      thread={thread}
+                      projectName={projectNameById.get(thread.projectId) ?? null}
+                      isActive={thread.id === activeThreadId}
+                      canPark={lifecycle.canPark(thread)}
+                      onNavigate={onNavigate}
+                      onSettle={() => lifecycle.settle(thread.id)}
+                      onSnooze={(until) => lifecycle.snooze(thread.id, until)}
+                      now={now}
+                    />
+                  ))}
+                </Shelf>
+              ) : null) : (
+                // WB4-1 (#1435): the running specs.
+                <SpecsSection threads={threads} now={now} activeThreadId={activeThreadId} onNavigate={onNavigate}
+                  collapsed={sections.collapsed.has("specs")} onToggleCollapsed={() => sections.toggle("specs")}
+                  collapseFailed={sections.failed === "specs"} />
+              );
+              return content === null ? null : <SectionFrame key={key} section={key} order={order}>{content}</SectionFrame>;
+            })}
             <ParkedShelf
               label="Snoozed"
               threads={snoozed}
@@ -263,24 +280,18 @@ export function ThreadInbox({
               lifecycle={lifecycle}
               onNavigate={onNavigate}
             />
-            <ParkedShelf
-              label="Settled"
+            {/* E1 (#187): Settled is not a section; one quiet link at the very bottom opens it, and a search finds it. */}
+            <SettledLink
               threads={settled}
-              expanded={showSettled}
+              open={showSettled}
+              searching={searching}
               onToggle={() => setShowSettled((open) => !open)}
-              shelf="settled"
               activeThreadId={activeThreadId}
               lifecycle={lifecycle}
               onNavigate={onNavigate}
             />
           </>
         )}
-        {/* WB4-1 (#1435): the running specs, under the 0.3 shelves. */}
-        {status === "ready" && !drag.rowsUnknown ? (
-          <SpecsSection threads={threads} now={now} activeThreadId={activeThreadId} onNavigate={onNavigate}
-            collapsed={sections.collapsed.has("specs")} onToggleCollapsed={() => sections.toggle("specs")}
-            collapseFailed={sections.failed === "specs"} />
-        ) : null}
       </div>
       <FooterCounter className="shrink-0 border-t border-sidebar-border px-3 py-1" />
     </div>
@@ -306,7 +317,7 @@ function ParkedShelf({
   threads: readonly PluginSidebarThread[];
   expanded: boolean;
   onToggle: () => void;
-  shelf: "snoozed" | "settled" | "muted";
+  shelf: "snoozed" | "muted";
   activeThreadId: string | null;
   lifecycle: ReturnType<typeof useLifecycle>;
   onNavigate: () => void;
@@ -319,7 +330,7 @@ function ParkedShelf({
         type="button"
         onClick={onToggle}
         aria-expanded={expanded}
-        // Round 5 A: "Settled 4", the count faint, the rule running to the
+        // Round 5 A: "Snoozed 4", the count faint, the rule running to the
         // edge like every shelf's, and no chevron; the whole line toggles.
         className="mt-3 flex w-full items-center gap-2 px-2.5 pb-1 text-left"
       >
@@ -344,11 +355,7 @@ function ParkedShelf({
               wakeAt={lifecycle.wakeAtFor(thread)}
               now={now}
               onNavigate={onNavigate}
-              onRestore={() =>
-                shelf === "snoozed"
-                  ? lifecycle.unsnooze(thread.id)
-                  : lifecycle.unsettle(thread.id)
-              }
+              onRestore={() => lifecycle.unsnooze(thread.id)}
             />
           ))}
         </ul>
@@ -439,44 +446,192 @@ function Shelf({
 const SAVE_FAILED = "Could not save the collapsed section. Try again.";
 
 /**
- * S1 (#169): `sectionsCollapsed` from plugin settings, saved the way the Specs
- * section saves `specsOpen`: a toggle shows at once, saves run one at a time
- * and the newest toggle wins. A failed save keeps the toggled state on screen
- * and names the section whose save failed.
+ * One section setting (`sectionsCollapsed` or `sectionsOrder`), saved the way
+ * the Specs section saves `specsOpen`: a change shows at once, saves run one at
+ * a time and the newest change wins, and only this one key is written. A failed
+ * save keeps the changed state on screen and reports the change's tag.
  */
-function useSectionsCollapsed() {
+function useSectionSetting<Tag>(name: "sectionsCollapsed" | "sectionsOrder") {
   const pluginId = experimental_usePluginId();
   const host = useSettings();
   const sdk = useSdk();
   const [written, setWritten] = useState<{ baseline: unknown; value: unknown; held: boolean } | null>(null);
-  const [failed, setFailed] = useState<SectionKey | null>(null);
-  const value = written && (written.held || written.baseline === host.values) ? written.value : host.values?.sectionsCollapsed;
+  const [failed, setFailed] = useState<Tag | null>(null);
+  const value = written && (written.held || written.baseline === host.values) ? written.value : host.values?.[name];
   const latest = useRef({ value, hostValues: host.values, seq: 0 });
   latest.current.value = value;
   latest.current.hostValues = host.values;
   const queue = useRef<Promise<void>>(Promise.resolve());
-  const collapsed = useMemo(() => new Set(readCollapsedKeys(value)), [value]);
-  const toggle = useCallback((key: SectionKey) => {
-    const next = withCollapsed(latest.current.value, key, !readCollapsedKeys(latest.current.value).includes(key));
+  /** Writes `change(current value)`, unless it is what is already stored. */
+  const save = useCallback((change: (raw: unknown) => string, tag: Tag) => {
+    const next = change(latest.current.value);
+    if (next === latest.current.value) return;
     const seq = ++latest.current.seq;
     latest.current.value = next;
     setWritten({ baseline: latest.current.hostValues, value: next, held: true });
     setFailed(null);
     queue.current = queue.current.then(async () => {
-      // A newer toggle carries this one's change in its own save.
+      // A newer change carries this one's in its own save.
       if (seq !== latest.current.seq) return;
       try {
-        const result = await sdk.plugins.updateSettings({ pluginId, values: { sectionsCollapsed: next } });
+        const result = await sdk.plugins.updateSettings({ pluginId, values: { [name]: next } });
         if (seq === latest.current.seq) {
-          setWritten({ baseline: latest.current.hostValues, value: result.values?.sectionsCollapsed ?? next, held: false });
+          setWritten({ baseline: latest.current.hostValues, value: result.values?.[name] ?? next, held: false });
         }
       } catch {
         // Keep the owner's choice on screen (held) and say the save failed.
-        if (seq === latest.current.seq) setFailed(key);
+        if (seq === latest.current.seq) setFailed(() => tag);
       }
     });
-  }, [pluginId, sdk]);
+  }, [name, pluginId, sdk]);
+  return { value, save, failed };
+}
+
+/** S1 (#169): `sectionsCollapsed`; a toggle names the section whose save failed. */
+function useSectionsCollapsed() {
+  const { value, save, failed } = useSectionSetting<SectionKey>("sectionsCollapsed");
+  const collapsed = useMemo(() => new Set(readCollapsedKeys(value)), [value]);
+  const toggle = useCallback((key: SectionKey) =>
+    save((raw) => withCollapsed(raw, key, !readCollapsedKeys(raw).includes(key)), key), [save]);
   return { collapsed, toggle, failed };
+}
+
+/**
+ * E1 (#187): `sectionsOrder` (sidebar-v3.v1.md section 10). `move` puts a
+ * section at an index of the whole order, as a header drop or Alt+Up/Alt+Down does.
+ */
+function useSectionsOrder() {
+  const { value, save, failed } = useSectionSetting<true>("sectionsOrder");
+  const order = useMemo(() => readSectionsOrder(value), [value]);
+  const [dragging, setDragging] = useState<SidebarSection | null>(null);
+  const [dropAt, setDropAt] = useState<{ over: SidebarSection; after: boolean } | null>(null);
+  const move = useCallback((key: SidebarSection, to: number) => {
+    // Moving to where it already is writes nothing.
+    save((raw) => {
+      const next = withSectionMoved(raw, key, to);
+      return JSON.stringify(readSectionsOrder(raw)) === next ? (raw as string) : next;
+    }, true);
+  }, [save]);
+  return { order, move, failed: failed !== null, dragging, setDragging, dropAt, setDropAt };
+}
+
+/**
+ * E1 (#187): one movable section. Its header (the section's first
+ * `aria-expanded` button) moves it with Alt+Up/Alt+Down, and a faint grip on
+ * the header's left, shown on hover, drags it. Card drags pass straight through.
+ */
+function SectionFrame({ section, order, children }: {
+  section: SidebarSection;
+  order: ReturnType<typeof useSectionsOrder>;
+  children: ReactNode;
+}) {
+  const frame = useRef<HTMLDivElement>(null);
+  const refocus = useRef(false);
+  const index = order.order.indexOf(section);
+  const headerOf = () => frame.current?.querySelector<HTMLElement>("button[aria-expanded]") ?? null;
+  // A keyed move can take focus with the moved element: give it back to the header.
+  useEffect(() => {
+    if (!refocus.current) return;
+    refocus.current = false;
+    const header = headerOf();
+    if (header && document.activeElement !== header) header.focus();
+  }, [index]);
+  const dropAfter = (event: React.DragEvent) => {
+    const box = frame.current!.getBoundingClientRect();
+    return event.clientY > box.top + box.height / 2;
+  };
+  const marker = (after: boolean) => order.dragging !== null && order.dragging !== section
+    && order.dropAt?.over === section && order.dropAt.after === after
+    ? <div aria-hidden="true" className="mx-2.5 h-0.5 rounded-full bg-sidebar-ring" /> : null;
+  return (
+    <div
+      ref={frame}
+      data-wizbar-section={section}
+      // The header lights up on hover like the design's Pinned header, and shows the grip.
+      className="group/section relative [&>section>:first-child]:rounded-md [&>section>:first-child:hover]:bg-sidebar-accent/60"
+      onKeyDown={(event) => {
+        if (!event.altKey || event.shiftKey || event.ctrlKey || event.metaKey) return;
+        if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+        if (event.target !== headerOf()) return;
+        event.preventDefault();
+        refocus.current = true;
+        order.move(section, index + (event.key === "ArrowUp" ? -1 : 1));
+      }}
+      onDragOver={(event) => {
+        if (order.dragging === null) return;
+        event.preventDefault();
+        const after = dropAfter(event);
+        if (order.dropAt?.over !== section || order.dropAt.after !== after) order.setDropAt({ over: section, after });
+      }}
+      onDrop={(event) => {
+        const moving = order.dragging;
+        if (moving === null) return;
+        event.preventDefault();
+        order.setDragging(null);
+        order.setDropAt(null);
+        if (moving === section) return;
+        const rest = order.order.filter((key) => key !== moving);
+        order.move(moving, rest.indexOf(section) + (dropAfter(event) ? 1 : 0));
+      }}
+    >
+      <span
+        aria-hidden="true"
+        draggable
+        data-wizbar-section-grip=""
+        title="Drag to reorder"
+        onDragStart={(event) => {
+          if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
+          order.setDragging(section);
+        }}
+        onDragEnd={() => { order.setDragging(null); order.setDropAt(null); }}
+        className="absolute left-0 top-[13px] z-10 flex h-3.5 w-2 cursor-grab items-center justify-center text-muted-foreground opacity-0 hover:opacity-100 group-has-[>section>:first-child:hover]/section:opacity-60 group-has-[>section>:first-child:focus-visible]/section:opacity-60"
+      >
+        <svg width="5" height="9" viewBox="0 0 5 9" fill="currentColor">
+          {[1, 4.5, 8].flatMap((y) => [<circle key={`l${y}`} cx="1" cy={y} r="0.9" />, <circle key={`r${y}`} cx="4" cy={y} r="0.9" />])}
+        </svg>
+      </span>
+      {marker(false)}
+      {children}
+      {marker(true)}
+    </div>
+  );
+}
+
+/**
+ * E1 (#187): Settled, out of the list. One quiet `Settled N` link at the very
+ * bottom opens the settled threads; a search shows its matches without a click.
+ */
+function SettledLink({ threads, open, searching, onToggle, activeThreadId, lifecycle, onNavigate }: {
+  threads: readonly PluginSidebarThread[];
+  open: boolean;
+  searching: boolean;
+  onToggle: () => void;
+  activeThreadId: string | null;
+  lifecycle: ReturnType<typeof useLifecycle>;
+  onNavigate: () => void;
+}) {
+  if (threads.length === 0) return null;
+  const expanded = open || searching;
+  const now = Date.now();
+  return (
+    // A small landmark for the link and its list; not one of the ordered sections.
+    <section aria-label="Settled" className="mt-4">
+      <button type="button" aria-expanded={expanded} onClick={searching ? undefined : onToggle}
+        {...(searching ? { "aria-disabled": true } : {})}
+        className="rounded px-2.5 py-1 text-left text-[11.5px] text-muted-foreground/70 hover:text-muted-foreground focus-visible:ring-1 aria-disabled:cursor-default">
+        Settled <span className="text-muted-foreground/40">{threads.length}</span>
+      </button>
+      {expanded ? (
+        <ul className="flex flex-col gap-px">
+          {threads.map((thread) => (
+            <SlimRow key={thread.id} thread={thread} isActive={thread.id === activeThreadId} shelf="settled"
+              wakeAt={lifecycle.wakeAtFor(thread)} now={now} onNavigate={onNavigate}
+              onRestore={() => lifecycle.unsettle(thread.id)} />
+          ))}
+        </ul>
+      ) : null}
+    </section>
+  );
 }
 
 /** A shelf's rule: the Specs section's rule olive (round 5 A), so every shelf reads as one list. */

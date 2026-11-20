@@ -1111,7 +1111,8 @@ describe("round 5 shelves", () => {
   const rule = (region: HTMLElement) => region.querySelector<HTMLElement>(":scope > h2 > span:last-child, :scope > button > span:last-child")!;
 
   // catches: a shelf left on the grey border rule, or on the text olive, while Specs uses its quieter rule olive.
-  it.each(["Pinned", "Inbox", "Snoozed", "Muted", "Settled"])("draws the %s rule in the Specs rule olive", async (name) => {
+  // E1 (#187): Settled is a quiet link with no rule now, tested in the E1 block.
+  it.each(["Pinned", "Inbox", "Snoozed", "Muted"])("draws the %s rule in the Specs rule olive", async (name) => {
     renderShelves();
     const region = await screen.findByRole("region", { name });
     const specs = await screen.findByRole("region", { name: "Specs" });
@@ -1422,14 +1423,16 @@ describe("E1: section order and the Settled link", () => {
   it("drops Settled from the list for one quiet Settled N link at the very bottom, which opens it", async () => {
     renderOrder();
     const link = await screen.findByRole("button", { name: "Settled 1" });
-    expect(screen.queryByRole("region", { name: "Settled" })).toBeNull();
+    // Its landmark holds only the link: no section frame, no grip, no header rule.
+    const region = screen.getByRole("region", { name: "Settled" });
+    expect(region.closest("[data-wizbar-section]")).toBeNull();
+    expect(region.firstElementChild).toBe(link);
+    expect(region.querySelector("[aria-hidden='true'].h-px")).toBeNull();
     expect(screen.queryByRole("link", { name: "Settled alpha" })).toBeNull();
-    // Nothing of the list comes after it: no rule, no section.
-    const regions = screen.getAllByRole("region");
-    for (const region of regions) {
-      expect(region.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // Nothing of the list comes after it: every other region is above.
+    for (const other of screen.getAllByRole("region").filter((r) => r !== region)) {
+      expect(other.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     }
-    expect(link.querySelector("[aria-hidden='true'].h-px")).toBeNull();
     expect(link.getAttribute("aria-expanded")).toBe("false");
     fireEvent.click(link);
     expect(link.getAttribute("aria-expanded")).toBe("true");
