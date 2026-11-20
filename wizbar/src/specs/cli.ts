@@ -5,6 +5,7 @@ import type { PluginCliResult } from "@get-bb/plugin-sdk";
 import type { SpecKeyV4, SpecOpenResultV4, SpecsFileReadV4, SpecsResultV4 } from "../fixtures/v4";
 import { effectiveOpen, readOpenKeys, withOpen } from "./open-state";
 import { readSpecsFile } from "./read";
+import { readSpecsSort, specsSorts, type SpecsSort } from "../settings";
 import { isHidden, isRunning, needsYouSpecs, sectionRule, specRows, type SpecsThreadRow } from "./rows";
 import type { CardModelsResultV3 } from "../v3-types";
 
@@ -20,6 +21,8 @@ export interface SpecsSources {
   models?(threadIds: readonly string[]): Promise<CardModelsResultV3>;
   /** Reads `specsOpen`; a failed read rejects (the display falls back to collapsed, a mutation fails). */
   openSetting(): Promise<unknown>;
+  /** S1 (#184): reads `specsSort`, the order `wizbar specs` uses without `--sort`; a failed or missing read is the default. */
+  sortSetting?(): Promise<unknown>;
   /** Writes `specsOpen` and returns the value read back. */
   writeOpenSetting(value: string): Promise<unknown>;
 }
@@ -44,20 +47,30 @@ export function formatSpecsText(result: SpecsResultV4): string {
   ].join(" · "))].join("\n");
 }
 
-/** Splits arguments into positionals and flags; null on a repeated or unknown flag. */
-function parse(args: readonly string[], allowed: readonly string[]): { positional: string[]; flags: Set<string> } | null {
+/**
+ * Splits arguments into positionals and flags; null on a repeated or unknown flag.
+ * S1 (#184): `--sort` takes the next argument as its value, one of the four sorts.
+ */
+function parse(args: readonly string[], allowed: readonly string[]): { positional: string[]; flags: Set<string>; sort?: SpecsSort } | null {
   const positional: string[] = [];
   const flags = new Set<string>();
+  let sort: SpecsSort | undefined;
   let literal = false;
-  for (const arg of args) {
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i]!;
     if (literal) positional.push(arg);
     else if (arg === "--") literal = true;
-    else if (arg.startsWith("--")) {
+    else if (arg === "--sort" && allowed.includes(arg)) {
+      const value = args[i + 1];
+      if (sort !== undefined || !(specsSorts as readonly unknown[]).includes(value)) return null;
+      sort = value as SpecsSort;
+      i++;
+    } else if (arg.startsWith("--")) {
       if (!allowed.includes(arg) || flags.has(arg)) return null;
       flags.add(arg);
     } else positional.push(arg);
   }
-  return { positional, flags };
+  return { positional, flags, ...(sort ? { sort } : {}) };
 }
 
 const issueKey = /^[A-Za-z0-9][A-Za-z0-9-]*\/[A-Za-z0-9._-]+#[1-9][0-9]*$/;
@@ -71,7 +84,7 @@ export function createSpecsCommands(sources: SpecsSources): SpecsCommands {
     return next;
   };
 
-  const specs = async (json: boolean, signal?: AbortSignal): Promise<PluginCliResult> => {
+  const specs = async (json: boolean, chosen: SpecsSort | undefined, signal?: AbortSignal): Promise<PluginCliResult> => {
     const now = Date.now();
     const read = readSpecsFile(await sources.specsFile(), now);
     if (read.status !== "ready") return fail(json, unavailable(read.reason));
@@ -81,7 +94,9 @@ export function createSpecsCommands(sources: SpecsSources): SpecsCommands {
     const models = sources.models && running.length ? await sources.models(running) : null;
     // A failed settings read shows every spec collapsed (section 4: fail closed).
     const openKeys = readOpenKeys(await sources.openSetting().catch(() => undefined));
-    const result = specRows(read.file, rows, openKeys, now, models);
+    // S1 (#184): `--sort`, else the stored sort; a failed read is the default.
+    const sort = chosen ?? readSpecsSort(await sources.sortSetting?.().catch(() => undefined));
+    const result = specRows(read.file, rows, openKeys, now, models, sort);
     // #161: `needsYouSpecs`, the visible specs with a ticket due now, beside `needsYou`.
     return { exitCode: 0, stdout: (json ? JSON.stringify({ ...result, needsYouSpecs: needsYouSpecs(result) }) : formatSpecsText(result)) + "\n" };
   };
@@ -122,8 +137,8 @@ export function createSpecsCommands(sources: SpecsSources): SpecsCommands {
   return {
     async run(argv, json, signal) {
       if (argv[0] === "specs") {
-        const args = parse(argv.slice(1), ["--json"]);
-        return args && args.positional.length === 0 ? specs(json, signal) : null;
+        const args = parse(argv.slice(1), ["--json", "--sort"]);
+        return args && args.positional.length === 0 ? specs(json, args.sort, signal) : null;
       }
       const args = parse(argv.slice(1), ["--json", "--open", "--close"]);
       if (!args || args.positional.length !== 1 || args.flags.has("--open") === args.flags.has("--close")) return null;

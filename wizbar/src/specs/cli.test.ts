@@ -75,7 +75,7 @@ describe("wizbar specs (section 8)", () => {
       return contentRead(v4SpecsFileText)(args);
     };
     const cli = await setup({ read: v1Only });
-    expect(await cli.json(["specs"])).toEqual({ exitCode: 0, body: { ...v4SpecRows, needsYouSpecs: 2, sort: "needs-you" } });
+    expect(await cli.json(["specs"])).toEqual({ exitCode: 0, body: { ...v4SpecRows, needsYouSpecs: 2 } });
     expect(cli.read.mock.calls.map(([args]) => args)).toEqual([
       expect.objectContaining({ hostId: "hst_v4_home", rootPath: "/synthetic/home", path: "/synthetic/home/.openwiz/specs.v2.json" }),
       expect.objectContaining({ hostId: "hst_v4_home", rootPath: "/synthetic/home", path: "/synthetic/home/.openwiz/specs.v1.json" }),
@@ -96,7 +96,7 @@ describe("wizbar specs (section 8)", () => {
   // catches (#162): a v2 file refused, or its later tickets missing from the JSON, folded into needs you, or left out of the text.
   it("prints later tickets apart from needs you, in JSON and text", async () => {
     const cli = await setup({ text: v4SpecsFileV2Text });
-    expect(await cli.json(["specs"])).toEqual({ exitCode: 0, body: { ...v4SpecRowsV2, needsYouSpecs: 2, sort: "needs-you" } });
+    expect(await cli.json(["specs"])).toEqual({ exitCode: 0, body: { ...v4SpecRowsV2, needsYouSpecs: 2 } });
     expect(await cli.run(["specs"])).toEqual({ exitCode: 0, stderr: "", stdout: [
       "Specs 2 · 2 tickets need you (2 specs)",
       "example/sample-plans#501 Sample palette: 4/11 · 1 done in the last hour · 1 needs you · 1 later · 4 running",
@@ -360,12 +360,11 @@ describe("S1: the four sorts (section 11)", () => {
   });
 
   // catches: the CLI ignoring --sort, or giving another order than the section for the same input.
-  it.each(specsSortsV6)("wizbar specs --sort %s --json gives the same order, and names it", async (sort) => {
+  it.each(specsSortsV6)("wizbar specs --sort %s --json gives the same order, in JSON and text", async (sort) => {
     vi.setSystemTime(v6Now);
     const cli = await setup({ text: v6SpecsFileText, list: async () => v6Threads.map(rawRow), settings: { specsOpen: "[]" } });
     const { exitCode, body } = await cli.json(["specs", "--sort", sort]);
     expect(exitCode).toBe(0);
-    expect(body.sort).toBe(sort);
     expect(body.specs.map((row: { spec: string }) => row.spec)).toEqual(v6SortOrders[sort].filter((key) => !finished.has(key)));
     const text = (await cli.run(["specs", "--sort", sort])).stdout.split("\n").slice(1, -1).map((line) => line.split(" ")[0]);
     expect(text).toEqual(body.specs.map((row: { spec: string }) => row.spec));
@@ -376,7 +375,6 @@ describe("S1: the four sorts (section 11)", () => {
     vi.setSystemTime(v6Now);
     const cli = await setup({ text: v6SpecsFileText, list: async () => v6Threads.map(rawRow), settings: { specsOpen: "[]" } });
     const { body } = await cli.json(["specs"]);
-    expect(body.sort).toBe("needs-you");
     expect(body.specs.map((row: { spec: string }) => row.spec)).toEqual(v6SortOrders["needs-you"].filter((key) => !finished.has(key)));
   });
 });

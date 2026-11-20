@@ -10,7 +10,7 @@ import { loadPluginApp, renderSlot } from "@get-bb/plugin-sdk/testing/app";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import plugin from "../server";
 import { v4Now, v4OpenSetting, v4SpecOpenCases, v4SpecRows, v4SpecRowsV2, v4SpecsFileText, v4SpecsFileV2Text, v4Threads, type SpecsFileReadV4 } from "../fixtures/v4";
-import { specsSortsV6, v6Activity, v6Agents, v6Now, v6SortOrders, v6SpecsFileText } from "../fixtures/v6";
+import { specsSortsV6, type SpecsSortV6, v6Activity, v6Agents, v6Now, v6SortOrders, v6SpecsFileText } from "../fixtures/v6";
 import { strictRead } from "../testing/strict-files";
 import { SpecsSection, type SpecsSectionProps } from "./SpecsSection";
 import { effectiveOpen, readOpenKeys } from "./open-state";
@@ -669,7 +669,8 @@ describe("S1: the Specs sort", () => {
   const picker = (region: HTMLElement) => within(region).getByRole("combobox", { name: "Sort specs" }) as HTMLSelectElement;
 
   // catches: the section still in the file's order, or a stored sort ignored on a fresh mount.
-  it.each([["no stored sort", undefined, "needs-you"], ...specsSortsV6.map((sort) => [`a stored ${sort}`, sort, sort])] as const)(
+  const cases: [string, SpecsSortV6 | undefined, SpecsSortV6][] = [["no stored sort", undefined, "needs-you"], ...specsSortsV6.map((sort) => [`a stored ${sort}`, sort, sort] as [string, SpecsSortV6, SpecsSortV6])];
+  it.each(cases)(
     "shows the rows in the sort for %s", async (_name, stored, sort) => {
       renderV6(stored === undefined ? {} : { specsSort: stored });
       const region = await section();
