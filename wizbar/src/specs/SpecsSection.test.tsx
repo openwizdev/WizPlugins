@@ -4,12 +4,13 @@
 // (specs-section.v1.md sections 2 to 4 and 8). Every row is synthetic.
 import { createHash } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { createFakePluginHost, type FakePluginHost } from "@get-bb/plugin-sdk/testing";
 import { loadPluginApp, renderSlot } from "@get-bb/plugin-sdk/testing/app";
 import plugin from "../server";
-import { v4Now, v4OpenSetting, v4SpecRows, v4SpecsFileText, v4Threads, type SpecsFileReadV4 } from "../fixtures/v4";
+import { v4Now, v4OpenSetting, v4SpecOpenCases, v4SpecRows, v4SpecsFileText, v4Threads, type SpecsFileReadV4 } from "../fixtures/v4";
 import { SpecsSection, type SpecsSectionProps } from "./SpecsSection";
+import { effectiveOpen, readOpenKeys } from "./open-state";
 import { rawRow } from "./testing";
 
 const binding = JSON.stringify([{ projectKey: "sample-factory", cloudroomProjectId: "prj_v4_atlas", repositories: ["example/sample-plans"],
@@ -136,7 +137,8 @@ describe("S2: open, closed and remembered", () => {
     const { rendered } = render();
     await screen.findByText("Sample palette");
     const row = rowOf("Sample palette");
-    expect(within(row).queryByRole("button", { name: "Open Sample palette on GitHub" })).toBeNull();
+    // The GitHub button stays mounted for keyboard users (#1563); before hover the row shows done/total.
+    expect(within(row).getByText("4/10")).toBeTruthy();
     fireEvent.pointerEnter(row);
     expect(within(row).queryByText("4/10")).toBeNull();
     fireEvent.click(within(row).getByRole("button", { name: "Open Sample palette on GitHub" }));
@@ -203,5 +205,143 @@ describe("parity: wizbar specs --json is what the section shows", () => {
         open: s.open, dots: s.dots.map((d) => d.state), agents: s.open ? s.agents.map((a) => a.threadId) : [],
       })),
     });
+  });
+});
+
+// WB4-8 (openwizdev/OpenWiz#1583): fixes from the cross-family re-check of WB4-1.
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((done) => { resolve = done; });
+  return { promise, resolve };
+}
+
+describe("WB4-8: the latest toggle wins (#1562)", () => {
+  // catches: an older settings response landing last and reopening a spec the owner just closed, on screen and in the store.
+  it("keeps the latest choice shown and stored when the saves finish out of order", async () => {
+    let stored: Record<string, string> = { wizdeckFactories: binding };
+    const pending: { values: Record<string, string>; done: (result: unknown) => void }[] = [];
+    renderSlot({ component: SpecsSection }, props, {
+      pluginId: "wizbar", rpc: { specsFile: () => ready }, settings: stored,
+      sdk: { plugins: { updateSettings: ((args: { values: Record<string, string> }) => new Promise((done) => {
+        pending.push({ values: args.values, done });
+      })) as never } },
+    });
+    fireEvent.click(await screen.findByRole("button", { name: "Open Sample palette" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Close Sample palette" }));
+    // The host finishes the newest outstanding save first, then the older ones; each lands in the store as it finishes.
+    for (;;) {
+      await act(async () => { await new Promise((tick) => setTimeout(tick, 0)); });
+      const save = pending.pop();
+      if (!save) break;
+      stored = { ...stored, ...save.values };
+      save.done({ values: stored });
+    }
+    expect(readOpenKeys(stored.specsOpen)).toEqual([]);
+    expect(screen.getByRole("button", { name: "Open Sample palette" }).getAttribute("aria-expanded")).toBe("false");
+    expect(screen.queryByRole("list", { name: "Sample palette agents" })).toBeNull();
+  });
+});
+
+describe("WB4-8: GitHub by keyboard on a spec without agents (#1563)", () => {
+  const tabbable = (root: HTMLElement) => [...root.querySelectorAll<HTMLElement>("button, a[href], input, [tabindex]")]
+    .filter((el) => el.tabIndex >= 0 && !(el as HTMLButtonElement).disabled);
+
+  // catches: a row with no chevron that has nothing to focus, so its GitHub action needs a mouse.
+  it("puts the GitHub action in the tab order, reveals it on focus, and opens the spec issue", async () => {
+    const { rendered } = render();
+    await screen.findByText("Sample cache");
+    const row = rowOf("Sample cache");
+    expect(within(row).getByText("0/3")).toBeTruthy();
+    const stops = tabbable(row);
+    expect(stops.map((el) => el.getAttribute("aria-label"))).toEqual(["Open Sample cache on GitHub"]);
+    const github = stops[0] as HTMLButtonElement;
+    expect(github.tagName).toBe("BUTTON");
+    expect(github.type).toBe("button");
+    act(() => github.focus());
+    expect(document.activeElement).toBe(github);
+    expect(within(row).queryByText("0/3")).toBeNull();
+    // Enter on a focused native button is a click; jsdom does not synthesize that, so the click stands in for it.
+    fireEvent.click(github);
+    expect(rendered.navigateCalls).toEqual([{ method: "openUrl", url: "https://github.com/example/sample-tools/issues/77" }]);
+    act(() => github.blur());
+    expect(within(row).getByText("0/3")).toBeTruthy();
+  });
+});
+
+describe("WB4-8: pointer and focus reveal GitHub independently (#1563, review R1)", () => {
+  // catches: a pointer leave hiding the focused GitHub button, or a blur hiding it under the pointer, because hover and focus share one flag.
+  it.each([
+    ["the pointer leaves while focus stays", (row: HTMLElement, github: HTMLElement) => {
+      fireEvent.pointerEnter(row); act(() => github.focus()); fireEvent.pointerLeave(row);
+    }],
+    ["focus leaves while the pointer stays", (row: HTMLElement, github: HTMLElement) => {
+      act(() => github.focus()); fireEvent.pointerEnter(row); act(() => github.blur());
+    }],
+  ] as const)("keeps the GitHub action shown when %s", async (_name, steps) => {
+    render();
+    await screen.findByText("Sample cache");
+    const row = rowOf("Sample cache");
+    const github = within(row).getByRole("button", { name: "Open Sample cache on GitHub" });
+    steps(row, github);
+    expect(github.classList.contains("sr-only")).toBe(false);
+    expect(within(row).queryByText("0/3")).toBeNull();
+  });
+});
+
+describe("WB4-8: a changed factory clears the old rows at once (#1564)", () => {
+  const other = JSON.stringify([{ ...JSON.parse(binding)[0], home: { hostId: "hst_v4_other", rootPath: "/synthetic/other" } }]);
+  const onlyCache: SpecsFileReadV4 = { kind: "content", text: JSON.stringify({
+    ...JSON.parse(v4SpecsFileText), specs: JSON.parse(v4SpecsFileText).specs.filter((s: { spec: string }) => s.spec === "example/sample-tools#77") }) };
+  // The fake host keeps one settings object for the mount; changing it and rerendering is the owner's settings edit.
+  function mountSwitchable() {
+    const settings: Record<string, string> = { wizdeckFactories: binding };
+    const reads: ReturnType<typeof deferred<SpecsFileReadV4>>[] = [];
+    const rendered = renderSlot({ component: SpecsSection }, props, {
+      pluginId: "wizbar", settings,
+      rpc: { specsFile: () => { const read = deferred<SpecsFileReadV4>(); reads.push(read); return read.promise; } },
+    });
+    const switchTo = (next: string) => { settings.wizdeckFactories = next; rendered.lifecycle.rerender(<SpecsSection {...props} />); };
+    return { rendered, reads, switchTo };
+  }
+
+  // catches: two valid single-factory bindings reduced to one Boolean, so the old factory's rows and GitHub links stay up.
+  it("drops the old rows at once and reads the new factory", async () => {
+    const { rendered, reads, switchTo } = mountSwitchable();
+    await waitFor(() => expect(reads.length).toBe(1));
+    await act(async () => reads[0]!.resolve(ready));
+    expect(await screen.findByText("Sample palette")).toBeTruthy();
+    switchTo(other);
+    expect(screen.queryByText("Sample palette")).toBeNull();
+    await waitFor(() => expect(rendered.rpcCalls.length).toBe(2));
+    await act(async () => reads[1]!.resolve(onlyCache));
+    expect(await screen.findByText("Sample cache")).toBeTruthy();
+    expect(screen.queryByText("Sample palette")).toBeNull();
+  });
+
+  // catches: the old factory's read finishing after the switch and painting its rows over the new factory's.
+  it("drops a late response from the old binding", async () => {
+    const { reads, switchTo } = mountSwitchable();
+    await waitFor(() => expect(reads.length).toBe(1));
+    switchTo(other);
+    await waitFor(() => expect(reads.length).toBe(2));
+    await act(async () => reads[1]!.resolve(onlyCache));
+    expect(await screen.findByText("Sample cache")).toBeTruthy();
+    await act(async () => reads[0]!.resolve(ready));
+    expect(screen.queryByText("Sample palette")).toBeNull();
+    expect(screen.getByText("Sample cache")).toBeTruthy();
+  });
+});
+
+describe("WB4-8: the sidebar shows WB4-7's effective open state (#1539)", () => {
+  // catches: the sidebar and `wizbar spec` disagreeing on whether a spec is open, for example a saved key on a spec with no agents.
+  it.each(v4SpecOpenCases.map((c) => [c.argv.join(" "), c] as const))("after %s", async (_name, c) => {
+    render({ settings: { specsOpen: JSON.stringify(c.stored) } });
+    await screen.findByText("Sample palette");
+    for (const row of v4SpecRows.specs) {
+      const shown = rowOf(row.shortName).querySelector("[aria-expanded]")?.getAttribute("aria-expanded") === "true";
+      expect(shown).toBe(effectiveOpen({ open: c.stored.includes(row.spec), agents: row.agents }));
+    }
+    const target = rowOf(v4SpecRows.specs.find((row) => row.spec === c.result.spec)!.shortName);
+    expect(target.querySelector("[aria-expanded]")?.getAttribute("aria-expanded") === "true").toBe(c.result.open);
   });
 });
