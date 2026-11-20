@@ -192,7 +192,8 @@ describe("wizbar spec <n> --open|--close (sections 4 and 8)", () => {
     file.specs[1] = { ...file.specs[1]!, spec: "example/sample-tools#501", url: "https://github.com/example/sample-tools/issues/501" };
     const cli = await setup({ text: JSON.stringify(file) });
     expect((await cli.json(["spec", "501", "--open"])).body.error.code).toBe("ambiguous_spec");
-    expect(await cli.json(["spec", "example/sample-tools#501", "--open"])).toEqual({ exitCode: 0, body: { spec: "example/sample-tools#501", open: true } });
+    // The copied cache spec has no agents, so it reports closed (section 4: effective open state).
+    expect(await cli.json(["spec", "example/sample-tools#501", "--open"])).toEqual({ exitCode: 0, body: { spec: "example/sample-tools#501", open: false } });
   });
 
   // catches: a spec opened from an unavailable file.
@@ -255,14 +256,26 @@ describe("wizbar spec <n> --open|--close (sections 4 and 8)", () => {
     expect(specs.body.specs.map((r: { open: boolean }) => r.open)).toEqual([false, false]);
   });
 
+  // catches: a spec written and reported when its agents, and so what the sidebar shows, could not be read.
+  it("needs the thread rows and writes nothing without them", async () => {
+    const cli = await setup({ list: async () => { throw new Error("offline"); } });
+    expect(await cli.json(["spec", "77", "--open"])).toEqual({
+      exitCode: 1, body: { error: { code: "state_unavailable", message: "Thread state is unavailable." } },
+    });
+    expect(await cli.stored()).toBe(v4OpenSetting);
+  });
+
   // catches: two overlapping commands reading the same snapshot, so the later write drops the earlier change (#1561).
   it("keeps both changes when two commands overlap", async () => {
     const cli = await setup({ settings: { specsOpen: "[]" } });
     let release!: () => void;
     const gate = new Promise<void>((resolve) => { release = resolve; });
-    cli.open.beforeGet = () => gate;
+    let reads = 0;
+    cli.open.beforeGet = () => { reads += 1; return gate; };
     const both = Promise.all([cli.json(["spec", "501", "--open"]), cli.json(["spec", "77", "--open"])]);
-    for (let i = 0; i < 20; i++) await new Promise((resolve) => setTimeout(resolve, 0));
+    // One command holds a settings read; after one task turn the other's read has started unless it waits its turn.
+    await vi.waitFor(() => expect(reads).toBeGreaterThan(0));
+    await new Promise((resolve) => setTimeout(resolve, 0));
     release();
     const results = await both;
     expect(readOpenKeys(await cli.stored()).sort()).toEqual(["example/sample-plans#501", "example/sample-tools#77"]);
