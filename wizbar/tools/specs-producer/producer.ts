@@ -34,7 +34,8 @@ export const CACHE = join(".openwiz", "specs.v1.etags.json");
 export const BUDGET = 59;
 
 type State = "done" | "building" | "review" | "needs-you" | "yours-later" | "held" | "not-started";
-interface Ticket { ticket: string; code: string | null; title: string; state: State; closedAt: string | null; pulls: number[] }
+/** `updatedAt` (#183, v2 only): the issue's `updated_at`, its last activity; absent when the answer has none. */
+interface Ticket { ticket: string; code: string | null; title: string; state: State; closedAt: string | null; updatedAt?: string; pulls: number[] }
 interface Spec { spec: string; shortName: string; url: string; fleetThreadId: null; tickets: Ticket[] }
 
 /** The spec title after `spec: ` and before the next `: `, at most 40 characters. */
@@ -77,7 +78,7 @@ function slim(item: unknown): Record<string, unknown> {
   const summary = raw.sub_issues_summary as { total?: unknown } | undefined;
   const dependencies = raw.issue_dependencies_summary as { blocked_by?: unknown } | undefined;
   return {
-    number: raw.number, title: raw.title, state: raw.state, state_reason: raw.state_reason, closed_at: raw.closed_at,
+    number: raw.number, title: raw.title, state: raw.state, state_reason: raw.state_reason, closed_at: raw.closed_at, updated_at: raw.updated_at,
     labels: Array.isArray(raw.labels) ? raw.labels.map((l) => (typeof l === "string" ? l : (l as { name?: unknown })?.name)) : [],
     repository_url: raw.repository_url, sub_issues_summary: { total: summary?.total },
     issue_dependencies_summary: { blocked_by: dependencies?.blocked_by }, pull_request: raw.pull_request ? true : undefined,
@@ -88,13 +89,14 @@ function slim(item: unknown): Record<string, unknown> {
 /** One cached page from the last successful run: its ETag, link and slimmed items. */
 interface CacheEntry { etag: string; next: string | null; body: Record<string, unknown>[] }
 /** The cache file: exactly the pages of the last successful scan, so an unbound repository leaves no trace. */
-interface Cache { version: 4; pages: Record<string, CacheEntry> }
+interface Cache { version: 5; pages: Record<string, CacheEntry> }
 
 async function readCache(path: string): Promise<Record<string, CacheEntry>> {
   try {
     const parsed = JSON.parse(await readFile(path, "utf8")) as Partial<Cache> | null;
-    // An older cache format starts again with unconditional reads (version 3 kept no blockers, #162).
-    if (parsed?.version === 4 && typeof parsed.pages === "object" && parsed.pages !== null) return parsed.pages;
+    // An older cache format starts again with unconditional reads (version 3 kept no blockers, #162;
+    // version 4 no update times, #183), so a 304 never serves a page without them.
+    if (parsed?.version === 5 && typeof parsed.pages === "object" && parsed.pages !== null) return parsed.pages;
   } catch {
     // No cache, or an unreadable one.
   }
@@ -133,9 +135,12 @@ async function writeAllOrNothing(files: readonly (readonly [path: string, text: 
   }
 }
 
-/** The v1 file: v2 with every later ticket as needs-you, as the producer wrote it before #162. */
+/** The v1 file: v2 with every later ticket as needs-you and no `updatedAt` (#183), as the producer wrote it before #162. */
 function asV1(specs: Spec[]): Spec[] {
-  return specs.map((spec) => ({ ...spec, tickets: spec.tickets.map((t) => (t.state === "yours-later" ? { ...t, state: "needs-you" as const } : t)) }));
+  return specs.map((spec) => ({
+    ...spec,
+    tickets: spec.tickets.map(({ updatedAt: _v2Only, ...t }) => (t.state === "yours-later" ? { ...t, state: "needs-you" as const } : t)),
+  }));
 }
 
 const text = (value: unknown): string => (typeof value === "string" ? value : "");
@@ -167,7 +172,14 @@ function ticketOf(issue: Record<string, unknown>, repository: string, pulls: Pul
   else if (open.some((p) => !p.draft)) state = "review";
   else if (open.length > 0) state = "building";
   const closedAt = closed && typeof issue.closed_at === "string" ? issue.closed_at.replace(/\.\d+Z$/, "Z") : null;
-  return { ticket: key, code: ticketCodeOf(title), title, state, closedAt, pulls: open.map((p) => p.number).sort((a, b) => a - b) };
+  // #183: the answer's own `updated_at`, no extra request. Anything but a UTC time is left out, never guessed,
+  // since one bad time would make the whole file malformed for the reader.
+  const updatedAt = typeof issue.updated_at === "string" ? issue.updated_at.replace(/\.\d+Z$/, "Z") : "";
+  return {
+    ticket: key, code: ticketCodeOf(title), title, state, closedAt,
+    ...(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(updatedAt) && !Number.isNaN(Date.parse(updatedAt)) ? { updatedAt } : {}),
+    pulls: open.map((p) => p.number).sort((a, b) => a - b),
+  };
 }
 
 /** One run's reads: every page through `request`, conditional on the last run's ETag, counted against the budget. */
@@ -257,7 +269,7 @@ export async function runOnce(options: { home: string; repositories: readonly st
       [join(options.home, OUTPUT), `${JSON.stringify({ schema: "openwiz.specs.v1", generatedAt, specs: asV1(specs) }, null, 2)}\n`],
       [join(options.home, OUTPUT_V2), `${JSON.stringify({ schema: "openwiz.specs.v2", generatedAt, specs }, null, 2)}\n`],
     ]);
-    await writeAllOrNothing([[cachePath, JSON.stringify({ version: 4, pages: reader.pages } satisfies Cache)]]);
+    await writeAllOrNothing([[cachePath, JSON.stringify({ version: 5, pages: reader.pages } satisfies Cache)]]);
     return { ok: true, calls: reader.calls, specs: specs.length, unchanged: reader.unchanged };
   } catch (error) {
     return { ok: false, calls: reader.calls, error: error instanceof Error ? error.message : String(error) };

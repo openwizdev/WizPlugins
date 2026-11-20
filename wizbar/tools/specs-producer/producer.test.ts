@@ -26,8 +26,11 @@ const outputV2 = (dir: string) => join(dir, ".openwiz", "specs.v2.json");
 
 const t = (repo: string, n: number, code: string | null, title: string, state: string, closedAt: string | null = null, pulls: number[] = []) =>
   ({ ticket: `${repo}#${n}`, code, title, state, closedAt, pulls });
+/** The v1 ticket plus the issue's `updated_at` as v2's `updatedAt` (#183), or without it when the answer had none. */
+const u = (ticket: ReturnType<typeof t>, updatedAt: string | null) => (updatedAt === null ? ticket : { ...ticket, updatedAt });
+const DEFAULT_UPDATED = "2026-11-19T08:00:00Z";
 /** Worked out by hand from recorded.ts and the ticket's rules. */
-const kernel = {
+const kernelV1 = {
   spec: `${FLEET}#900`, shortName: "Sample kernel", url: `https://github.com/${FLEET}/issues/900`, fleetThreadId: null,
   tickets: [
     t(FLEET, 901, "KN1", "0.1.0 KN1: Sample records shape", "done", "2026-11-19T10:00:00Z"),
@@ -45,27 +48,42 @@ const kernel = {
     // #162: ready-for-human with open blockers is later; 904's one closed blocker leaves it due now.
     t(FLEET, 910, "KN11", "0.1.0 KN11: Sample sign-off", "yours-later"),
     t(FLEET, 911, "KN12", "0.1.0 KN12: Sample after the sign-off", "not-started"),
+    t(FLEET, 912, "KN13", "0.1.0 KN13: Sample with no update time", "not-started"),
   ],
 };
-const filler = (i: number) => {
+/** Each kernel ticket's `updated_at` in recorded.ts, by hand; 912's answer has none. */
+const kernelUpdated: Record<string, string | null> = {
+  [`${FLEET}#901`]: "2026-11-19T10:45:00Z", [`${FLEET}#902`]: "2026-11-20T11:30:00Z", [`${TOOLS}#31`]: "2026-11-20T09:15:00Z", [`${FLEET}#912`]: null,
+};
+const kernel = { ...kernelV1, tickets: kernelV1.tickets.map((x) => u(x, x.ticket in kernelUpdated ? kernelUpdated[x.ticket]! : DEFAULT_UPDATED)) };
+const filler = (i: number, v2 = true) => {
   const repo = i < 7 ? FLEET : TOOLS;
   const n = 1000 + i * 10;
+  const at = (ticket: ReturnType<typeof t>, updatedAt: string) => (v2 ? u(ticket, updatedAt) : ticket);
   return {
     spec: `${repo}#${n}`, shortName: `Sample filler ${i + 1}`, url: `https://github.com/${repo}/issues/${n}`, fleetThreadId: null,
-    tickets: [t(repo, n + 1, `F${i}1`, "0.2.0 F" + i + "1: Sample first", "not-started"), t(repo, n + 2, `F${i}2`, "0.2.0 F" + i + "2: Sample second", "done", "2026-11-19T11:00:00Z")],
+    tickets: [
+      at(t(repo, n + 1, `F${i}1`, "0.2.0 F" + i + "1: Sample first", "not-started"), DEFAULT_UPDATED),
+      at(t(repo, n + 2, `F${i}2`, "0.2.0 F" + i + "2: Sample second", "done", "2026-11-19T11:00:00Z"), "2026-11-19T11:00:00Z"),
+    ],
   };
 };
+const fillers = [0, 1, 2, 3, 4, 5, 6, 7, 8];
 /** `.openwiz/specs.v2.json`: due now and later apart (#162). */
 const expectedFile = {
   schema: "openwiz.specs.v2", generatedAt: "2026-11-20T12:00:00Z",
-  specs: [kernel, ...[0, 1, 2, 3, 4, 5, 6, 7, 8].map(filler)],
+  specs: [kernel, ...fillers.map((i) => filler(i))],
 };
-/** `.openwiz/specs.v1.json`, as the producer before #162 wrote it: a later ticket is needs-you (#164 R1). */
+/**
+ * `.openwiz/specs.v1.json`, as the producer before #162 wrote it: a later ticket is needs-you (#164 R1), and
+ * no ticket carries `updatedAt` (#183: v1 stays exactly as it was; a v1 reader calls the field malformed).
+ */
 const expectedV1File = {
-  ...expectedFile, schema: "openwiz.specs.v1",
-  specs: expectedFile.specs.map((spec) => spec === kernel ? {
-    ...kernel, tickets: kernel.tickets.map((ticket) => ticket.ticket === `${FLEET}#910` ? { ...ticket, state: "needs-you" } : ticket),
-  } : spec),
+  schema: "openwiz.specs.v1", generatedAt: "2026-11-20T12:00:00Z",
+  specs: [
+    { ...kernelV1, tickets: kernelV1.tickets.map((ticket) => ticket.ticket === `${FLEET}#910` ? { ...ticket, state: "needs-you" } : ticket) },
+    ...fillers.map((i) => filler(i, false)),
+  ],
 };
 /** A pre-#162 WizBar: the base reader takes only `.openwiz/specs.v1.json`, and only schema v1 with no later state. */
 const oldWizBar = (text: string, now: Date) => {
@@ -84,6 +102,18 @@ describe("P1: one run writes a file WizBar reads as ready", () => {
     expect(JSON.parse(text)).toEqual(expectedFile);
     expect(readSpecsFile({ kind: "content", text }, NOW.getTime())).toEqual({ status: "ready", file: expectedFile });
     expect(JSON.parse(await readFile(output(dir), "utf8"))).toEqual(expectedV1File);
+  });
+
+  // catches (#183): `updatedAt` leaking into v1 (which a v1 reader calls malformed), v1's key order or layout
+  // changed, the field dropped from v2, or a ticket given a time its answer did not carry.
+  it("adds each ticket's updated_at to v2 only, and writes v1 byte for byte as before", async () => {
+    const dir = await home();
+    expect(await runOnce({ home: dir, repositories, request: fakeGitHub().request, now: () => NOW })).toEqual({ ok: true, calls: 15, specs: 10, unchanged: 0 });
+    expect(await readFile(output(dir), "utf8")).toBe(`${JSON.stringify(expectedV1File, null, 2)}\n`);
+    const v2 = JSON.parse(await readFile(outputV2(dir), "utf8")) as typeof expectedFile;
+    const times = Object.fromEntries(v2.specs[0]!.tickets.map((x) => [x.ticket, (x as { updatedAt?: string }).updatedAt ?? null]));
+    expect(times).toMatchObject(kernelUpdated);
+    expect(Object.hasOwn(v2.specs[0]!.tickets.find((x) => x.ticket === `${FLEET}#912`)!, "updatedAt")).toBe(false);
   });
 
   // catches (#164 R1): a producer that replaces the v1 file with v2, so a WizBar from before #162 shows Specs unavailable.
@@ -143,6 +173,20 @@ describe("P1: unchanged answers cost nothing", () => {
 
 // #122 R3: a scan bigger than one run's budget resumes where it stopped, and the file stays fresh.
 const cacheOf = (dir: string) => join(dir, ".openwiz", "specs.v1.etags.json");
+
+describe("P1 (#183): the last activity needs no extra request", () => {
+  // catches: a cache written before the producer kept update times, whose 304 pages would drop every `updatedAt`.
+  it("a cache from before update times were kept is read afresh, with the same request count", async () => {
+    const dir = await home();
+    const github = fakeGitHub();
+    await runOnce({ home: dir, repositories, request: github.request, now: () => NOW });
+    const cache = JSON.parse(await readFile(cacheOf(dir), "utf8")) as { version: number; pages: Record<string, { body: Record<string, unknown>[] }> };
+    for (const page of Object.values(cache.pages)) for (const item of page.body) delete item.updated_at;
+    await writeFile(cacheOf(dir), JSON.stringify({ ...cache, version: 4 }));
+    expect(await runOnce({ home: dir, repositories, request: github.request, now: () => LATER })).toEqual({ ok: true, calls: 15, specs: 10, unchanged: 0 });
+    expect(JSON.parse(await readFile(outputV2(dir), "utf8"))).toEqual({ ...expectedFile, generatedAt: "2026-11-20T12:10:00Z" });
+  });
+});
 
 describe("N1 (#162): the later state needs no extra request", () => {
   // catches: a cache written before the producer kept blockers, whose 304 pages would read every blocked ticket as due now.

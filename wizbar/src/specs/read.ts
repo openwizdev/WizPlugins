@@ -3,7 +3,11 @@
 // so the app and the CLI judge the same read at their own `now`.
 import { z } from "zod";
 import { homeRootProblem, readDeckFactories } from "../deck/data/binding";
-import type { SpecsFileReadV4, SpecsFileV4, SpecsReadV4 } from "../fixtures/v4";
+import type { SpecsFileReadV4, SpecsReadV4 } from "../fixtures/v4";
+import type { SpecsFileV6 } from "../fixtures/v6";
+
+/** `readSpecsFile`'s result: a ready file keeps each v2 ticket's `updatedAt` (#183) for the spec rows. */
+export type SpecsReadV6 = Exclude<SpecsReadV4, { status: "ready" }> | { status: "ready"; file: SpecsFileV6 };
 
 /** Where the specs files live, relative to the bound factory's home root: v2 first, then v1 (#164 R1). */
 export const specsRelativePath = ".openwiz/specs.v1.json";
@@ -39,6 +43,8 @@ const ticketSchema = z.object({
   title: z.string().refine((title) => title.trim().length > 0),
   state: z.enum(["done", "building", "review", "needs-you", "yours-later", "held", "not-started"]),
   closedAt: utc.nullable(),
+  // Additive (#183, section 10): the issue's last activity, v2 only (the file rule below).
+  updatedAt: utc.optional(),
   // Additive (0.5.0 A): the ticket's open pull request numbers, for `Review #P at <sha>` titles.
   pulls: z.array(z.number().int().positive().refine(Number.isSafeInteger)).optional(),
 }).strict().refine((ticket) => ticket.state === "done" || ticket.closedAt === null);
@@ -62,7 +68,9 @@ const fileSchema = z.object({
   specs: z.array(specSchema),
 }).strict().refine((file) => distinct(file.specs.map((spec) => spec.spec)))
   // v1 has no later state.
-  .refine((file) => file.schema === specsSchemaIdV2 || file.specs.every((spec) => spec.tickets.every((ticket) => ticket.state !== "yours-later")));
+  .refine((file) => file.schema === specsSchemaIdV2 || file.specs.every((spec) => spec.tickets.every((ticket) => ticket.state !== "yours-later")))
+  // v1 stays exactly as it was (#183): `updatedAt` there is an unknown field.
+  .refine((file) => file.schema === specsSchemaIdV2 || file.specs.every((spec) => spec.tickets.every((ticket) => !Object.hasOwn(ticket, "updatedAt"))));
 
 function distinct(values: readonly string[]): boolean {
   return new Set(values).size === values.length;
@@ -117,9 +125,9 @@ export function pickSpecsRead(v2: SpecsFileReadV4, v1: SpecsFileReadV4, now: num
 }
 
 /** Section 1's reading table, first match wins. Every failure is unavailable, never zero. */
-export function readSpecsFile(read: SpecsFileReadV4, now: number): SpecsReadV4 {
+export function readSpecsFile(read: SpecsFileReadV4, now: number): SpecsReadV6 {
   if (read.kind !== "content") return { status: "unavailable", reason: read.kind };
-  const malformed: SpecsReadV4 = { status: "unavailable", reason: "malformed" };
+  const malformed: SpecsReadV6 = { status: "unavailable", reason: "malformed" };
   let raw: unknown;
   try {
     raw = JSON.parse(read.text);
@@ -136,5 +144,5 @@ export function readSpecsFile(read: SpecsFileReadV4, now: number): SpecsReadV4 {
   const generatedAt = Date.parse(parsed.data.generatedAt);
   if (generatedAt - now > 5 * MINUTE) return malformed;
   if (now - generatedAt > 30 * MINUTE) return { status: "unavailable", reason: "stale" };
-  return { status: "ready", file: parsed.data as SpecsFileV4 };
+  return { status: "ready", file: parsed.data as SpecsFileV6 };
 }
