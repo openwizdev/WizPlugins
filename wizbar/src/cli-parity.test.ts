@@ -140,7 +140,8 @@ describe("V5: every UI action has a wizbar command with --json", () => {
   it("registers each action's command, and every command's usage offers --json", () => {
     const cli = server().host.harness.registrations.cli!;
     const names = cli.commands.map((c) => c.name);
-    expect(names.sort()).toEqual([...wizbarOperationsV4].sort());
+    // #156: `models` is a read-only diagnostic of the model source, no UI action of its own.
+    expect(names.sort()).toEqual([...wizbarOperationsV4, "models"].sort());
     expect(names).toEqual(expect.arrayContaining(Object.values(uiActions)));
     for (const command of cli.commands) expect(command.usage, command.name).toMatch(/\[--json\]$/);
   });
