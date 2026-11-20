@@ -68,11 +68,24 @@ export function queuePathInRoot(rootPath: string, path: string): boolean {
   return homeRootProblem(rootPath) === null;
 }
 
-/** Whether a host-reported read path is the expected file and nothing else. */
-export function isExpectedReadPath(rootPath: string, reported: string): boolean {
+/**
+ * The absolute path of `relative` (a `/`-separated path) under `rootPath`, the
+ * form the host's file read requires (#153: a relative path is refused with 400
+ * "Path must be absolute"). A Windows root (`C:\…`) joins with `\`.
+ */
+export function pathInRoot(rootPath: string, relative: string): string {
   const separator = /^[A-Za-z]:\\/.test(rootPath) ? "\\" : "/";
-  const joined = `${rootPath}${separator}${needsYouRelativePath.split("/").join(separator)}`;
-  return reported === needsYouRelativePath || reported === joined || reported === `${rootPath}/${needsYouRelativePath}`;
+  return `${rootPath}${separator}${relative.split("/").join(separator)}`;
+}
+
+/** Whether a host-reported read path is `relative` under `rootPath` and nothing else. */
+export function isReportedPath(rootPath: string, relative: string, reported: string): boolean {
+  return reported === relative || reported === pathInRoot(rootPath, relative) || reported === `${rootPath}/${relative}`;
+}
+
+/** Whether a host-reported read path is the expected queue file and nothing else. */
+export function isExpectedReadPath(rootPath: string, reported: string): boolean {
+  return isReportedPath(rootPath, needsYouRelativePath, reported);
 }
 
 /** Parse the private settings value. Unknown fields, duplicates or bad roots fail closed. */

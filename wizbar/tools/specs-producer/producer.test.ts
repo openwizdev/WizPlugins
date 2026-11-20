@@ -2,7 +2,8 @@
 // synthetic GitHub answers (recorded.ts). The written file must read as ready
 // through WizBar's own reader (specs-section.v1.md section 1). Each run is one
 // complete scan or nothing (the #110 decision after review R7).
-import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { chmod, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -60,7 +61,7 @@ describe("P1: one run writes a file WizBar reads as ready", () => {
   it("writes the hand-worked file for the recorded answers", async () => {
     const dir = await home();
     const github = fakeGitHub();
-    expect(await runOnce({ home: dir, repositories, request: github.request, now: () => NOW })).toEqual({ ok: true, calls: 15, specs: 10 });
+    expect(await runOnce({ home: dir, repositories, request: github.request, now: () => NOW })).toEqual({ ok: true, calls: 15, specs: 10, unchanged: 0 });
     const text = await readFile(output(dir), "utf8");
     expect(JSON.parse(text)).toEqual(expectedFile);
     expect(readSpecsFile({ kind: "content", text }, NOW.getTime())).toEqual({ status: "ready", file: expectedFile });
@@ -106,7 +107,7 @@ describe("P1: unchanged answers cost nothing", () => {
     const github = fakeGitHub();
     await runOnce({ home: dir, repositories, request: github.request, now: () => NOW });
     github.calls.length = 0;
-    expect(await runOnce({ home: dir, repositories, request: github.request, now: () => LATER })).toEqual({ ok: true, calls: 15, specs: 10 });
+    expect(await runOnce({ home: dir, repositories, request: github.request, now: () => LATER })).toEqual({ ok: true, calls: 15, specs: 10, unchanged: 15 });
     expect(github.calls.length).toBeLessThan(60);
     expect(github.calls.every((call) => call.etag !== null && call.status === 304)).toBe(true);
     expect(JSON.parse(await readFile(output(dir), "utf8"))).toEqual({ ...expectedFile, generatedAt: "2026-11-20T12:10:00Z" });
@@ -174,7 +175,7 @@ describe("P1: the request budget", () => {
     // One spec fewer fits exactly: 59 requests.
     answers.set(`repos/${FLEET}/issues?state=open&per_page=100`, { body: specs.slice(0, 57) });
     expect(await runOnce({ home: dir, repositories: [FLEET], request: fakeGitHub(answers).request, now: () => NOW }))
-      .toEqual({ ok: true, calls: 59, specs: 57 });
+      .toEqual({ ok: true, calls: 59, specs: 57, unchanged: 0 });
   });
 });
 
@@ -185,11 +186,69 @@ describe("P1: an unbound repository leaves no trace", () => {
     const github = fakeGitHub();
     await runOnce({ home: dir, repositories, request: github.request, now: () => NOW });
     github.calls.length = 0;
-    expect(await runOnce({ home: dir, repositories: [TOOLS], request: github.request, now: () => LATER })).toEqual({ ok: true, calls: 4, specs: 2 });
+    expect(await runOnce({ home: dir, repositories: [TOOLS], request: github.request, now: () => LATER })).toEqual({ ok: true, calls: 4, specs: 2, unchanged: 4 });
     expect(github.calls.filter((c) => c.path.includes(FLEET))).toEqual([]);
     const file = JSON.parse(await readFile(output(dir), "utf8")) as typeof expectedFile;
     expect({ specs: file.specs.map((s) => s.spec), generatedAt: file.generatedAt }).toEqual({ specs: [`${TOOLS}#1070`, `${TOOLS}#1080`], generatedAt: "2026-11-20T12:10:00Z" });
     const cache = JSON.parse(await readFile(cacheOf(dir), "utf8")) as { pages: Record<string, unknown> };
     expect(Object.keys(cache.pages).filter((page) => page.includes(FLEET))).toEqual([]);
+  });
+});
+
+// #153 items 5 and 6: the real CLI, run as a systemd user service would run it, with a fake `gh`.
+describe("#153: --gh, a missing gh and the unchanged count", () => {
+  const producer = join(import.meta.dirname, "producer.ts");
+  const run = (args: string[], env: Record<string, string>) => new Promise<{ code: number; stdout: string; stderr: string }>((resolve) => {
+    execFile(process.execPath, [producer, ...args], { env }, (error, stdout, stderr) =>
+      resolve({ code: error ? Number((error as { code?: unknown }).code ?? 1) : 0, stdout, stderr }));
+  });
+  /** A `gh` that logs each call and answers `[]` with an ETag, or 304 to a matching If-None-Match. */
+  async function fakeGh(dir: string) {
+    const gh = join(dir, "bin", "gh");
+    await mkdir(join(dir, "bin"));
+    await writeFile(gh, [
+      "#!/bin/sh",
+      `echo "$*" >> "${join(dir, "calls.log")}"`,
+      'case "$*" in *"If-None-Match: \\"e1\\""*) printf \'HTTP/2.0 304 Not Modified\\r\\nEtag: "e1"\\r\\n\\r\\n\'; exit 1;; esac',
+      'printf \'HTTP/2.0 200 OK\\r\\nEtag: "e1"\\r\\n\\r\\n[]\'',
+      "",
+    ].join("\n"));
+    await chmod(gh, 0o755);
+    return gh;
+  }
+  // A PATH without the folder `gh` is in, like a systemd user service's `/usr/local/bin:/usr/bin` on the
+  // real PC. A folder of its own, so a `gh` installed in /usr/bin (as on CI runners) cannot answer.
+  const servicePath = { PATH: "/nonexistent-wizbar-153" };
+
+  // catches: --gh unknown to the CLI (usage), or ignored for some calls so they spawn `gh` from PATH again.
+  it("--gh /abs/path/gh is used for every call", async () => {
+    const dir = await home();
+    const gh = await fakeGh(dir);
+    const result = await run(["--home", dir, "--repo", FLEET, "--repo", TOOLS, "--gh", gh], servicePath);
+    expect(result).toMatchObject({ code: 0, stderr: "" });
+    expect((await readFile(join(dir, "calls.log"), "utf8")).trim().split("\n")).toHaveLength(4);
+  });
+
+  // catches: the bare `spawn gh ENOENT` (the real PC's failure), which names neither the fix nor the option.
+  it("a missing gh keeps the last file and names --gh and PATH", async () => {
+    const dir = await home();
+    const result = await run(["--home", dir, "--repo", FLEET], servicePath);
+    expect(result.code).toBe(1);
+    expect(result.stderr).toMatch(/^kept the last file: .*--gh.*\(1 requests\)\n$/s);
+    expect(result.stderr).toMatch(/PATH/);
+    const missing = await run(["--home", dir, "--repo", FLEET, "--gh", join(dir, "no-such-gh")], servicePath);
+    expect(missing.code).toBe(1);
+    expect(missing.stderr).toMatch(/--gh/);
+    expect(missing.stderr).toMatch(/PATH/);
+    await expect(readFile(output(dir), "utf8")).rejects.toThrow();
+  });
+
+  // catches: a run line that hides how many requests GitHub answered 304 unchanged.
+  it("the run line gives the unchanged (304) count", async () => {
+    const dir = await home();
+    const gh = await fakeGh(dir);
+    const args = ["--home", dir, "--repo", FLEET, "--repo", TOOLS, "--gh", gh];
+    expect((await run(args, servicePath)).stdout).toBe(`wrote ${output(dir)}: 0 specs, 4 requests (0 unchanged)\n`);
+    expect((await run(args, servicePath)).stdout).toBe(`wrote ${output(dir)}: 0 specs, 4 requests (4 unchanged)\n`);
   });
 });

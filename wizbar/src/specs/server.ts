@@ -11,6 +11,7 @@ import { runtimeStatusesV3 } from "../children";
 import type { SpecsFileReadV4 } from "../fixtures/v4";
 import type { CardModelsResultV3 } from "../v3-types";
 import { createSpecsCommands, type SpecsCommands } from "./cli";
+import { isReportedPath, pathInRoot } from "../deck/data/binding";
 import { boundHome, specsRelativePath } from "./read";
 import type { SpecsThreadRow } from "./rows";
 
@@ -42,13 +43,14 @@ const statusOf = (error: unknown): unknown =>
 async function readOnce(read: BbPluginApi["sdk"]["files"]["read"], hostId: string, rootPath: string, signal?: AbortSignal): Promise<SpecsFileReadV4> {
   let result: Awaited<ReturnType<typeof read>>;
   try {
-    result = await read({ hostId, rootPath, path: specsRelativePath, signal });
+    // The host refuses a relative path with 400 "Path must be absolute" (#153).
+    result = await read({ hostId, rootPath, path: pathInRoot(rootPath, specsRelativePath), signal });
   } catch (error) {
     const status = statusOf(error);
     return { kind: status === 404 || status === "ENOENT" || status === "not_found" ? "missing" : "unreadable" };
   }
   if (!result || typeof result !== "object" || typeof result.content !== "string" || typeof result.sha256 !== "string") return { kind: "unreadable" };
-  if (result.path !== specsRelativePath && result.path !== `${rootPath}/${specsRelativePath}`) return { kind: "unreadable" };
+  if (!isReportedPath(rootPath, specsRelativePath, result.path)) return { kind: "unreadable" };
   let bytes: Uint8Array;
   if (result.contentEncoding === "utf8") bytes = new TextEncoder().encode(result.content);
   else if (result.contentEncoding === "base64") bytes = Uint8Array.from(Buffer.from(result.content, "base64"));

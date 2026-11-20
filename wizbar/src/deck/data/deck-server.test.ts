@@ -9,6 +9,7 @@ import { dxCutoffResponse, dxFactory, dxFillerIssues, dxNow, dxOtherFactory, dxQ
 import { loadBoard, mergesToday } from "./board";
 import { GitHubReader } from "./github";
 import { LEASE_MS, REFRESH_MS } from "./cache";
+import { strictRead } from "../../testing/strict-files";
 
 const hosts: FakePluginHost[] = [];
 const sha = (text: string) => createHash("sha256").update(text).digest("hex");
@@ -18,7 +19,8 @@ function setup(options: { settings?: Record<string, string>; read?: ReadImpl } =
   const github = fakeGitHub();
   vi.stubGlobal("fetch", github.fetch);
   let queueText = dxQueue();
-  const read = vi.fn(options.read ?? (async ({ path }) => ({ content: queueText, contentEncoding: "utf8", path, sha256: sha(queueText), sizeBytes: queueText.length })));
+  // The real host's rule (#153): a relative path is refused with 400 "Path must be absolute".
+  const read = vi.fn(strictRead(options.read ?? (async ({ path }) => ({ content: queueText, contentEncoding: "utf8", path, sha256: sha(queueText), sizeBytes: queueText.length }))));
   const write = vi.fn(async () => { throw new Error("no writes"); });
   const host = createFakePluginHost({
     pluginId: "wizbar", settings: options.settings ?? dxSettings(),
@@ -406,11 +408,12 @@ describe("verified progress and merges today", () => {
 describe("Needs-you queue host read", () => {
   const view = async (t: ReturnType<typeof setup>) => { await t.watch("desk-tab"); await t.settle(); return (await t.watch("desk-tab")).view!.needsYou; };
 
-  it("reads with the explicit configured host and root, only the fixed relative file", async () => {
+  // catches (#153): the fixed file passed relative to rootPath, which the real host refuses with 400 "Path must be absolute".
+  it("reads with the explicit configured host and root, only the fixed file by its absolute path", async () => {
     const t = setup();
     const needsYou = await view(t);
     expect(t.read).toHaveBeenCalledTimes(1);
-    expect(t.read.mock.calls[0][0]).toMatchObject({ hostId: "host_d1_sample", rootPath: "/synthetic/home", path: ".openwiz/needs-you.v1.json" });
+    expect(t.read.mock.calls[0][0]).toMatchObject({ hostId: "host_d1_sample", rootPath: "/synthetic/home", path: "/synthetic/home/.openwiz/needs-you.v1.json" });
     expect(needsYou.freshness).toBe("fresh");
     expect(needsYou.view).toMatchObject({ state: "ready", count: 1 });
     expect(needsYou.view!.state === "ready" && needsYou.view!.items[0].answer.enabled).toBe(false);
@@ -449,6 +452,14 @@ describe("Needs-you queue host read", () => {
       expect(needsYou.view).toEqual({ state: "unavailable", reason: "not-configured", count: null, items: [] });
       expect(needsYou.detail).toMatch(/forbidden home root/i);
     });
+
+  // catches (#153): a Windows root joined with `/`, or the host's reported absolute path refused.
+  it("a Windows root reads its file by the backslash-joined absolute path", async () => {
+    const rootPath = "C:\\synthetic\\home";
+    const t = setup({ settings: dxSettings([{ ...dxFactory, home: { ...dxFactory.home, rootPath } }]) });
+    expect((await view(t)).view).toMatchObject({ state: "ready", count: 1 });
+    expect(t.read.mock.calls[0][0]).toMatchObject({ rootPath, path: "C:\\synthetic\\home\\.openwiz\\needs-you.v1.json" });
+  });
 
   it("a queue that expires between refreshes becomes unavailable without a read", async () => {
     const t = setup();
