@@ -142,11 +142,13 @@ export function ThreadInbox({
       muted: sortByCreatedAtDescending(onMutedShelf),
     };
   }, [lifecycle, scope, searchQuery, threads]);
-  // E2 (#188): Unread. Until the specs file answers, a running thread (one that may be a spec's agent)
-  // is held back rather than shown and then pulled out.
-  const unread = useMemo(() => specsFile === undefined
+  // E2 (#188): Unread. While a search is active every match shows, read or not, as the 0.5 Inbox did.
+  // Until the specs file answers, a running thread (one that may be a spec's agent) is held back
+  // rather than shown and then pulled out.
+  const searchActive = searchQuery.trim() !== "";
+  const unread = useMemo(() => searchActive ? inbox : specsFile === undefined
     ? unreadThreads(inbox.filter((thread) => !isRunning(thread)), null, threads)
-    : unreadThreads(inbox, specsFile, threads), [inbox, specsFile, threads]);
+    : unreadThreads(inbox, specsFile, threads), [inbox, searchActive, specsFile, threads]);
 
   const connection = useRealtimeConnectionState();
   const drag = useDragPins(status, connection, threads, pinned);

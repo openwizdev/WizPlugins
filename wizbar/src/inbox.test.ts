@@ -9,7 +9,6 @@ import {
   searchThreadsByTitle,
   sortByCreatedAtDescending,
   sortPinned,
-  LOOP_ORIGIN_PLUGIN_IDS,
   threadDisplayTitle,
   unreadThreads,
   visibleInboxThreads,
@@ -274,14 +273,26 @@ describe("unreadThreads", () => {
     expect(unreadThreads([row], v4SpecsFile, [row]).map((t) => t.id)).toEqual(shown ? ["thr_x"] : []);
   });
 
-  // catches: a loop run let into Unread because it is unread, or every plugin-started thread dropped with it.
+  // catches: a fleet loop run let into Unread because it is unread, a loop of a repository outside the
+  // binding hidden, or a near-miss title (another loop, extra words) hidden by a loose match. Every row
+  // carries `originKind` and `originPluginId` null, as the owner's host answers for every thread.
   it.each([
-    ["an unread loop run", [...LOOP_ORIGIN_PLUGIN_IDS][0]!, false],
-    ["a loop run waiting on you", [...LOOP_ORIGIN_PLUGIN_IDS][0]!, false],
-    ["an unread thread another plugin started", "sample-other-plugin", true],
-  ] as const)("%s", (name, originPluginId, shown) => {
-    const row = thread({ id: "thr_x", originPluginId, isUnread: !name.includes("waiting"), hasPendingInteraction: name.includes("waiting") });
-    expect(unreadThreads([row], v4SpecsFile, [row]).map((t) => t.id)).toEqual(shown ? ["thr_x"] : []);
+    ["launch-fleet example/sample-plans", false],
+    ["launch-fleet wakes example/sample-plans", false],
+    ["launch-fleet #181 example/sample-plans", false],
+    ["launch-fleet wakes example/sample-tools", false],
+    ["launch-fleet wakes example/elsewhere", true],
+    ["launch-fleet #0181 example/sample-plans", true],
+    ["launch-fleet wakes example/sample-plans now", true],
+    ["Re: launch-fleet example/sample-plans", true],
+    ["board publish kick", true],
+    ["Skills-eval weekly mistakes", true],
+  ] as const)("unread loop titled %j: shown %s", (title, shown) => {
+    const row = thread({ id: "thr_x", title, displayTitle: title, isUnread: true });
+    expect(row.originKind).toBeNull();
+    expect(row.originPluginId).toBeNull();
+    expect(unreadThreads([row], v4SpecsFile, [row], ["example/sample-plans", "example/sample-tools"]).map((t) => t.id))
+      .toEqual(shown ? ["thr_x"] : []);
   });
 
   // catches: a spec match that ignores the fleet parent (section 3 rule 1), so a running agent under a

@@ -1471,6 +1471,8 @@ describe("E2: Unread", () => {
     thread({ id: "u_fleet", title: "Fleet #77: Sample cache", displayTitle: "Fleet #77: Sample cache", isUnread: true, createdAt: 30 }),
     thread({ id: "u_agent", title: "Builder · SC-1: Sample borrowed code", displayTitle: "Builder · SC-1: Sample borrowed code", isUnread: true, ...working, createdAt: 20 }),
     thread({ id: "u_stray", title: "Builder · ZZ-9: Sample stray", displayTitle: "Builder · ZZ-9: Sample stray", isUnread: true, ...working, createdAt: 10 }),
+    thread({ id: "u_wake", title: "launch-fleet wakes example/sample-plans", displayTitle: "launch-fleet wakes example/sample-plans", isUnread: true, createdAt: 8 }),
+    thread({ id: "u_loop", title: "Sample weekly loop", displayTitle: "Sample weekly loop", isUnread: true, createdAt: 6 }),
   ];
   function renderUnread(options: { stored?: string; specsFile?: () => unknown; searchQuery?: string } = {}) {
     const updates: unknown[] = [];
@@ -1494,9 +1496,10 @@ describe("E2: Unread", () => {
 
   // catches: the 0.5 Inbox kept under a new name (every thread), a spec's running agent listed twice,
   // a fleet wake let in, or a running thread that matches no spec dropped with them.
-  it("lists exactly the threads with something new that are under no spec and are not fleet wakes", async () => {
+  it("lists exactly the threads with something new that are under no spec and are not fleet wakes or fleet loop runs", async () => {
     renderUnread();
-    await waitFor(() => expect(links()).toEqual(["Sample new", "Sample waiting", "Builder · ZZ-9: Sample stray"]));
+    // The bound repository's `launch-fleet wakes` loop run is out; another loop's run, unmarked by the host, stays.
+    await waitFor(() => expect(links()).toEqual(["Sample new", "Sample waiting", "Builder · ZZ-9: Sample stray", "Sample weekly loop"]));
     expect(screen.queryByRole("region", { name: "Inbox" })).toBeNull();
     expect(header().textContent).toBe("Unread");
   });
@@ -1505,9 +1508,9 @@ describe("E2: Unread", () => {
   it("never shows a running thread before the specs file says whether it is a spec's", async () => {
     let answer: (value: unknown) => void = () => {};
     renderUnread({ specsFile: () => new Promise((resolve) => { answer = resolve; }) });
-    expect(links()).toEqual(["Sample new", "Sample waiting"]);
+    expect(links()).toEqual(["Sample new", "Sample waiting", "Sample weekly loop"]);
     await act(async () => answer({ kind: "content", text: v4SpecsFileText }));
-    await waitFor(() => expect(links()).toEqual(["Sample new", "Sample waiting", "Builder · ZZ-9: Sample stray"]));
+    await waitFor(() => expect(links()).toEqual(["Sample new", "Sample waiting", "Builder · ZZ-9: Sample stray", "Sample weekly loop"]));
   });
 
   // catches: a search that can no longer find a read thread, a fleet wake or a spec's agent, because
@@ -1515,9 +1518,9 @@ describe("E2: Unread", () => {
   it("shows every matching thread while a search is active, read or not, and filters again once it clears", async () => {
     const { rendered } = renderUnread({ searchQuery: "Sample" });
     await waitFor(() => expect(links()).toEqual(["Sample read", "Sample new", "Sample waiting", "Fleet #77: Sample cache",
-      "Builder · SC-1: Sample borrowed code", "Builder · ZZ-9: Sample stray"]));
+      "Builder · SC-1: Sample borrowed code", "Builder · ZZ-9: Sample stray", "Sample weekly loop"]));
     rendered.rerender(createElement(inbox.component, { ...listProps, searchQuery: "" }));
-    await waitFor(() => expect(links()).toEqual(["Sample new", "Sample waiting", "Builder · ZZ-9: Sample stray"]));
+    await waitFor(() => expect(links()).toEqual(["Sample new", "Sample waiting", "Builder · ZZ-9: Sample stray", "Sample weekly loop"]));
   });
 
   // catches: a 0.5 Inbox collapse lost on upgrade, or a write that still stores `inbox`.
