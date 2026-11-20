@@ -8,7 +8,10 @@ import type { BbPluginApi } from "@get-bb/plugin-sdk";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import plugin from "../server";
 import { v4Now, v4OpenSetting, v4SpecOpenCases, v4SpecRows, v4SpecRowsV2, v4SpecsFile, v4SpecsFileText, v4SpecsFileV2Text, v4Threads } from "../fixtures/v4";
+import { specsSortsV6, v6Activity, v6Agents, v6Now, v6SortOrders, v6SpecsFile, v6SpecsFileText } from "../fixtures/v6";
+import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import { effectiveOpen, readOpenKeys } from "./open-state";
+import { activityAt, sortSpecs } from "./rows";
 import { rawRow } from "./testing";
 
 const factory = {
@@ -72,7 +75,7 @@ describe("wizbar specs (section 8)", () => {
       return contentRead(v4SpecsFileText)(args);
     };
     const cli = await setup({ read: v1Only });
-    expect(await cli.json(["specs"])).toEqual({ exitCode: 0, body: { ...v4SpecRows, needsYouSpecs: 2 } });
+    expect(await cli.json(["specs"])).toEqual({ exitCode: 0, body: { ...v4SpecRows, needsYouSpecs: 2, sort: "needs-you" } });
     expect(cli.read.mock.calls.map(([args]) => args)).toEqual([
       expect.objectContaining({ hostId: "hst_v4_home", rootPath: "/synthetic/home", path: "/synthetic/home/.openwiz/specs.v2.json" }),
       expect.objectContaining({ hostId: "hst_v4_home", rootPath: "/synthetic/home", path: "/synthetic/home/.openwiz/specs.v1.json" }),
@@ -93,7 +96,7 @@ describe("wizbar specs (section 8)", () => {
   // catches (#162): a v2 file refused, or its later tickets missing from the JSON, folded into needs you, or left out of the text.
   it("prints later tickets apart from needs you, in JSON and text", async () => {
     const cli = await setup({ text: v4SpecsFileV2Text });
-    expect(await cli.json(["specs"])).toEqual({ exitCode: 0, body: { ...v4SpecRowsV2, needsYouSpecs: 2 } });
+    expect(await cli.json(["specs"])).toEqual({ exitCode: 0, body: { ...v4SpecRowsV2, needsYouSpecs: 2, sort: "needs-you" } });
     expect(await cli.run(["specs"])).toEqual({ exitCode: 0, stderr: "", stdout: [
       "Specs 2 · 2 tickets need you (2 specs)",
       "example/sample-plans#501 Sample palette: 4/11 · 1 done in the last hour · 1 needs you · 1 later · 4 running",
@@ -194,7 +197,8 @@ describe("wizbar specs (section 8)", () => {
   });
 
   // catches: extra arguments or a repeated --json accepted silently.
-  it.each([["specs", "extra"], ["specs", "--json", "--json"], ["specs", "--bogus"]])("treats %j as a usage error", async (...argv) => {
+  it.each([["specs", "extra"], ["specs", "--json", "--json"], ["specs", "--bogus"], ["specs", "--sort"], ["specs", "--sort", "name"],
+    ["specs", "--sort", "Recent"], ["specs", "--sort", "recent", "--sort", "recent"]])("treats %j as a usage error", async (...argv) => {
     const cli = await setup();
     expect((await cli.run(argv)).exitCode).toBe(2);
   });
@@ -327,5 +331,52 @@ describe("wizbar spec <n> --open|--close (sections 4 and 8)", () => {
       { exitCode: 0, body: { spec: "example/sample-plans#501", open: true } },
       { exitCode: 0, body: { spec: "example/sample-tools#77", open: false } },
     ]);
+  });
+});
+
+// S1 (#184): the Specs section's order (specs-section.v1.md sections 10 and 11), on the 0.6 fixture.
+/** The fixture's running agents as sidebar rows: running, top level, titled with their ticket's code. */
+const v6Threads: PluginSidebarThread[] = Object.values(v6Agents).flat().map((agent) => {
+  const role = agent.matrix === "reviewing" ? "Reviewer" : "Builder";
+  const title = `${role} · SS${agent.ticket!.slice(agent.ticket!.lastIndexOf("#") + 1)}: Sample work`;
+  return { ...v4Threads[2]!, id: agent.threadId, title, displayTitle: title, parentThreadId: null, createdAt: agent.updatedAt - 60_000, updatedAt: agent.updatedAt };
+});
+// 0.5's hidden rule still hides a finished spec until S2 (#185) shows it as quiet.
+const finished = new Set(v6Activity.filter((c) => c.done === c.total).map((c) => c.spec));
+
+describe("S1: the four sorts (section 11)", () => {
+  // catches: an activity time that skips a ticket's update, a close or a running agent, or invents one when none is known.
+  it("gives each spec its activity time: the newest ticket update, close or running agent, else null", () => {
+    for (const expected of v6Activity) {
+      const entry = v6SpecsFile.specs.find((spec) => spec.spec === expected.spec)!;
+      expect([expected.spec, activityAt(entry, v6Agents[expected.spec] ?? [])]).toEqual([expected.spec, expected.activityAt]);
+    }
+  });
+
+  // catches: a sort that compares shares as floats, puts a null time first, breaks ties by anything but file order, or leaves finished specs in place.
+  it.each(specsSortsV6)("orders the fixture's specs by %s", (sort) => {
+    // The fixture's activity cases are in file order, as the rows are.
+    expect(sortSpecs(v6Activity, sort).map((row) => row.spec)).toEqual(v6SortOrders[sort]);
+  });
+
+  // catches: the CLI ignoring --sort, or giving another order than the section for the same input.
+  it.each(specsSortsV6)("wizbar specs --sort %s --json gives the same order, and names it", async (sort) => {
+    vi.setSystemTime(v6Now);
+    const cli = await setup({ text: v6SpecsFileText, list: async () => v6Threads.map(rawRow), settings: { specsOpen: "[]" } });
+    const { exitCode, body } = await cli.json(["specs", "--sort", sort]);
+    expect(exitCode).toBe(0);
+    expect(body.sort).toBe(sort);
+    expect(body.specs.map((row: { spec: string }) => row.spec)).toEqual(v6SortOrders[sort].filter((key) => !finished.has(key)));
+    const text = (await cli.run(["specs", "--sort", sort])).stdout.split("\n").slice(1, -1).map((line) => line.split(" ")[0]);
+    expect(text).toEqual(body.specs.map((row: { spec: string }) => row.spec));
+  });
+
+  // catches: the CLI's default order still the file's order.
+  it("uses needs-you without --sort", async () => {
+    vi.setSystemTime(v6Now);
+    const cli = await setup({ text: v6SpecsFileText, list: async () => v6Threads.map(rawRow), settings: { specsOpen: "[]" } });
+    const { body } = await cli.json(["specs"]);
+    expect(body.sort).toBe("needs-you");
+    expect(body.specs.map((row: { spec: string }) => row.spec)).toEqual(v6SortOrders["needs-you"].filter((key) => !finished.has(key)));
   });
 });

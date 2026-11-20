@@ -7,6 +7,8 @@ import {
   dotOrderV4, type DotStateV4, type MatrixStateV4, type SpecAgentV4, type SpecEntryV4, type SpecKeyV4,
   type SpecRowV4, type SpecsFileV4, type SpecsResultV4, type TicketEntryV4,
 } from "../fixtures/v4";
+import type { SpecEntryV6 } from "../fixtures/v6";
+import type { SpecsSort } from "../settings";
 import type { CardModelsResultV3 } from "../v3-types";
 
 /** The row fields the spec rows read; the app's rows and the CLI reader both supply them. */
@@ -211,4 +213,17 @@ export function needsYouWords(result: SpecsResultV4): { full: string; short: str
 export function sectionRule(result: SpecsResultV4): string {
   const words = needsYouWords(result);
   return `Specs ${result.specs.length}${words ? ` · ${words.full}` : ""}`;
+}
+
+/** What a sort reads of a spec (section 11). */
+export interface SortableSpec { spec: string; done: number; total: number; needsYou: number; activityAt: number | null }
+
+/** Section 10: a spec's activity time. Red-first stub (#184). */
+export function activityAt(_spec: SpecEntryV6, _agents: readonly { updatedAt: number }[]): number | null {
+  return null;
+}
+
+/** Section 11: the visible specs in the chosen sort. Red-first stub (#184). */
+export function sortSpecs<T extends SortableSpec>(rows: readonly T[], _sort: SpecsSort): T[] {
+  return [...rows];
 }
