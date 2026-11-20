@@ -2,7 +2,8 @@ import type { PluginCliRegistration, PluginCliResult } from "@get-bb/plugin-sdk"
 import { z } from "zod";
 import { resolveSnoozePresets, type ThreadShelf } from "./lifecycle";
 import { formatStatsText } from "./stats";
-import type { ChildrenResultV3, MovePositionV3, MoveResultV3, PinResultV3, StatsV3 } from "./v3-types";
+import type { ChildrenResultV3, MovePositionV3, MoveResultV3, PinResultV3 } from "./v3-types";
+import type { StatsV4 } from "./fixtures/v4";
 import type { SpecsCommands } from "./specs/cli";
 
 export type LifecycleOperation = "settle" | "unsettle" | "snooze" | "unsnooze" | "mute" | "unmute" | "list";
@@ -120,8 +121,8 @@ function wakeTime(value: string, now: number): number {
   return until;
 }
 
-/** WZ20 (#41): reads every row and computes stats; an unavailable read gives `status: "unavailable"`. */
-type ReadStats = (signal?: AbortSignal) => Promise<StatsV3>;
+/** WZ20 (#41), WB4-3 (#1437): reads every row and computes the card's stats; an unavailable read gives `status: "unavailable"`. */
+type ReadStats = (signal?: AbortSignal) => Promise<StatsV4>;
 
 export function createLifecycleCommand(execute: Execute, readStats: ReadStats, pins?: PinOperations, children?: ReadChildren, specs?: SpecsCommands): PluginCliRegistration {
   return {
@@ -129,7 +130,7 @@ export function createLifecycleCommand(execute: Execute, readStats: ReadStats, p
     summary: "List or change WizBar thread shelves.",
     commands: [
       ...operations.map((name) => ({ name, summary: `${name} one or many threads`, usage: `${name} <id>...${name === "snooze" ? " --until <time>" : ""} [--json]` })),
-      { name: "stats", summary: "running, waiting and finished-today numbers", usage: "stats [--json]" },
+      { name: "stats", summary: "running, waiting, harness split and running threads (the footer card)", usage: "stats [--json]" },
       ...(pins ? [
         { name: "pin", summary: "pin one or many threads", usage: "pin <id>... [--json]" },
         { name: "unpin", summary: "unpin one or many threads", usage: "unpin <id>... [--json]" },

@@ -1,11 +1,12 @@
 # WizBar
 
 WizBar is an agent-first Cloudroom sidebar plugin for fleets of agent threads,
-version 0.3.0. It keeps T3 Sidebar's flat list of cards, newest first, that
+version 0.4.0. It keeps T3 Sidebar's flat list of cards, newest first, that
 never re-orders itself, with Inbox, Snoozed, Settled, Muted and Pinned shelves.
-v0.3 adds richer cards, children on hover, a live running count with a stats
-panel, drag to pin, and a `wizbar` CLI command with JSON for every sidebar
-action. The project lives in
+v0.3 added richer cards, children on hover, a live running count, drag to pin,
+and a `wizbar` CLI command with JSON for every sidebar action. v0.4 keeps that
+list exactly as it is and adds a Specs section under it, matrix status marks,
+and a quiet footer with a hover card. The project lives in
 [openwizdev/WizPlugins](https://github.com/openwizdev/WizPlugins).
 
 ![WizBar rendered with synthetic example rows](../docs/images/wizbar.png)
@@ -14,9 +15,41 @@ The image shows the React UI rendered with synthetic fixture data and styling,
 not an installed app. Everything below is proved by fixture tests in CI unless
 it says otherwise. **Behaviour on a real host awaits the live check in
 [#9](https://github.com/openwizdev/WizPlugins/issues/9).** The rules and sources
-are in the [v0.3 sidebar contract](contracts/sidebar-v3.v1.md).
+are in the [v0.3 sidebar contract](contracts/sidebar-v3.v1.md) and the
+[v0.4 specs section contract](contracts/specs-section.v1.md).
 
-## What v0.3 shows
+## What v0.4 shows
+
+- **Specs.** Under the thread list, one row per running spec from the bound
+  factory's specs file: its name, one dot per ticket (done, done in the last
+  hour, building, review, needs you in the warning colour, held, not started),
+  "N done in the last hour" only when something moved, "K needs you", and
+  done/total. Finished specs are hidden. A missing, malformed or stale file
+  shows "Specs unavailable", never zero.
+- **Open a spec.** Click a spec to see its running builders and reviewers;
+  specs start collapsed and each one's open state is remembered.
+- **Running threads.** Each shows its harness logo, model and effort as a quiet
+  second line, and a 3 × 3 matrix status mark (working, checks running,
+  reviewing, needs you, failed, done, idle). Model and effort stay omitted
+  until the live check adopts the host's source; nothing is guessed.
+- **GitHub** is a quiet hover mark that opens the spec issue or the agent's
+  pull request.
+- **Footer.** No bolt. Only "N running" stays, counting threads, never
+  subagents, with a matrix mark. Hover or focus it for a card: who is waiting
+  on you with the Cloud and Local split, the harness split, then every running
+  thread with its mark, title, spec and model · effort. A click (or Enter or
+  Space) pins the card open and another unpins it; Escape closes it; clicking a
+  thread in the card opens it.
+- **Theme.** Every colour is a host theme variable, so WizBar follows the
+  Cloudroom theme you use; a literal colour appears only as the fallback for a
+  missing variable.
+- **CLI.** `wizbar specs`, `wizbar spec <n> --open|--close` and the extended
+  `wizbar stats` return what the sidebar shows, as JSON with `--json`.
+
+The matrix status idea is credited to Conductor's workspace status matrix
+(Conductor changelog 0.85.0 to 0.96.0); idea only, no code or artwork.
+
+## What v0.3 added
 
 - **Cards.** The third line shows the issue or pull request as a link and a
   child count, hidden at zero. The pull request comes from the host's sidebar
@@ -29,12 +62,9 @@ are in the [v0.3 sidebar contract](contracts/sidebar-v3.v1.md).
   status, title and age, in spawn order; click one to open it, or open the
   parent. In the thread header, the parent's children chip is off by default
   and a child's chip back to its parent is on by default; each has a setting.
-- **Running count and stats.** A slim "N running" line stays below the list. A
-  thread is running when it has runtime work and is not waiting on you. The
-  footer bolt opens a stats panel: running threads split into top-level and
-  children, Cloud, Local and unknown, plus threads waiting on you. It discloses
-  that subagents are not counted and some threads may be unseen. "Finished
-  today" says "not available yet": the host gives no finish time.
+- **Running count.** A slim "N running" line stays below the list. A thread is
+  running when it has runtime work and is not waiting on you. (v0.3's footer
+  bolt and stats panel became v0.4's hover card above.)
 - **Drag to pin.** Drag a card into Pinned to pin it, out to unpin it, or
   inside Pinned to reorder it; Alt+Up and Alt+Down do the same from the
   keyboard. WizBar uses the host's own pins and pinned order. The Inbox stays
@@ -76,8 +106,8 @@ rows. Separate runtime IDs and data still need live verification.
 The registered namespace is `wizbar` (`room-cli wizbar …`). Every WizBar
 action in the sidebar has a command, and every command takes `--json`; the
 [parity test](src/cli-parity.test.ts) checks both, and that `children` and
-`stats` JSON equal what the hover list and the stats panel show for the same
-threads. The row menu's host-owned items are excluded by name (below). Use `--`
+`stats` JSON equal what the hover list and the running line's hover card show
+for the same threads. The row menu's host-owned items are excluded by name (below). Use `--`
 to end options before literal IDs.
 
 ```text
@@ -93,6 +123,8 @@ wizbar unpin <id>... [--json]
 wizbar move <id> (--before <id> | --after <id> | --first | --last) [--json]
 wizbar children <id> [--json]
 wizbar stats [--json]
+wizbar specs [--json]
+wizbar spec <n> (--open | --close) [--json]
 ```
 
 **Exit codes**, every command: `0` success; `1` any thread or the whole command
@@ -131,18 +163,26 @@ pinned order read after the move. Its errors include `not_pinned` and
 Status is the first of `waiting`, `failed`, `working`, `unread`, `idle` that
 holds. An unknown ID prints `{"error":{"code":"unknown_id",…}}` with exit 1.
 
-**`stats`** prints the stats panel's numbers:
+**`stats`** prints the hover card's data: 0.3's numbers at `version: 2`, plus
+the harness split and every running thread with its matrix state, visible spec
+and model and effort (null until the source is adopted):
 
 ```json
-{"version":1,"status":"ready","running":{"total":7,"topLevel":4,"children":3,"cloud":6,"local":1,"unknown":0},"waitingOnYou":2,"finishedToday":{"source":"none","count":null},"window":{"timeZone":"UTC","start":1794441600000,"end":1794528000000},"coverage":{"scope":"observable-sidebar","subagents":"not-counted","unseen":"possible"}}
+{"version":2,"status":"ready","running":{"total":2,"topLevel":0,"children":2,"cloud":2,"local":0,"unknown":0},"waitingOnYou":1,"finishedToday":{"source":"none","count":null},"window":{"timeZone":"UTC","start":1795046400000,"end":1795132800000},"coverage":{"scope":"observable-sidebar","subagents":"not-counted","unseen":"possible"},"harness":[{"providerId":"sample-harness","count":2}],"threads":[{"id":"thr_example_b","title":"Builder · SP-2: Example work","providerId":"sample-harness","matrix":"working","spec":"example/sample-plans#501","shortName":"Example spec","model":null,"effort":null}]}
 ```
 
-`window` is today in the server's time zone. Unreadable thread state prints
+`window` is today in the server's time zone. A thread names a spec only when
+the specs file is ready and the spec is visible. Unreadable thread state prints
 `{"error":{"code":"state_unavailable",…}}` with exit 1, never a guessed number.
 
+**`specs`** prints the visible spec rows with their running agents, and
+**`spec`** opens or closes one spec in the section; an unavailable specs file
+prints `{"error":{"code":"specs_unavailable",…,"reason":…}}` with exit 1.
+
 The values above are examples. The full JSON shapes and error codes are in
-[section 7 of the contract](contracts/sidebar-v3.v1.md#7-cli). Live dispatch,
-and the CLI matching the panel on a real host, await #9.
+[section 7 of the v0.3 contract](contracts/sidebar-v3.v1.md#7-cli) and
+[section 8 of the v0.4 contract](contracts/specs-section.v1.md#8-cli). Live dispatch,
+and the CLI matching the hover card on a real host, await #9.
 
 ### Host-owned row-menu items
 
@@ -164,8 +204,9 @@ item that is neither a command nor listed here.
   host yet; WizBar omits or discloses them.
 - Subagents are not counted; threads the sidebar does not see may be missing.
 - Cloud rows carry no branch or pull request in observed host data.
-- The real pinned order, footer placement and the stats panel's real look are
-  unverified until #9. PR badges have appeared inconsistently on real hosts; a
+- The real pinned order, footer placement and the hover card's real look are
+  unverified until #9. The v0.4 Specs section, marks, model source and hover
+  card on a real host await the WizBar 0.4 live check. PR badges have appeared inconsistently on real hosts; a
   missing badge alone is not a WizBar regression.
 
 ## Credit and licence

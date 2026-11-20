@@ -1,7 +1,10 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk";
 import { countRunning, type ObservableRunningSource, type RunningCountSource } from "./running-count";
-import { isRunning, readSidebarRows, type SidebarRowsStatus } from "./stats";
+import { cardPinNext, isRunning, readSidebarRows, type SidebarRowsStatus } from "./stats";
+import type { CardEventV4, CardStateV4 } from "./fixtures/v4";
+import { MatrixMark } from "./MatrixMark";
+import { StatsPanel } from "./StatsPanel";
 import { experimental_usePluginId, experimental_useSidebarThreads, useRealtimeConnectionState } from "@get-bb/plugin-sdk/app";
 import { useFeatureSourceStatus, useWizBarSettings } from "./SettingsPage";
 
@@ -47,7 +50,8 @@ export function useObservableRows(): { status: SidebarRowsStatus; rows: readonly
 }
 
 /** Observable host cache only; neither coverage nor freshness is claimed live.
- * WZ20 (#41): counts the one running rule (stats.ts), the stats panel's total. */
+ * WZ20 (#41): counts the one running rule (stats.ts). WB4-3 (#1437): its hover
+ * card is `StatsPanel`, the `wizbar stats` data for the same rows. */
 export function FooterCounter({ className }: { className?: string }) {
   const { status, rows } = useObservableRows();
   const base = { version: 1, scope: "observable-sidebar", subagents: { status: "unproven", count: null } } as const;
@@ -55,69 +59,51 @@ export function FooterCounter({ className }: { className?: string }) {
     ? { ...base, status, threads: rows.map((t) => ({ id: t.id, projectId: t.projectId, parentThreadId: t.parentThreadId, isWorking: isRunning(t) })) }
     : { ...base, status: status === "ready" ? "incomplete" : status, threads: null };
   useFeatureSourceStatus("footer", source.status === "ready" ? "unverified" : "unavailable");
-  return <FooterCounterArtwork className={className} source={source} />;
+  return <FooterCounterArtwork className={className} source={source} card={() => <StatsPanel rows={rows} />} />;
 }
 
-/** Presentation over explicit inputs; synthetic harness inputs are not host proof. */
-export function FooterCounterArtwork({ source, className }: {
+/**
+ * "N running" (specs-section.v1.md section 7): threads only, with a matrix
+ * mark. Hover or focus opens the card; a click (Enter or Space) pins it and
+ * another unpins it; Escape closes it. Synthetic inputs are not host proof.
+ */
+export function FooterCounterArtwork({ source, className, card }: {
   source: RunningCountSource | null;
   className?: string;
+  card?: () => ReactNode;
 }) {
   const { footerCountEnabled } = useWizBarSettings();
   const count = countRunning(source);
-  const [hovered, setHovered] = useState(false);
-  const [focused, setFocused] = useState(false);
-  const tooltipId = useId();
+  const [state, setState] = useState<CardStateV4>("closed");
+  const send = (event: CardEventV4) => setState((current) => cardPinNext(current, event));
   const unavailable = count === null;
   useEffect(() => {
-    if (unavailable) {
-      setHovered(false);
-      setFocused(false);
-    }
+    if (unavailable) setState("closed");
   }, [unavailable]);
   if (!footerCountEnabled || count === null) return null;
-  const showSplit = hovered || focused;
+  const open = state !== "closed" && card !== undefined;
   return (
-    <>
-      <style>{"@keyframes wizbar-running-spin { to { transform: rotate(360deg); } } @media (prefers-reduced-motion: reduce) { .wizbar-running-spinner { animation: none !important; } }"}</style>
-      <span
-        role="status"
-        aria-label={`${count.total} running`}
-        aria-describedby={showSplit ? tooltipId : undefined}
-        aria-live="polite"
-        tabIndex={0}
-        className={className}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        style={{
-          position: "relative", display: "inline-flex", alignItems: "center",
-          gap: 6, fontSize: 12, fontVariantNumeric: "tabular-nums", lineHeight: "20px",
-          color: count.total === 0 ? "var(--muted-foreground)" : "var(--foreground)",
-        }}
-      >
-        <svg
-          className="wizbar-running-spinner" viewBox="0 0 16 16" width={14} height={14} fill="none" aria-hidden="true"
-          style={{ flexShrink: 0, animation: count.total > 0 ? "wizbar-running-spin 1s linear infinite" : undefined }}
-        >
-          <circle cx={8} cy={8} r={6} stroke="currentColor" strokeWidth={2} opacity={0.25} />
-          <path d="M8 2a6 6 0 0 1 6 6" stroke="currentColor" strokeWidth={2} strokeLinecap="round" />
-        </svg>
-        <span>{count.total}</span>
-        {showSplit ? (
-          <span id={tooltipId} role="tooltip" style={{
-            position: "absolute", bottom: "calc(100% + 6px)", left: 0,
-            width: "max-content", maxWidth: "min(300px, calc(100vw - 32px))", whiteSpace: "normal", padding: "4px 8px", borderRadius: 6, zIndex: 50,
-            background: "var(--popover)", color: "var(--popover-foreground)",
-            border: "1px solid var(--border)", pointerEvents: "none",
+    <div className={className} style={{ position: "relative" }}
+      onPointerEnter={() => send("enter")} onPointerLeave={() => send("leave")} onFocus={() => send("focus")}
+      onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) send("blur"); }}
+      onKeyDown={(event) => { if (event.key === "Escape") send("escape"); }}>
+      {open ? card() : null}
+      <span role="status" aria-label={`${count.total} running`} aria-live="polite" style={{
+        display: "inline-flex", fontSize: 12, fontVariantNumeric: "tabular-nums", lineHeight: "20px",
+        color: count.total === 0 ? "var(--muted-foreground, #b7b7b7)" : "var(--foreground)",
+      }}>
+        <span role="button" tabIndex={0} aria-pressed={state === "pinned"} aria-expanded={open}
+          style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer" }}
+          onClick={() => send("click")}
+          onKeyDown={(event) => {
+            if (event.key !== "Enter" && event.key !== " ") return;
+            event.preventDefault();
+            send("click");
           }}>
-            {count.subagents === null
-              ? `${count.threads} running · subagents not counted yet · some threads may be unseen`
-              : `${count.threads} threads, ${count.subagents} subagents`}
-          </span>
-        ) : null}
+          <MatrixMark state={count.total > 0 ? "working" : "idle"} />
+          <span>{count.total}</span>
+        </span>
       </span>
-    </>
+    </div>
   );
 }

@@ -13,7 +13,8 @@ import { createLifecycleCommand, LifecycleError, type LifecycleOperation, type L
 import { placePinned } from "./drag";
 import type { CardModelsResultV3, MovePositionV3 } from "./v3-types";
 import { sortPinned } from "./inbox";
-import { computeStats, runtimeDisplayStatuses, type StatsRow } from "./stats";
+import { computeStatsV4, isRunning, runtimeDisplayStatuses, type StatsRow, type StatsV4Row } from "./stats";
+import { readSpecsFile } from "./specs/read";
 import { childrenList, runtimeStatusesV3, type ChildrenRow } from "./children";
 import { registerDeckReaders } from "./deck/data/server";
 import { registerDeckActions } from "./deck/actions/server";
@@ -204,6 +205,14 @@ async function readSignals(bb: BbPluginApi, threadId: string, signal?: AbortSign
 const statsRowSchema = z.object({
   id: z.string().trim().min(1),
   parentThreadId: z.string().nullable(),
+  // WB4-3 (#1437): what the hover card's threads read (specs-section.v1.md sections 3 and 8).
+  title: z.string().nullable().optional(),
+  titleFallback: z.string().nullable().optional(),
+  providerId: z.string(),
+  createdAt: z.number().finite(),
+  updatedAt: z.number().finite(),
+  status: z.string(),
+  queuedWork: z.enum(["none", "waiting", "failed"]),
   hasPendingInteraction: z.boolean(),
   runtime: z.object({ displayStatus: z.enum(runtimeDisplayStatuses) }),
   activity: liveThreadSchema.shape.activity,
@@ -211,8 +220,10 @@ const statsRowSchema = z.object({
   environmentBranchName: z.string().nullable(),
   environmentProviderId: z.string().nullable(),
   environmentHostId: z.string().nullable(),
-}).transform((raw): StatsRow => ({
+}).transform((raw): StatsV4Row => ({
   id: raw.id, parentThreadId: raw.parentThreadId, hasPendingInteraction: raw.hasPendingInteraction,
+  displayTitle: raw.title || raw.titleFallback || raw.id, providerId: raw.providerId,
+  createdAt: raw.createdAt, updatedAt: raw.updatedAt, status: raw.status as StatsV4Row["status"], queuedWork: raw.queuedWork,
   runtimeStatus: raw.runtime.displayStatus,
   activity: {
     workflows: raw.activity.activeWorkflowCount, backgroundAgents: raw.activity.activeBackgroundAgentCount,
@@ -226,9 +237,9 @@ const statsRowSchema = z.object({
   host: raw.environmentHostId === null ? null : { id: raw.environmentHostId } as StatsRow["host"],
 }));
 
-async function readStatsRows(bb: BbPluginApi, signal?: AbortSignal): Promise<StatsRow[] | null> {
+async function readStatsRows(bb: BbPluginApi, signal?: AbortSignal): Promise<StatsV4Row[] | null> {
   try {
-    const rows: StatsRow[] = [];
+    const rows: StatsV4Row[] = [];
     const seen = new Set<string>();
     for (let offset = 0; ; offset += 100) {
       const page = await bb.sdk.threads.list({ archived: false, includeHidden: true, limit: 100, offset, signal });
@@ -438,7 +449,8 @@ export default function plugin(bb: BbPluginApi) {
   // WizDeck 0.1 (#74): the one steer path to the bound orchestrator.
   registerDeckActions(bb, { settings: deckReaders.settings });
   // WB4-1 (#1435): the specs reader, its RPC and `wizbar specs` / `wizbar spec`.
-  const specs = registerSpecs(bb, { settings: bb.settings.define(specsSettingDescriptors), factories: deckReaders.settings });
+  const models = (threadIds: readonly string[]) => cardModelsFrom((args) => bb.sdk.threads.defaultExecutionOptions(args), threadIds);
+  const specs = registerSpecs(bb, { settings: bb.settings.define(specsSettingDescriptors), factories: deckReaders.settings, models });
   const db = bb.storage.database();
   bb.storage.migrate(db, migrations);
 
@@ -641,8 +653,16 @@ export default function plugin(bb: BbPluginApi) {
     async move({ threadId, position }) { await pins.place(threadId, position); return { ok: true }; },
     async pinnedOrder() { return { order: await pins.pinnedOrder() }; },
   });
-  bb.cli.register(createLifecycleCommand(perform, async (signal) =>
-    computeStats(await readStatsRows(bb, signal), Date.now(), Intl.DateTimeFormat().resolvedOptions().timeZone), pins,
+  // WB4-3 (#1437): the hover card's computation over the same rows, the specs
+  // file (a spec only when it is ready) and the gated model source.
+  bb.cli.register(createLifecycleCommand(perform, async (signal) => {
+    const rows = await readStatsRows(bb, signal);
+    const now = Date.now();
+    const read = readSpecsFile(await specs.specsFile(), now);
+    const running = rows?.filter(isRunning).map((row) => row.id) ?? [];
+    return computeStatsV4(rows, read.status === "ready" ? read.file : null, running.length ? await models(running) : null,
+      now, Intl.DateTimeFormat().resolvedOptions().timeZone);
+  }, pins,
     (threadId, signal) => readChildren(bb, threadId, signal), specs));
 
   bb.events.on("interaction.pending", ({ thread }) => breakMute(thread.id));

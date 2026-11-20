@@ -8,9 +8,10 @@ import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/re
 import { loadPluginApp, renderSlot } from "@get-bb/plugin-sdk/testing/app";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import {
-  v4CardPinCases, v4Now, v4SpecsFile, v4SpecsFileText, v4Stats, v4Threads, v4TimeZone, type StatsV4,
+  v4CardPinCases, v4Now, v4OpenSetting, v4SpecRows, v4SpecsFile, v4SpecsFileText, v4Stats, v4Threads, v4TimeZone, type StatsV4,
 } from "./fixtures/v4";
 import { cardPinNext, cardSummary, computeStatsV4, formatStatsText } from "./stats";
+import { createSpecsCommands } from "./specs/cli";
 
 type Ready = Extract<StatsV4, { status: "ready" }>;
 const ready = v4Stats as Ready;
@@ -148,5 +149,17 @@ describe("S4: no bolt; N running with its hover card", () => {
     fireEvent.click(within(card()!).getByText("Builder · SP-4: Sample wire shortcuts"));
     expect(rendered.inspection.sidebarActionCalls).toContainEqual(expect.objectContaining({ threadId: "thr_v4_code_a" }));
     expect(card()).toBeTruthy();
+  });
+
+  // catches: `wizbar specs` still hard-coding model and effort as empty once the shared source serves them.
+  it("wizbar specs takes model and effort from the shared source", async () => {
+    const cli = createSpecsCommands({
+      specsFile: async () => ({ kind: "content", text: v4SpecsFileText }), rows: async () => [...v4Threads],
+      openSetting: async () => v4OpenSetting, writeOpenSetting: async (value) => value,
+      models: async (threadIds) => models("Sample model", "high")({ threadIds: [...threadIds] }) as never,
+    });
+    const out = JSON.parse((await cli.run(["specs"], true))!.stdout!);
+    expect(out.specs[0].agents.map((a: { threadId: string; model: string | null; effort: string | null }) => [a.threadId, a.model, a.effort]))
+      .toEqual(v4SpecRows.specs[0]!.agents.map((a) => [a.threadId, "Sample model", "high"]));
   });
 });
