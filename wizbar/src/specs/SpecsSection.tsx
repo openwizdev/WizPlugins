@@ -112,7 +112,7 @@ export function SpecsSection({ threads, now, activeThreadId, onNavigate }: Specs
   const byId = new Map(threads.map((thread) => [thread.id, thread]));
   return (
     <section aria-label="Specs">
-      <h2 className="flex items-center gap-2 px-2.5 pb-1 pt-3 text-2xs font-medium">
+      <h2 className="flex items-center gap-2 px-2.5 pb-1 pt-3 text-[11.5px] font-medium">
         {view === "unavailable" ? <span className="text-muted-foreground">Specs unavailable</span> : (
           <span>
             <span className="text-muted-foreground">Specs</span>{" "}
@@ -213,7 +213,7 @@ const ring = (colour: string): CSSProperties => ({ boxShadow: `inset 0 0 0 1px $
 const dotStyle: Record<DotStateV4, CSSProperties> = {
   done: { background: tokens.mutedAccent },
   "done-recent": { background: tokens.brightOlive },
-  building: ring(tokens.accent),
+  building: ring(tokens.mutedText),
   review: ring(tokens.accent),
   "needs-you": { background: tokens.warning },
   held: ring(tokens.quietRing),

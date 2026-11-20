@@ -87,7 +87,7 @@ One row per visible spec, in file order (`SpecRowV4`). All counts are over the s
 
 **Hidden.** A spec is hidden when `total === 0` or `done === total` (finished). A hidden spec has no row and counts nowhere, in the UI and the CLI.
 
-**Section rule.** `Specs N` where N is the number of visible rows, then ` · M need you` when M (the sum of `needsYou` over visible rows) is over zero. On screen (0.5.0 C) the count is faint, ` · M need you` is in the warning colour, and an olive rule line follows.
+**Section rule.** `Specs N` where N is the number of visible rows, then ` · M need you` when M (the sum of `needsYou` over visible rows) is over zero. On screen (0.5.0 C) the label is about 11.5 px, weight 500, in muted text, the count is faint, ` · M need you` is in the warning colour, and an olive rule line follows.
 
 ## 3. Matching running threads to a spec
 
@@ -240,7 +240,7 @@ WizBar matches the host's theme, not the Ember map palette. Every colour is a ho
 - **Rule line:** `color-mix(in oklch, var(--primary, #c0ff04) 40%, var(--sidebar, #161616))`, a quieter olive for the line beside a section's name (`tokens.rule`).
 - **Bright olive:** `color-mix(in oklch, var(--primary, #c0ff04) 85%, var(--sidebar, #161616))`, for `done-recent` dots.
 - **Quiet ring:** `color-mix(in oklch, var(--muted-foreground, #b7b7b7) 45%, var(--sidebar, #161616))`, a grey ring for `held` dots.
-- **Dots:** `done` muted accent, filled; `done-recent` bright olive, filled; `building` hollow, a 1 px accent ring that pulses (still under reduced motion); `review` hollow, a 1 px accent ring; `needs-you` warning, filled; `held` hollow, a 1 px quiet ring; `not-started` border, filled. "K needs you" uses warning text.
+- **Dots:** `done` muted accent, filled; `done-recent` bright olive, filled; `building` hollow, a 1 px muted-text ring that pulses (still under reduced motion); `review` hollow, a 1 px accent ring; `needs-you` warning, filled; `held` hollow, a 1 px quiet ring; `not-started` border, filled. "K needs you" uses warning text.
 - **Open-spec panel:** the card variable, `var(--card, #222222)`.
 - **Accent variable: Unverified.** Which host variable carries the owner's lime is not declared anywhere; `--primary` is this contract's choice. WB4-4 reads the owner's theme; if the lime is another variable, a contract revision swaps that one row.
 - **The check.** `src/fixtures/v4-fixtures.test.ts` (run by `npm test`, so by `wizbar-checks`) fails on any hard-coded colour in WizBar's non-test source (`*.ts`, `*.tsx`, `*.css` under `wizbar/`, except `node_modules/` and `src/fixtures/`). A hard-coded colour is a hex literal, a colour function (`rgb`, `rgba`, `hsl`, `hsla`, `hwb`, `lab`, `lch`, `oklab`, `oklch`, `color`), a Tailwind palette class (`text-amber-500`, `bg-black`), an arbitrary colour class (`bg-[#…]`), or a colour keyword as a style value, JSX colour attribute (`fill="red"`) or CSS declaration (`color: red;`); `transparent`, `currentColor`, `inherit`, `initial`, `unset` and `none` are not colours. The only literals it passes are `var(<variable>, <fallback>)` exactly as in the table; there are no exceptions. Comments are ignored. An arbitrary class holding a keyword (`text-[red]`), side and offset prefixes (`border-x-black`, `ring-offset-white`) and every `*Color` style key (`borderTopColor`) count too.

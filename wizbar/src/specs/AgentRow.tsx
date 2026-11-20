@@ -87,7 +87,7 @@ export function AgentRow({ agent, thread, now, isActive, onNavigate }: AgentRowP
           ) : <span className="text-2xs tabular-nums text-muted-foreground/70">{relativeTimeLabel(agent.createdAt, now)}</span>}
         </span>
       </div>
-      <div data-agent-meta="" className="pointer-events-none relative flex items-center gap-1 pb-1 pl-[30px] pr-2.5 text-2xs text-muted-foreground/70">
+      <div data-agent-meta="" className="pointer-events-none relative flex items-center gap-1 pb-1 pl-[30px] pr-2.5 text-xs text-muted-foreground/70">
         <span data-provider={agent.providerId} className="contents">
           {provider ? (
             <span role="img" aria-label={provider.displayName} title={provider.displayName}
