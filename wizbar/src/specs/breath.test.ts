@@ -14,11 +14,11 @@ describe("A1: only a ticket a working agent names breathes (section 13)", () => 
     expect(dotBreathes({ ticket, state }, agents)).toBe(motion === "breath");
   });
 
-  // catches: a done dot breathing because its builder is still finishing.
-  it("never breathes a done or done-recent dot, even when a working agent names it", () => {
+  // catches: a done dot breathing because its builder is still finishing, or a ticket in review breathing because a
+  // working agent (a fixer, a fleet child) names it; section 13 keeps every review dot a steady ring. Seen in the harness.
+  it.each(["done", "done-recent", "review"] as const)("never breathes a %s dot, even when a working agent names it", (state) => {
     const agents = [{ ticket: "example/sample-sort#712", matrix: "working" }] as const;
-    expect(dotBreathes({ ticket: "example/sample-sort#712", state: "done" }, agents)).toBe(false);
-    expect(dotBreathes({ ticket: "example/sample-sort#712", state: "done-recent" }, agents)).toBe(false);
+    expect(dotBreathes({ ticket: "example/sample-sort#712", state }, agents)).toBe(false);
   });
 });
 
