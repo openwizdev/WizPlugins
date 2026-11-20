@@ -6,7 +6,8 @@
 // understands. Here, uninstalling the plugin removes its state with it.
 import { defineRpcContract, type BbPluginApi, type PluginCliRegistration } from "@get-bb/plugin-sdk";
 import { z } from "zod";
-import { specsSettingDescriptors, wizbarSettingDescriptors } from "./settings";
+import { sectionsSettingDescriptors, specsSettingDescriptors, wizbarSettingDescriptors } from "./settings";
+import { withSectionCommand } from "./sections";
 import { canMute, canPark, hasRuntimeWork, resolveShelf, type ThreadActivitySignals } from "./lifecycle";
 import { cardModelsNone } from "./card-meta";
 import { withModelLabel } from "./model-names";
@@ -736,7 +737,9 @@ export default function plugin(bb: BbPluginApi) {
   });
   // WB4-3 (#1437): the hover card's computation over the same rows, the specs
   // file (a spec only when it is ready) and the gated model source.
-  bb.cli.register(withModelsCommand(createLifecycleCommand(perform, async (signal) => {
+  // S1 (#169): `wizbar section`, beside the commands it wraps.
+  const sections = bb.settings.define(sectionsSettingDescriptors);
+  bb.cli.register(withSectionCommand(withModelsCommand(createLifecycleCommand(perform, async (signal) => {
     const rows = await readStatsRows(bb, signal);
     const now = Date.now();
     const read = readSpecsFile(await specs.specsFile(), now);
@@ -745,7 +748,7 @@ export default function plugin(bb: BbPluginApi) {
       now, Intl.DateTimeFormat().resolvedOptions().timeZone);
     return stats.threads ? { ...stats, threads: stats.threads.map(withModelLabel) } : stats;
   }, pins,
-    (threadId, signal) => readChildren(bb, threadId, signal), withSpecsModelLabels(specs)), hostOptions(bb), hostContext(bb)));
+    (threadId, signal) => readChildren(bb, threadId, signal), withSpecsModelLabels(specs)), hostOptions(bb), hostContext(bb)), sections));
 
   bb.events.on("interaction.pending", ({ thread }) => breakMute(thread.id));
   bb.events.on("thread.failed", ({ thread }) => breakMute(thread.id));

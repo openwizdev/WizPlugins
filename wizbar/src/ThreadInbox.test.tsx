@@ -1176,7 +1176,7 @@ describe("S1: collapsible Pinned and Inbox", () => {
     await waitFor(() => expect(header(name).getAttribute("aria-expanded")).toBe("false"));
     expect(header(name).textContent).toBe(`${name} 2`);
     expect(within(header(name)).getByText("2").className).toContain("text-muted-foreground/40");
-    expect(header(name).querySelector<HTMLElement>("span:last-child")!.style.background).toBe(tokens.rule);
+    expect(header(name).querySelector<HTMLElement>(":scope > span:last-child")!.style.background).toBe(tokens.rule);
     expect(links(name)).toEqual([]);
     expect(updates).toEqual([{ pluginId: "wizbar", values: { sectionsCollapsed: JSON.stringify([name.toLowerCase()]) } }]);
     fireEvent.click(header(name));

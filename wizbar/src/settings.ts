@@ -32,6 +32,17 @@ export const specsSettingDescriptors = {
   },
 } satisfies PluginSettingDescriptors;
 
+/**
+ * S1 (#169): which sidebar sections are collapsed (sidebar-v3.v1.md section 9).
+ * Not a switch either, so it stays off the settings page; same store and write rule.
+ */
+export const sectionsSettingDescriptors = {
+  sectionsCollapsed: {
+    type: "string", label: "Collapsed sections", default: "[]",
+    description: "JSON list of the collapsed sidebar sections (pinned, inbox, specs). Every section starts expanded.",
+  },
+} satisfies PluginSettingDescriptors;
+
 export type WizBarSettings = {
   footerCountEnabled: boolean; machineIconsEnabled: boolean;
   childrenChipEnabled: boolean; parentChipEnabled: boolean;

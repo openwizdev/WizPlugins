@@ -50,7 +50,7 @@ describe("S1: wizbar section errors", () => {
   it("fails with settings_failed and writes nothing when the read fails", async () => {
     const { withSectionCommand } = await import("./sections");
     const writes: string[] = [];
-    const cli = withSectionCommand({ commands: [], run: async () => ({ exitCode: 9 }) }, {
+    const cli = withSectionCommand({ name: "wizbar", summary: "synthetic", commands: [], run: async () => ({ exitCode: 9 }) }, {
       get: async () => { throw new Error("offline"); },
       experimental_set: async (values) => { writes.push(values.sectionsCollapsed ?? ""); return values; },
     });

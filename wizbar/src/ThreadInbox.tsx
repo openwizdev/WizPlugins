@@ -1,9 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  experimental_usePluginId,
   experimental_useSidebarThreadActions as useSidebarThreadActions,
   experimental_useSidebarThreads as useSidebarThreads,
   useRealtimeConnectionState,
   useRpc,
+  useSdk,
+  useSettings,
   type PluginSidebarThread,
   type PluginThreadListProps,
 } from "@get-bb/plugin-sdk/app";
@@ -24,6 +27,7 @@ import { useLifecycle } from "./useLifecycle";
 import { SpecsSection } from "./specs/SpecsSection";
 import { tokens } from "./specs/theme";
 import type { t3sidebarRpcContract } from "./server";
+import { readCollapsedKeys, withCollapsed, type SectionKey } from "./sections";
 import type { MovePositionV3 } from "./v3-types";
 import {
   dragPinOutcome,
@@ -128,6 +132,11 @@ export function ThreadInbox({
 
   const connection = useRealtimeConnectionState();
   const drag = useDragPins(status, connection, threads, pinned);
+  const sections = useSectionsCollapsed();
+  // While a search is active its matches show even in a collapsed section; nothing is stored.
+  const searching = searchQuery.trim() !== "";
+  const isCollapsed = (key: SectionKey) => !searching && sections.collapsed.has(key);
+  const pinnedShown = pinned.length > 0 || drag.draggingId !== null;
 
   const scopeLabel =
     scope === ALL_PROJECTS
@@ -190,8 +199,9 @@ export function ThreadInbox({
           </p>
         ) : (
           <>
-            {pinned.length > 0 || drag.draggingId !== null ? (
-              <Shelf label="Pinned" pinnedDropZone>
+            {pinnedShown ? (
+              <Shelf label="Pinned" pinnedDropZone count={pinned.length} collapsed={isCollapsed("pinned")}
+                onToggle={() => sections.toggle("pinned")} saveFailed={sections.failed === "pinned"}>
                 {pinned.length === 0 ? (
                   <li className="list-none rounded-md border border-dashed border-sidebar-border px-2.5 py-2 text-xs text-muted-foreground">
                     Drop here to pin
@@ -215,7 +225,9 @@ export function ThreadInbox({
               </Shelf>
             ) : null}
             {inbox.length > 0 ? (
-              <Shelf label={pinned.length > 0 || drag.draggingId !== null ? "Inbox" : null}>
+              // The Inbox header shows beside Pinned, and whenever Inbox is stored collapsed, so it can be expanded again.
+              <Shelf label={pinnedShown || sections.collapsed.has("inbox") ? "Inbox" : null} count={inbox.length}
+                collapsed={isCollapsed("inbox")} onToggle={() => sections.toggle("inbox")} saveFailed={sections.failed === "inbox"}>
                 {inbox.map((thread) => (
                   <ThreadCard
                     key={thread.id}
@@ -265,7 +277,9 @@ export function ThreadInbox({
         )}
         {/* WB4-1 (#1435): the running specs, under the 0.3 shelves. */}
         {status === "ready" && !drag.rowsUnknown ? (
-          <SpecsSection threads={threads} now={now} activeThreadId={activeThreadId} onNavigate={onNavigate} />
+          <SpecsSection threads={threads} now={now} activeThreadId={activeThreadId} onNavigate={onNavigate}
+            collapsed={sections.collapsed.has("specs")} onToggleCollapsed={() => sections.toggle("specs")}
+            collapseFailed={sections.failed === "specs"} />
         ) : null}
       </div>
       <FooterCounter className="shrink-0 border-t border-sidebar-border px-3 py-1" />
@@ -385,27 +399,83 @@ function Shelf({
   label,
   children,
   pinnedDropZone = false,
+  count,
+  collapsed,
+  onToggle,
+  saveFailed,
 }: {
   label: string | null;
   children: React.ReactNode;
   /** Marks Pinned as the drop zone that pins, places and reorders (WZ21). */
   pinnedDropZone?: boolean;
+  count: number;
+  collapsed: boolean;
+  onToggle: () => void;
+  saveFailed: boolean;
 }) {
   return (
     // A named section is exposed as a landmark region; an unnamed one is not,
-    // which is exactly right for the single unlabelled inbox list.
+    // which is exactly right for the single unlabelled inbox list. A collapsed
+    // Pinned stays the drop zone: its header is inside the section.
     <section {...(label ? { "aria-label": label } : {})} {...(pinnedDropZone ? { "data-wizbar-pinned": "" } : {})}>
       {label ? (
-        <h2 className={cn("flex items-center gap-2 px-2.5 pb-1 pt-3")}>
+        // S1 (#169): the whole line toggles, like Settled; collapsed shows "Pinned 3", the count faint.
+        <button type="button" onClick={onToggle} aria-expanded={!collapsed}
+          className="flex w-full items-center gap-2 px-2.5 pb-1 pt-3 text-left">
           <span className="text-[11.5px] font-medium text-muted-foreground">
             {label}
+            {collapsed ? <>{" "}<span className="ml-1 font-normal text-muted-foreground/40">{count}</span></> : null}
           </span>
           <ShelfRule />
-        </h2>
+        </button>
       ) : null}
-      <ul className="flex flex-col gap-px">{children}</ul>
+      {saveFailed ? <p role="status" className="px-2.5 text-xs text-muted-foreground">{SAVE_FAILED}</p> : null}
+      {label && collapsed ? null : <ul className="flex flex-col gap-px">{children}</ul>}
     </section>
   );
+}
+
+const SAVE_FAILED = "Could not save the collapsed section. Try again.";
+
+/**
+ * S1 (#169): `sectionsCollapsed` from plugin settings, saved the way the Specs
+ * section saves `specsOpen`: a toggle shows at once, saves run one at a time
+ * and the newest toggle wins. A failed save keeps the toggled state on screen
+ * and names the section whose save failed.
+ */
+function useSectionsCollapsed() {
+  const pluginId = experimental_usePluginId();
+  const host = useSettings();
+  const sdk = useSdk();
+  const [written, setWritten] = useState<{ baseline: unknown; value: unknown; held: boolean } | null>(null);
+  const [failed, setFailed] = useState<SectionKey | null>(null);
+  const value = written && (written.held || written.baseline === host.values) ? written.value : host.values?.sectionsCollapsed;
+  const latest = useRef({ value, hostValues: host.values, seq: 0 });
+  latest.current.value = value;
+  latest.current.hostValues = host.values;
+  const queue = useRef<Promise<void>>(Promise.resolve());
+  const collapsed = useMemo(() => new Set(readCollapsedKeys(value)), [value]);
+  const toggle = useCallback((key: SectionKey) => {
+    const next = withCollapsed(latest.current.value, key, !readCollapsedKeys(latest.current.value).includes(key));
+    const seq = ++latest.current.seq;
+    latest.current.value = next;
+    setWritten({ baseline: latest.current.hostValues, value: next, held: true });
+    setFailed(null);
+    queue.current = queue.current.then(async () => {
+      // A newer toggle carries this one's change in its own save.
+      if (seq !== latest.current.seq) return;
+      try {
+        const result = await sdk.plugins.updateSettings({ pluginId, values: { sectionsCollapsed: next } });
+        if (seq === latest.current.seq) {
+          setWritten({ baseline: latest.current.hostValues, value: result.values?.sectionsCollapsed ?? next, held: false });
+        }
+      } catch {
+        // Keep the owner's choice on screen (held) and say the save failed.
+        if (seq === latest.current.seq) setFailed(key);
+      }
+    });
+  }, [pluginId, sdk]);
+  return { collapsed, toggle, failed };
 }
 
 /** A shelf's rule: the Specs section's rule olive (round 5 A), so every shelf reads as one list. */
