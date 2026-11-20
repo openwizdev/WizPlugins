@@ -95,7 +95,7 @@ The input is the 0.3 rows (sidebar-v3.v1.md section 1). Only **running** rows ma
 
 **Which spec,** first match wins:
 
-1. **Fleet parent.** The specs whose `fleetThreadId` equals the row's `parentThreadId`. Exactly one: that spec. Several: the one among them with a ticket whose `code` equals the title code; if not exactly one, no spec.
+1. **Fleet parent,** only when the row's `parentThreadId` is not null. The specs whose `fleetThreadId` is not null and equals it. Exactly one: that spec. Several: the one among them with a ticket whose `code` equals the title code; if not exactly one, no spec. None, or a top-level row: rule 2. A missing ID never matches a missing ID.
 2. **Ticket code.** The specs with a ticket whose `code` equals the title code. Exactly one: that spec. Zero or several: no spec.
 
 Hidden specs take part in matching, so an agent of a finished spec is matched to it and appears in no spec row (the hover card lists it with no spec). A row matching no spec appears in no spec; it still counts in "N running" and the hover card (section 7). The fleet thread itself matches only by rule 2.
@@ -127,7 +127,7 @@ A small 3 × 3 dot mark on each running thread (inside an open spec, and on the 
 | `done` | Pull request `merged` |
 | `idle` | Otherwise |
 
-A running row is working and not waiting, so inside a spec and in the hover card only `reviewing` and `working` occur; the CLI and the app therefore agree there. The pull-request states appear only on 0.3 cards in the app.
+A running row is working and not waiting, so it never shows `needs-you`, and it still counts as running when it shows `failed`: inside a spec, in the hover card and in `wizbar stats --json`, a running row shows `failed` (an error status or failed queued work), else `reviewing` or `working`. The server and the app compute these rows alike, so the CLI and the app agree there. The pull-request states appear only on 0.3 cards in the app.
 
 **Marks** (row-major masks, `1` lit; unlit dots use the border token). Reduced motion (`prefers-reduced-motion: reduce`) shows every mark static.
 
