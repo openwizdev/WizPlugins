@@ -158,6 +158,9 @@ describe("0.5 C: the rule, the spec rows and the open panel", () => {
     const heading = within(await section()).getByRole("heading");
     await waitFor(() => expect(heading.textContent).toBe("Specs 2 · 2 need you"));
     expect(within(heading).getByText("Specs").className).toContain("text-muted-foreground");
+    // Council round 1: the target's label size and weight, as on the shelf labels.
+    expect(heading.className).toContain("text-[11.5px]");
+    expect(heading.className).toContain("font-medium");
     const count = within(heading).getByText("2");
     expect(count.className).toMatch(/text-muted-foreground\/\d+/);
     expect(count.className).not.toBe(within(heading).getByText("Specs").className);
@@ -220,7 +223,8 @@ describe("0.5 C: the rule, the spec rows and the open panel", () => {
     expect(dot("done-recent").style.background).toBe(tokens.brightOlive);
     expect(dot("done-recent").style.boxShadow).toBe("");
     expect(dot("building").style.background).toBe("");
-    expect(dot("building").style.boxShadow).toBe(ring(tokens.accent));
+    // Council round 1: a light grey ring, as in the target, which has no lime rings.
+    expect(dot("building").style.boxShadow).toBe(ring(tokens.mutedText));
     expect(dot("building").className).toContain("motion-safe:animate-pulse");
     expect(dot("review").style.boxShadow).toBe(ring(tokens.accent));
     expect(dot("review").className).not.toContain("animate-pulse");

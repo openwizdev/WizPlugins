@@ -61,6 +61,8 @@ describe("S3: the agent row (sections 3, 5 and 6)", () => {
     const { row } = show(builder, served("Sample model 2", "xhigh"));
     const line = await within(row()).findByText("Sample model 2 · Xhigh");
     expect(line.closest("[data-agent-meta]")!.querySelector("[data-provider]")?.getAttribute("data-provider")).toBe("harness-a");
+    // Council round 1: one step larger than text-2xs, about 12 px, as in the target.
+    expect(line.closest("[data-agent-meta]")!.className).toContain("text-xs");
   });
 
   // catches: a guessed model, a lone effort, or placeholder text when the source has nothing.
