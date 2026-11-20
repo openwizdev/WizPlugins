@@ -6,7 +6,7 @@ import { classifyMachine } from "./machine-source";
 import type { PluginRealtimeConnectionState, PluginSidebarThreadsState } from "@get-bb/plugin-sdk";
 import type { CardModelsResultV3, StatsCoverageV3, StatsV3, StatsWindowV3, ThreadV3 } from "./v3-types";
 import type { CardEventV4, CardStateV4, FooterThreadV4, SpecsFileV4, StatsV4 } from "./fixtures/v4";
-import { isHidden, matchSpec, matrixState, parseTitle, specRows, type SpecsThreadRow } from "./specs/rows";
+import { matchSpec, matrixState, parseTitle, specRows, type SpecsThreadRow } from "./specs/rows";
 
 /** SDK 0.6.33 `ThreadRuntimeDisplayStatus`; anything else cannot mean idle. */
 export const runtimeDisplayStatuses = [
@@ -170,8 +170,8 @@ export function computeStatsV4(
   const threads = running.map((row): FooterThreadV4 => {
     // Every row goes in too, so a child of a `Fleet #S:` thread finds spec S (section 3).
     const key = specs ? matchSpec(specs, row, rows ?? []) : null;
-    // A hidden (finished) spec has no row, so its agents name no spec (section 3).
-    const entry = key ? specs!.specs.find((spec) => spec.spec === key && !isHidden(spec)) ?? null : null;
+    // From 0.6 only a spec with no tickets is hidden; a finished one is quiet and named like any other (section 3).
+    const entry = key ? specs!.specs.find((spec) => spec.spec === key && spec.tickets.length > 0) ?? null : null;
     const model = served.get(row.id);
     return {
       id: row.id, title: row.displayTitle, providerId: row.providerId, matrix: matrixState(row, null),
