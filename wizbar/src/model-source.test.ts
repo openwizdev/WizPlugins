@@ -38,6 +38,18 @@ describe("S3: model and effort behind the adoption gate (section 6)", () => {
     ] });
   });
 
+  // catches: a host read that throws before returning a promise failing every card, `stats` and `children` (#111: the gate is open).
+  it("nulls only the thread whose read throws synchronously", async () => {
+    const throwing = (({ threadId }: { threadId: string }) => {
+      if (threadId === "thr_v4_ambiguous") throw new Error("synthetic host failure");
+      return Promise.resolve(options[threadId] ?? null);
+    }) as (args: { threadId: string }) => Promise<unknown>;
+    expect(await cardModelsFrom(throwing, ["thr_v4_ambiguous", "thr_v4_builder_a"], true)).toEqual({ source: "host", items: [
+      { threadId: "thr_v4_ambiguous", model: null, effort: null },
+      { threadId: "thr_v4_builder_a", model: "Sample model 2", effort: "xhigh" },
+    ] });
+  });
+
   // catches: `wizbar children --json` dropping a served model, or reading every listed thread's options.
   it("carries model and effort in wizbar children when present", async () => {
     const rows = v4Threads.map(rawRow);
