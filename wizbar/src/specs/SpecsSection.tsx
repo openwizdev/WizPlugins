@@ -18,10 +18,11 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { GithubIcon } from "@hugeicons/core-free-icons";
 import { cn } from "../lib/utils";
 import { TRAILING_GLYPH_BOX_CLASS } from "../StatusSlot";
-import type { DotStateV4, SpecRowV4, SpecsFileReadV4, SpecsResultV4 } from "../fixtures/v4";
+import type { DotStateV4, SpecRowV4, SpecsFileReadV4 } from "../fixtures/v4";
+import type { SpecsResultV6 } from "../fixtures/v6";
 import { effectiveOpen, readOpenKeys, withOpen } from "./open-state";
 import { boundHome, readSpecsFile } from "./read";
-import { needsYouWords, sectionRule, specRows } from "./rows";
+import { mainRows, needsYouWords, sectionRule, specRows } from "./rows";
 import type { specsRpcContract } from "./server";
 import { tokens } from "./theme";
 import { readSpecsSort, type SpecsSort } from "../settings";
@@ -153,6 +154,13 @@ export function SpecsSection({ threads, now, activeThreadId, onNavigate, collaps
   }, [now, read, threads, value, sorting.sort]);
   if (view === null) return null;
   const byId = new Map(threads.map((thread) => [thread.id, thread]));
+  // S2 (#185): quiet rows follow the main list, under one Quiet group kept as `quiet` in `specsOpen`.
+  const quiet = view === "unavailable" ? [] : view.specs.filter((row) => row.quiet);
+  const quietOpen = readOpenKeys(value).includes(QUIET_KEY);
+  const specRow = (row: SpecRowV4) => (
+    <SpecRow key={row.spec} row={row} threads={byId} now={now} activeThreadId={activeThreadId} breath={breath}
+      onNavigate={onNavigate} onToggle={() => toggle(row.spec, !row.open)} />
+  );
   return (
     <section ref={sectionRef} aria-label="Specs">
       {view === "unavailable" ? (
@@ -167,10 +175,14 @@ export function SpecsSection({ threads, now, activeThreadId, onNavigate, collaps
       {collapseFailed ? <p role="status" className="px-2.5 text-xs text-muted-foreground">Could not save the collapsed section. Try again.</p> : null}
       {view === "unavailable" || collapsed ? null : (
         <ul className="flex flex-col gap-px">
-          {view.specs.map((row) => (
-            <SpecRow key={row.spec} row={row} threads={byId} now={now} activeThreadId={activeThreadId} breath={breath}
-              onNavigate={onNavigate} onToggle={() => toggle(row.spec, !row.open)} />
-          ))}
+          {/* #201 R1: one keyed array, the Quiet header placed at the split, so a spec moving between the main
+              list and the open group keeps its DOM node (separate arrays would remount it), and React puts
+              keyboard focus back on a kept node after a commit moves it. */}
+          {[
+            ...mainRows(view.specs).map(specRow),
+            ...(quiet.length > 0 ? [<QuietGroup key={QUIET_KEY} count={quiet.length} open={quietOpen} onToggle={() => toggle(QUIET_KEY, !quietOpen)} />] : []),
+            ...(quietOpen ? quiet.map(specRow) : []),
+          ]}
         </ul>
       )}
     </section>
@@ -185,7 +197,7 @@ const RULE_RESERVE = 8 + 16;
  * fit on one line. The full sentence is always the rule's accessible name and tooltip. An invisible copy
  * gives the full sentence's natural width, so the choice never flips on its own result.
  */
-function SpecsRule({ result, collapsed, onToggle, picker }: { result: SpecsResultV4; collapsed: boolean; onToggle?: () => void; picker?: ReactNode }) {
+function SpecsRule({ result, collapsed, onToggle, picker }: { result: SpecsResultV6; collapsed: boolean; onToggle?: () => void; picker?: ReactNode }) {
   const words = needsYouWords(result);
   const sentence = sectionRule(result);
   const rule = useRef<HTMLHeadingElement>(null);
@@ -211,7 +223,7 @@ function SpecsRule({ result, collapsed, onToggle, picker }: { result: SpecsResul
   const label = (after: string | null) => (
     <>
       <span className="text-muted-foreground">Specs</span>{" "}
-      <span className="font-normal tabular-nums text-muted-foreground/60">{result.specs.length}</span>
+      <span className="font-normal tabular-nums text-muted-foreground/60">{mainRows(result.specs).length}</span>
       {after !== null ? <>{" "}<span style={{ color: tokens.warning }}>· {after}</span></> : null}
     </>
   );
@@ -241,6 +253,30 @@ function SpecsRule({ result, collapsed, onToggle, picker }: { result: SpecsResul
       {/* S1 (#184): outside the heading, so its options never join the rule's words or name. */}
       {picker}
     </div>
+  );
+}
+
+/** S2 (#185): the Quiet group's key in `specsOpen`; never a spec key, which always holds `#`. */
+const QUIET_KEY = "quiet";
+
+/**
+ * S2 (#185): the collapsed `Quiet N` group at the bottom of the Specs list. It opens like a spec: a chevron
+ * in the spec's lead column, the word in muted text and its count faint, as the section rule writes its count.
+ */
+function QuietGroup({ count, open, onToggle }: { count: number; open: boolean; onToggle: () => void }) {
+  return (
+    <li data-quiet-group="" className="list-none text-xs">
+      <button type="button" aria-expanded={open} aria-label={`Quiet ${count}`} onClick={onToggle}
+        className="flex w-full items-center gap-2 rounded-lg px-2.5 py-[5px] text-left hover:bg-sidebar-accent/60">
+        <span data-chevron={open ? "open" : "closed"} aria-hidden className="flex size-2.5 shrink-0 items-center justify-center text-muted-foreground/70">
+          <svg viewBox="0 0 10 10" className={cn("size-2.5", open && "rotate-90")} fill="none" stroke="currentColor" strokeWidth={1.6}>
+            <path d="M3.5 1.5 7 5l-3.5 3.5" />
+          </svg>
+        </span>
+        <span className="text-[13px] text-muted-foreground">Quiet</span>
+        <span className="text-[13px] tabular-nums text-muted-foreground/60">{count}</span>
+      </button>
+    </li>
   );
 }
 

@@ -18,6 +18,26 @@ import { readOpenKeys, withOpen } from "./open-state";
 import { readSpecsFile } from "./read";
 import { isRunning, matchSpec, matrixState, parseTitle, sectionRule, specRows } from "./rows";
 
+// S2 (#185): 0.6 rows add `activityAt` and `quiet`, the body adds `sort`, and the finished spec, hidden in 0.5,
+// is now one quiet row after the others (specs-section.v1.md section 12). Worked by hand at `v4Now`: every
+// fixture thread was updated a minute before, so a spec with a running agent was active then; the cache spec
+// has no agent and no close time, so no activity time.
+const MINUTE = 60_000;
+const reviewerC = v4Threads.find((t) => t.id === "thr_v4_reviewer_c")!;
+const v4FinishedQuiet = {
+  spec: "example/sample-plans#601", shortName: "Sample finished", url: "https://github.com/example/sample-plans/issues/601",
+  // SF-1 closed 10 minutes ago, SF-2 two hours ago.
+  done: 2, total: 2, doneLastHour: 1, needsYou: 0, yoursLater: 0, open: false,
+  dots: [{ ticket: "example/sample-plans#603", code: "SF-2", state: "done" }, { ticket: "example/sample-plans#602", code: "SF-1", state: "done-recent" }],
+  agents: [{ threadId: "thr_v4_reviewer_c", title: reviewerC.displayTitle, role: "Reviewer", code: "SF-2", ticket: "example/sample-plans#603",
+    providerId: "harness-b", model: null, effort: null, matrix: "reviewing", createdAt: reviewerC.createdAt, updatedAt: reviewerC.updatedAt }],
+  activityAt: v4Now - MINUTE, quiet: true,
+};
+const v4ActivityAt: Record<string, number | null> = { "example/sample-plans#501": v4Now - MINUTE, "example/sample-tools#77": null };
+const asV6 = <T extends { specs: readonly { spec: string }[] }>(result: T, sort = "needs-you") => ({
+  ...result, sort, specs: [...result.specs.map((row) => ({ ...row, activityAt: v4ActivityAt[row.spec], quiet: false })), v4FinishedQuiet],
+});
+
 const running = v4Threads.filter((t) => Object.hasOwn(v4Matching, t.id));
 
 describe("S1: reading the specs file (section 1)", () => {
@@ -58,7 +78,7 @@ describe("P1 (#183): a ticket's updatedAt (section 10)", () => {
 describe("S1: spec rows, dots, last hour and needs you (section 2)", () => {
   // catches: dots in file order, a ticket closed exactly an hour ago counted as recent, finished or empty specs shown, the wrong agents.
   it("gives the contract's rows for the fixture file, rows and open setting", () => {
-    expect(specRows(v4SpecsFile, v4Threads, readOpenKeys(v4OpenSetting), v4Now)).toEqual(v4SpecRows);
+    expect(specRows(v4SpecsFile, v4Threads, readOpenKeys(v4OpenSetting), v4Now)).toEqual(asV6(v4SpecRows, "newest"));
   });
 
   // catches: hidden specs counted in the rule, or a need-you count that ignores visibility.
@@ -70,15 +90,16 @@ describe("S1: spec rows, dots, last hour and needs you (section 2)", () => {
   // catches (#162): a later ticket counted as needs you, in the rule, or with its dot outside its place after needs you.
   it("counts later tickets apart from needs you, with their dots right after needs you", () => {
     const result = specRows(v4SpecsFileV2, v4Threads, readOpenKeys(v4OpenSetting), v4Now);
-    expect(result).toEqual(v4SpecRowsV2);
+    expect(result).toEqual(asV6(v4SpecRowsV2, "newest"));
     expect(sectionRule(result)).toBe("Specs 2 · 2 tickets need you (2 specs)");
   });
 
-  // catches: a fresh file with only finished specs shown as unavailable or with rows.
-  it("shows Specs 0 and no rows when every spec is hidden", () => {
+  // catches: a fresh file with only finished and empty specs shown as unavailable, counted in the rule, or the empty one shown.
+  // S2 (#185): the finished spec is a quiet row, never counted in the rule; the empty one stays hidden.
+  it("shows Specs 0, the finished spec only as quiet, when no spec is in the main list", () => {
     const hiddenOnly = { ...v4SpecsFile, specs: v4SpecsFile.specs.slice(2) };
     const result = specRows(hiddenOnly, v4Threads, [], v4Now);
-    expect(result.specs).toEqual([]);
+    expect(result.specs.map((row) => [row.spec, row.quiet])).toEqual([["example/sample-plans#601", true]]);
     expect(sectionRule(result)).toBe("Specs 0");
   });
 
@@ -179,13 +200,13 @@ describe("WB4-6: missing fleet ids and failed running rows (sections 3 and 5)", 
   // catches: a running row with failed queued work shown as working (running rows limited to working and reviewing),
   // or dropped from the running count; and the top-level row placed in the spec with no fleet thread.
   it("spec rows and the hover card's data: no spec for the top-level row, counted and failed for the failed one", () => {
-    expect(specRows(v4SpecsFile, rows, readOpenKeys(v4OpenSetting), v4Now)).toEqual(expectedRows);
+    expect(specRows(v4SpecsFile, rows, readOpenKeys(v4OpenSetting), v4Now)).toEqual(asV6(expectedRows, "newest"));
     expect(computeStatsV4(rows, v4SpecsFile, null, v4Now, v4TimeZone)).toEqual(v4FleetIdStats);
   });
 
   // catches: the CLI readers dropping the null parent or the failed queued work, so the CLI and the app disagree.
   it("wizbar specs --json and wizbar stats --json give the same", async () => {
-    expect(await cli(["specs"])).toEqual({ exitCode: 0, body: { ...expectedRows, needsYouSpecs: 2 } });
+    expect(await cli(["specs"])).toEqual({ exitCode: 0, body: { ...asV6(expectedRows), needsYouSpecs: 2 } });
     expect(await cli(["stats"])).toEqual({ exitCode: 0, body: v4FleetIdStats });
   });
 
@@ -195,7 +216,7 @@ describe("WB4-6: missing fleet ids and failed running rows (sections 3 and 5)", 
     ["/synthetic/home", "/synthetic/home/.openwiz/specs.v1.json"],
     ["C:\\synthetic\\home", "C:\\synthetic\\home\\.openwiz\\specs.v1.json"],
   ])("through the real host's absolute-path rule, root %s reads %s as ready", async (rootPath, absolute) => {
-    expect(await cli(["specs"], rootPath)).toEqual({ exitCode: 0, body: { ...expectedRows, needsYouSpecs: 2 } });
+    expect(await cli(["specs"], rootPath)).toEqual({ exitCode: 0, body: { ...asV6(expectedRows), needsYouSpecs: 2 } });
     // specs.v2.json first (missing here), then specs.v1.json (#164 R1).
     expect(read).toHaveBeenCalledTimes(2);
     expect(read.mock.calls[0]![0]).toMatchObject({ hostId: "hst_v4_home", rootPath, path: absolute.replace("specs.v1.json", "specs.v2.json") });
@@ -244,11 +265,11 @@ describe("#164 R1: either upgrade order", () => {
 
   // catches: a new WizBar that needs specs.v2.json, so an old producer's file shows Specs unavailable.
   it("an old producer (specs.v1.json only): the v1 rows", async () => {
-    expect(await specs({ v1 })).toEqual({ exitCode: 0, body: { ...v4SpecRows, needsYouSpecs: 2 } });
+    expect(await specs({ v1 })).toEqual({ exitCode: 0, body: { ...asV6(v4SpecRows), needsYouSpecs: 2 } });
   });
   // catches: a new WizBar that still reads only specs.v1.json, so later never shows.
   it("a new producer (both files): the v2 rows, later apart", async () => {
-    expect(await specs({ v1, v2 })).toEqual({ exitCode: 0, body: { ...v4SpecRowsV2, needsYouSpecs: 2 } });
+    expect(await specs({ v1, v2 })).toEqual({ exitCode: 0, body: { ...asV6(v4SpecRowsV2), needsYouSpecs: 2 } });
   });
   // catches (#164 R3): after a producer rollback, an older specs.v2.json winning over a newer specs.v1.json until it goes stale.
   it("an older specs.v2.json loses to a newer specs.v1.json: a ticket now done shows done", async () => {
@@ -265,7 +286,7 @@ describe("#164 R1: either upgrade order", () => {
   // catches (#164 R3): equal or newer v2 times losing to v1, so later never shows from a current producer.
   it.each([["equal", 5, 5], ["newer", 2, 5]] as const)("a specs.v2.json %s to specs.v1.json wins", async (_name, v2Age, v1Age) => {
     const result = await specs({ v1: at(v1, v1Age), v2: at(v2, v2Age) });
-    expect(result).toEqual({ exitCode: 0, body: { ...v4SpecRowsV2, generatedAt: v4Now - v2Age * 60_000, needsYouSpecs: 2 } });
+    expect(result).toEqual({ exitCode: 0, body: { ...asV6(v4SpecRowsV2), generatedAt: v4Now - v2Age * 60_000, needsYouSpecs: 2 } });
   });
 
   // catches: a stale or broken specs.v2.json hiding a fresh specs.v1.json.
@@ -274,7 +295,7 @@ describe("#164 R1: either upgrade order", () => {
     ["malformed", "{\"schema\":"],
     ["of an unknown schema", v2.replace("openwiz.specs.v2", "openwiz.specs.v3")],
   ])("a specs.v2.json that is %s falls back to a fresh specs.v1.json", async (_name, text) => {
-    expect(await specs({ v1, v2: text })).toEqual({ exitCode: 0, body: { ...v4SpecRows, needsYouSpecs: 2 } });
+    expect(await specs({ v1, v2: text })).toEqual({ exitCode: 0, body: { ...asV6(v4SpecRows), needsYouSpecs: 2 } });
   });
   // catches: unavailable files read as zero, or a reason from the wrong file.
   it.each([

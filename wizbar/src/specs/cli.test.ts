@@ -8,11 +8,31 @@ import type { BbPluginApi } from "@get-bb/plugin-sdk";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import plugin from "../server";
 import { v4Now, v4OpenSetting, v4SpecOpenCases, v4SpecRows, v4SpecRowsV2, v4SpecsFile, v4SpecsFileText, v4SpecsFileV2Text, v4Threads } from "../fixtures/v4";
-import { specsSortsV6, v6Activity, v6Agents, v6Now, v6SortOrders, v6SpecsFile, v6SpecsFileText } from "../fixtures/v6";
+import { quietAfterMsV6, specsSortsV6, v6Activity, v6Agents, v6Now, v6QuietSplit, v6SortOrders, v6SpecsFile, v6SpecsFileText } from "../fixtures/v6";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import { effectiveOpen, readOpenKeys } from "./open-state";
-import { activityAt, sortSpecs } from "./rows";
+import { activityAt, sectionRule, sortSpecs, specRows } from "./rows";
 import { rawRow } from "./testing";
+
+// S2 (#185): 0.6 rows add `activityAt` and `quiet`, the body adds `sort`, and the finished spec, hidden in 0.5,
+// is now one quiet row after the others (specs-section.v1.md section 12). Worked by hand at `v4Now`: every
+// fixture thread was updated a minute before, so a spec with a running agent was active then; the cache spec
+// has no agent and no close time, so no activity time.
+const MINUTE = 60_000;
+const reviewerC = v4Threads.find((t) => t.id === "thr_v4_reviewer_c")!;
+const v4FinishedQuiet = {
+  spec: "example/sample-plans#601", shortName: "Sample finished", url: "https://github.com/example/sample-plans/issues/601",
+  // SF-1 closed 10 minutes ago, SF-2 two hours ago.
+  done: 2, total: 2, doneLastHour: 1, needsYou: 0, yoursLater: 0, open: false,
+  dots: [{ ticket: "example/sample-plans#603", code: "SF-2", state: "done" }, { ticket: "example/sample-plans#602", code: "SF-1", state: "done-recent" }],
+  agents: [{ threadId: "thr_v4_reviewer_c", title: reviewerC.displayTitle, role: "Reviewer", code: "SF-2", ticket: "example/sample-plans#603",
+    providerId: "harness-b", model: null, effort: null, matrix: "reviewing", createdAt: reviewerC.createdAt, updatedAt: reviewerC.updatedAt }],
+  activityAt: v4Now - MINUTE, quiet: true,
+};
+const v4ActivityAt: Record<string, number | null> = { "example/sample-plans#501": v4Now - MINUTE, "example/sample-tools#77": null };
+const asV6 = <T extends { specs: readonly { spec: string }[] }>(result: T, sort = "needs-you") => ({
+  ...result, sort, specs: [...result.specs.map((row) => ({ ...row, activityAt: v4ActivityAt[row.spec], quiet: false })), v4FinishedQuiet],
+});
 
 const factory = {
   projectKey: "sample-factory", cloudroomProjectId: "prj_v4_atlas", repositories: ["example/sample-plans"],
@@ -75,7 +95,7 @@ describe("wizbar specs (section 8)", () => {
       return contentRead(v4SpecsFileText)(args);
     };
     const cli = await setup({ read: v1Only });
-    expect(await cli.json(["specs"])).toEqual({ exitCode: 0, body: { ...v4SpecRows, needsYouSpecs: 2 } });
+    expect(await cli.json(["specs"])).toEqual({ exitCode: 0, body: { ...asV6(v4SpecRows), needsYouSpecs: 2 } });
     expect(cli.read.mock.calls.map(([args]) => args)).toEqual([
       expect.objectContaining({ hostId: "hst_v4_home", rootPath: "/synthetic/home", path: "/synthetic/home/.openwiz/specs.v2.json" }),
       expect.objectContaining({ hostId: "hst_v4_home", rootPath: "/synthetic/home", path: "/synthetic/home/.openwiz/specs.v1.json" }),
@@ -89,6 +109,7 @@ describe("wizbar specs (section 8)", () => {
       "Specs 2 · 2 tickets need you (2 specs)",
       "example/sample-plans#501 Sample palette: 4/10 · 1 done in the last hour · 1 needs you · 4 running",
       "example/sample-tools#77 Sample cache: 0/3 · 1 needs you",
+      "example/sample-plans#601 Sample finished: 2/2 · 1 done in the last hour · 1 running · quiet",
       "",
     ].join("\n") });
   });
@@ -96,11 +117,12 @@ describe("wizbar specs (section 8)", () => {
   // catches (#162): a v2 file refused, or its later tickets missing from the JSON, folded into needs you, or left out of the text.
   it("prints later tickets apart from needs you, in JSON and text", async () => {
     const cli = await setup({ text: v4SpecsFileV2Text });
-    expect(await cli.json(["specs"])).toEqual({ exitCode: 0, body: { ...v4SpecRowsV2, needsYouSpecs: 2 } });
+    expect(await cli.json(["specs"])).toEqual({ exitCode: 0, body: { ...asV6(v4SpecRowsV2), needsYouSpecs: 2 } });
     expect(await cli.run(["specs"])).toEqual({ exitCode: 0, stderr: "", stdout: [
       "Specs 2 · 2 tickets need you (2 specs)",
       "example/sample-plans#501 Sample palette: 4/11 · 1 done in the last hour · 1 needs you · 1 later · 4 running",
       "example/sample-tools#77 Sample cache: 0/3 · 1 needs you",
+      "example/sample-plans#601 Sample finished: 2/2 · 1 done in the last hour · 1 running · quiet",
       "",
     ].join("\n") });
   });
@@ -193,7 +215,7 @@ describe("wizbar specs (section 8)", () => {
     vi.setSystemTime(v4Now + 60_000);
     const result = await specs();
     expect(result.exitCode).toBe(0);
-    expect(result.body.specs.map((s: { open: boolean }) => s.open)).toEqual([false, false]);
+    expect(result.body.specs.map((s: { open: boolean }) => s.open)).toEqual([false, false, false]);
   });
 
   // catches: extra arguments or a repeated --json accepted silently.
@@ -213,12 +235,12 @@ describe("wizbar spec <n> --open|--close (sections 4 and 8)", () => {
     hosts.push(reloaded);
     const after = await reloaded.harness.behavior.runCli(["specs", "--json"]);
     expect(JSON.parse(after.stdout!).specs.map((s: { spec: string; open: boolean }) => [s.spec, s.open])).toEqual([
-      ["example/sample-plans#501", true], ["example/sample-tools#77", true],
+      ["example/sample-plans#501", true], ["example/sample-tools#77", true], ["example/sample-plans#601", false],
     ]);
     const closed = await reloaded.harness.behavior.runCli(["spec", "example/sample-plans#501", "--close"]);
     expect(closed).toMatchObject({ exitCode: 0, stdout: "example/sample-plans#501: closed\n" });
     const settings = await reloaded.harness.behavior.runCli(["specs", "--json"]);
-    expect(JSON.parse(settings.stdout!).specs.map((s: { open: boolean }) => s.open)).toEqual([false, true]);
+    expect(JSON.parse(settings.stdout!).specs.map((s: { open: boolean }) => s.open)).toEqual([false, true, false]);
   });
 
   // catches: a hidden, unknown or ambiguous reference opened anyway.
@@ -301,7 +323,7 @@ describe("wizbar spec <n> --open|--close (sections 4 and 8)", () => {
     // Display still fails closed: every spec collapsed.
     const specs = await cli.json(["specs"]);
     expect(specs.exitCode).toBe(0);
-    expect(specs.body.specs.map((r: { open: boolean }) => r.open)).toEqual([false, false]);
+    expect(specs.body.specs.map((r: { open: boolean }) => r.open)).toEqual([false, false, false]);
   });
 
   // catches: a spec written and reported when its agents, and so what the sidebar shows, could not be read.
@@ -341,8 +363,10 @@ const v6Threads: PluginSidebarThread[] = Object.values(v6Agents).flat().map((age
   const title = `${role} · SS${agent.ticket!.slice(agent.ticket!.lastIndexOf("#") + 1)}: Sample work`;
   return { ...v4Threads[2]!, id: agent.threadId, title, displayTitle: title, parentThreadId: null, createdAt: agent.updatedAt - 60_000, updatedAt: agent.updatedAt };
 });
-// 0.5's hidden rule still hides a finished spec until S2 (#185) shows it as quiet.
-const finished = new Set(v6Activity.filter((c) => c.done === c.total).map((c) => c.spec));
+// S2 (#185): quiet specs, the finished one included, are listed after the others, each part in the sort's order.
+const quietKeys = new Set(v6Activity.filter((c) => c.quiet).map((c) => c.spec));
+const listed = (sort: (typeof specsSortsV6)[number]) =>
+  [...v6SortOrders[sort].filter((key) => !quietKeys.has(key)), ...v6SortOrders[sort].filter((key) => quietKeys.has(key))];
 
 describe("S1: the four sorts (section 11)", () => {
   // catches: an activity time that skips a ticket's update, a close or a running agent, or invents one when none is known.
@@ -365,7 +389,7 @@ describe("S1: the four sorts (section 11)", () => {
     const cli = await setup({ text: v6SpecsFileText, list: async () => v6Threads.map(rawRow), settings: { specsOpen: "[]" } });
     const { exitCode, body } = await cli.json(["specs", "--sort", sort]);
     expect(exitCode).toBe(0);
-    expect(body.specs.map((row: { spec: string }) => row.spec)).toEqual(v6SortOrders[sort].filter((key) => !finished.has(key)));
+    expect(body.specs.map((row: { spec: string }) => row.spec)).toEqual(listed(sort));
     const text = (await cli.run(["specs", "--sort", sort])).stdout.split("\n").slice(1, -1).map((line) => line.split(" ")[0]);
     expect(text).toEqual(body.specs.map((row: { spec: string }) => row.spec));
   });
@@ -375,8 +399,8 @@ describe("S1: the four sorts (section 11)", () => {
     vi.setSystemTime(v6Now);
     const cli = await setup({ text: v6SpecsFileText, list: async () => v6Threads.map(rawRow), settings: { specsOpen: "[]", specsSort: "closest" } });
     const keys = async (argv: string[]) => (await cli.json(argv)).body.specs.map((row: { spec: string }) => row.spec);
-    expect(await keys(["specs"])).toEqual(v6SortOrders.closest.filter((key) => !finished.has(key)));
-    expect(await keys(["specs", "--sort", "recent"])).toEqual(v6SortOrders.recent.filter((key) => !finished.has(key)));
+    expect(await keys(["specs"])).toEqual(listed("closest"));
+    expect(await keys(["specs", "--sort", "recent"])).toEqual(listed("recent"));
   });
 
   // catches: the CLI's default order still the file's order.
@@ -384,6 +408,78 @@ describe("S1: the four sorts (section 11)", () => {
     vi.setSystemTime(v6Now);
     const cli = await setup({ text: v6SpecsFileText, list: async () => v6Threads.map(rawRow), settings: { specsOpen: "[]" } });
     const { body } = await cli.json(["specs"]);
-    expect(body.specs.map((row: { spec: string }) => row.spec)).toEqual(v6SortOrders["needs-you"].filter((key) => !finished.has(key)));
+    expect(body.specs.map((row: { spec: string }) => row.spec)).toEqual(listed("needs-you"));
+  });
+});
+
+// S2 (#185): the Quiet group (specs-section.v1.md section 12), on the 0.6 fixture.
+describe("S2: finished and idle specs fold into Quiet", () => {
+  const quiet = new Set(v6Activity.filter((c) => c.quiet).map((c) => c.spec));
+  const rows = (file = v6SpecsFile, sort: (typeof specsSortsV6)[number] = "needs-you") =>
+    specRows(file, v6Threads, [], v6Now, null, sort);
+
+  // catches: a quiet rule off at an edge (exactly 3 days, no time, an agent rescuing idle tickets), finished specs still hidden,
+  // or a needs-you spec folded away.
+  it("marks each visible spec quiet, with its activity time, exactly as the fixture says", () => {
+    const result = rows();
+    const marks = result.specs.map((row) => ({ spec: row.spec, activityAt: row.activityAt, quiet: row.quiet }));
+    expect(marks.sort((a, b) => (a.spec < b.spec ? -1 : 1))).toEqual(
+      v6Activity.map((c) => ({ spec: c.spec, activityAt: c.activityAt, quiet: c.quiet })).sort((a, b) => (a.spec < b.spec ? -1 : 1)));
+  });
+
+  // catches: the split re-sorting either list, quiet rows mixed into the main list, or the rule counting quiet specs.
+  it("lists the main rows, then the quiet ones, each in the sort's order, and counts only the main list in the rule", () => {
+    const result = rows();
+    expect(result.specs.map((row) => row.spec)).toEqual([...v6QuietSplit.main, ...v6QuietSplit.quiet]);
+    expect(sectionRule(result)).toBe(v6QuietSplit.rule);
+    for (const sort of specsSortsV6) {
+      const keys = rows(v6SpecsFile, sort).specs.map((row) => row.spec);
+      expect(keys).toEqual([...v6SortOrders[sort].filter((key) => !quiet.has(key)), ...v6SortOrders[sort].filter((key) => quiet.has(key))]);
+    }
+  });
+
+  // catches: needs you folded into Quiet when the spec is finished-looking or long idle (the acceptance's "never quiet").
+  it("never folds a spec with a ticket due now, however long idle", () => {
+    const file = structuredClone(v6SpecsFile);
+    // charlie, idle 4 days, gets a ticket due now; alpha is already idle 5 days with one.
+    file.specs.find((spec) => spec.spec === "example/sample-sort#721")!.tickets[1]!.state = "needs-you";
+    const result = rows(file);
+    expect(result.specs.filter((row) => row.needsYou > 0).map((row) => [row.spec, row.quiet])).toEqual([
+      // Newest activity first: echo 30 minutes, charlie 4 days, alpha 5 days.
+      ["example/sample-sort#741", false], ["example/sample-sort#721", false], ["example/sample-sort#701", false],
+    ]);
+    expect(result.specs.filter((row) => row.quiet).map((row) => row.spec)).toEqual(["example/sample-sort#731"]);
+  });
+
+  // catches: a spec just past 3 days left in the main list, or one at exactly 3 days folded.
+  it("folds just past 3 days idle, not at exactly 3 days", () => {
+    const golf = (at: number) => {
+      const file = structuredClone(v6SpecsFile);
+      for (const ticket of file.specs.find((spec) => spec.spec === "example/sample-sort#761")!.tickets) {
+        ticket.updatedAt = new Date(at).toISOString();
+        if (ticket.closedAt !== null) ticket.closedAt = new Date(at).toISOString();
+      }
+      return rows(file).specs.find((row) => row.spec === "example/sample-sort#761")!.quiet;
+    };
+    expect(golf(v6Now - quietAfterMsV6)).toBe(false);
+    expect(golf(v6Now - quietAfterMsV6 - 1)).toBe(true);
+  });
+
+  // catches: the JSON missing the sort, the quiet mark or the activity time, or the text not marking a quiet row.
+  it("wizbar specs marks quiet rows last, in JSON and text, and names the sort", async () => {
+    vi.setSystemTime(v6Now);
+    const cli = await setup({ text: v6SpecsFileText, list: async () => v6Threads.map(rawRow), settings: { specsOpen: "[]" } });
+    const { exitCode, body } = await cli.json(["specs"]);
+    expect(exitCode).toBe(0);
+    expect(body.sort).toBe("needs-you");
+    expect(body.specs.map((row: { spec: string; quiet: boolean }) => [row.spec, row.quiet])).toEqual([
+      ...v6QuietSplit.main.map((key) => [key, false]), ...v6QuietSplit.quiet.map((key) => [key, true]),
+    ]);
+    expect(body.specs.find((row: { spec: string }) => row.spec === "example/sample-sort#751").activityAt).toBeNull();
+    expect((await cli.json(["specs", "--sort", "recent"])).body.sort).toBe("recent");
+    const text = (await cli.run(["specs"])).stdout.split("\n");
+    expect(text[0]).toBe(v6QuietSplit.rule);
+    expect(text.slice(1, -1).filter((line) => line.endsWith(" · quiet")).map((line) => line.split(" ")[0])).toEqual([...v6QuietSplit.quiet]);
+    expect(text).toContain("example/sample-sort#731 Sample delta: 2/2 · quiet");
   });
 });
