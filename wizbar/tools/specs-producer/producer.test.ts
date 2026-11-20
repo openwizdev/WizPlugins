@@ -7,7 +7,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { readSpecsFile } from "../../src/specs/read";
 import { runOnce, shortNameOf, ticketCodeOf } from "./producer";
-import { fakeGitHub, FLEET, TOOLS } from "./fixtures/recorded";
+import { fakeGitHub, FLEET, recordedAnswers, TOOLS } from "./fixtures/recorded";
 
 const NOW = new Date("2026-11-20T12:00:00Z");
 const LATER = new Date("2026-11-20T12:10:00Z");
@@ -349,6 +349,83 @@ describe("P1: a spec that disappears from a later page of the issue list", () =>
     expect(keys.includes(`${FLEET}#2040`)).toBe(true);
   });
 });
+
+// #122 R6: one repository's state or failure never blocks another's refresh and write.
+describe("P1: repositories never block each other", () => {
+  const MINUTE = 60_000;
+  const at = (minutes: number) => () => new Date(NOW.getTime() + minutes * MINUTE);
+  const fleetList = `repos/${FLEET}/issues?state=open&per_page=100`;
+  const toolsPulls = `repos/${TOOLS}/pulls?state=open&per_page=100`;
+  const kernelSub = `repos/${FLEET}/issues/900/sub_issues?per_page=100`;
+  const specOf = (file: typeof expectedFile, key: string) => file.specs.find((s) => s.spec === key);
+  const readFileJson = async (dir: string) => JSON.parse(await readFile(output(dir), "utf8")) as typeof expectedFile;
+  /** sample-fleet turns inaccessible (every page 403) with spec 900's page answering 404; sample-tools changes. */
+  function breakFleet(answers: Map<string, { body: unknown; next?: string }>) {
+    answers.delete(kernelSub);
+    const github = fakeGitHub(answers);
+    const request: typeof github.request = async (path, etag) =>
+      path.includes(FLEET) && path !== kernelSub ? { status: 403, etag: null, next: null, body: { message: "Forbidden" } } : github.request(path, etag);
+    answers.set(toolsPulls, { body: [{ number: 41, draft: true, body: "Closes #1071", state: "open" }] });
+    return { request, calls: github.calls };
+  }
+
+  // catches: a failing repository stopping the whole run, so the others' specs go stale with it.
+  it("an inaccessible repository keeps its last data and ages generatedAt while the others refresh and write", async () => {
+    const dir = await home();
+    const answers = new Map(recordedAnswers());
+    await runOnce({ home: dir, repositories, request: fakeGitHub(answers).request, now: at(0) });
+    const before = await readFileJson(dir);
+    const broken = breakFleet(answers);
+    const result = await runOnce({ home: dir, repositories, request: broken.request, now: at(10) });
+    expect(result).toMatchObject({ ok: false, written: true });
+    expect(result.errors.length).toBeGreaterThan(0);
+    const after = await readFileJson(dir);
+    // sample-tools refreshed: its ticket 1071 is now building with draft pull 41.
+    expect(specOf(after, `${TOOLS}#1070`)!.tickets[0]).toMatchObject({ ticket: `${TOOLS}#1071`, state: "building", pulls: [41] });
+    expect(specOf(after, `${TOOLS}#1080`)).toEqual(specOf(before, `${TOOLS}#1080`));
+    expect(github_calls_for(broken.calls, TOOLS)).toBeGreaterThan(0);
+    // sample-fleet keeps its last data, and the file's age is its last read.
+    expect(specOf(after, `${FLEET}#900`)).toEqual(specOf(before, `${FLEET}#900`));
+    expect(after.generatedAt).toBe("2026-11-20T12:00:00Z");
+  });
+
+  // catches: an unbound repository's pending re-read requested every run (the reviewer's R6).
+  it("unbinding a repository drops its pages, cursors and pending re-reads: the run reads only the bound ones", async () => {
+    const dir = await home();
+    const answers = new Map(recordedAnswers());
+    await runOnce({ home: dir, repositories, request: fakeGitHub(answers).request, now: at(0) });
+    const broken = breakFleet(answers);
+    await runOnce({ home: dir, repositories, request: broken.request, now: at(10) });
+    broken.calls.length = 0;
+    const result = await runOnce({ home: dir, repositories: [TOOLS], request: broken.request, now: at(20) });
+    expect(result).toMatchObject({ ok: true, written: true, errors: [] });
+    expect(broken.calls.filter((c) => c.path.includes(FLEET))).toEqual([]);
+    const file = await readFileJson(dir);
+    expect(file.specs.map((s) => s.spec)).toEqual([`${TOOLS}#1070`, `${TOOLS}#1080`]);
+    expect(file.generatedAt).toBe("2026-11-20T12:20:00Z");
+    expect(await readFile(join(dir, ".openwiz", "specs.v1.etags.json"), "utf8")).not.toContain(FLEET);
+  });
+
+  // catches: a newly bound repository too big for one run holding back every write until its scan completes.
+  it("a newly bound repository too big for one run does not stop the others' writes", async () => {
+    const dir = await home();
+    const answers = new Map(recordedAnswers());
+    for (const [path] of answers) if (path.includes(FLEET)) answers.delete(path);
+    const github = fakeGitHub(answers);
+    await runOnce({ home: dir, repositories: [TOOLS], request: github.request, now: at(0) });
+    const bigFleet = Array.from({ length: 60 }, (_, i) => ({ number: 4000 + i, title: `spec: Sample ${i}`, state: "open", labels: [], repository_url: `https://api.github.com/repos/${FLEET}`, sub_issues_summary: { total: 1 } }));
+    answers.set(fleetList, { body: bigFleet });
+    answers.set(`repos/${FLEET}/pulls?state=open&per_page=100`, { body: [] });
+    for (const s of bigFleet) answers.set(`repos/${FLEET}/issues/${s.number}/sub_issues?per_page=100`, { body: [] });
+    const first = await runOnce({ home: dir, repositories, request: github.request, now: at(10) });
+    expect(first).toMatchObject({ ok: true, written: true });
+    expect((await readFileJson(dir)).specs.map((s) => s.spec)).toEqual([`${TOOLS}#1070`, `${TOOLS}#1080`]);
+    const second = await runOnce({ home: dir, repositories, request: github.request, now: at(20) });
+    expect(second).toMatchObject({ ok: true, written: true, pending: 0 });
+    expect((await readFileJson(dir)).specs).toHaveLength(62);
+  });
+});
+const github_calls_for = (calls: { path: string }[], repository: string) => calls.filter((c) => c.path.includes(repository)).length;
 
 describe("P1: a failed read keeps the last file", () => {
   it.each([
