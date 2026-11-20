@@ -31,11 +31,11 @@ export function effortName(effort: EffortV3 | null | undefined): string | null {
   return EFFORTS[effort] ?? title(effort);
 }
 
-const HARNESSES: Record<string, string> = { "claude-code": "Claude Code", codex: "Codex" };
+const HARNESSES = new Map([["claude-code", "Claude Code"], ["codex", "Codex"]]);
 
 /** `claude-code` → `Claude Code`, `codex` → `Codex`; any other id title-cased word by word. */
 export function harnessName(providerId: string): string {
-  return HARNESSES[providerId]
+  return HARNESSES.get(providerId)
     ?? (providerId.split(/[-_\s]+/).filter(Boolean).map(title).join(" ") || providerId);
 }
 
