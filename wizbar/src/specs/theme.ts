@@ -3,23 +3,33 @@
 const primary = "var(--primary, #c0ff04)";
 const sidebar = "var(--sidebar, #161616)";
 const warning = "var(--warning, #fc8c45)";
-/** The accent warmed by the warning (0.5 P, #130), so its mixes into the sidebar read olive, not lime-green. */
-const warmAccent = `color-mix(in oklch, ${primary} 85%, ${warning})`;
+const mutedText = "var(--muted-foreground, #b7b7b7)";
+/**
+ * Done (0.5.x C2, #155): the host's success colour, else a neutral, never the warning or the accent,
+ * so done stays apart from needs-you whatever `--primary` or a theme tint is.
+ */
+const success = `var(--success, ${mutedText})`;
+/**
+ * Done tones mix in oklab, not oklch: a host grey written `oklch(L 0 0)` has hue 0, and an oklch mix
+ * from green toward it swings through yellow and orange, the needs-you hue (#155).
+ */
+const done = (percent: number, into: string) => `color-mix(in oklab, ${success} ${percent}%, ${into})`;
 export const tokens = {
   accent: primary,
-  /** The olive rule line beside a section's name: quieter than the text olive. */
-  rule: `color-mix(in oklch, ${warmAccent} 40%, ${sidebar})`,
+  /** The done rule line beside a section's name: quieter than the done dots. */
+  rule: done(40, sidebar),
   /** The owner's "olive": done dots and done marks. */
-  mutedAccent: `color-mix(in oklch, ${warmAccent} 55%, ${sidebar})`,
-  /** A brighter olive for "N done in the last hour", 4.5:1 or better on the sidebar and the open card (#131 R1). */
-  doneNote: `color-mix(in oklch, ${warmAccent} 75%, ${sidebar})`,
-  /** Bright olive: a ticket done in the last hour. */
-  brightOlive: `color-mix(in oklch, ${primary} 85%, ${sidebar})`,
+  mutedAccent: done(55, sidebar),
+  /** "N done in the last hour": mixed toward the text, so it keeps 4.5:1 or better on the sidebar and the card, dark or light. */
+  doneNote: done(50, `var(--foreground, ${mutedText})`),
+  /** A ticket done in the last hour: a brighter done dot. */
+  brightOlive: done(85, sidebar),
+  /** Needs-you only. */
   warning,
   border: "var(--border, #292929)",
-  mutedText: "var(--muted-foreground, #b7b7b7)",
+  mutedText,
   /** A quiet grey ring: a held ticket. */
-  quietRing: `color-mix(in oklch, var(--muted-foreground, #b7b7b7) 45%, ${sidebar})`,
+  quietRing: `color-mix(in oklch, ${mutedText} 45%, ${sidebar})`,
   /** The raised panel of an open spec. */
   card: "var(--card, #222222)",
 } as const;
