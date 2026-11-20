@@ -48,24 +48,27 @@ function useSpecsRead(): SpecsFileReadV4 | null {
   return read && read.key === key ? read.read : null;
 }
 
-/** Model and effort for the running threads, from the `cardModels` RPC; null until every batch answers. */
-function useModels(threadIds: readonly string[]): CardModelsResultV3 | null {
+/**
+ * Model and effort for the running threads, from the `cardModels` RPC; null until every batch answers.
+ * `revision` (the rows' `updatedAt`) reads again on a newer turn; the last answer stays meanwhile,
+ * and a late answer for an older read is ignored (#111 R1).
+ */
+function useModels(threadIds: readonly string[], revision: string): CardModelsResultV3 | null {
   const rpc = useRpc<typeof t3sidebarRpcContract>();
-  const [served, setServed] = useState<CardModelsResultV3 | null>(null);
+  const [served, setServed] = useState<{ key: string; result: CardModelsResultV3 } | null>(null);
   const key = threadIds.join("\n");
   useEffect(() => {
     let live = true;
-    setServed(null);
     if (!key) return;
     const ids = key.split("\n");
     const batches: string[][] = [];
     for (let i = 0; i < ids.length; i += 100) batches.push(ids.slice(i, i + 100));
     Promise.all(batches.map((threadIds) => rpc.call("cardModels", { threadIds }))).then((results) => {
-      if (live) setServed({ source: results.every((r) => r.source === "host") ? "host" : "none", items: results.flatMap((r) => r.items) });
+      if (live) setServed({ key, result: { source: results.every((r) => r.source === "host") ? "host" : "none", items: results.flatMap((r) => r.items) } });
     }, () => undefined);
     return () => { live = false; };
-  }, [rpc, key]);
-  return served;
+  }, [rpc, key, revision]);
+  return served && served.key === key ? served.result : null;
 }
 
 const quiet = { margin: 0, color: tokens.mutedText } as const;
@@ -86,7 +89,8 @@ export function StatsPanel({ rows }: { rows: readonly PluginSidebarThread[] | nu
   const actions = useSidebarThreadActions();
   const providers = useProviders().providers;
   const read = useSpecsRead();
-  const models = useModels(rows?.filter(isRunning).map((row) => row.id) ?? []);
+  const running = rows?.filter(isRunning) ?? [];
+  const models = useModels(running.map((row) => row.id), running.map((row) => row.updatedAt).join());
   const now = Date.now();
   const specs = read ? readSpecsFile(read, now) : null;
   const stats = computeStatsV4(rows, specs?.status === "ready" ? specs.file : null, models, now,
