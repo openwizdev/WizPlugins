@@ -526,3 +526,49 @@ export const v4CardPinCases: ReadonlyArray<readonly [CardStateV4, CardEventV4, C
   ["pinned", "click", "hover"], ["pinned", "leave", "pinned"], ["pinned", "blur", "pinned"],
   ["pinned", "enter", "pinned"], ["pinned", "focus", "pinned"], ["pinned", "escape", "closed"],
 ];
+
+// ---- WB4-6 (openwizdev/OpenWiz#1581): missing fleet ids, failed running rows ----
+
+/**
+ * Two more running rows, read with `v4Threads` and `v4SpecsFile` (sections 3 and 5).
+ * - top_level: a top-level thread whose code ZZ-2 is in no spec. The cache spec
+ *   has no fleet thread, so comparing two missing ids would put it in cache.
+ * - failed_running: active runtime, not waiting, failed queued work, under the
+ *   palette fleet. It is running, matches palette by its parent, and shows `failed`.
+ */
+export const v4FleetIdThreads: readonly PluginSidebarThread[] = [
+  thread({ id: "thr_v4_top_level", displayTitle: "Builder · ZZ-2: Sample top-level work", machine: "cloud", createdAgo: 15 * MINUTE }),
+  thread({
+    id: "thr_v4_failed_running", displayTitle: "Builder · SP-5: Sample keeps going", machine: "cloud", parentThreadId: "thr_v4_fleet_a",
+    queuedWork: "failed", createdAgo: 12 * MINUTE,
+  }),
+];
+
+/** Section 3 for `v4FleetIdThreads`: the spec each matches. */
+export const v4FleetIdMatching: Readonly<Record<string, SpecKeyV4 | null>> = {
+  thr_v4_top_level: null,
+  thr_v4_failed_running: `${PLANS}#501`,
+};
+
+/** The palette agent `failed_running` adds (section 3); it is the newest, so it comes last. */
+export const v4FailedRunningAgent: SpecAgentV4 = {
+  threadId: "thr_v4_failed_running", title: "Builder · SP-5: Sample keeps going", role: "Builder", code: "SP-5",
+  ticket: `${PLANS}#507`, providerId: "harness-a", ...none, matrix: "failed",
+  createdAt: v4Now - 12 * MINUTE, updatedAt: v4Now - MINUTE,
+};
+
+/** `wizbar stats --json` and the hover card for `v4Threads` plus `v4FleetIdThreads`: both new rows count as running. */
+const newFooter = (id: string, matrix: MatrixStateV4, spec: SpecKeyV4 | null): FooterThreadV4 =>
+  ({ ...footer(id, matrix, "harness-a", spec), title: v4FleetIdThreads.find((t) => t.id === id)!.displayTitle });
+export const v4FleetIdStats: StatsV4 = {
+  ...(v4Stats as Extract<StatsV4, { status: "ready" }>),
+  running: { total: 11, topLevel: 4, children: 7, cloud: 9, local: 1, unknown: 1 },
+  harness: [{ providerId: "harness-a", count: 8 }, { providerId: "harness-b", count: 3 }],
+  threads: [
+    // createdAt ascending: both new rows come just before untitled (10 minutes old).
+    ...(v4Stats as Extract<StatsV4, { status: "ready" }>).threads.slice(0, -1),
+    newFooter("thr_v4_top_level", "working", null),
+    newFooter("thr_v4_failed_running", "failed", `${PLANS}#501`),
+    ...(v4Stats as Extract<StatsV4, { status: "ready" }>).threads.slice(-1),
+  ],
+};

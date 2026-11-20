@@ -37,8 +37,9 @@ export function isRunning(row: SpecsThreadRow): boolean {
 /** Section 5, first match wins. The server has no pull request and passes null. */
 export function matrixState(row: SpecsThreadRow, pullRequest: PluginSidebarPullRequest | null): MatrixStateV4 {
   if (row.hasPendingInteraction) return "needs-you";
-  if (row.status === "error" || row.runtimeStatus === "error" || row.queuedWork === "failed") return "failed";
+  // The contract's line 130, literally: a running row shows only reviewing or working.
   if (isWorking(row)) return parseTitle(row.displayTitle).role === "Reviewer" ? "reviewing" : "working";
+  if (row.status === "error" || row.runtimeStatus === "error" || row.queuedWork === "failed") return "failed";
   const live = pullRequest?.state === "open" || pullRequest?.state === "draft";
   if (live && pullRequest.experimental_checks.state === "failing") return "failed";
   if (live && pullRequest.experimental_checks.state === "pending") return "checks-running";
@@ -52,7 +53,8 @@ const only = <T>(items: readonly T[]): T | null => (items.length === 1 ? items[0
 function matchEntry(file: SpecsFileV4, row: SpecsThreadRow): SpecEntryV4 | null {
   if (!isRunning(row)) return null;
   const { code } = parseTitle(row.displayTitle);
-  const byParent = row.parentThreadId === null ? [] : file.specs.filter((s) => s.fleetThreadId === row.parentThreadId);
+  // The contract's line 98, literally: the specs whose fleetThreadId equals the row's parentThreadId.
+  const byParent = file.specs.filter((s) => s.fleetThreadId === row.parentThreadId);
   if (byParent.length === 1) return byParent[0]!;
   if (byParent.length > 1) return only(byParent.filter((s) => hasCode(s, code)));
   return only(file.specs.filter((s) => hasCode(s, code)));
