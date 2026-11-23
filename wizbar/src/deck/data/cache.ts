@@ -32,6 +32,7 @@ interface Entry<T> {
   loader: Loader<T>;
   keepLastGood: boolean;
   snapshot: ReadSnapshotV1<T> | null;
+  lastGoodGaps: string[];
   detail: string | null;
   lastAttemptAt: number | null;
   retryAt: number;
@@ -42,6 +43,7 @@ interface Entry<T> {
 
 export interface CacheView<T> {
   snapshot: ReadSnapshotV1<T> | null;
+  lastGoodGaps?: string[];
   /** Plain words for an unavailable read; never shown as zero. */
   detail: string | null;
   /** Epoch ms of the next read this cache allows. */
@@ -110,7 +112,7 @@ export class SharedReadCache {
     let entry = this.entries.get(key) as Entry<T> | undefined;
     if (!entry) {
       entry = {
-        loader, keepLastGood, snapshot: null, detail: null, lastAttemptAt: null, retryAt: 0,
+        loader, keepLastGood, snapshot: null, lastGoodGaps: [], detail: null, lastAttemptAt: null, retryAt: 0,
         inflight: null, leases: new Map(), timer: null,
       };
       this.entries.set(key, entry as Entry<unknown>);
@@ -127,6 +129,7 @@ export class SharedReadCache {
   private view<T>(entry: Entry<T>): CacheView<T> {
     return {
       snapshot: entry.snapshot, detail: entry.detail,
+      ...(entry.snapshot?.status === "unavailable" && entry.snapshot.lastGood ? { lastGoodGaps: [...entry.lastGoodGaps] } : {}),
       nextRefreshAt: entry.lastAttemptAt === null && entry.retryAt === 0 ? null : this.dueAt(entry),
       refreshing: entry.inflight !== null,
     };
@@ -164,6 +167,7 @@ export class SharedReadCache {
           status: "ready", data: result.data, fetchedAt: this.now(), stale: false,
           complete: result.complete, gaps: [...result.gaps],
         };
+        entry.lastGoodGaps = [...result.gaps];
         entry.detail = null;
         // A partial read that met a rate limit keeps its rows and still waits for the deadline.
         if (result.retryAt !== undefined) entry.retryAt = Math.max(entry.retryAt, result.retryAt);

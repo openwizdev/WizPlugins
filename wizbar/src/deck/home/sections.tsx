@@ -143,6 +143,7 @@ function SpecRow({ spec, open, multiRepo }: { spec: SpecRowV1; open: (url: strin
             <dt style={muted}>Now:</dt><dd style={{ margin: 0 }}>{status.now}</dd>
             <dt style={muted}>Next:</dt><dd style={{ margin: 0 }}>{status.next}</dd>
             <dt style={muted}>When:</dt><dd style={{ margin: 0 }}>{status.when}</dd>
+            <dt style={muted}>Status updated:</dt><dd style={{ margin: 0 }}>{status.updated.replace(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}).*$/, "$1 $2 UTC")}</dd>
           </dl>
         ) : (
           <p style={{ ...muted, margin: 0 }}>Status {status.reason === "ambiguous" ? "ambiguous" : "unavailable"} · When: {status.when}</p>
