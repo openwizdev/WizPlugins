@@ -7,7 +7,6 @@ import {
   experimental_usePluginId,
   experimental_useSidebarThreadActions as useSidebarThreadActions,
   useRpc,
-  useSettings,
   type PluginSidebarThread,
 } from "@get-bb/plugin-sdk/app";
 import { modelLabel } from "./card-meta";
@@ -15,39 +14,12 @@ import { harnessName } from "./model-names";
 import { MatrixMark } from "./MatrixMark";
 import { ProviderGlyph } from "./ProviderGlyph";
 import { cardBatch, cardRowLabels, cardSummary, computeStatsV4, emptyCardBatch, isRunning, type CardThread } from "./stats";
-import { boundHome, readSpecsFile } from "./specs/read";
+import { readSpecsFile } from "./specs/read";
+import { useSpecsRead } from "./specs/SpecsSection";
 import { tokens } from "./specs/theme";
-import type { specsRpcContract } from "./specs/server";
 import type { t3sidebarRpcContract } from "./server";
-import type { FooterThreadV4, SpecsFileReadV4 } from "./fixtures/v4";
+import type { FooterThreadV4 } from "./fixtures/v4";
 import type { CardModelsResultV3, CardModelV3 } from "./v3-types";
-
-const REFRESH_MS = 60_000;
-
-/**
- * The specs file read while the card is open, on open and once a minute (the
- * server's shared refresh, specs-section.v1.md section 1), keyed to the bound
- * factory's host and root: a new binding hides the old read at once and drops
- * its late answers. A failed call is unreadable.
- */
-function useSpecsRead(): SpecsFileReadV4 | null {
-  const rpc = useRpc<typeof specsRpcContract>();
-  const home = boundHome(useSettings().values?.wizdeckFactories);
-  const key = home ? JSON.stringify([home.hostId, home.rootPath]) : null;
-  const [read, setRead] = useState<{ key: string; read: SpecsFileReadV4 } | null>(null);
-  useEffect(() => {
-    if (key === null) return;
-    let live = true;
-    const load = () => rpc.call("specsFile", {}).then(
-      (result) => { if (live) setRead({ key, read: result }); },
-      () => { if (live) setRead({ key, read: { kind: "unreadable" } }); },
-    );
-    void load();
-    const timer = setInterval(load, REFRESH_MS);
-    return () => { live = false; clearInterval(timer); };
-  }, [key, rpc]);
-  return read && read.key === key ? read.read : null;
-}
 
 /** How often one thread's model and effort may be read again (owner steer on #175). */
 export const MODEL_REFRESH_MS = 5 * 60_000;

@@ -5,7 +5,7 @@
 // `specRows`, the same computation `wizbar specs` prints. The round-5 look
 // (0.5 C, #112): a leading chevron, notes on the right, dots below, and an
 // open spec raised into one card panel with its agents.
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import {
   experimental_usePluginId,
   useBbNavigate,
@@ -45,29 +45,31 @@ export interface SpecsSectionProps {
   collapseFailed?: boolean;
 }
 
-/**
- * The server's specs file read for the bound factory, asked for on mount, at once
- * when the binding's host or root changes, and once a minute; a failed call is
- * unreadable. A read is shown only under the binding it was asked for, so a
- * switch clears the old rows at once and a late answer for the old one is dropped.
- */
-function useSpecsFile(home: string | null): SpecsFileReadV4 | null {
+export const SpecsReadContext = createContext<SpecsFileReadV4 | null | undefined>(undefined);
+
+export function useSpecsRead(): SpecsFileReadV4 | null {
+  const shared = useContext(SpecsReadContext);
+  const settings = useSettings();
   const rpc = useRpc<typeof specsRpcContract>();
-  const [read, setRead] = useState<{ home: string; read: SpecsFileReadV4 } | null>(null);
+  const binding = shared === undefined && !settings.isLoading ? boundHome(settings.values?.wizdeckFactories) : null;
+  const key = binding ? JSON.stringify([binding.hostId, binding.rootPath]) : null;
+  const [state, setState] = useState<{ key: string | null; read: SpecsFileReadV4 | null }>({ key, read: null });
+  if (state.key !== key) setState({ key, read: null });
   useEffect(() => {
-    if (home === null) return;
+    if (key === null) return;
     let live = true;
     const load = () => rpc.call("specsFile", {}).then(
-      (result) => { if (live) setRead({ home, read: result }); },
-      () => { if (live) setRead({ home, read: { kind: "unreadable" } }); },
+      (read) => { if (live) setState({ key, read }); },
+      () => { if (live) setState({ key, read: { kind: "unreadable" } }); },
     );
     void load();
     const timer = setInterval(load, REFRESH_MS);
     return () => { live = false; clearInterval(timer); };
-  }, [home, rpc]);
-  // With no bound factory there is nothing to read (section 1: no-binding).
-  if (home === null) return NO_BINDING;
-  return read?.home === home ? read.read : null;
+  }, [key, rpc]);
+  if (shared !== undefined) return shared;
+  if (settings.isLoading) return null;
+  if (key === null) return NO_BINDING;
+  return state.key === key ? state.read : null;
 }
 
 /**
@@ -105,8 +107,7 @@ function useOpenSetting() {
       }
     });
   }, [pluginId, sdk]);
-  const home = boundHome(host.values?.wizdeckFactories);
-  return { value, toggle, failed, home: home === null ? null : JSON.stringify([home.hostId, home.rootPath]) };
+  return { value, toggle, failed };
 }
 
 /**
@@ -148,9 +149,9 @@ function useSortSetting() {
 }
 
 export function SpecsSection({ threads, now, activeThreadId, onNavigate, collapsed = false, onToggleCollapsed, collapseFailed = false }: SpecsSectionProps) {
-  const { value, toggle, failed, home } = useOpenSetting();
+  const { value, toggle, failed } = useOpenSetting();
   const sorting = useSortSetting();
-  const read = useSpecsFile(home);
+  const read = useSpecsRead();
   // A1 (#186): one breath mode for every dot in the section.
   const [breath, sectionRef] = useBreathMode();
   const view = useMemo(() => {
