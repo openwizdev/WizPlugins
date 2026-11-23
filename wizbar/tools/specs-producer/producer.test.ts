@@ -7,8 +7,9 @@ import { chmod, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { z } from "zod";
 import { readSpecsFile } from "../../src/specs/read";
-import { runOnce, shortNameOf, ticketCodeOf } from "./producer";
+import { runOnce, shortNameOf, ticketCodeOf, utcTime } from "./producer";
 import { fakeGitHub, FLEET, TOOLS } from "./fixtures/recorded";
 
 const NOW = new Date("2026-11-20T12:00:00Z");
@@ -188,6 +189,22 @@ describe("P1 (#183): the last activity needs no extra request", () => {
     expect(await runOnce({ home: dir, repositories, request: github.request, now: () => LATER })).toEqual({ ok: true, calls: 15, specs: 10, unchanged: 0 });
     expect(JSON.parse(await readFile(outputV2(dir), "utf8"))).toEqual({ ...expectedFile, generatedAt: "2026-11-20T12:10:00Z" });
   });
+});
+
+describe("openwizdev/WizPlugins#195: an update time the reader takes, kept as is", () => {
+  // catches: a producer check looser or stricter than the reader's (`z.iso.datetime()`): a bad leap day, an hour
+  // of 24 or an offset written into v2 makes the whole file malformed; a refused good time drops activity.
+  it.each([
+    "2026-11-20T10:45:00Z", "2026-11-20T10:45:00.789Z", "2026-11-20T10:45:00.123456789Z", "2024-02-29T00:00:00Z",
+    "2000-02-29T23:59:59Z", "2026-12-31T23:59:59Z", "2026-02-30T10:45:00Z", "2023-02-29T10:45:00Z", "2100-02-29T10:45:00Z",
+    "2026-04-31T10:45:00Z", "2026-13-01T10:45:00Z", "2026-00-10T10:45:00Z", "2026-11-00T10:45:00Z", "2026-11-20T24:00:00Z",
+    "2026-11-20T10:60:00Z", "2026-11-20T10:45:60Z", "2026-11-20T10:45Z", "2026-11-20T10:45:00.Z", "2026-11-20T10:45:00+01:00",
+    "2026-11-20T10:45:00", "2026-11-20t10:45:00z", "2026-11-20 10:45:00Z", " 2026-11-20T10:45:00Z", "2026-11-20T10:45:00Z\n",
+    "", "２026-11-20T10:45:00Z",
+  ])("%j", (value) => {
+    expect(utcTime(value)).toBe(z.iso.datetime().safeParse(value).success ? value : null);
+  });
+  it.each([null, 1795089300000, { at: "2026-11-20T10:45:00Z" }])("%j is no time", (value) => expect(utcTime(value)).toBeNull());
 });
 
 describe("N1 (#162): the later state needs no extra request", () => {
