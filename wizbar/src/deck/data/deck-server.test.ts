@@ -568,8 +568,7 @@ describe("factory selection and setup", () => {
 });
 
 describe("B07 polish: coverage and status age survive what the board shows", () => {
-  // Bug caught (WizPlugins#81): a failed refresh erases known coverage gaps.
-  it("keeps the last good read's coverage gaps during stale fallback, including repeated failures", async () => {
+  it("WizPlugins#81: a failed refresh never erases known coverage gaps, even after repeated failures", async () => {
     const t = setup();
     t.github.state.repos.get("example-org/sample-app")![0].issues.push(...dxFillerIssues(60));
     t.github.state.override = (call) => call.kind === "issues" ? { status: 502 } : null;
@@ -588,8 +587,7 @@ describe("B07 polish: coverage and status age survive what the board shows", () 
     }
   });
 
-  // Bug caught (WizPlugins#84): a failed later PR page hides link incompleteness after the ticket's merge is already verified.
-  it("records a PR-link gap when a later closing-PR page fails after a verified merge, keeping the exact count", async () => {
+  it("WizPlugins#84: a failed later PR page never hides link incompleteness once the ticket's merge is verified, and the count stays exact", async () => {
     const github = fakeGitHub();
     const repo = "example-org/sample-app";
     const ticket = github.state.repos.get(repo)![0].issues[0].tickets[0];
@@ -606,8 +604,7 @@ describe("B07 polish: coverage and status age survive what the board shows", () 
     expect(result.complete).toBe(false);
   });
 
-  // Bug caught (WizPlugins#83): an old status appears to have the age of a new GitHub fetch.
-  it("renders the status comment's own update time apart from the board fetch age", async () => {
+  it("WizPlugins#83: an old status never appears to have the age of a new GitHub fetch", async () => {
     const t = setup();
     t.github.state.comments = [{ ...dxStatusComment, body: dxStatusComment.body.replace("2026-11-15T20:00:00Z", "2026-10-01T00:00:00Z") }];
     await t.watch("desk-tab"); await t.settle();
@@ -616,5 +613,10 @@ describe("B07 polish: coverage and status age survive what the board shows", () 
     const html = renderToStaticMarkup(createElement(Versions, { board, open: () => {} }));
     expect(html).toContain("Status updated:");
     expect(html).toContain("2026-10-01 00:00 UTC");
+    for (const updated of ["2026-10-01T07:05Z", "2026-10-01T07:05:09.250Z"]) {
+      const spec = { ...board.versions[0].specs[0], status: { ...board.versions[0].specs[0].status, updated } };
+      const other = { ...board, versions: [{ ...board.versions[0], specs: [spec] }] };
+      expect(renderToStaticMarkup(createElement(Versions, { board: other, open: () => {} }))).toContain("2026-10-01 07:05 UTC");
+    }
   });
 });

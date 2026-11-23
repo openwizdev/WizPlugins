@@ -27,7 +27,6 @@ export interface SpecRowV1 {
   total: number;
   /** Tickets closed by a merged pull request in a configured repository. */
   merged: number;
-  /** False when some ticket or link page was not read: `merged` is then a lower bound. */
   complete: boolean;
   /** Verified merged pull requests, newest first. */
   pullRequests: PrLinkV1[];
@@ -276,6 +275,7 @@ export async function loadBoard(source: BoardSource, signal: AbortSignal): Promi
       let complete = tickets.complete;
       const pullRequests: PrLinkV1[] = [];
       let merged = 0;
+      let linksComplete = true;
       for (const ticket of tickets.nodes) {
         // Closing pull requests, continued in the ticket's own repository.
         const [ticketOwner, ticketName] = ticket.repository.nameWithOwner.split("/");
@@ -289,10 +289,12 @@ export async function loadBoard(source: BoardSource, signal: AbortSignal): Promi
         const verified = verifiedMerges({ state: ticket.state, prs: prs.nodes }, source.repositories);
         // Unread links can only hide a merge, never invent one.
         if (!prs.complete && verified.length === 0) complete = false;
+        if (!prs.complete) linksComplete = false;
         if (verified.length > 0) merged += 1;
         pullRequests.push(...verified);
       }
       if (!complete) gaps.push(`${repository}#${issue.number}: some tickets or links were not read.`);
+      else if (!linksComplete) gaps.push(`${repository}#${issue.number}: some pull request links were not read.`);
 
       // Status comment: supplementary. Its failure marks only this status unavailable.
       const comments = traversal.retryAt === 0

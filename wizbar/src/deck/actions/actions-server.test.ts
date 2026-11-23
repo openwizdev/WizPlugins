@@ -355,8 +355,7 @@ describe("review round 1", () => {
 });
 
 describe("operation ids stay inside the plugin", () => {
-  // Bug caught (WizPlugins#89): the plugin-local operation id leaks into the host-bound message text.
-  it("leaves the operation id out of the whole send payload for every action kind, and keeps it in the record", async () => {
+  it("WizPlugins#89: the plugin-local operation id never reaches the host send payload of any action kind, and stays in the record", async () => {
     const t = setup();
     const { args } = await t.answer();
     const kinds: [string, Record<string, unknown>][] = [

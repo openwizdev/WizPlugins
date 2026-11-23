@@ -4,20 +4,20 @@
 import type { NeedsYouItemV1, SpecRefV1 } from "../../factory-contract";
 import type { SpecActionV1 } from "./protocol";
 
-export function answerText(item: NeedsYouItemV1, optionId: string, queueRevision: number, operationId: string): string {
+export function answerText(item: NeedsYouItemV1, optionId: string, queueRevision: number, _operationId: string): string {
   const option = item.options.find((candidate) => candidate.id === optionId);
   const request = item.requestId ? `\nRequest ${item.requestId} · request fingerprint ${item.requestFingerprint}` : "";
   return [
     `WizDeck answer · ${item.code}`,
     `Question: ${item.question}`,
     `Choice: ${option?.label ?? optionId} (option ${optionId})`,
-    `Item ${item.id} · fingerprint ${item.fingerprint} · queue revision ${queueRevision} · WizDeck operation ${operationId}${request}`,
+    `Item ${item.id} · fingerprint ${item.fingerprint} · queue revision ${queueRevision}${request}`,
     "Check the current proposal and record this decision under the existing approval rules. This message is not itself an approval.",
   ].join("\n");
 }
 
-export function tellText(text: string, operationId: string): string {
-  return `WizDeck · Tell the factory (operation ${operationId}):\n${text}`;
+export function tellText(text: string, _operationId: string): string {
+  return `WizDeck · Tell the factory:\n${text}`;
 }
 
 const specAsk: Record<SpecActionV1, (spec: string) => string> = {
@@ -31,17 +31,17 @@ export const specActionLabel: Record<SpecActionV1, string> = {
   pause: "Pause", resume: "Resume", prioritise: "Prioritise", "ask-why": "Ask why",
 };
 
-export function specActionText(action: SpecActionV1, spec: SpecRefV1, operationId: string): string {
+export function specActionText(action: SpecActionV1, spec: SpecRefV1, _operationId: string): string {
   return [
-    `WizDeck spec action · ${specActionLabel[action]} ${spec} (operation ${operationId})`,
+    `WizDeck spec action · ${specActionLabel[action]} ${spec}`,
     specAsk[action](spec),
     "Act through the existing fleet rules. WizDeck changed nothing on GitHub; any label or fleet change is yours to make under those rules.",
   ].join("\n");
 }
 
-export function feedbackText(text: string, operationId: string): string {
+export function feedbackText(text: string, _operationId: string): string {
   return [
-    `WizDeck feedback (operation ${operationId}):`,
+    "WizDeck feedback:",
     text,
     "Please file a public-safe WizDeck issue for a later hill-climb: your own plain words, with no private details, thread ids or exact quotes.",
   ].join("\n");

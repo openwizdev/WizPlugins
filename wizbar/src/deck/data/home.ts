@@ -114,7 +114,7 @@ export function buildHomeView(input: {
       continue;
     }
     if (data.stale) anyStale = true;
-    if (view.snapshot?.status === "ready") gaps.push(...view.snapshot.gaps);
+    gaps.push(...(view.snapshot?.status === "ready" ? view.snapshot.gaps : view.lastGoodGaps ?? []));
     read.push(data.data);
     fetchedAt = fetchedAt === null ? data.fetchedAt : Math.min(fetchedAt, data.fetchedAt);
     for (const version of data.data.versions) versions.push({ ...version });
