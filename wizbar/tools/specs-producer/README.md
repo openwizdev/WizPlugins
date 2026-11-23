@@ -19,7 +19,7 @@ With one repository under 100 open issues and pull requests, and specs of up to 
 | Ticket code | The `[A-Z]{1,3}[0-9]+` just before the title's first `:` (`0.1.0 KN3: the driver…` → `KN3`), else none |
 | State | Closed → `done` (with `closedAt`); label `ready-for-human` → `needs-you` (due now), or `yours-later` while its sub-issues answer's `issue_dependencies_summary.blocked_by` (open blockers) is over 0, with no extra request; `held` or `needs-info` → `held`; an open pull request whose body closes it (`Closes #N`) → `review`, or `building` while every such pull is a draft; otherwise `not-started`. Closed as not planned: left out |
 | `pulls` | The open pull requests in the ticket's own repository whose body closes it, when that repository is bound |
-| `updatedAt` | v2 only (#183): the ticket's `updated_at` from the same sub-issues answer, its last activity, with no extra request; left out when the answer has none. `specs.v1.json` never carries it |
+| `updatedAt` | v2 only (#183): the ticket's `updated_at` from the same sub-issues answer, its last activity, with no extra request, kept exactly as GitHub sent it (a fraction of a second included); left out when the answer has none or it is not a real UTC date and time, so the rest of the file still reads (#195). `specs.v1.json` never carries it |
 
 ## Run it once
 
@@ -61,7 +61,7 @@ systemctl --user daemon-reload
 systemctl --user enable --now wizbar-specs.timer
 ```
 
-A user service's `PATH` is only `/usr/local/bin:/usr/bin`, so a `gh` in `~/.local/bin` fails with `gh not found`. In the `Environment=PATH=…` line, put `gh`'s folder first: find it with `command -v gh` in your shell. Or pass `--gh /full/path/to/gh` in `ExecStart` instead.
+A user service's `PATH` can differ from your shell's: often it is only `/usr/local/bin:/usr/bin`, so a `gh` in `~/.local/bin` fails with `gh not found`. The example unit sets its own `PATH` in the `Environment=PATH=…` line: put `gh`'s folder first there (find it with `command -v gh` in your shell), or pass `--gh /full/path/to/gh` in `ExecStart` instead.
 
 Check it with `systemctl --user list-timers wizbar-specs.timer` and `journalctl --user -u wizbar-specs.service`. The service runs as you, so it uses your `gh` login; if `node` is not on the service's `PATH`, give its full path in `ExecStart`.
 

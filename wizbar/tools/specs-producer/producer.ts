@@ -154,6 +154,20 @@ function openBlockers(issue: Record<string, unknown>): number {
   return typeof count === "number" && Number.isFinite(count) ? count : 0;
 }
 
+/**
+ * The value as is when it is a UTC time WizBar's reader takes (`z.iso.datetime()`): a real calendar date, the
+ * fraction kept (openwizdev/WizPlugins#195); otherwise null.
+ */
+function utcTime(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?Z$/.exec(value);
+  if (match === null) return null;
+  const [year, month, day] = [Number(match[1]), Number(match[2]), Number(match[3])];
+  const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1];
+  return days !== undefined && day >= 1 && day <= days ? value : null;
+}
+
 type PullIndex = Map<string, { number: number; draft: boolean }[]>;
 
 function ticketOf(issue: Record<string, unknown>, repository: string, pulls: PullIndex): Ticket | null {
@@ -174,10 +188,10 @@ function ticketOf(issue: Record<string, unknown>, repository: string, pulls: Pul
   const closedAt = closed && typeof issue.closed_at === "string" ? issue.closed_at.replace(/\.\d+Z$/, "Z") : null;
   // #183: the answer's own `updated_at`, no extra request. Anything but a UTC time is left out, never guessed,
   // since one bad time would make the whole file malformed for the reader.
-  const updatedAt = typeof issue.updated_at === "string" ? issue.updated_at.replace(/\.\d+Z$/, "Z") : "";
+  const updatedAt = utcTime(issue.updated_at);
   return {
     ticket: key, code: ticketCodeOf(title), title, state, closedAt,
-    ...(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(updatedAt) && !Number.isNaN(Date.parse(updatedAt)) ? { updatedAt } : {}),
+    ...(updatedAt === null ? {} : { updatedAt }),
     pulls: open.map((p) => p.number).sort((a, b) => a - b),
   };
 }

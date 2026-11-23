@@ -51,9 +51,10 @@ const kernelV1 = {
     t(FLEET, 912, "KN13", "0.1.0 KN13: Sample with no update time", "not-started"),
   ],
 };
-/** Each kernel ticket's `updated_at` in recorded.ts, by hand; 912's answer has none. */
+/** Each kernel ticket's `updated_at` in recorded.ts, by hand; 912's answer has none and 903's is no real date. */
 const kernelUpdated: Record<string, string | null> = {
-  [`${FLEET}#901`]: "2026-11-19T10:45:00Z", [`${FLEET}#902`]: "2026-11-20T11:30:00Z", [`${TOOLS}#31`]: "2026-11-20T09:15:00Z", [`${FLEET}#912`]: null,
+  [`${FLEET}#901`]: "2026-11-19T10:45:00Z", [`${FLEET}#902`]: "2026-11-20T11:30:00.789Z", [`${FLEET}#903`]: null,
+  [`${TOOLS}#31`]: "2026-11-20T09:15:00Z", [`${FLEET}#912`]: null,
 };
 const kernel = { ...kernelV1, tickets: kernelV1.tickets.map((x) => u(x, x.ticket in kernelUpdated ? kernelUpdated[x.ticket]! : DEFAULT_UPDATED)) };
 const filler = (i: number, v2 = true) => {
@@ -106,6 +107,7 @@ describe("P1: one run writes a file WizBar reads as ready", () => {
 
   // catches (#183): `updatedAt` leaking into v1 (which a v1 reader calls malformed), v1's key order or layout
   // changed, the field dropped from v2, or a ticket given a time its answer did not carry.
+  // catches (openwizdev/WizPlugins#195): a valid fraction cut off, or an impossible date that makes v2 malformed.
   it("adds each ticket's updated_at to v2 only, and writes v1 byte for byte as before", async () => {
     const dir = await home();
     expect(await runOnce({ home: dir, repositories, request: fakeGitHub().request, now: () => NOW })).toEqual({ ok: true, calls: 15, specs: 10, unchanged: 0 });
@@ -113,7 +115,7 @@ describe("P1: one run writes a file WizBar reads as ready", () => {
     const v2 = JSON.parse(await readFile(outputV2(dir), "utf8")) as typeof expectedFile;
     const times = Object.fromEntries(v2.specs[0]!.tickets.map((x) => [x.ticket, (x as { updatedAt?: string }).updatedAt ?? null]));
     expect(times).toMatchObject(kernelUpdated);
-    expect(Object.hasOwn(v2.specs[0]!.tickets.find((x) => x.ticket === `${FLEET}#912`)!, "updatedAt")).toBe(false);
+    for (const n of [903, 912]) expect(Object.hasOwn(v2.specs[0]!.tickets.find((x) => x.ticket === `${FLEET}#${n}`)!, "updatedAt")).toBe(false);
   });
 
   // catches (#164 R1): a producer that replaces the v1 file with v2, so a WizBar from before #162 shows Specs unavailable.

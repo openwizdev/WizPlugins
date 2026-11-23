@@ -34,8 +34,10 @@ const pull = (number: number, body: string | null, draft = false) => ({ number, 
 const kernel = [
   // A comment after the close: its last activity is newer than its close time (#183).
   issue(FLEET, 901, "0.1.0 KN1: Sample records shape", { ...closed("2026-11-19T10:00:00Z"), ...updated("2026-11-19T10:45:00Z") }),
-  issue(FLEET, 902, "0.1.0 KN2: Sample the driver", updated("2026-11-20T11:30:00Z")),
-  issue(FLEET, 903, "0.1.0 KN3: Sample the reader"),
+  // A fraction of a second is kept as GitHub sent it (openwizdev/WizPlugins#195).
+  issue(FLEET, 902, "0.1.0 KN2: Sample the driver", updated("2026-11-20T11:30:00.789Z")),
+  // No such calendar date (openwizdev/WizPlugins#195): left out, so the rest of v2 still reads.
+  issue(FLEET, 903, "0.1.0 KN3: Sample the reader", updated("2026-02-30T10:45:00Z")),
   // Its only blocker is closed: due now (#162).
   issue(FLEET, 904, "0.1.0 AP11: Sample app shell", { ...labels("ready-for-human"), ...blockedBy(0, 1) }),
   issue(FLEET, 905, "0.1.0 KN5: Sample waits on a question", labels("needs-info", "ready-for-agent")),
