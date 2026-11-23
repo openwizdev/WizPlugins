@@ -10,8 +10,12 @@ import { loadBoard, mergesToday } from "./board";
 import { GitHubReader } from "./github";
 import { LEASE_MS, REFRESH_MS } from "./cache";
 import { strictRead } from "../../testing/strict-files";
+import { createRequire } from "node:module";
+import { createElement, type ReactElement } from "react";
+import { Versions } from "../home/sections";
 
 const hosts: FakePluginHost[] = [];
+const { renderToStaticMarkup } = createRequire(import.meta.url)("react-dom/server") as { renderToStaticMarkup: (element: ReactElement) => string };
 const sha = (text: string) => createHash("sha256").update(text).digest("hex");
 
 type ReadImpl = (args: { hostId?: string; rootPath?: string; path: string }) => Promise<unknown>;
@@ -560,5 +564,57 @@ describe("factory selection and setup", () => {
     }
     expect(JSON.stringify([result, final])).not.toContain("synthetic-token");
     expect(JSON.stringify(t.host.harness.inspection.realtimeSignals)).not.toContain("synthetic-token");
+  });
+});
+
+describe("B07 polish: coverage and status age survive what the board shows", () => {
+  // Bug caught (WizPlugins#81): a failed refresh erases known coverage gaps.
+  it("keeps the last good read's coverage gaps during stale fallback, including repeated failures", async () => {
+    const t = setup();
+    t.github.state.repos.get("example-org/sample-app")![0].issues.push(...dxFillerIssues(60));
+    t.github.state.override = (call) => call.kind === "issues" ? { status: 502 } : null;
+    await t.watch("desk-tab"); await t.settle();
+    const first = (await t.watch("desk-tab")).view!.board;
+    expect(first.freshness).toBe("fresh");
+    expect(first.gaps.join(" ")).toMatch(/not every issue was read/);
+    t.github.state.override = (call) => call.kind === "board" ? { status: 503 } : null;
+    for (let failure = 1; failure <= 2; failure += 1) {
+      await t.heartbeat(REFRESH_MS);
+      const board = (await t.watch("desk-tab")).view!.board;
+      expect(t.count("board")).toBe(1 + failure);
+      expect(board.freshness).toBe("stale");
+      expect(board.versions[0].complete).toBe(false);
+      expect(board.gaps).toEqual(first.gaps);
+    }
+  });
+
+  // Bug caught (WizPlugins#84): a failed later PR page hides link incompleteness after the ticket's merge is already verified.
+  it("records a PR-link gap when a later closing-PR page fails after a verified merge, keeping the exact count", async () => {
+    const github = fakeGitHub();
+    const repo = "example-org/sample-app";
+    const ticket = github.state.repos.get(repo)![0].issues[0].tickets[0];
+    ticket.prs = Array.from({ length: 11 }, (_, i) => ({ number: 700 + i, repo, mergedAt: "2026-11-15T12:00:00Z", merged: true }));
+    github.state.override = (call) => call.kind === "closing" ? { status: 503 } : null;
+    const result = await loadBoard({
+      reader: new GitHubReader(github.fetch, "synthetic-token", () => dxNow), repository: repo,
+      repositories: [repo], statusWriterLogin: "sample-manager", now: () => dxNow,
+    }, new AbortController().signal);
+    const spec = result.data.versions[0].specs[0];
+    expect(spec).toMatchObject({ merged: 1, total: 4, complete: true });
+    expect(spec.pullRequests).toHaveLength(10);
+    expect(result.gaps.join(" ")).toMatch(/#41: some pull request links were not read/);
+    expect(result.complete).toBe(false);
+  });
+
+  // Bug caught (WizPlugins#83): an old status appears to have the age of a new GitHub fetch.
+  it("renders the status comment's own update time apart from the board fetch age", async () => {
+    const t = setup();
+    t.github.state.comments = [{ ...dxStatusComment, body: dxStatusComment.body.replace("2026-11-15T20:00:00Z", "2026-10-01T00:00:00Z") }];
+    await t.watch("desk-tab"); await t.settle();
+    const board = (await t.watch("desk-tab")).view!.board;
+    expect(board.fetchedAt).toBe(dxNow);
+    const html = renderToStaticMarkup(createElement(Versions, { board, open: () => {} }));
+    expect(html).toContain("Status updated:");
+    expect(html).toContain("2026-10-01 00:00 UTC");
   });
 });

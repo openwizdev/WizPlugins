@@ -353,3 +353,24 @@ describe("review round 1", () => {
     expect(t.send).not.toHaveBeenCalled();
   });
 });
+
+describe("operation ids stay inside the plugin", () => {
+  // Bug caught (WizPlugins#89): the plugin-local operation id leaks into the host-bound message text.
+  it("leaves the operation id out of the whole send payload for every action kind, and keeps it in the record", async () => {
+    const t = setup();
+    const { args } = await t.answer();
+    const kinds: [string, Record<string, unknown>][] = [
+      ["answer", args],
+      ["tell", { kind: "tell", text: "Hold new builds until Monday." }],
+      ["spec-action", { kind: "spec-action", text: null, specAction: { spec: "example-org/sample-app#41", action: "pause" } }],
+      ["feedback", { kind: "feedback", text: "The spec menu is hard to find." }],
+    ];
+    for (const [index, [kind, extra]] of kinds.entries()) {
+      const operationId = `op-synthetic-${kind}-7f3a`;
+      const record = await t.steer({ ...extra, operationId });
+      expect(record).toMatchObject({ state: "sent", operationId, kind });
+      expect(t.send).toHaveBeenCalledTimes(index + 1);
+      expect(JSON.stringify(t.send.mock.calls[index][0])).not.toContain(operationId);
+    }
+  });
+});
