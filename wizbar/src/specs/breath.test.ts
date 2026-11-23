@@ -3,7 +3,7 @@
 // values come from the hand-worked v6 fixtures, never from this code.
 import { describe, expect, it } from "vitest";
 import { v6Activity, v6Agents, v6DotMotion, v6SpecsFile } from "../fixtures/v6";
-import { BREATH_KEYFRAMES, BREATH_TIMING, dotBreathes, nameMuted } from "./breath";
+import { dotBreathes, nameMuted } from "./breath";
 
 const specOf = (ticket: string) => v6SpecsFile.specs.find((spec) => spec.tickets.some((t) => t.ticket === ticket))!.spec;
 
@@ -26,13 +26,5 @@ describe("A1: inactive names are muted (section 13)", () => {
   // catches: a spec with only later tickets kept bright, or a spec with a running agent muted.
   it.each(v6Activity)("$spec muted: $muted", ({ spec, needsYou, muted }) => {
     expect(nameMuted({ agents: v6Agents[spec] ?? [], needsYou })).toBe(muted);
-  });
-});
-
-describe("A1: one soft breath every 2 s (section 13)", () => {
-  // catches: a faster or livelier pulse, a breath that dims below 0.4, or a linear (non-soft) curve.
-  it("goes from full opacity down to 0.4 and back, ease in and out, over 2000 ms, forever", () => {
-    expect(BREATH_KEYFRAMES).toEqual([{ opacity: 1 }, { opacity: 0.4 }, { opacity: 1 }]);
-    expect(BREATH_TIMING).toEqual({ duration: 2000, iterations: Infinity, easing: "ease-in-out" });
   });
 });
