@@ -1,5 +1,6 @@
-import { readdirSync, readFileSync } from "node:fs";
-import { join, relative } from "node:path";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 import { hostTokensV4 } from "./v4";
 
@@ -74,7 +75,29 @@ describe("theme: host variables only (specs-section contract, section 9)", () =>
     expect(hardCodedColours(`color: "var(--primary, #c0ff04)"`)).toEqual([]);
     expect(hardCodedColours(`color: "var(--warning, #c0ff04)"`)).toEqual(["#c0ff04"]);
     expect(hardCodedColours(`color: "var(--foreground)", border: "1px solid var(--border)"`)).toEqual([]);
+    // Named colours inside shorthand values and gradient stops (WizPlugins#141).
+    expect.soft(hardCodedColours(`style={{ border: "1px solid red" }}`)).toEqual([`border: "1px solid red"`]);
+    expect.soft(hardCodedColours(`style={{ background: "linear-gradient(red, blue)" }}`)).toEqual(["linear-gradient(red, blue)"]);
+    expect.soft(hardCodedColours(`className="bg-[radial-gradient(white,var(--card))]"`)).toEqual(["radial-gradient(white,var(--card))"]);
+    expect.soft(hardCodedColours(`.card { box-shadow: 0 1px 2px black; outline: 2px dashed Gold }`)).toEqual(["box-shadow: 0 1px 2px black;", "outline: 2px dashed Gold }"]);
+    expect.soft(hardCodedColours(`style={{ borderTop: "1px solid var(--red, red)" }}`)).toEqual([`borderTop: "1px solid var(--red, red)"`]);
+    expect(hardCodedColours(`style={{ border: "1px solid var(--border, #292929)", background: "linear-gradient(var(--card), transparent)" }}`)).toEqual([]);
+    expect(hardCodedColours(`.row { border-bottom: 1px solid currentColor; text-decoration: underline dotted; }`)).toEqual([]);
     expect(hardCodedColours(`// see #160 and #1434\nconst label = \`PR #\${n}\`;`)).toEqual([]);
+  });
+
+  it("skips only the top-level dist/ and types/, never a nested source folder of the same name", () => {
+    const tree = mkdtempSync(join(tmpdir(), "wizbar-theme-"));
+    try {
+      for (const file of ["dist/server.ts", "types/sdk.d.ts", "src/dist/panel.tsx", "src/types/card.ts", "src/view.css"]) {
+        mkdirSync(join(tree, dirname(file)), { recursive: true });
+        writeFileSync(join(tree, file), `style={{ color: "#c6f432" }}`);
+      }
+      const found = sourceFiles(tree, tree).map((path) => relative(tree, path).split("\\").join("/")).sort();
+      expect(found).toEqual(["src/dist/panel.tsx", "src/types/card.ts", "src/view.css"]);
+    } finally {
+      rmSync(tree, { recursive: true, force: true });
+    }
   });
 
   it("finds no hard-coded colour anywhere in WizBar's source", () => {
