@@ -62,7 +62,7 @@ function spec(n: number, name: string, tickets: TicketEntryV6[]): SpecEntryV6 {
  * A ready v2 file, in the producer's order (newest spec first), written a
  * minute before `v6Now`. Each spec is one case:
  * - alpha: a ticket needs you, idle 5 days: never quiet.
- * - bravo: an agent ran 10 minutes ago, newer than any ticket; a done ticket updated after its close; a working agent and a reviewer both name its review ticket.
+ * - bravo: an agent ran 10 minutes ago, newer than any ticket; a done ticket updated after its close.
  * - charlie: idle 4 days: quiet.
  * - delta: every ticket done (0.5 hid it): quiet; a close newer than its `updatedAt`.
  * - echo: a ticket needs you, active 30 minutes ago.
@@ -163,7 +163,7 @@ export const v6QuietSplit = {
   quietHeader: "Quiet 2",
 } as const;
 
-/** Section 13: each ticket dot's motion. Only a ticket a `working` agent names breathes, and never a `review` dot. */
+/** Section 13: each ticket dot's motion. Only a ticket a `working` agent names breathes. */
 export interface DotMotionCaseV6 { ticket: SpecKeyV4; state: TicketEntryV6["state"]; motion: "breath" | "still"; why: string }
 export const v6DotMotion: readonly DotMotionCaseV6[] = [
   { ticket: k(713), state: "building", motion: "breath", why: "a working builder names it" },
