@@ -7,7 +7,6 @@ import {
   experimental_usePluginId,
   experimental_useSidebarThreadActions as useSidebarThreadActions,
   useRpc,
-  useSettings,
   type PluginSidebarThread,
 } from "@get-bb/plugin-sdk/app";
 import { modelLabel } from "./card-meta";
@@ -15,39 +14,12 @@ import { harnessName } from "./model-names";
 import { MatrixMark } from "./MatrixMark";
 import { ProviderGlyph } from "./ProviderGlyph";
 import { cardBatch, cardRowLabels, cardSummary, computeStatsV4, emptyCardBatch, isRunning, type CardThread } from "./stats";
-import { boundHome, readSpecsFile } from "./specs/read";
+import { readSpecsFile } from "./specs/read";
+import { useSpecsRead } from "./specs/SpecsSection";
 import { tokens } from "./specs/theme";
-import type { specsRpcContract } from "./specs/server";
 import type { t3sidebarRpcContract } from "./server";
-import type { FooterThreadV4, SpecsFileReadV4 } from "./fixtures/v4";
+import type { FooterThreadV4 } from "./fixtures/v4";
 import type { CardModelsResultV3, CardModelV3 } from "./v3-types";
-
-const REFRESH_MS = 60_000;
-
-/**
- * The specs file read while the card is open, on open and once a minute (the
- * server's shared refresh, specs-section.v1.md section 1), keyed to the bound
- * factory's host and root: a new binding hides the old read at once and drops
- * its late answers. A failed call is unreadable.
- */
-function useSpecsRead(): SpecsFileReadV4 | null {
-  const rpc = useRpc<typeof specsRpcContract>();
-  const home = boundHome(useSettings().values?.wizdeckFactories);
-  const key = home ? JSON.stringify([home.hostId, home.rootPath]) : null;
-  const [read, setRead] = useState<{ key: string; read: SpecsFileReadV4 } | null>(null);
-  useEffect(() => {
-    if (key === null) return;
-    let live = true;
-    const load = () => rpc.call("specsFile", {}).then(
-      (result) => { if (live) setRead({ key, read: result }); },
-      () => { if (live) setRead({ key, read: { kind: "unreadable" } }); },
-    );
-    void load();
-    const timer = setInterval(load, REFRESH_MS);
-    return () => { live = false; clearInterval(timer); };
-  }, [key, rpc]);
-  return read && read.key === key ? read.read : null;
-}
 
 /** How often one thread's model and effort may be read again (owner steer on #175). */
 export const MODEL_REFRESH_MS = 5 * 60_000;
@@ -219,8 +191,14 @@ export function StatsPanel({ rows, stale = false }: { rows: readonly PluginSideb
   const specs = read ? readSpecsFile(read, now) : null;
   const file = specs?.status === "ready" ? specs.file : null;
   const stats = computeStatsV4(rows, file, models, now, Intl.DateTimeFormat().resolvedOptions().timeZone);
-  const labels = cardRowLabels(rows ?? [], file, now);
+  const resolved = cardRowLabels(rows ?? [], file, now);
   const threads = useCardThreads(stats.threads);
+  const previousLabels = useRef(new Map<string, string>());
+  const labels = new Map(threads?.map((thread) => [
+    thread.id,
+    (thread.leaving ? previousLabels.current.get(thread.id) : resolved.get(thread.id)) ?? thread.title,
+  ]));
+  if (threads !== null) previousLabels.current = labels;
   return (
     <section aria-label="Running threads" data-stale={stale ? "true" : undefined} style={{
       display: "flex", flexDirection: "column", gap: 10, minHeight: 0, boxSizing: "border-box",
@@ -238,9 +216,10 @@ export function StatsPanel({ rows, stale = false }: { rows: readonly PluginSideb
                     style={{ flexGrow: count, flexBasis: 0, borderRadius: 2, background: segmentColour(providerId, i) }} />
                 ))}
               </div>
-              <ul aria-label="Harness" style={{ ...list, display: "flex", flexDirection: "row", flexWrap: "wrap", columnGap: 16, rowGap: 2 }}>
+              <ul aria-label="Harness" tabIndex={0} className="rounded focus-visible:ring-1 focus-visible:ring-inset"
+                style={{ ...list, display: "flex", flexDirection: "row", flexWrap: "nowrap", columnGap: 16, minWidth: 0, overflowX: "auto" }}>
                 {stats.harness.map(({ providerId, count }) => (
-                  <li key={providerId} data-harness={providerId} data-count={count} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <li key={providerId} data-harness={providerId} data-count={count} style={{ display: "flex", flexShrink: 0, alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
                     <ProviderGlyph providerId={providerId} className="justify-start" />
                     <span>{harnessName(providerId)} {count}</span>
                   </li>

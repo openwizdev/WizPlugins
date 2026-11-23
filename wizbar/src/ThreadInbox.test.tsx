@@ -433,6 +433,14 @@ describe("row context menu", () => {
     ).toEqual(["Open in split", "Mark read", "Pin", "Archive", "Delete"]);
   });
 
+  it("offers Mark unread on a read pinned row", async () => {
+    render([thread({ title: "Read pinned row", isPinned: true, isUnread: false })]);
+    fireEvent.contextMenu(await screen.findByText("Read pinned row"));
+    const menu = await screen.findByRole("menu", { name: "Thread actions" });
+    expect(within(menu).getByRole("menuitem", { name: "Mark unread" })).toBeDefined();
+    expect(within(menu).queryByRole("menuitem", { name: "Mark read" })).toBeNull();
+  });
+
   it("routes deletion through the host's confirmation", async () => {
     const rendered = render([thread({ id: "thr_del", title: "Delete me" })]);
     fireEvent.contextMenu(await screen.findByText("Delete me"));
@@ -1123,6 +1131,22 @@ describe("round 5 shelves", () => {
   });
 
   // catches: "Settled (1)" or a chevron back on a parked shelf, or a header that no longer expands.
+  it.each(["Snoozed", "Muted"])("opens a matching %s shelf only while searching", async (name) => {
+    const rendered = renderShelves();
+    const region = await screen.findByRole("region", { name });
+    const heading = within(region).getByRole("button", { name: `${name} 1` });
+    const match = () => within(region).queryByRole("link", { name: `${name} one` });
+    expect(heading.getAttribute("aria-expanded")).toBe("false");
+    expect(match()).toBeNull();
+    rendered.rerender(createElement(inbox.component, { ...listProps, searchQuery: `${name} one` }));
+    expect(heading.getAttribute("aria-expanded")).toBe("true");
+    expect(match()).not.toBeNull();
+    rendered.rerender(createElement(inbox.component, listProps));
+    expect(heading.getAttribute("aria-expanded")).toBe("false");
+    expect(match()).toBeNull();
+    expect(rendered.sdkCalls).toEqual([]);
+  });
+
   it.each(["Snoozed", "Muted", "Settled"])("labels %s with a faint count, no chevron, and still expands", async (name) => {
     renderShelves();
     const region = await screen.findByRole("region", { name });
@@ -1305,11 +1329,11 @@ describe("E1: section order and the Settled link", () => {
   const settledRows = [{ threadId: "set_a", settledAt: 200, snoozedUntil: null, snoozedAt: null }];
   const ordered = (threads: PluginSidebarThread[]) => threads.filter((t) => t.isPinned)
     .sort((a, b) => ((a.pinSortKey ?? "~") < (b.pinSortKey ?? "~") ? -1 : 1)).map((t) => t.id);
-  function renderOrder(options: { stored?: Record<string, string>; searchQuery?: string; specs?: boolean;
+  function renderOrder(options: { stored?: Record<string, string>; searchQuery?: string; specs?: boolean; hidePinned?: boolean;
     save?: (values: Record<string, unknown>) => unknown } = {}) {
     const updates: { pluginId: string; values: Record<string, unknown> }[] = [];
     const settings: Record<string, string> = { ...(options.specs ? { wizdeckFactories: binding } : {}), ...options.stored };
-    const threads = rows();
+    const threads = rows().filter((row) => !options.hidePinned || !row.isPinned);
     const rendered = renderSlot(inbox, { ...listProps, searchQuery: options.searchQuery ?? "" }, {
       pluginId: "wizbar", settings,
       sidebarThreads: { status: "ready", threads, projects: [] },
@@ -1380,6 +1404,19 @@ describe("E1: section order and the Settled link", () => {
     expect(header("Pinned").getAttribute("aria-expanded")).toBe("true");
   });
 
+  it("moves across the nearest rendered section while keeping empty Pinned in storage", async () => {
+    const { updates } = renderOrder({ specs: true, hidePinned: true, stored: { sectionsOrder: '["specs","pinned","unread"]' } });
+    await waitFor(() => expect(specsHeader()).toBeDefined());
+    expect(sectionOrder()).toEqual(["Specs", "Unread"]);
+    specsHeader().focus();
+    fireEvent.keyDown(specsHeader(), { key: "ArrowUp", altKey: true });
+    expect(orderWrites(updates)).toEqual([]);
+    fireEvent.keyDown(specsHeader(), { key: "ArrowDown", altKey: true });
+    await waitFor(() => expect(sectionOrder()).toEqual(["Unread", "Specs"]));
+    expect(document.activeElement).toBe(specsHeader());
+    expect(orderWrites(updates)).toEqual([{ sectionsOrder: '["pinned","unread","specs"]' }]);
+  });
+
   // catches: a header that cannot be dragged, or a drop that lands on the wrong side of its target.
   it("reorders by dragging a header's grip onto another section", async () => {
     const { updates } = renderOrder();
@@ -1417,6 +1454,22 @@ describe("E1: section order and the Settled link", () => {
     await screen.findByRole("region", { name: "Specs" });
     fireEvent.keyDown(header("Unread"), { key: "ArrowUp", altKey: true });
     expect(await screen.findByText("Could not save the section order. Try again.")).toBeTruthy();
+    expect(sectionOrder()).toEqual(["Pinned", "Unread", "Specs"]);
+  });
+
+  it("retries the displayed section order after a refusal without moving again", async () => {
+    const save = vi.fn().mockRejectedValueOnce(new Error("refused")).mockImplementation((values) => ({ values }));
+    const { updates } = renderOrder({ save });
+    await screen.findByRole("region", { name: "Specs" });
+    fireEvent.keyDown(header("Unread"), { key: "ArrowUp", altKey: true });
+    const retry = await screen.findByRole("button", { name: "Retry" });
+    expect(sectionOrder()).toEqual(["Pinned", "Unread", "Specs"]);
+    fireEvent.click(retry);
+    await waitFor(() => expect(orderWrites(updates)).toEqual([
+      { sectionsOrder: '["pinned","unread","specs"]' },
+      { sectionsOrder: '["pinned","unread","specs"]' },
+    ]));
+    expect(screen.queryByText(/Could not save the section order/)).toBeNull();
     expect(sectionOrder()).toEqual(["Pinned", "Unread", "Specs"]);
   });
 
@@ -1512,6 +1565,67 @@ describe("E2: Unread", () => {
     expect(screen.queryByRole("region", { name: "Unread" })).toBeNull();
     await act(async () => answer({ kind: "content", text: v4SpecsFileText }));
     await waitFor(() => expect(links()).toEqual(["Sample new", "Sample waiting", "Builder · ZZ-9: Sample stray", "Sample weekly loop"]));
+  });
+
+  it("shares one bound Specs read and its minute refresh across the mounted sidebar and open footer", async () => {
+    vi.useRealTimers();
+    vi.useFakeTimers();
+    vi.setSystemTime(v4Now);
+    const specsFile = vi.fn(() => ({ kind: "content", text: v4SpecsFileText }));
+    await act(async () => { renderUnread({ specsFile }); });
+    fireEvent.click(screen.getByRole("button", { name: /^\d+ running$/ }));
+    await act(async () => {});
+    expect(within(screen.getByRole("region", { name: "Running threads" })).getByText("Sample cache")).toBeDefined();
+    expect(within(screen.getByRole("region", { name: "Specs" })).getByText("Sample cache")).toBeDefined();
+    expect(links()).toEqual(["Sample new", "Sample waiting", "Builder · ZZ-9: Sample stray", "Sample weekly loop"]);
+    expect(specsFile).toHaveBeenCalledTimes(1);
+    await act(() => vi.advanceTimersByTimeAsync(59_999));
+    expect(specsFile).toHaveBeenCalledTimes(1);
+    await act(() => vi.advanceTimersByTimeAsync(1));
+    expect(specsFile).toHaveBeenCalledTimes(2);
+  });
+
+  it("uses the wall clock for Specs skew at the real sidebar mount", async () => {
+    const now = Math.floor(v4Now / 60_000) * 60_000 + 45_000;
+    vi.setSystemTime(now);
+    const file = JSON.parse(v4SpecsFileText);
+    file.generatedAt = new Date(now + 285_000).toISOString();
+    renderUnread({ specsFile: () => ({ kind: "content", text: JSON.stringify(file) }) });
+    const specs = await screen.findByRole("region", { name: "Specs" });
+    expect(within(specs).getByText("Sample cache")).toBeDefined();
+  });
+
+  it("filters retained Unread by the chosen project while a new binding is pending", async () => {
+    const settings = { wizdeckFactories: binding };
+    const projects = ["Alpha", "Beta"].map((name) => ({
+      name, id: name, isPersonal: false, href: `/projects/${name}`, settingsHref: `/projects/${name}/settings`,
+    }));
+    const threads = projects.map(({ id }) => thread({ id, projectId: id, title: `Sample ${id} card` }));
+    let respond!: (value: unknown) => void;
+    const ready = { kind: "content", text: v4SpecsFileText };
+    const specsFile = vi.fn(() => settings.wizdeckFactories === binding
+      ? ready
+      : new Promise((resolve) => { respond = resolve; }));
+    const rendered = renderSlot(inbox, listProps, {
+      settings, sidebarThreads: { status: "ready", threads, projects },
+      rpc: { listLifecycle: () => ({ rows: [] }), specsFile: specsFile as never },
+    });
+    const select = (name: string) => {
+      fireEvent.keyDown(screen.getByLabelText(/Project scope/), { key: "Enter" });
+      fireEvent.click(screen.getByRole("option", { name }));
+    };
+    await screen.findByRole("link", { name: "Sample Alpha card" });
+    select("Alpha");
+    expect(links()).toEqual(["Sample Alpha card"]);
+    settings.wizdeckFactories = JSON.stringify([{ ...JSON.parse(binding)[0],
+      home: { hostId: "hst_v4_other", rootPath: "/synthetic/other" } }]);
+    rendered.rerender(createElement(inbox.component, listProps));
+    await waitFor(() => expect(respond).toBeTypeOf("function"));
+    expect(links()).toEqual(["Sample Alpha card"]);
+    select("Beta");
+    expect(screen.queryByRole("link", { name: "Sample Alpha card" })).toBeNull();
+    await act(async () => respond(ready));
+    expect(links()).toEqual(["Sample Beta card"]);
   });
 
   // catches: a search that can no longer find a read thread, a fleet wake or a spec's agent, because

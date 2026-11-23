@@ -172,8 +172,20 @@ describe("S4: no bolt; N running with its hover card", () => {
       id: el.getAttribute("data-thread"), matrix: el.querySelector("[data-matrix]")?.getAttribute("data-matrix"),
       title: el.querySelector("[data-title]")?.textContent, shortName: el.querySelector("[data-spec-name]")?.textContent ?? null,
     }));
-    expect(rows).toEqual(ready.threads.map((t) => ({ id: t.id, matrix: t.matrix, title: cardRowLabel(t.title), shortName: t.shortName })));
-    expect(rows.find((r) => r.id === "thr_v4_builder_a")).toMatchObject({ title: "Builder · SP-2", shortName: "Sample palette" });
+    expect(rows.map(({ title, ...row }) => row)).toEqual(
+      ready.threads.map((t) => ({ id: t.id, matrix: t.matrix, shortName: t.shortName })),
+    );
+    expect(rows.map(({ title }) => title)).toEqual([
+      "Sample palette fleet",
+      "Builder · SP-2",
+      "Builder · SH-1",
+      "Reviewer · SF-2",
+      "Builder · ZZ-1",
+      "Reviewer · SP-3",
+      "Builder · SC-1",
+      "Builder · SP-4",
+      "Sample tidy imports",
+    ]);
   });
 
   // catches (0.5 E): the harness split as a list of rows with no bar, or a bar not split by the counts.
@@ -186,6 +198,18 @@ describe("S4: no bolt; N running with its hover card", () => {
     const names = [...card()!.querySelectorAll("[data-harness]")].map((el) => el.textContent);
     expect(names).toEqual(["Harness A 6", "Harness B 3"]);
     expect(card()!.querySelector("[data-harness]")!.parentElement!.style.flexDirection).not.toBe("column");
+  });
+
+  it("keeps three harness labels in one keyboard-scrollable row", () => {
+    render(v4Threads.map((row) => row.id === "thr_v4_untitled" ? { ...row, providerId: "harness-c" } : row));
+    fireEvent.pointerEnter(counter().parentElement!);
+    const legend = within(card()!).getByRole("list", { name: "Harness" });
+    const entries = within(legend).getAllByRole("listitem");
+    expect(entries.map((entry) => entry.textContent)).toEqual(["Harness A 5", "Harness B 3", "Harness C 1"]);
+    expect(legend.style.flexWrap).toBe("nowrap");
+    expect(legend.style.overflowX).toBe("auto");
+    expect(entries.map((entry) => entry.style.flexShrink)).toEqual(["0", "0", "0"]);
+    expect(legend.tabIndex).toBe(0);
   });
 
   // catches (#159 R2): the Claude Code segment mixed from --warning, so a theme's alert colour leaks into a bar of
@@ -313,16 +337,20 @@ describe("WB4-10: the running card stays reachable", () => {
 
   // catches (#1532): the card mounted before its trigger, so Tab from the trigger leaves the card
   // (and the blur closes it), or thread buttons that hide the focus ring.
-  it("Tab from the trigger reaches the first thread, with visible focus, and the card stays open", () => {
+  it("Tab reaches the legend and then the first thread with visible focus while the card stays open", () => {
     render();
     act(() => trigger().focus());
     expect(card()).toBeTruthy();
     const order = tabbables();
-    const next = order[order.indexOf(trigger()) + 1]!;
+    const legend = within(card()!).getByRole("list", { name: "Harness" });
     const first = within(card()!).getAllByRole("button")[0]!;
-    expect(next).toBe(first);
-    fireEvent.blur(trigger(), { relatedTarget: next });
-    act(() => next.focus());
+    expect(order.slice(order.indexOf(trigger()) + 1, order.indexOf(trigger()) + 3)).toEqual([legend, first]);
+    fireEvent.blur(trigger(), { relatedTarget: legend });
+    act(() => legend.focus());
+    expect(card()).toBeTruthy();
+    expect(document.activeElement).toBe(legend);
+    fireEvent.blur(legend, { relatedTarget: first });
+    act(() => first.focus());
     expect(card()).toBeTruthy();
     expect(document.activeElement).toBe(first);
     expect(first.style.getPropertyValue("all")).toBe("");
@@ -416,6 +444,20 @@ describe("R1 (#172): the open card updates in place, with no flashing", () => {
       for (const [id, node] of rows0) expect(rowNode(id), `row ${id} at ${second}s`).toBe(node);
       await tick(1000);
     }
+  });
+
+  it("keeps a departing row's resolved title until the faded row is removed", async () => {
+    await pinned();
+    const id = "thr_v4_builder_a";
+    const row = rowNode(id)!;
+    const title = row.querySelector("[data-title]")!;
+    expect(title.textContent).toBe("Builder · SP-2");
+    await push(snapshot().filter((thread) => thread.id !== id));
+    expect(rowNode(id)).toBe(row);
+    expect(row.getAttribute("data-leaving")).toBe("true");
+    expect(title.textContent).toBe("Builder · SP-2");
+    await tick(3000);
+    expect(rowNode(id)).toBeNull();
   });
 
   // catches: a thread that leaves taken out at once, so a turn boundary flashes its row, or leaves removed one by one.
