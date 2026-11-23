@@ -66,6 +66,34 @@ describe("P1: the Needs-you queue boundary", () => {
     const published = JSON.parse(readFileSync(new URL("../../contracts/factory-view.v1.schema.json", import.meta.url), "utf8"));
     expect(published).toEqual(z.toJSONSchema(needsYouQueueSchema));
   });
+
+  const withItem = (overrides: Record<string, unknown>, queue: Record<string, unknown> = {}) =>
+    ({ ...fxQueue, ...queue, items: [{ ...n1, ...overrides }] });
+  it.each([
+    ["the sample queue", fxQueue, true],
+    ["padded text", withItem({ question: " Sample? ", options: [{ id: "yes", label: " Yes " }] }), true],
+    ["an incomplete queue with a gap", { ...fxQueue, complete: false, gaps: ["sample gap"] }, true],
+    ["a sourceUrl on an explicit port", withItem({ sourceUrl: "https://example.com:8443/decision/1" }), true],
+    ["a sourceUrl on an IPv6 host", withItem({ sourceUrl: "https://[2001:db8::1]/decision/1" }), true],
+    ["a sourceUrl on an IPv6 host and port", withItem({ sourceUrl: "https://[2001:db8::1]:8443/decision/1" }), true],
+    ["a sourceUrl with userinfo", withItem({ sourceUrl: "https://sample@example.com/decision/1" }), true],
+    ["a plain-HTTP sourceUrl", withItem({ sourceUrl: "http://example.com/decision/1" }), false],
+    ["a sourceUrl on an out-of-range port", withItem({ sourceUrl: "https://example.com:65536/decision/1" }), false],
+    ["a sourceUrl with a port and no host", withItem({ sourceUrl: "https://:8443/decision/1" }), false],
+    ["a hostless sourceUrl", withItem({ sourceUrl: "https://" }), false],
+    ["a sourceUrl with a space", withItem({ sourceUrl: "https://example.com/a b" }), false],
+    ["a blank code", withItem({ code: " " }), false],
+    ["a blank question", withItem({ question: " " }), false],
+    ["a blank option label", withItem({ options: [{ id: "yes", label: " " }] }), false],
+    ["a blank fingerprint", withItem({ fingerprint: "\t" }), false],
+    ["a blank request id", withItem({ requestId: " ", requestFingerprint: "rfp-1" }), false],
+    ["a blank request fingerprint", withItem({ requestId: "req-1", requestFingerprint: "\n" }), false],
+    ["a blank gap", { ...fxQueue, complete: false, gaps: [" "] }, false],
+  ])("gives the published schema and the reader one verdict on %s", (_name, queue, valid) => {
+    const published = z.fromJSONSchema(JSON.parse(readFileSync(new URL("../../contracts/factory-view.v1.schema.json", import.meta.url), "utf8")));
+    expect(published.safeParse(queue).success).toBe(valid);
+    expect(readNeedsYouQueue(JSON.stringify(queue), context).ok).toBe(valid);
+  });
 });
 
 describe("P1: a pending answer is rechecked against the current queue", () => {
@@ -190,6 +218,19 @@ describe("Activity and stall: no guessed amber", () => {
     expect(stallStatus({ running: true, activity: old, threshold: synthetic, now: fxNow }))
       .toEqual({ status: "unavailable", reason: "stale-observation" });
     expect(read(fxTimelineOlderPage)).toEqual({ status: "unavailable", reason: "not-latest-page" });
+  });
+
+  it.each([
+    ["a pending-work delta", { upsertRows: fxTimelineLongTool.rows }],
+    ["a no-op delta after a page with pending work", { upsertRows: [] }],
+  ])("refuses %s as unavailable, never as no pending work", (_name, delta) => {
+    expect(readTimelineActivity({ ...fxTimelineLongTool, rows: [], delta }, fxNow))
+      .toEqual({ status: "unavailable", reason: "not-latest-page" });
+  });
+
+  it("still reads a latest page with older rows, promising only that page's facts", () => {
+    const page = { ...fxTimelineLongTool, timelinePage: { ...fxTimelineLongTool.timelinePage, hasOlderRows: true } };
+    expect(read(page)).toMatchObject({ status: "read", activeTurnId: "turn_c1", pendingOperations: 1 });
   });
 
   // Bug caught: a made-up default threshold, or the PR-record stall alarm,
