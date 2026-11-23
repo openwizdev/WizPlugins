@@ -12,15 +12,16 @@ export const needsYouRelativePath = ".openwiz/needs-you.v1.json";
 
 const utc = z.iso.datetime();
 const stableId = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/);
-const text = z.string().trim().min(1);
+const text = z.string().trim().min(1).regex(/\S/);
+const httpsUrl = z.string().check(z.regex(/^https:\/\/[^\s/?#@:]+(?:[/?#]\S*)?$/), z.url({ protocol: /^https$/ }));
 
 export const needsYouItemSchema = z.object({
   id: stableId,
-  code: z.string().trim().min(1).max(32),
+  code: text.max(32),
   question: text,
   options: z.array(z.object({ id: stableId, label: text }).strict()).min(1),
   recommendedOptionId: stableId.nullable(),
-  sourceUrl: z.url({ protocol: /^https$/ }),
+  sourceUrl: httpsUrl,
   spec: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9-]*\/[A-Za-z0-9._-]+#[1-9][0-9]*$/).nullable(),
   risk: z.enum(["ordinary", "live", "release", "publish", "unknown"]),
   fingerprint: text,

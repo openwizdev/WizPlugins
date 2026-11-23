@@ -67,9 +67,6 @@ describe("P1: the Needs-you queue boundary", () => {
     expect(published).toEqual(z.toJSONSchema(needsYouQueueSchema));
   });
 
-  // Bug caught: a producer emits a file the published schema accepts and the
-  // reader rejects (plain-HTTP or hostless sourceUrl, whitespace-only text),
-  // because serialization dropped the reader's HTTPS and trim rules.
   const withItem = (overrides: Record<string, unknown>, queue: Record<string, unknown> = {}) =>
     ({ ...fxQueue, ...queue, items: [{ ...n1, ...overrides }] });
   it.each([
@@ -86,7 +83,7 @@ describe("P1: the Needs-you queue boundary", () => {
     ["a blank request id", withItem({ requestId: " ", requestFingerprint: "rfp-1" }), false],
     ["a blank request fingerprint", withItem({ requestId: "req-1", requestFingerprint: "\n" }), false],
     ["a blank gap", { ...fxQueue, complete: false, gaps: [" "] }, false],
-  ])("the published schema and the reader agree on %s", (_name, queue, valid) => {
+  ])("gives the published schema and the reader one verdict on %s", (_name, queue, valid) => {
     const published = z.fromJSONSchema(JSON.parse(readFileSync(new URL("../../contracts/factory-view.v1.schema.json", import.meta.url), "utf8")));
     expect(published.safeParse(queue).success).toBe(valid);
     expect(readNeedsYouQueue(JSON.stringify(queue), context).ok).toBe(valid);
@@ -217,20 +214,15 @@ describe("Activity and stall: no guessed amber", () => {
     expect(read(fxTimelineOlderPage)).toEqual({ status: "unavailable", reason: "not-latest-page" });
   });
 
-  // Bug caught: an unmerged delta response (empty rows, changes in
-  // delta.upsertRows) read as a latest page with no pending work, so a
-  // running tool, or work a no-op delta leaves unchanged, becomes zero.
   it.each([
     ["a pending-work delta", { upsertRows: fxTimelineLongTool.rows }],
     ["a no-op delta after a page with pending work", { upsertRows: [] }],
-  ])("refuses %s as unavailable, never zero", (_name, delta) => {
+  ])("refuses %s as unavailable, never as no pending work", (_name, delta) => {
     expect(readTimelineActivity({ ...fxTimelineLongTool, rows: [], delta }, fxNow))
       .toEqual({ status: "unavailable", reason: "not-latest-page" });
   });
 
-  // Bug caught: refusing a latest page only because older rows exist; the
-  // reader promises this page's facts, not full history.
-  it("still reads a latest page that has older rows", () => {
+  it("still reads a latest page with older rows, promising only that page's facts", () => {
     const page = { ...fxTimelineLongTool, timelinePage: { ...fxTimelineLongTool.timelinePage, hasOlderRows: true } };
     expect(read(page)).toMatchObject({ status: "read", activeTurnId: "turn_c1", pendingOperations: 1 });
   });

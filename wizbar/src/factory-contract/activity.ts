@@ -21,6 +21,7 @@ export const stallThresholdV1: StallThresholdV1 = {
 export interface TimelineReadInputV1 {
   rows: unknown;
   timelinePage: unknown;
+  delta?: unknown;
 }
 
 interface RowFacts { pendingTurn: string | null; pendingOperations: number }
@@ -52,6 +53,7 @@ export function readTimelineActivity(response: TimelineReadInputV1, fetchedAt: n
   const page = response.timelinePage as { kind?: unknown } | null;
   if (!page || typeof page !== "object") return { status: "unavailable", reason: "malformed" };
   if (page.kind !== "latest") return { status: "unavailable", reason: "not-latest-page" };
+  if (response.delta !== undefined) return { status: "unavailable", reason: "not-latest-page" };
   const facts: RowFacts = { pendingTurn: null, pendingOperations: 0 };
   if (!walk(response.rows, facts)) return { status: "unavailable", reason: "malformed" };
   return {
