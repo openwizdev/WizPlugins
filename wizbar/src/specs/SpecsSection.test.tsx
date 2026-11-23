@@ -45,7 +45,7 @@ beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(v4Now);
 });
-afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllEnvs(); });
+afterEach(() => { vi.restoreAllMocks(); cleanup(); vi.useRealTimers(); vi.unstubAllEnvs(); });
 
 describe("S1: the section shows one row per running spec", () => {
   // catches: counts, dots or hidden specs that differ from the contract's rows.
@@ -1012,6 +1012,7 @@ describe("S2: the Quiet group", () => {
     const golf = "example/sample-sort#761";
     await waitFor(() => expect(order(region)).toEqual([...v6QuietSplit.main, ...v6QuietSplit.quiet]));
     const row = region.querySelector(`[data-spec="${golf}"]`)!;
+    const quietHeader = group(region);
     const github = within(row as HTMLElement).getByRole("button", { name: "Open Sample golf on GitHub" });
     github.focus();
     expect(document.activeElement).toBe(github);
@@ -1019,12 +1020,13 @@ describe("S2: the Quiet group", () => {
     act(() => rendered.lifecycle.rerender(<SpecsSection {...props} threads={v6Threads} now={v6Now + 1} />));
     expect(order(region)).toEqual([...v6QuietSplit.main.filter((key) => key !== golf), golf, ...v6QuietSplit.quiet]);
     expect(region.querySelector(`[data-spec="${golf}"]`)).toBe(row);
+    expect(quietHeader.compareDocumentPosition(row) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(document.activeElement).toBe(github);
 
     const builder = { ...v6Threads[0]!, id: "thr_v6_golf_builder", title: "Builder · SS763: Sample work", displayTitle: "Builder · SS763: Sample work", updatedAt: v6Now };
     act(() => rendered.lifecycle.rerender(<SpecsSection {...props} threads={[...v6Threads, builder]} now={v6Now + 1} />));
     expect(region.querySelector(`[data-spec="${golf}"]`)).toBe(row);
-    expect(order(region).indexOf(golf)).toBeLessThan(order(region).indexOf(v6QuietSplit.quiet[0]));
+    expect(row.compareDocumentPosition(quietHeader) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(document.activeElement).toBe(github);
   });
 

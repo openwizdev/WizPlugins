@@ -82,7 +82,7 @@ function useOpenSetting() {
   const host = useSettings();
   const sdk = useSdk();
   const [written, setWritten] = useState<{ baseline: unknown; value: unknown; saving: boolean } | null>(null);
-  const [failed, setFailed] = useState(false);
+  const [failed, setFailed] = useState<string | null>(null);
   const value = written && (written.saving || written.baseline === host.values) ? written.value : host.values?.specsOpen;
   const latest = useRef({ value, hostValues: host.values, seq: 0 });
   latest.current.value = value;
@@ -93,7 +93,7 @@ function useOpenSetting() {
     const seq = ++latest.current.seq;
     latest.current.value = next;
     setWritten({ baseline: latest.current.hostValues, value: next, saving: true });
-    setFailed(false);
+    setFailed(null);
     queue.current = queue.current.then(async () => {
       // A newer toggle carries this one's change in its own save.
       if (seq !== latest.current.seq) return;
@@ -101,7 +101,7 @@ function useOpenSetting() {
         const result = await sdk.plugins.updateSettings({ pluginId, values: { specsOpen: next } });
         if (seq === latest.current.seq) setWritten({ baseline: latest.current.hostValues, value: result.values?.specsOpen ?? next, saving: false });
       } catch {
-        if (seq === latest.current.seq) { setWritten(null); setFailed(true); }
+        if (seq === latest.current.seq) { setWritten(null); setFailed(spec); }
       }
     });
   }, [pluginId, sdk]);
@@ -121,7 +121,11 @@ function useSortSetting() {
   const [written, setWritten] = useState<{ baseline: unknown; value: SpecsSort; saving: boolean } | null>(null);
   const [failed, setFailed] = useState(false);
   const sort = written && (written.saving || written.baseline === host.values) ? written.value : readSpecsSort(host.values?.specsSort);
-  const latest = useRef({ hostValues: host.values, seq: 0 });
+  const latest = useRef({
+    hostValues: host.values,
+    seq: 0,
+    confirmed: null as { baseline: typeof host.values; value: SpecsSort; saving: false } | null,
+  });
   latest.current.hostValues = host.values;
   const queue = useRef<Promise<void>>(Promise.resolve());
   const choose = useCallback((next: SpecsSort) => {
@@ -132,9 +136,11 @@ function useSortSetting() {
       if (seq !== latest.current.seq) return;
       try {
         const result = await sdk.plugins.updateSettings({ pluginId, values: { specsSort: next } });
-        if (seq === latest.current.seq) setWritten({ baseline: latest.current.hostValues, value: readSpecsSort(result.values?.specsSort ?? next), saving: false });
+        const confirmed = { baseline: latest.current.hostValues, value: readSpecsSort(result.values?.specsSort ?? next), saving: false as const };
+        latest.current.confirmed = confirmed;
+        if (seq === latest.current.seq) setWritten(confirmed);
       } catch {
-        if (seq === latest.current.seq) { setWritten(null); setFailed(true); }
+        if (seq === latest.current.seq) { setWritten(latest.current.confirmed); setFailed(true); }
       }
     });
   }, [pluginId, sdk]);
@@ -170,7 +176,9 @@ export function SpecsSection({ threads, now, activeThreadId, onNavigate, collaps
         </h2>
       ) : <SpecsRule result={view} collapsed={collapsed} onToggle={onToggleCollapsed}
         picker={<SortPicker sort={sorting.sort} onChoose={sorting.choose} />} />}
-      {failed ? <p role="status" className="px-2.5 text-xs text-muted-foreground">Could not save the open spec. Try again.</p> : null}
+      {failed ? <p role="status" className="px-2.5 text-xs text-muted-foreground">
+        {failed === QUIET_KEY ? "Could not save the Quiet group. Try again." : "Could not save the open spec. Try again."}
+      </p> : null}
       {sorting.failed ? <p role="status" className="px-2.5 text-xs text-muted-foreground">Could not save the sort. Try again.</p> : null}
       {collapseFailed ? <p role="status" className="px-2.5 text-xs text-muted-foreground">Could not save the collapsed section. Try again.</p> : null}
       {view === "unavailable" || collapsed ? null : (
@@ -189,8 +197,7 @@ export function SpecsSection({ threads, now, activeThreadId, onNavigate, collaps
   );
 }
 
-/** Gap plus the shortest rule line kept beside the words, in px: under this the narrow form shows (#161). */
-const RULE_RESERVE = 8 + 16;
+const MIN_RULE_SPACE = 8 + 4;
 
 /**
  * #161: `Specs N · M tickets need you (K specs)`, or `Specs N · M for you` when the full sentence does not
@@ -202,17 +209,17 @@ function SpecsRule({ result, collapsed, onToggle, picker }: { result: SpecsResul
   const sentence = sectionRule(result);
   const rule = useRef<HTMLHeadingElement>(null);
   const measure = useRef<HTMLSpanElement>(null);
-  const [fits, setFits] = useState(true);
+  const [room, setRoom] = useState<number | null>(null);
   useLayoutEffect(() => {
     const box = rule.current;
     const full = measure.current;
     if (!box || !full) return;
     const check = () => {
       // Not laid out (hidden, or no layout at all): keep the full sentence.
-      if (box.clientWidth === 0) { setFits(true); return; }
+      if (box.clientWidth === 0) { setRoom(null); return; }
       const style = getComputedStyle(box);
       const inner = box.clientWidth - (parseFloat(style.paddingLeft) || 0) - (parseFloat(style.paddingRight) || 0);
-      setFits(full.offsetWidth + RULE_RESERVE <= inner);
+      setRoom(inner - full.offsetWidth);
     };
     check();
     if (typeof ResizeObserver === "undefined") return;
@@ -220,6 +227,8 @@ function SpecsRule({ result, collapsed, onToggle, picker }: { result: SpecsResul
     observer.observe(box);
     return () => observer.disconnect();
   }, [sentence]);
+  const fits = room === null || room >= 0;
+  const showLine = room === null || !fits || words === null || room >= MIN_RULE_SPACE;
   const label = (after: string | null) => (
     <>
       <span className="text-muted-foreground">Specs</span>{" "}
@@ -230,7 +239,7 @@ function SpecsRule({ result, collapsed, onToggle, picker }: { result: SpecsResul
   const line = (
     <>
       <span data-rule-text="" className="shrink-0 whitespace-nowrap">{label(words === null ? null : fits ? words.full : words.short)}</span>
-      <span data-rule-line="" className="h-px flex-1" style={{ background: tokens.rule }} />
+      {showLine ? <span data-rule-line="" className="h-px min-w-0 flex-1" style={{ background: tokens.rule }} /> : null}
     </>
   );
   return (
@@ -291,7 +300,7 @@ const sortLabels: Record<SpecsSort, string> = {
 function SortPicker({ sort, onChoose }: { sort: SpecsSort; onChoose: (sort: SpecsSort) => void }) {
   return (
     <span data-sort-picker="" title={`Sort: ${sortLabels[sort]}`}
-      className="relative mb-1 mr-2 flex h-[18px] shrink-0 items-center gap-px rounded px-1 text-muted-foreground opacity-50 hover:bg-sidebar-accent/60 hover:opacity-100 focus-within:opacity-100">
+      className="relative mb-1 mr-2 flex h-[18px] shrink-0 items-center gap-px rounded px-1 text-muted-foreground opacity-50 hover:bg-sidebar-accent/60 hover:opacity-100 focus-within:opacity-100 has-[:focus-visible]:ring-1 has-[:focus-visible]:ring-sidebar-ring">
       <svg aria-hidden viewBox="0 0 12 12" className="size-3" fill="none" stroke="currentColor" strokeWidth={1.3} strokeLinecap="round">
         <path d="M2 3.5h8M3.5 6h5M5 8.5h2" />
       </svg>
