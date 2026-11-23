@@ -68,6 +68,67 @@ describe("S3: model and effort behind the adoption gate (section 6)", () => {
   });
 });
 
+// #147: the adoption gate is bound where the plugin is registered. A closed
+// policy, swapped in for the fixture module the server imports, closes the
+// cardModels RPC and `wizbar children`, and no reader argument opens it again.
+describe("#147: a closed adoption gate at the composition point", () => {
+  const hosts: FakePluginHost[] = [];
+  afterEach(async () => {
+    for (const host of hosts.splice(0)) await host.harness.lifecycle.dispose();
+    vi.doUnmock("./fixtures/v4");
+    vi.resetModules();
+  });
+  async function closedServer() {
+    vi.resetModules();
+    vi.doMock("./fixtures/v4", async (importOriginal) => {
+      const actual = await importOriginal<typeof import("./fixtures/v4")>();
+      return { ...actual, modelSourceV4: { ...actual.modelSourceV4, adopted: false } };
+    });
+    return import("./server");
+  }
+  function fakeHost() {
+    const rows = v4Threads.map(rawRow);
+    const options = vi.fn(async () => resolved("client/turn/start"));
+    const context = vi.fn(async () => ({ usage: { snapshot: { model: "Sample model 2" } } }));
+    const host = createFakePluginHost({ pluginId: "wizbar", sdk: { threads: {
+      get: vi.fn(async ({ threadId }: { threadId: string }) => rows.find((r) => r.id === threadId)),
+      list: vi.fn(async ({ offset = 0 }: { offset?: number } = {}) => rows.slice(offset, offset + 100)),
+      defaultExecutionOptions: options,
+      context,
+    } } as never });
+    hosts.push(host);
+    return { host, options, context };
+  }
+  const fleetChildren = ["thr_v4_builder_a", "thr_v4_parent_wins", "thr_v4_reviewer_a", "thr_v4_waiting"];
+
+  // catches: the cardModels RPC or `wizbar children` reading the host's options while the gate is closed.
+  it("serves source none from the cardModels RPC and nulls in wizbar children, with no host read", async () => {
+    const server = await closedServer();
+    const { host, options, context } = fakeHost();
+    server.default(host.bb);
+    expect(await host.harness.behavior.callRpc("cardModels", { threadIds: ["thr_v4_builder_a"] })).toEqual(
+      { source: "none", items: [{ threadId: "thr_v4_builder_a", model: null, effort: null }] });
+    const result = await host.harness.behavior.runCli(["children", "thr_v4_fleet_a", "--json"]);
+    expect(result.exitCode, result.stdout ?? result.stderr).toBe(0);
+    const children = JSON.parse(result.stdout!).children as Record<string, unknown>[];
+    expect(children.map(({ id, model, effort, modelLabel }) => ({ id, model, effort, modelLabel })).sort((a, b) => String(a.id).localeCompare(String(b.id))))
+      .toStrictEqual(fleetChildren.map((id) => ({ id, model: null, effort: null, modelLabel: undefined })));
+    expect(options).not.toHaveBeenCalled();
+    expect(context).not.toHaveBeenCalled();
+  });
+
+  // catches: a reader argument that opens a closed gate (the old fourth readChildren argument, #147).
+  it("lets no caller of readChildren open a closed gate", async () => {
+    const server = await closedServer();
+    const { host, options } = fakeHost();
+    const withAnyArguments = server.readChildren as unknown as (...args: unknown[]) => ReturnType<typeof readChildren>;
+    const result = await withAnyArguments(host.bb, "thr_v4_fleet_a", undefined, true);
+    expect(result.children.map(({ id, model, effort }) => ({ id, model, effort })).sort((a, b) => a.id.localeCompare(b.id)))
+      .toStrictEqual(fleetChildren.map((id) => ({ id, model: null, effort: null })));
+    expect(options).not.toHaveBeenCalled();
+  });
+});
+
 // WizBar 0.5.0 B (#111): the gate is open; the owner's look at the 0.5.0
 // candidate is the live check (section 6). Host ids stay raw in every RPC and
 // JSON body; JSON adds the friendly `modelLabel` only when the model is known.
@@ -246,6 +307,16 @@ describe("#156: a host answering like the real host", () => {
     expect(await host.harness.behavior.callRpc("cardModels", { threadIds: ["thr_v4_builder_a"] })).toEqual({
       source: "host", items: [{ threadId: "thr_v4_builder_a", model: null, effort: null }] });
     expect(context).not.toHaveBeenCalled();
+  });
+
+  // catches: `models --raw` turning an undefined host answer into null, or the reverse, so the diagnostic hides which one the host sent (#165).
+  it("wizbar models --raw omits defaultExecutionOptions for an undefined answer and shows an explicit null", async () => {
+    const { cli } = await setup((id) => id === "thr_v4_builder_a" ? undefined : null);
+    expect(await cli(["models", "thr_v4_builder_a", "thr_v4_code_a", "--raw", "--json"])).toMatchObject({ exitCode: 0, stdout:
+      '{"models":[{"threadId":"thr_v4_builder_a","model":null,"effort":null,"raw":{"contextModel":null}},'
+      + '{"threadId":"thr_v4_code_a","model":null,"effort":null,"raw":{"defaultExecutionOptions":null,"contextModel":null}}]}\n' });
+    expect(await cli(["models", "thr_v4_builder_a", "thr_v4_code_a", "--raw"])).toMatchObject({ exitCode: 0, stdout:
+      '"thr_v4_builder_a": none {"contextModel":null}\n"thr_v4_code_a": none {"defaultExecutionOptions":null,"contextModel":null}\n' });
   });
 
   // catches: the owner's next live check needing more than one command, or the diagnostic hiding what the host said.
