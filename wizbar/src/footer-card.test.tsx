@@ -337,16 +337,20 @@ describe("WB4-10: the running card stays reachable", () => {
 
   // catches (#1532): the card mounted before its trigger, so Tab from the trigger leaves the card
   // (and the blur closes it), or thread buttons that hide the focus ring.
-  it("Tab from the trigger reaches the first thread, with visible focus, and the card stays open", () => {
+  it("Tab reaches the legend and then the first thread with visible focus while the card stays open", () => {
     render();
     act(() => trigger().focus());
     expect(card()).toBeTruthy();
     const order = tabbables();
-    const next = order[order.indexOf(trigger()) + 1]!;
+    const legend = within(card()!).getByRole("list", { name: "Harness" });
     const first = within(card()!).getAllByRole("button")[0]!;
-    expect(next).toBe(first);
-    fireEvent.blur(trigger(), { relatedTarget: next });
-    act(() => next.focus());
+    expect(order.slice(order.indexOf(trigger()) + 1, order.indexOf(trigger()) + 3)).toEqual([legend, first]);
+    fireEvent.blur(trigger(), { relatedTarget: legend });
+    act(() => legend.focus());
+    expect(card()).toBeTruthy();
+    expect(document.activeElement).toBe(legend);
+    fireEvent.blur(legend, { relatedTarget: first });
+    act(() => first.focus());
     expect(card()).toBeTruthy();
     expect(document.activeElement).toBe(first);
     expect(first.style.getPropertyValue("all")).toBe("");

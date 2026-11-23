@@ -219,8 +219,14 @@ export function StatsPanel({ rows, stale = false }: { rows: readonly PluginSideb
   const specs = read ? readSpecsFile(read, now) : null;
   const file = specs?.status === "ready" ? specs.file : null;
   const stats = computeStatsV4(rows, file, models, now, Intl.DateTimeFormat().resolvedOptions().timeZone);
-  const labels = cardRowLabels(rows ?? [], file, now);
+  const resolved = cardRowLabels(rows ?? [], file, now);
   const threads = useCardThreads(stats.threads);
+  const previousLabels = useRef(new Map<string, string>());
+  const labels = new Map(threads?.map((thread) => [
+    thread.id,
+    (thread.leaving ? previousLabels.current.get(thread.id) : resolved.get(thread.id)) ?? thread.title,
+  ]));
+  if (threads !== null) previousLabels.current = labels;
   return (
     <section aria-label="Running threads" data-stale={stale ? "true" : undefined} style={{
       display: "flex", flexDirection: "column", gap: 10, minHeight: 0, boxSizing: "border-box",
@@ -238,9 +244,10 @@ export function StatsPanel({ rows, stale = false }: { rows: readonly PluginSideb
                     style={{ flexGrow: count, flexBasis: 0, borderRadius: 2, background: segmentColour(providerId, i) }} />
                 ))}
               </div>
-              <ul aria-label="Harness" style={{ ...list, display: "flex", flexDirection: "row", flexWrap: "wrap", columnGap: 16, rowGap: 2 }}>
+              <ul aria-label="Harness" tabIndex={0} className="rounded focus-visible:ring-1 focus-visible:ring-inset"
+                style={{ ...list, display: "flex", flexDirection: "row", flexWrap: "nowrap", columnGap: 16, minWidth: 0, overflowX: "auto" }}>
                 {stats.harness.map(({ providerId, count }) => (
-                  <li key={providerId} data-harness={providerId} data-count={count} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <li key={providerId} data-harness={providerId} data-count={count} style={{ display: "flex", flexShrink: 0, alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
                     <ProviderGlyph providerId={providerId} className="justify-start" />
                     <span>{harnessName(providerId)} {count}</span>
                   </li>
