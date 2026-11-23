@@ -1567,6 +1567,24 @@ describe("E2: Unread", () => {
     await waitFor(() => expect(links()).toEqual(["Sample new", "Sample waiting", "Builder · ZZ-9: Sample stray", "Sample weekly loop"]));
   });
 
+  it("shares one bound Specs read and its minute refresh across the mounted sidebar and open footer", async () => {
+    vi.useRealTimers();
+    vi.useFakeTimers();
+    vi.setSystemTime(v4Now);
+    const specsFile = vi.fn(() => ({ kind: "content", text: v4SpecsFileText }));
+    await act(async () => { renderUnread({ specsFile }); });
+    fireEvent.click(screen.getByRole("button", { name: /^\d+ running$/ }));
+    await act(async () => {});
+    expect(within(screen.getByRole("region", { name: "Running threads" })).getByText("Sample cache")).toBeDefined();
+    expect(within(screen.getByRole("region", { name: "Specs" })).getByText("Sample cache")).toBeDefined();
+    expect(links()).toEqual(["Sample new", "Sample waiting", "Builder · ZZ-9: Sample stray", "Sample weekly loop"]);
+    expect(specsFile).toHaveBeenCalledTimes(1);
+    await act(() => vi.advanceTimersByTimeAsync(59_999));
+    expect(specsFile).toHaveBeenCalledTimes(1);
+    await act(() => vi.advanceTimersByTimeAsync(1));
+    expect(specsFile).toHaveBeenCalledTimes(2);
+  });
+
   it("uses the wall clock for Specs skew at the real sidebar mount", async () => {
     const now = Math.floor(v4Now / 60_000) * 60_000 + 45_000;
     vi.setSystemTime(now);
