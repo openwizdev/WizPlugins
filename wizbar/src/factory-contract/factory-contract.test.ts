@@ -66,6 +66,31 @@ describe("P1: the Needs-you queue boundary", () => {
     const published = JSON.parse(readFileSync(new URL("../../contracts/factory-view.v1.schema.json", import.meta.url), "utf8"));
     expect(published).toEqual(z.toJSONSchema(needsYouQueueSchema));
   });
+
+  // Bug caught: a producer emits a file the published schema accepts and the
+  // reader rejects (plain-HTTP or hostless sourceUrl, whitespace-only text),
+  // because serialization dropped the reader's HTTPS and trim rules.
+  const withItem = (overrides: Record<string, unknown>, queue: Record<string, unknown> = {}) =>
+    ({ ...fxQueue, ...queue, items: [{ ...n1, ...overrides }] });
+  it.each([
+    ["the sample queue", fxQueue, true],
+    ["padded text", withItem({ question: " Sample? ", options: [{ id: "yes", label: " Yes " }] }), true],
+    ["an incomplete queue with a gap", { ...fxQueue, complete: false, gaps: ["sample gap"] }, true],
+    ["a plain-HTTP sourceUrl", withItem({ sourceUrl: "http://example.com/decision/1" }), false],
+    ["a hostless sourceUrl", withItem({ sourceUrl: "https://" }), false],
+    ["a sourceUrl with a space", withItem({ sourceUrl: "https://example.com/a b" }), false],
+    ["a blank code", withItem({ code: " " }), false],
+    ["a blank question", withItem({ question: " " }), false],
+    ["a blank option label", withItem({ options: [{ id: "yes", label: " " }] }), false],
+    ["a blank fingerprint", withItem({ fingerprint: "\t" }), false],
+    ["a blank request id", withItem({ requestId: " ", requestFingerprint: "rfp-1" }), false],
+    ["a blank request fingerprint", withItem({ requestId: "req-1", requestFingerprint: "\n" }), false],
+    ["a blank gap", { ...fxQueue, complete: false, gaps: [" "] }, false],
+  ])("the published schema and the reader agree on %s", (_name, queue, valid) => {
+    const published = z.fromJSONSchema(JSON.parse(readFileSync(new URL("../../contracts/factory-view.v1.schema.json", import.meta.url), "utf8")));
+    expect(published.safeParse(queue).success).toBe(valid);
+    expect(readNeedsYouQueue(JSON.stringify(queue), context).ok).toBe(valid);
+  });
 });
 
 describe("P1: a pending answer is rechecked against the current queue", () => {
@@ -190,6 +215,24 @@ describe("Activity and stall: no guessed amber", () => {
     expect(stallStatus({ running: true, activity: old, threshold: synthetic, now: fxNow }))
       .toEqual({ status: "unavailable", reason: "stale-observation" });
     expect(read(fxTimelineOlderPage)).toEqual({ status: "unavailable", reason: "not-latest-page" });
+  });
+
+  // Bug caught: an unmerged delta response (empty rows, changes in
+  // delta.upsertRows) read as a latest page with no pending work, so a
+  // running tool, or work a no-op delta leaves unchanged, becomes zero.
+  it.each([
+    ["a pending-work delta", { upsertRows: fxTimelineLongTool.rows }],
+    ["a no-op delta after a page with pending work", { upsertRows: [] }],
+  ])("refuses %s as unavailable, never zero", (_name, delta) => {
+    expect(readTimelineActivity({ ...fxTimelineLongTool, rows: [], delta }, fxNow))
+      .toEqual({ status: "unavailable", reason: "not-latest-page" });
+  });
+
+  // Bug caught: refusing a latest page only because older rows exist; the
+  // reader promises this page's facts, not full history.
+  it("still reads a latest page that has older rows", () => {
+    const page = { ...fxTimelineLongTool, timelinePage: { ...fxTimelineLongTool.timelinePage, hasOlderRows: true } };
+    expect(read(page)).toMatchObject({ status: "read", activeTurnId: "turn_c1", pendingOperations: 1 });
   });
 
   // Bug caught: a made-up default threshold, or the PR-record stall alarm,
