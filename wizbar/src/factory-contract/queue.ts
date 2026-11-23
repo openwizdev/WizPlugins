@@ -13,7 +13,8 @@ export const needsYouRelativePath = ".openwiz/needs-you.v1.json";
 const utc = z.iso.datetime();
 const stableId = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/);
 const text = z.string().trim().min(1).regex(/\S/);
-const httpsUrl = z.string().check(z.regex(/^https:\/\/[^\s/?#@:]+(?:[/?#]\S*)?$/), z.url({ protocol: /^https$/ }));
+const httpsAuthority = /^https:\/\/(?:[^\s/?#@]*@)?(?:\[[0-9A-Fa-f:.]+\]|[^\s/?#@:\[\]]+)(?::(?:[0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]))?(?:[/?#]\S*)?$/;
+const httpsUrl = z.string().check(z.regex(httpsAuthority), z.url({ protocol: /^https$/ }));
 
 export const needsYouItemSchema = z.object({
   id: stableId,
