@@ -76,6 +76,26 @@ describe("C0: synthetic 0.6 fixtures cover the contract's cases", () => {
     expect(v6Activity.some((c) => c.muted) && v6Activity.some((c) => !c.muted)).toBe(true);
   });
 
+  it("pairs a working agent with a review ticket, and that review dot stays still", () => {
+    const naming = (ticket: string) => Object.values(v6Agents).flat().filter((agent) => agent.ticket === ticket).map((agent) => agent.matrix);
+    const review = v6DotMotion.filter((c) => c.state === "review");
+    expect(review.filter((c) => naming(c.ticket).includes("working")).map((c) => c.motion)).toEqual(["still"]);
+    expect(review.every((c) => c.motion === "still")).toBe(true);
+  });
+
+  it("puts a null activity time last only where activityAt is compared: in recent and within a needs-you group, not in closest or newest", () => {
+    const undated = v6Activity.filter((c) => c.activityAt === null).map((c) => c.spec);
+    expect(undated).toEqual(["example/sample-sort#751"]);
+    const spec = undated[0]!;
+    const datedAfter = (order: readonly string[]) => order.slice(order.indexOf(spec) + 1).filter((key) => byKey.get(key as never)!.activityAt !== null);
+    expect(datedAfter(v6SortOrders.recent)).toEqual([]);
+    const others = v6SortOrders["needs-you"].filter((key) => { const c = byKey.get(key)!; return c.needsYou === 0 && c.done < c.total; });
+    expect(others.at(-1)).toBe(spec);
+    expect(datedAfter(v6SortOrders["needs-you"])).toEqual(["example/sample-sort#731"]);
+    expect(datedAfter(v6SortOrders.closest)).toEqual(["example/sample-sort#781"]);
+    expect(datedAfter(v6SortOrders.newest)).toEqual(["example/sample-sort#761", "example/sample-sort#781"]);
+  });
+
   it("sets every 0.5.0 key away from its 0.5.0 default", () => {
     expect(Object.keys(v6Store050).sort()).toEqual([
       "childrenChipEnabled", "footerCountEnabled", "machineIconsEnabled", "parentChipEnabled", "sectionsCollapsed",

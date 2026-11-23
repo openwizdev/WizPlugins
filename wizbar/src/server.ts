@@ -390,21 +390,21 @@ const childrenRowSchema = z.object({
 /**
  * Model and effort for `cardModels` and `wizbar children` (WB4-2,
  * specs-section.v1.md section 6): the host's resolved execution options,
- * whatever their `source` (#156: the real host answers `{ model,
- * reasoningLevel }` with none), when the model is a non-empty string and the
- * level a known one. Only when the answer is an explicit null, the model of
- * the context's latest usage snapshot, effort omitted; undefined is malformed
- * (#160), so it gets nulls with no fallback. Behind the adoption gate: closed, it
- * reads nothing and serves source none. A thread whose read fails or answers
- * malformed gets nulls; the rest stand.
+ * whatever their `source`, when the model is a non-empty string and the level
+ * a known one. An answer with no `source` (`{ model, reasoningLevel }`, #156) is
+ * kept as a compatibility case; the real host's answer has five fields (#160).
+ * Only when the answer is an explicit null, the model of the context's latest
+ * usage snapshot, effort omitted; undefined is malformed (#160), so it gets
+ * nulls with no fallback. Behind the adoption gate, `modelSourceV4.adopted`
+ * and nothing else (#147): closed, it reads nothing and serves source none. A
+ * thread whose read fails or answers malformed gets nulls; the rest stand.
  */
 export async function cardModelsFrom(
   read: ModelRead,
   threadIds: readonly string[],
-  adopted: boolean = modelSourceV4.adopted,
   readContext?: ModelRead,
 ): Promise<CardModelsResultV3> {
-  if (!adopted) return cardModelsNone(threadIds);
+  if (!modelSourceV4.adopted) return cardModelsNone(threadIds);
   const items = await Promise.all(threadIds.map(async (threadId) => {
     const { model, effort } = await readModel(read, readContext, threadId);
     return { threadId, model, effort };
@@ -471,7 +471,7 @@ function withModelsCommand(cli: PluginCliRegistration, readOptions: ModelRead, r
 const hostOptions = (bb: BbPluginApi): ModelRead => (args) => bb.sdk.threads.defaultExecutionOptions(args);
 const hostContext = (bb: BbPluginApi): ModelRead => (args) => bb.sdk.threads.context(args);
 
-export async function readChildren(bb: BbPluginApi, rawId: string, signal?: AbortSignal, adopted: boolean = modelSourceV4.adopted) {
+export async function readChildren(bb: BbPluginApi, rawId: string, signal?: AbortSignal) {
   const threadId = validId(rawId);
   let route: unknown;
   try { route = await bb.sdk.threads.get({ threadId, signal }); } catch (error) {
@@ -500,7 +500,7 @@ export async function readChildren(bb: BbPluginApi, rawId: string, signal?: Abor
   }
   // Model and effort: the same source the cardModels RPC serves, read for the children only.
   const childIds = rows.filter((row) => row.parentThreadId === threadId).map((row) => row.id);
-  const result = childrenList(rows, threadId, await cardModelsFrom(hostOptions(bb), childIds, adopted, hostContext(bb)));
+  const result = childrenList(rows, threadId, await cardModelsFrom(hostOptions(bb), childIds, hostContext(bb)));
   if (!result) throw stateUnavailable();
   return { ...result, children: result.children.map(withModelLabel) };
 }
@@ -531,7 +531,7 @@ export default function plugin(bb: BbPluginApi) {
   // WizDeck 0.1 (#74): the one steer path to the bound orchestrator.
   registerDeckActions(bb, { settings: deckReaders.settings });
   // WB4-1 (#1435): the specs reader, its RPC and `wizbar specs` / `wizbar spec`.
-  const models = (threadIds: readonly string[]) => cardModelsFrom(hostOptions(bb), threadIds, modelSourceV4.adopted, hostContext(bb));
+  const models = (threadIds: readonly string[]) => cardModelsFrom(hostOptions(bb), threadIds, hostContext(bb));
   const specs = registerSpecs(bb, { settings: bb.settings.define(specsSettingDescriptors), factories: deckReaders.settings, models });
   const db = bb.storage.database();
   bb.storage.migrate(db, migrations);

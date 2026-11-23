@@ -107,6 +107,7 @@ export const v6Agents: Readonly<Record<string, readonly AgentActivityV6[]>> = {
   [`${REPO}#711`]: [
     { threadId: "thr_v6_bravo_builder", ticket: `${REPO}#713`, matrix: "working", updatedAt: v6Now - 10 * MINUTE },
     { threadId: "thr_v6_bravo_reviewer", ticket: `${REPO}#714`, matrix: "reviewing", updatedAt: v6Now - 20 * MINUTE },
+    { threadId: "thr_v6_bravo_fixer", ticket: `${REPO}#714`, matrix: "working", updatedAt: v6Now - 30 * MINUTE },
   ],
   [`${REPO}#781`]: [
     { threadId: "thr_v6_india_builder", ticket: `${REPO}#782`, matrix: "working", updatedAt: v6Now - MINUTE },
@@ -166,7 +167,7 @@ export const v6QuietSplit = {
 export interface DotMotionCaseV6 { ticket: SpecKeyV4; state: TicketEntryV6["state"]; motion: "breath" | "still"; why: string }
 export const v6DotMotion: readonly DotMotionCaseV6[] = [
   { ticket: k(713), state: "building", motion: "breath", why: "a working builder names it" },
-  { ticket: k(714), state: "review", motion: "still", why: "only a reviewer names it: a steady ring" },
+  { ticket: k(714), state: "review", motion: "still", why: "a working agent names it too, yet a review ring stays steady" },
   { ticket: k(712), state: "done", motion: "still", why: "done" },
   { ticket: k(782), state: "building", motion: "breath", why: "a working builder names it" },
   { ticket: k(783), state: "not-started", motion: "still", why: "its agent failed" },
