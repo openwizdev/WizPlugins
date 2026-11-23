@@ -21,18 +21,10 @@ const read = vi.fn(async ({ threadId }: { threadId: string }) => {
 });
 
 describe("S3: model and effort behind the adoption gate (section 6)", () => {
-  // catches: a host read, or a guessed value, before WB4-4 adopts the source.
-  it("serves source none and every value null while the gate is closed, with no host read", async () => {
-    read.mockClear();
-    expect(await cardModelsFrom(read, ["thr_v4_builder_a"], false)).toEqual(
-      { source: "none", items: [{ threadId: "thr_v4_builder_a", model: null, effort: null }] });
-    expect(read).not.toHaveBeenCalled();
-  });
-
   // catches: options from a thread start or a requested turn dropped (#156: every fleet thread starts with an explicit model).
   it("uses the resolved options whatever their source; null, failed or malformed answers are omitted", async () => {
     const ids = ["thr_v4_builder_a", "thr_v4_reviewer_a", "thr_v4_parent_wins", "thr_v4_code_a", "thr_v4_ambiguous"];
-    expect(await cardModelsFrom(read, ids, true)).toEqual({ source: "host", items: [
+    expect(await cardModelsFrom(read, ids)).toEqual({ source: "host", items: [
       ...ids.slice(0, 3).map((threadId) => ({ threadId, model: "Sample model 2", effort: "xhigh" })),
       ...ids.slice(3).map((threadId) => ({ threadId, model: null, effort: null })),
     ] });
@@ -44,7 +36,7 @@ describe("S3: model and effort behind the adoption gate (section 6)", () => {
       if (threadId === "thr_v4_ambiguous") throw new Error("synthetic host failure");
       return Promise.resolve(options[threadId] ?? null);
     }) as (args: { threadId: string }) => Promise<unknown>;
-    expect(await cardModelsFrom(throwing, ["thr_v4_ambiguous", "thr_v4_builder_a"], true)).toEqual({ source: "host", items: [
+    expect(await cardModelsFrom(throwing, ["thr_v4_ambiguous", "thr_v4_builder_a"])).toEqual({ source: "host", items: [
       { threadId: "thr_v4_ambiguous", model: null, effort: null },
       { threadId: "thr_v4_builder_a", model: "Sample model 2", effort: "xhigh" },
     ] });
@@ -59,7 +51,7 @@ describe("S3: model and effort behind the adoption gate (section 6)", () => {
       list: vi.fn(async ({ offset = 0 }: { offset?: number } = {}) => rows.slice(offset, offset + 100)),
       defaultExecutionOptions: read,
     } } });
-    const result = await readChildren(host.bb, "thr_v4_fleet_a", undefined, true);
+    const result = await readChildren(host.bb, "thr_v4_fleet_a");
     const children = result.children.map(({ id, model, effort }) => ({ id, model, effort }));
     expect(children).toContainEqual({ id: "thr_v4_builder_a", model: "Sample model 2", effort: "xhigh" });
     expect(children.filter((c) => c.model !== null).map((c) => c.id).sort()).toEqual(
@@ -68,10 +60,7 @@ describe("S3: model and effort behind the adoption gate (section 6)", () => {
   });
 });
 
-// #147: the adoption gate is bound where the plugin is registered. A closed
-// policy, swapped in for the fixture module the server imports, closes the
-// cardModels RPC and `wizbar children`, and no reader argument opens it again.
-describe("#147: a closed adoption gate at the composition point", () => {
+describe("#147: a closed adoption gate, swapped in for the fixture policy the server imports at registration", () => {
   const hosts: FakePluginHost[] = [];
   afterEach(async () => {
     for (const host of hosts.splice(0)) await host.harness.lifecycle.dispose();
@@ -101,7 +90,6 @@ describe("#147: a closed adoption gate at the composition point", () => {
   }
   const fleetChildren = ["thr_v4_builder_a", "thr_v4_parent_wins", "thr_v4_reviewer_a", "thr_v4_waiting"];
 
-  // catches: the cardModels RPC or `wizbar children` reading the host's options while the gate is closed.
   it("serves source none from the cardModels RPC and nulls in wizbar children, with no host read", async () => {
     const server = await closedServer();
     const { host, options, context } = fakeHost();
@@ -117,8 +105,7 @@ describe("#147: a closed adoption gate at the composition point", () => {
     expect(context).not.toHaveBeenCalled();
   });
 
-  // catches: a reader argument that opens a closed gate (the old fourth readChildren argument, #147).
-  it("lets no caller of readChildren open a closed gate", async () => {
+  it("lets no caller of readChildren open a closed gate, not even with the old fourth argument", async () => {
     const server = await closedServer();
     const { host, options } = fakeHost();
     const withAnyArguments = server.readChildren as unknown as (...args: unknown[]) => ReturnType<typeof readChildren>;
@@ -192,10 +179,7 @@ describe("#111: the open gate and friendly labels in wizbar JSON", () => {
   });
 });
 
-// #156: on the owner's real host the per-thread read answers with exactly
-// `{ model, reasoningLevel }` (no `source`), and the list rows carry no model.
-// The values below are the live answer's shape with public model ids.
-describe("#156: a host answering like the real host", () => {
+describe("#156: a source-less answer, kept as a compatibility case; #160 has the real host's five-field answer", () => {
   const live: Record<string, unknown> = {
     thr_v4_builder_a: { model: "gpt-6.2-sol", reasoningLevel: "medium" },
     thr_v4_reviewer_a: { model: "claude-opus-5-5", reasoningLevel: "high" },
@@ -309,7 +293,6 @@ describe("#156: a host answering like the real host", () => {
     expect(context).not.toHaveBeenCalled();
   });
 
-  // catches: `models --raw` turning an undefined host answer into null, or the reverse, so the diagnostic hides which one the host sent (#165).
   it("wizbar models --raw omits defaultExecutionOptions for an undefined answer and shows an explicit null", async () => {
     const { cli } = await setup((id) => id === "thr_v4_builder_a" ? undefined : null);
     expect(await cli(["models", "thr_v4_builder_a", "thr_v4_code_a", "--raw", "--json"])).toMatchObject({ exitCode: 0, stdout:

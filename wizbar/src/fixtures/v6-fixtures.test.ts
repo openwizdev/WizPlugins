@@ -76,7 +76,6 @@ describe("C0: synthetic 0.6 fixtures cover the contract's cases", () => {
     expect(v6Activity.some((c) => c.muted) && v6Activity.some((c) => !c.muted)).toBe(true);
   });
 
-  // catches: a review dot that breathes because a working agent names it (#192); the fixture paired its review ticket with a reviewer only.
   it("pairs a working agent with a review ticket, and that review dot stays still", () => {
     const naming = (ticket: string) => Object.values(v6Agents).flat().filter((agent) => agent.ticket === ticket).map((agent) => agent.matrix);
     const review = v6DotMotion.filter((c) => c.state === "review");
@@ -84,19 +83,15 @@ describe("C0: synthetic 0.6 fixtures cover the contract's cases", () => {
     expect(review.every((c) => c.motion === "still")).toBe(true);
   });
 
-  // catches: null-last read as a rule of every sort (#191), so an undated spec drops below dated ones where activityAt is never compared.
-  it("puts a null activity time last only where activityAt is compared", () => {
+  it("puts a null activity time last only where activityAt is compared: in recent and within a needs-you group, not in closest or newest", () => {
     const undated = v6Activity.filter((c) => c.activityAt === null).map((c) => c.spec);
     expect(undated).toEqual(["example/sample-sort#751"]);
     const spec = undated[0]!;
     const datedAfter = (order: readonly string[]) => order.slice(order.indexOf(spec) + 1).filter((key) => byKey.get(key as never)!.activityAt !== null);
-    // recent compares activityAt throughout: nothing dated comes after the undated spec.
     expect(datedAfter(v6SortOrders.recent)).toEqual([]);
-    // needs-you compares it within a group: last among the other unfinished specs, still before the finished group.
     const others = v6SortOrders["needs-you"].filter((key) => { const c = byKey.get(key)!; return c.needsYou === 0 && c.done < c.total; });
     expect(others.at(-1)).toBe(spec);
     expect(datedAfter(v6SortOrders["needs-you"])).toEqual(["example/sample-sort#731"]);
-    // closest and newest never read activityAt: dated specs follow it.
     expect(datedAfter(v6SortOrders.closest)).toEqual(["example/sample-sort#781"]);
     expect(datedAfter(v6SortOrders.newest)).toEqual(["example/sample-sort#761", "example/sample-sort#781"]);
   });
