@@ -212,6 +212,43 @@ describe("0.5 C: the rule, the spec rows and the open panel", () => {
     }
   });
 
+  it("shows the full sentence whenever it fits, dropping the line when too little room is left, and follows resizes", async () => {
+    let width = 150;
+    const observers: (() => void)[] = [];
+    vi.stubGlobal("ResizeObserver", class { constructor(callback: () => void) { observers.push(callback); } observe() {} disconnect() {} });
+    const restore = [
+      vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(function (this: HTMLElement) {
+        return this.tagName === "H2" ? width : 0;
+      }),
+      vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockImplementation(function (this: HTMLElement) {
+        return this.hasAttribute("data-rule-measure") ? 220 : 0;
+      }),
+    ];
+    const resize = (to: number) => act(() => { width = to; for (const callback of observers) callback(); });
+    try {
+      render();
+      const heading = within(await section()).getByRole("heading");
+      const text = () => heading.querySelector("[data-rule-text]")!.textContent;
+      const line = () => heading.querySelector("[data-rule-line]");
+      await waitFor(() => expect(text()).toBe("Specs 2 · 2 for you"));
+      await resize(230);
+      expect(text()).toBe("Specs 2 · 2 tickets need you (2 specs)");
+      expect(line()).toBeNull();
+      await resize(220);
+      expect(text()).toBe("Specs 2 · 2 tickets need you (2 specs)");
+      await resize(219);
+      expect(text()).toBe("Specs 2 · 2 for you");
+      await resize(300);
+      expect(text()).toBe("Specs 2 · 2 tickets need you (2 specs)");
+      expect(line()).not.toBeNull();
+      await resize(150);
+      expect(text()).toBe("Specs 2 · 2 for you");
+    } finally {
+      for (const spy of restore) spy.mockRestore();
+      vi.unstubAllGlobals();
+    }
+  });
+
   // catches: a rule that still says "need you" when nothing waits on the owner.
   it("leaves out · M need you when M is zero", async () => {
     const none = JSON.parse(v4SpecsFileText);
@@ -707,6 +744,28 @@ describe("S1: the Specs sort", () => {
     expect(picker(region).value).toBe("closest");
   });
 
+  it("restores the confirmed sort when the next queued save fails", async () => {
+    let confirm!: (result: { values: { specsSort: string } }) => void;
+    const first = new Promise<{ values: { specsSort: string } }>((resolve) => { confirm = resolve; });
+    const save = vi.fn().mockReturnValueOnce(first).mockRejectedValueOnce(new Error("refused"));
+    const { updates } = renderV6({ specsSort: "recent" }, save);
+    const region = await section();
+    const select = picker(region);
+    fireEvent.change(select, { target: { value: "closest" } });
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+    fireEvent.change(select, { target: { value: "newest" } });
+    expect(select.value).toBe("newest");
+    expect(order(region)).toEqual(expected("newest"));
+    confirm({ values: { specsSort: "closest" } });
+    await within(region).findByText("Could not save the sort. Try again.");
+    expect(updates).toEqual([
+      { pluginId: "wizbar", values: { specsSort: "closest" } },
+      { pluginId: "wizbar", values: { specsSort: "newest" } },
+    ]);
+    expect(select.value).toBe("closest");
+    expect(order(region)).toEqual(expected("closest"));
+  });
+
   // catches: a failed save leaving the unsaved order on screen as if it were remembered.
   it("says so when the sort cannot be saved, and goes back to the stored sort", async () => {
     renderV6({ specsSort: "recent" }, () => { throw new Error("refused"); });
@@ -908,6 +967,16 @@ describe("S2: the Quiet group", () => {
     fireEvent.click(group(region));
     expect(order(region)).toEqual([...v6QuietSplit.main]);
     await waitFor(() => expect(updates.at(-1)).toEqual({ pluginId: "wizbar", values: { specsOpen: "[\"example/sample-sort#711\"]" } }));
+  });
+
+  it("restores a failed Quiet toggle and names the group in its message", async () => {
+    renderV6({}, () => { throw new Error("refused"); });
+    const region = await section();
+    fireEvent.click(group(region));
+    expect(group(region).getAttribute("aria-expanded")).toBe("true");
+    await within(region).findByText("Could not save the Quiet group. Try again.");
+    expect(group(region).getAttribute("aria-expanded")).toBe("false");
+    expect(order(region)).toEqual([...v6QuietSplit.main]);
   });
 
   // catches: a stored open group shown closed on a fresh mount.
