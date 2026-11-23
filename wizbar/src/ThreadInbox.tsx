@@ -93,11 +93,12 @@ export function ThreadInbox({
     return () => clearInterval(timer);
   }, []);
   const now = nowMinute * 60_000;
+  const specsNow = Date.now();
   const [showSnoozed, setShowSnoozed] = useState(false);
   const [showSettled, setShowSettled] = useState(false);
   const [showMuted, setShowMuted] = useState(false);
 
-  const specsFile = useSpecsFileForUnread(now);
+  const specsFile = useSpecsFileForUnread(specsNow);
 
   const projectNameById = useMemo(
     () => new Map(projects.map((project) => [project.id, project.name])),
@@ -162,13 +163,14 @@ export function ThreadInbox({
   [hiddenChildren, inbox, repositories, settingsState.isLoading, specsFile, threads]);
   const lastFiltered = useRef<typeof inbox>([]);
   if (filtered !== null) lastFiltered.current = filtered;
-  const unread = searchActive ? inbox : (filtered ?? lastFiltered.current);
+  const unread = searchActive ? inbox : filtered ??
+    filterByProject(lastFiltered.current, scope === ALL_PROJECTS ? null : scope);
 
   const connection = useRealtimeConnectionState();
   const drag = useDragPins(status, connection, threads, pinned);
   const sections = useSectionsCollapsed();
   // While a search is active its matches show even in a collapsed section; nothing is stored.
-  const searching = searchQuery.trim() !== "";
+  const searching = searchActive;
   const isCollapsed = (key: SidebarSection) => !searching && sections.collapsed.has(key);
   const pinnedShown = pinned.length > 0 || drag.draggingId !== null;
   const order = useSectionsOrder();
@@ -234,7 +236,12 @@ export function ThreadInbox({
                 {searchQuery.trim() ? "No threads found" : "No threads yet"}
               </p>
             ) : null}
-            {order.failed ? <p role="status" className="px-2.5 text-xs text-muted-foreground">Could not save the section order. Try again.</p> : null}
+            {order.failed ? (
+              <div className="flex items-center gap-2 px-2.5 text-xs text-muted-foreground">
+                <p role="status">Could not save the section order. Try again.</p>
+                <button type="button" className="rounded underline focus-visible:ring-1" onClick={order.retry}>Retry</button>
+              </div>
+            ) : null}
             {/* E1 (#187): Pinned, Specs and Unread in the owner's order (`sectionsOrder`). */}
             {order.order.map((key) => {
               const content = key === "pinned" ? (pinnedShown ? (
@@ -281,7 +288,7 @@ export function ThreadInbox({
                 </Shelf>
               ) : null) : (
                 // WB4-1 (#1435): the running specs.
-                <SpecsSection threads={threads} now={now} activeThreadId={activeThreadId} onNavigate={onNavigate}
+                <SpecsSection threads={threads} now={specsNow} activeThreadId={activeThreadId} onNavigate={onNavigate}
                   collapsed={sections.collapsed.has("specs")} onToggleCollapsed={() => sections.toggle("specs")}
                   collapseFailed={sections.failed === "specs"} />
               );
@@ -291,6 +298,7 @@ export function ThreadInbox({
               label="Snoozed"
               threads={snoozed}
               expanded={showSnoozed}
+              searching={searching}
               onToggle={() => setShowSnoozed((open) => !open)}
               shelf="snoozed"
               activeThreadId={activeThreadId}
@@ -301,6 +309,7 @@ export function ThreadInbox({
               label="Muted"
               threads={muted}
               expanded={showMuted}
+              searching={searching}
               onToggle={() => setShowMuted((open) => !open)}
               shelf="muted"
               activeThreadId={activeThreadId}
@@ -333,7 +342,8 @@ export function ThreadInbox({
 function ParkedShelf({
   label,
   threads,
-  expanded,
+  expanded: open,
+  searching,
   onToggle,
   shelf,
   activeThreadId,
@@ -343,6 +353,7 @@ function ParkedShelf({
   label: string;
   threads: readonly PluginSidebarThread[];
   expanded: boolean;
+  searching: boolean;
   onToggle: () => void;
   shelf: "snoozed" | "muted";
   activeThreadId: string | null;
@@ -350,12 +361,14 @@ function ParkedShelf({
   onNavigate: () => void;
 }) {
   if (threads.length === 0) return null;
+  const expanded = open || searching;
   const now = Date.now();
   return (
     <section aria-label={label}>
       <button
         type="button"
-        onClick={onToggle}
+        onClick={searching ? undefined : onToggle}
+        aria-disabled={searching || undefined}
         aria-expanded={expanded}
         // Round 5 A: "Snoozed 4", the count faint, the rule running to the
         // edge like every shelf's, and no chevron; the whole line toggles.
@@ -489,10 +502,9 @@ function useSectionSetting<Tag>(name: "sectionsCollapsed" | "sectionsOrder") {
   latest.current.value = value;
   latest.current.hostValues = host.values;
   const queue = useRef<Promise<void>>(Promise.resolve());
-  /** Writes `change(current value)`, unless it is what is already stored. */
-  const save = useCallback((change: (raw: unknown) => string, tag: Tag) => {
+  const save = useCallback((change: (raw: unknown) => string, tag: Tag, retry = false) => {
     const next = change(latest.current.value);
-    if (next === latest.current.value) return;
+    if (!retry && next === latest.current.value) return;
     const seq = ++latest.current.seq;
     latest.current.value = next;
     setWritten({ baseline: latest.current.hostValues, value: next, held: true });
@@ -575,7 +587,8 @@ function useSectionsOrder() {
       return JSON.stringify(readSectionsOrder(raw)) === next ? (raw as string) : next;
     }, true);
   }, [save]);
-  return { order, move, failed: failed !== null, dragging, setDragging, dropAt, setDropAt };
+  const retry = () => save((raw) => JSON.stringify(readSectionsOrder(raw)), true, true);
+  return { order, move, retry, failed: failed !== null, dragging, setDragging, dropAt, setDropAt };
 }
 
 /**
@@ -617,8 +630,15 @@ function SectionFrame({ section, order, children }: {
         if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
         if (event.target !== headerOf()) return;
         event.preventDefault();
+        const container = frame.current?.parentElement;
+        const frames = [...(container?.querySelectorAll<HTMLElement>(":scope > [data-wizbar-section]") ?? [])]
+          .filter((candidate) => candidate.querySelector(":scope > section"));
+        const visibleIndex = frames.findIndex((candidate) => candidate === frame.current);
+        const neighbor = frames[visibleIndex + (event.key === "ArrowUp" ? -1 : 1)];
+        const next = order.order.findIndex((key) => key === neighbor?.dataset.wizbarSection);
+        if (next === -1) return;
         refocus.current = true;
-        order.move(section, index + (event.key === "ArrowUp" ? -1 : 1));
+        order.move(section, next);
       }}
       onDragOver={(event) => {
         if (order.dragging === null) return;
