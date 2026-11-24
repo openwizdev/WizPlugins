@@ -53,11 +53,23 @@ const lines = () => [...(screen.queryByRole("region", { name: "Running threads" 
 const fixtureLine = "3 waiting on you · 1 cloud, 2 local, 1 unknown";
 
 describe("V3: footer stats panel", () => {
-  it("shows the contract's numbers and coverage disclosures for the fixture", () => {
-    const rendered = renderSlot(panel, props, { sidebarThreads: { status: "ready", threads: v3Threads } });
+  it("shows the fixture summary and labels only rows with a served model", async () => {
+    const rendered = renderSlot(panel, props, {
+      pluginId: "synthetic-running-summary",
+      sidebarThreads: { status: "ready", threads: v3Threads },
+      rpc: {
+        cardModels: ({ threadIds }: { threadIds: string[] }) => ({
+          source: "host",
+          items: threadIds.map((threadId) => threadId === "thr_v3_parent_many"
+            ? { threadId, model: "claude-opus-5-5", effort: "high" }
+            : { threadId, model: null, effort: null }),
+        }),
+      } as never,
+    });
     expect(lines()).toEqual([fixtureLine]);
+    expect(await screen.findByRole("button", { name: /Sample refine command palette.*Opus 5\.5 · High/ })).toBeDefined();
+    expect(screen.getByRole("button", { name: /Sample audit shortcuts$/ })).toBeDefined();
     expect(rendered.sdkCalls).toEqual([]);
-    expect(rendered.rpcCalls.map(({ method }) => method)).toEqual(["cardModels"]);
     expect(rendered.navigateCalls).toEqual([]);
   });
 
@@ -172,11 +184,36 @@ describe("WB4-10: the card's spec names follow the bound factory", () => {
     settingsFeed.current = factory("/synthetic/home-c");
     rendered.rerender(createElement(Panel, props));
     await waitFor(() => expect(answers).toHaveLength(3));
-    // The old binding's answer settles first, on its own; then the current one.
+    await act(async () => { answers[2]!(fileB); });
+    expect(names()).toContain("Sample palette B");
     await act(async () => { answers[1]!(v4SpecsFileText); });
-    expect(names()).toEqual([]);
-    answers[2]!(fileB);
-    await waitFor(() => expect(names()).toContain("Sample palette B"));
+    expect(names()).toContain("Sample palette B");
     expect(names()).not.toContain("Sample palette");
+  });
+
+  it("keeps names empty when the obsolete binding replies before the current one", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(v4Now);
+    fixtureFeed.current = { status: "ready", threads: [...v4Threads] };
+    settingsFeed.current = factory("/synthetic/home-a");
+    const answers: Array<(text: string) => void> = [];
+    const rendered = renderSlot(panel, props, { rpc: {
+      specsFile: () => new Promise((resolve) => answers.push((text) => resolve({ kind: "content", text }))),
+      cardModels: ({ threadIds }: { threadIds: string[] }) => ({ source: "none", items: threadIds.map((threadId) => ({ threadId, model: null, effort: null })) }),
+    } as never });
+
+    await waitFor(() => expect(answers).toHaveLength(1));
+    settingsFeed.current = factory("/synthetic/home-b");
+    rendered.rerender(createElement(Panel, props));
+    await waitFor(() => expect(answers).toHaveLength(2));
+
+    await act(async () => { answers[0]!(v4SpecsFileText); });
+    expect(document.querySelector("[data-spec-name]")).toBeNull();
+
+    const currentFile = v4SpecsFileText.replaceAll("\"Sample palette\"", "\"Sample palette B\"");
+    await act(async () => { answers[1]!(currentFile); });
+    const names = [...document.querySelectorAll("[data-spec-name]")].map((el) => el.textContent);
+    expect(names).toContain("Sample palette B");
+    expect(names).not.toContain("Sample palette");
   });
 });

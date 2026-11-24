@@ -1,6 +1,6 @@
 // S1 (#169): the `sectionsCollapsed` setting (sidebar-v3.v1.md section 9). Every
 // value is a known literal from the contract, never computed the way the code does.
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { v6CollapseWrites, v6CollapsedCases, v6OrderCases, v6OrderMoves } from "./fixtures/v6";
 import {
   readCollapsedKeys, readCollapsedSections, readSectionsOrder, sidebarSections, withCollapsed, withSectionCollapsed, withSectionMoved,
@@ -39,13 +39,15 @@ describe("S1: wizbar section errors", () => {
     const { createFakePluginHost } = await import("@get-bb/plugin-sdk/testing");
     const { default: plugin } = await import("./server");
     const host = createFakePluginHost({ pluginId: "wizbar" });
+    const define = vi.spyOn(host.bb.settings, "define");
     plugin(host.bb);
     await host.harness.behavior.setSettings({ sectionsCollapsed: "[\"pinned\"]" });
+    const handle = define.mock.results.find((_, i) => "sectionsCollapsed" in define.mock.calls[i]![0])!.value;
+    const write = vi.spyOn(handle, "experimental_set");
     const result = await host.harness.behavior.runCli(argv);
     expect(result.exitCode).toBe(2);
     expect(JSON.parse(result.stdout!).error.code).toBe("usage");
-    expect(JSON.parse((await host.harness.behavior.runCli(["section", "pinned", "--collapse", "--json"])).stdout!))
-      .toEqual({ section: "pinned", collapsed: true });
+    expect(write).not.toHaveBeenCalled();
     await host.harness.lifecycle.dispose();
   });
 
