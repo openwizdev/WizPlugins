@@ -106,7 +106,8 @@ Pinned, snoozed, muted and settled matches stay on their shelves.
   `wizbar stats --json` reports the same rows in `unseen`.
 - **Cloud agents.** The sidebar lists GitHub agents with no matching desktop
   thread. It starts after Pinned and can be moved or collapsed. Working and
-  asking agents appear first, followed by recent done and stopped agents.
+  asking agents with live notes appear first and count in the header.
+  Lapsed, done and stopped agents follow by most recent update.
   Names link to GitHub. `wizbar agents [--json]` lists the same rows.
 - **The producer** adds each ticket's last activity (`updatedAt`, from the
   issue's `updated_at` in the answer it already reads, no added requests) to
@@ -155,8 +156,8 @@ Pinned, snoozed, muted and settled matches stay on their shelves.
   v2 on a tie; when neither is ready, it shows "Specs unavailable". So the
   producer and WizBar can be upgraded in either order. `--gh`
   names the `gh` to run (default: `gh` on `PATH`). Each run is one complete
-  specs scan, all or nothing. After writing both specs files, it uses the
-  remaining requests from the run's 59-request budget to write
+  specs scan, all or nothing, with up to 59 requests. After writing both
+  specs files, it uses a separate 20-request budget to write
   `.openwiz/agents.v1.json`. Repeat `--author <login>` to set record authors
   or use each repository's `Record authors` row in `docs/agents/fleet.md`.
   Pass `--repo` for each product repository and optionally

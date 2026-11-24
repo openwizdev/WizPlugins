@@ -119,6 +119,11 @@ export function unseenSnapshot(
     const key = matchRun(agent, pullsByTicket);
     const mapped = key ? runs.get(key) : undefined;
     if (key) noted.add(key);
+    if (agent.agent === "reviewer" && !agent.pr) {
+      for (const pull of pullsByTicket.get(agent.ticket.toLowerCase()) ?? []) {
+        noted.add(runKey("reviewer", agent.repository, pull));
+      }
+    }
     return !(mapped?.seen ?? fallback.has(claimKey(agent.ticket, agent.agent)));
   });
   const more = [...runs].flatMap(([key, { entry, seen }]) => seen || noted.has(key) ? [] : [entry]);

@@ -24,9 +24,10 @@ home. See the [JSON schema](agents.v1.schema.json).
 
 The producer requests at most three pages of issue comments per repository,
 newest updates first. The request start rounds down to a ten-minute boundary.
-The agents scan uses the request budget left after specs. Failed note reads
-or exhausted budget keep the last agents file. A failed optional map read
-still publishes the notes.
+The agents scan has its own 20-request budget for author lookup, comment
+pages and the optional run map. The specs scan has a separate 59-request
+budget. Failed note reads or exhausted budget during the notes scan keep the
+last agents file. A failed optional map read still publishes the notes.
 
 WizBar reads the file by absolute path through the host's file API. A mapped
 agent is seen when its thread ID is known to the desktop, including archives.

@@ -6,8 +6,8 @@
   pages. No run map was used for this artifact.
 - [Cloud agents sidebar](sidebar.png) rendered by the SDK fixture with the
   installed host stylesheet and headless Chromium. The section follows Pinned
-  and shows Neon, Sol and Opus with their state and age. Two working or asking
-  claims count in the section header.
+  and shows Neon, Sol and Opus with their state and age. Only the live working agent counts
+  in the header. The lapsed reviewer has the idle mark and a separate PR badge.
 - [Running card](running-card.png) from the grouped-card fixture. Sample kernel
   counts its desktop thread and GitHub builder. Other counts its GitHub
   reviewer. A Chromium scene with 100 desktop rows and two GitHub rows checked

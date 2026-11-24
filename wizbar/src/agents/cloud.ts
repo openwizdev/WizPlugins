@@ -6,6 +6,7 @@ import type { AgentsRead } from "./read";
 
 const roles = { builder: "Builder", reviewer: "Reviewer", fleet: "Fleet" } as const;
 const matrices = { working: "working", asking: "needs-you", done: "done", stopped: "idle" } as const;
+const isLive = (agent: GitHubAgent) => agent.live ?? isActiveNote(agent.state);
 
 const labelFor = (role: keyof typeof roles, repository: string, number: string | number) =>
   `${roles[role]} · ${repository.slice(repository.indexOf("/") + 1)} #${number}`;
@@ -37,24 +38,23 @@ export function cloudAgents(read: AgentsRead, specs: SpecsFileV4 | null, rows: r
   const snapshot = unseenSnapshot(read, specs, rows);
   if (!snapshot) return { status: "unavailable" };
   const ordered = [...snapshot.agents].sort((a, b) =>
-    Number(isActiveNote(b.state)) - Number(isActiveNote(a.state))
+    Number(isLive(b)) - Number(isLive(a))
       || Date.parse(b.updatedAt) - Date.parse(a.updatedAt) || b.commentId - a.commentId,
   );
   const format = (agent: GitHubAgent): CloudRow => {
     const number = issueNumber(agent.ticket);
     const pr = agent.pr ? pullPattern.exec(agent.pr) : null;
-    const review = agent.agent === "reviewer" ? pr : null;
-    const state = isActiveNote(agent.state) && agent.live === false ? "lapsed" : agent.state;
+    const state = isActiveNote(agent.state) && !isLive(agent) ? "lapsed" : agent.state;
     return {
-      label: labelFor(agent.agent, review?.[1] ?? agent.repository, review?.[2] ?? number),
+      label: labelFor(agent.agent, agent.repository, number),
       detail: `${cloudModel(agent.model)} · ${state} · ${relativeTimeLabel(Date.parse(agent.updatedAt), now)}`,
-      matrix: matrices[agent.state],
+      matrix: state === "lapsed" ? "idle" : matrices[agent.state],
       pull: pr ? `PR #${pr[2]}` : null,
       url: agent.pr ?? `https://github.com/${agent.repository}/issues/${number}`,
     };
   };
   return {
-    status: "ready", active: ordered.filter((agent) => isActiveNote(agent.state)).length,
+    status: "ready", active: ordered.filter(isLive).length,
     rows: ordered.map(format),
     more: snapshot.more.map(({ role, repository, number }) => ({ label: labelFor(role, repository, number) })),
   };

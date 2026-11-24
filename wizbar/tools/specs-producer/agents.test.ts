@@ -135,12 +135,20 @@ it("writes all five repositories' agents and the run map after specs use all 59 
   const { home, file } = await fixture();
   const repositories = [FLEET, "example/two", "example/three", "example/four", "example/five"];
   const answers = budgetAnswers(repositories, 49);
+  const authors = Buffer.from("## GitHub identity\n| Record authors | `sample-builder` |\n").toString("base64");
+  for (const repository of repositories) {
+    answers.set(`repos/${repository}/contents/docs/agents/fleet.md`, { body: { type: "file", encoding: "base64", content: authors } });
+  }
+  // Four three-page lists, one two-page list, five author lookups and the run map.
+  const last = comments.replace(FLEET, repositories[4]);
+  answers.set(`${last}&page=2`, { body: answers.get(`${last}&page=3`)!.body });
+  answers.delete(`${last}&page=3`);
   const map = `repos/${FLEET}/issues/comments/42`;
   answers.set(map, { body: { body: ["```json", JSON.stringify({ state: { repo: FLEET, threads: {} }, runs: {} }), "```"].join("\n") } });
   const github = fakeGitHub(answers);
 
-  expect(await runOnce({ home, repositories, now, authors: ["sample-builder"], runMap: `${FLEET}#42`, request: github.request }))
-    .toMatchObject({ ok: true, specs: 49, calls: 75, agentsCalls: 16, agents: { status: "wrote", count: 5 } });
+  expect(await runOnce({ home, repositories, now, runMap: `${FLEET}#42`, request: github.request }))
+    .toMatchObject({ ok: true, specs: 49, calls: 79, agentsCalls: 20, agents: { status: "wrote", count: 5 } });
   expect(github.calls.slice(0, 59).every(({ path }) => !path.includes("/issues/comments"))).toBe(true);
   expect(github.calls.at(-1)?.path).toBe(map);
   expect(JSON.parse(await readFile(file, "utf8"))).toMatchObject({ runMap: [], agents: repositories.map((repository) => ({ repository })) });

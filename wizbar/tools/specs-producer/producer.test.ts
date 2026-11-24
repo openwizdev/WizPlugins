@@ -276,7 +276,7 @@ describe("P1: the request budget", () => {
     // One spec fewer fits exactly: 59 requests.
     answers.set(`repos/${FLEET}/issues?state=open&per_page=100`, { body: specs.slice(0, 57) });
     expect(await runOnce({ home: dir, repositories: [FLEET], request: fakeGitHub(answers).request, now: () => NOW }))
-      .toMatchObject({ ok: true, calls: 59, specs: 57, unchanged: 0 });
+      .toMatchObject({ ok: true, calls: 60, agentsCalls: 1, specs: 57, unchanged: 0 });
   });
 });
 
@@ -350,7 +350,7 @@ describe("#153: --gh, a missing gh and the unchanged count", () => {
     const dir = await home();
     const gh = await fakeGh(dir);
     const args = ["--home", dir, "--repo", FLEET, "--repo", TOOLS, "--gh", gh];
-    expect((await run(args, servicePath)).stdout).toBe(`wrote ${outputV2(dir)} and ${output(dir)}: 0 specs, 6 requests (0 unchanged) · wrote agents.v1.json: 0 live agents · no record authors set for 2 repositories\n`);
-    expect((await run(args, servicePath)).stdout).toBe(`wrote ${outputV2(dir)} and ${output(dir)}: 0 specs, 6 requests (4 unchanged) · wrote agents.v1.json: 0 live agents · no record authors set for 2 repositories\n`);
+    expect((await run(args, servicePath)).stdout).toBe(`wrote ${outputV2(dir)} and ${output(dir)}: 0 specs, 4 of 59 specs requests (0 unchanged) · 2 of 20 agents requests (0 unchanged) · wrote agents.v1.json: 0 live agents · no record authors set for 2 repositories\n`);
+    expect((await run(args, servicePath)).stdout).toBe(`wrote ${outputV2(dir)} and ${output(dir)}: 0 specs, 4 of 59 specs requests (4 unchanged) · 2 of 20 agents requests (0 unchanged) · wrote agents.v1.json: 0 live agents · no record authors set for 2 repositories\n`);
   });
 });

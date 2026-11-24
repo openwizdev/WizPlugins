@@ -13,7 +13,7 @@
 // requests. Any failed read, or a scan that would need more, writes nothing: the
 // last file stays and the run exits 1 naming the reason. Otherwise the file is
 // written whole (temp file, then rename) with `generatedAt` the run's time.
-// The agents scan uses the remaining requests and publishes independently.
+// The agents scan has its own 20-request budget and publishes independently.
 import { execFile } from "node:child_process";
 import { link, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -29,9 +29,9 @@ export interface GitHubResponse { status: number; etag: string | null; next: str
 /** One REST read of `path` (relative to the API root), conditional when `etag` is not null. */
 export type GitHubRequest = (path: string, etag: string | null) => Promise<GitHubResponse>;
 /** A run either wrote the whole file, or wrote nothing and says why. */
-/** `unchanged`: requests GitHub answered 304. They count toward `BUDGET`, not toward GitHub's rate limit. */
+/** `unchanged`: requests GitHub answered 304. They count toward the scan budget, not GitHub's rate limit. */
 type AgentsRun = { status: "wrote"; count: number; truncated: number; unknownAuthors: number; mapUnavailable: boolean } | { status: "kept"; reason: string };
-export type RunResult = { ok: true; calls: number; specs: number; unchanged: number; agents: AgentsRun } | { ok: false; calls: number; error: string };
+export type RunResult = { ok: true; calls: number; specs: number; unchanged: number; agentsCalls: number; agentsUnchanged: number; agents: AgentsRun } | { ok: false; calls: number; error: string };
 
 /** v1 as before #162, a later ticket written as needs-you, so a WizBar from before #162 keeps working (#164 R1). */
 export const OUTPUT = join(".openwiz", "specs.v1.json");
@@ -41,6 +41,7 @@ const AGENTS_CACHE = join(".openwiz", "agents.v1.etags.json");
 export const CACHE = join(".openwiz", "specs.v1.etags.json");
 /** Requests per run (the ticket's "under 60"). A scan that needs more fails loudly. */
 export const BUDGET = 59;
+const AGENTS_BUDGET = 20;
 
 type State = "done" | "building" | "review" | "needs-you" | "yours-later" | "held" | "not-started";
 /** `updatedAt` (#183, v2 only): the issue's `updated_at`, its last activity; absent when the answer has none. */
@@ -356,12 +357,13 @@ export async function runOnce(options: { home: string; repositories: readonly st
       [join(options.home, OUTPUT_V2), `${JSON.stringify({ schema: "openwiz.specs.v2", generatedAt, specs }, null, 2)}\n`],
     ]);
     await writeAllOrNothing([[cachePath, JSON.stringify({ version: 5, pages: reader.pages } satisfies Cache)]]);
-    const agentsReader = new Reader(options.request, await readCache(join(options.home, AGENTS_CACHE)), BUDGET - reader.calls,
-      `no requests left in the ${BUDGET}-request budget`);
+    const agentsReader = new Reader(options.request, await readCache(join(options.home, AGENTS_CACHE)), AGENTS_BUDGET,
+      `no requests left in the ${AGENTS_BUDGET}-request agents budget`);
     const agents = await scanAgents(agentsReader, options.home, repositories, options.authors ?? [], now, generatedAt, options.runMap);
     return {
       ok: true, calls: reader.calls + agentsReader.calls, specs: specs.length,
-      unchanged: reader.unchanged + agentsReader.unchanged, agents,
+      unchanged: reader.unchanged + agentsReader.unchanged,
+      agentsCalls: agentsReader.calls, agentsUnchanged: agentsReader.unchanged, agents,
     };
   } catch (error) {
     return { ok: false, calls: reader.calls, error: error instanceof Error ? error.message : String(error) };
@@ -427,7 +429,9 @@ async function main(argv: readonly string[]): Promise<void> {
         ...(result.agents.mapUnavailable ? ["run map unavailable"] : []),
       ].join(" · ")
       : `kept the last agents file: ${result.agents.reason}`;
-    process.stdout.write(`wrote ${join(home, OUTPUT_V2)} and ${join(home, OUTPUT)}: ${result.specs} specs, ${result.calls} requests (${result.unchanged} unchanged) · ${agents}\n`);
+    const specsUsage = `${result.calls - result.agentsCalls} of ${BUDGET} specs requests (${result.unchanged - result.agentsUnchanged} unchanged)`;
+    const agentsUsage = `${result.agentsCalls} of ${AGENTS_BUDGET} agents requests (${result.agentsUnchanged} unchanged)`;
+    process.stdout.write(`wrote ${join(home, OUTPUT_V2)} and ${join(home, OUTPUT)}: ${result.specs} specs, ${specsUsage} · ${agentsUsage} · ${agents}\n`);
   }
   else process.stderr.write(`kept the last file: ${result.error} (${result.calls} requests)\n`);
   process.exitCode = result.ok ? 0 : 1;
