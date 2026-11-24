@@ -48,10 +48,12 @@ it("counts GitHub rows in the running groups and opens their destinations", asyn
   const groups = within(panel).getByRole("list", { name: "Threads" });
   const specHeader = await within(groups).findByRole("button", { name: "Sample kernel 2" });
   const otherHeader = within(groups).getByRole("button", { name: "Other 1" });
-  expect(panel.querySelector("p")?.textContent).toBe("1 awake · 0 starting · 0 asleep · 2 more on GitHub");
+  expect(panel.querySelector("[data-running-count]")?.textContent).toBe("1 running · 2 more on GitHub");
+  expect(panel.querySelector("[data-states]")?.textContent).toBe("1 awake · 0 starting · 0 asleep");
   const spec = document.getElementById(specHeader.getAttribute("aria-controls")!)!;
   const other = document.getElementById(otherHeader.getAttribute("aria-controls")!)!;
-  expect(within(spec).getByRole("button", { name: /Builder · KN3$/ })).toBeDefined();
+  const localRow = within(spec).getByRole("button", { name: /Builder · KN3.*#903: Sample the reader/ });
+  expect(localRow.getAttribute("title")).toBe("#903: Sample the reader");
   fireEvent.click(specHeader);
   expect(within(spec).queryByRole("button", { name: /Builder · #902/ })).toBeNull();
   fireEvent.click(specHeader);
@@ -63,8 +65,8 @@ it("counts GitHub rows in the running groups and opens their destinations", asyn
   ]);
   expect(screen.queryByText(builder.step)).toBeNull();
   expect(screen.queryByText("Builder · #903")).toBeNull();
-  expect(screen.getByRole("region", { name: "Running threads" }).lastElementChild?.textContent)
-    .toBe(`${coverage} 2 seen on GitHub.`);
+  expect(screen.getByText(`${coverage} 2 seen on GitHub.`)).toBeDefined();
+  expect(panel.querySelector("[data-machines]")?.textContent).toBe("0 cloud, 1 local");
 });
 
 it("shows the coverage line for a ready empty file", async () => {

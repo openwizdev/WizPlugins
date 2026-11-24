@@ -30,6 +30,8 @@ const agents = [
   note(15, "done", "Cursor Claude Opus 5.5 xhigh", 2, { live: false, harness: "Cursor" }),
   note(12, "working", "Gemini 4 Neon Medium", 3),
   note(13, "asking", "GPT-6.2-Sol medium effort", 42, { agent: "reviewer", pr: `https://github.com/${repository}/pull/22` }),
+  note(18, "done", "Gemini Neon, Medium", 35, { live: false }),
+  note(19, "stopped", "GPT-6.2 medium effort", 50, { live: false }),
   note(14, "asking", "neon", 12),
   note(16, "working", "neon", 1),
   note(17, "working", "neon", 1),
@@ -49,7 +51,7 @@ it("inserts Cloud agents after Pinned in a stored order and keeps explicitly mov
   expect(readSectionsOrder('["cloud","pinned","yours","specs"]')).toEqual(["cloud", "pinned", "yours", "specs"]);
 });
 
-it("renders the same Cloud agents as the CLI, including lapsed, finished and note-free entries", async () => {
+it("renders the same Cloud agents as the CLI, folding older done, stopped and lapsed into N earlier", async () => {
   vi.setSystemTime(v4Now);
   const rendered = renderSlot({ component: ThreadInbox }, {
     activeThreadId: null, activeProjectId: null, isCompactViewport: false, onNavigate() {}, searchQuery: "",
@@ -62,19 +64,31 @@ it("renders the same Cloud agents as the CLI, including lapsed, finished and not
     },
   });
   const section = await screen.findByRole("region", { name: "Cloud agents" });
-  const lapsed = within(section).getByRole("button", { name: /lapsed.*on GitHub/ });
   const asking = within(section).getByRole("button", { name: /asking.*on GitHub/ });
-  expect(lapsed.querySelector("[data-matrix]")?.getAttribute("data-matrix")).toBe("idle");
   expect(asking.querySelector("[data-matrix]")?.getAttribute("data-matrix")).toBe("needs-you");
   const header = within(section).getByRole("button", { name: "Cloud agents 2" });
   const frame = section.closest("[data-wizbar-section]")!;
   expect(frame.previousElementSibling?.getAttribute("data-wizbar-section")).toBe("pinned");
   const observed = () => within(section).getAllByRole("button", { name: /on GitHub, opens in browser/ }).map((item) => item.textContent);
+  // Live agents + agents finished in the last 30 minutes are shown; older done, stopped and lapsed are folded.
   expect(observed()).toEqual([
     "Builder · OpenWiz #12Neon · Medium · working · 3m",
     "Builder · OpenWiz #14Neon · asking · 12m",
     "Builder · OpenWiz #15Opus 5.5 · XHigh · done · 2m",
+  ]);
+  expect(within(section).queryByRole("button", { name: /lapsed.*on GitHub/ })).toBeNull();
+  const earlierButton = within(section).getByRole("button", { name: "3 earlier", expanded: false });
+  fireEvent.click(earlierButton);
+  expect(earlierButton.getAttribute("aria-expanded")).toBe("true");
+  const lapsed = within(section).getByRole("button", { name: /lapsed.*on GitHub/ });
+  expect(lapsed.querySelector("[data-matrix]")?.getAttribute("data-matrix")).toBe("idle");
+  expect(observed()).toEqual([
+    "Builder · OpenWiz #12Neon · Medium · working · 3m",
+    "Builder · OpenWiz #14Neon · asking · 12m",
+    "Builder · OpenWiz #15Opus 5.5 · XHigh · done · 2m",
+    "Builder · OpenWiz #18Neon · Medium · done · 35m",
     "Reviewer · OpenWiz #13Sol 6.2 · Medium · lapsed · 42mPR #22",
+    "Builder · OpenWiz #19Sol 6.2 · Medium · stopped · 50m",
   ]);
   fireEvent.click(lapsed);
   expect(rendered.navigateCalls).toEqual([{ method: "openUrl", url: `https://github.com/${repository}/pull/22` }]);
@@ -97,12 +111,41 @@ it("renders the same Cloud agents as the CLI, including lapsed, finished and not
     expect(cli.exitCode).toBe(0);
     const result = JSON.parse(cli.stdout!);
     expect(result).toMatchObject({ status: "ready", active: 2, more: [{ label: "Reviewer · OpenWiz #24" }] });
-    expect(result.rows.map((item: { label: string; detail: string; pull: string | null }) => item.label + item.detail + (item.pull ?? ""))).toEqual(observed());
+    const fmt = (items: { label: string; detail: string; pull: string | null }[]) =>
+      items.map((item) => item.label + item.detail + (item.pull ?? ""));
+    expect([...fmt(result.rows), ...fmt(result.earlier)]).toEqual(observed());
     expect(cli.stdout).not.toContain("sample-archived");
-    expect((await host.harness.behavior.runCli(["agents"])).stdout).toContain("Neon · Medium · working · 3m");
+    const plain = (await host.harness.behavior.runCli(["agents"])).stdout;
+    expect(plain).toContain("Neon · Medium · working · 3m");
+    expect(plain).toContain("3 earlier");
   } finally {
     await host.harness.lifecycle.dispose();
   }
   fireEvent.click(header);
   expect(within(section).queryByText("Builder · OpenWiz #12")).toBeNull();
+});
+
+it("still shows Cloud agents when only earlier entries exist", async () => {
+  vi.setSystemTime(v4Now);
+  const onlyEarlier = JSON.stringify({
+    version: 1,
+    generatedAt: now,
+    agents: [note(21, "done", "Gemini Neon, Medium", 45, { live: false })],
+    runMap: [],
+  });
+  renderSlot({ component: ThreadInbox }, {
+    activeThreadId: null, activeProjectId: null, isCompactViewport: false, onNavigate() {}, searchQuery: "",
+  }, {
+    settings: { wizdeckFactories: bound, sectionsOrder: '["yours","pinned","specs"]' },
+    sidebarThreads: { status: "ready", threads: [row] },
+    rpc: {
+      listLifecycle: () => ({ rows: [] }), specsFile: () => ({ kind: "missing" }),
+      agentsFile: () => ({ kind: "content" as const, text: onlyEarlier }),
+      agentsArchive: () => [], cardModels: () => ({ source: "none", items: [] }),
+    },
+  });
+  const section = await screen.findByRole("region", { name: "Cloud agents" });
+  expect(within(section).getByRole("button", { name: "Cloud agents 0" })).toBeDefined();
+  fireEvent.click(within(section).getByRole("button", { name: "1 earlier", expanded: false }));
+  expect(within(section).getByRole("button", { name: /Builder · OpenWiz #21, Neon · Medium · done · 45m/ })).toBeDefined();
 });

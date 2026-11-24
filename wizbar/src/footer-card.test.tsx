@@ -241,7 +241,11 @@ describe("S4: no bolt; N running with its hover card", () => {
     render();
     fireEvent.pointerEnter(counter().parentElement!);
     const region = card()!;
-    expect(within(region).getByText(cardSummary(ready))).toBeTruthy();
+    expect(region.querySelector("[data-running-count]")?.textContent).toBe(`${ready.running.total} running`);
+    expect(region.querySelector("[data-waiting-on-you]")?.textContent).toBe(`${ready.waitingOnYou} waiting on you`);
+    expect(region.querySelector("[data-machines]")?.textContent).toBe(
+      `${ready.running.cloud} cloud, ${ready.running.local} local, ${ready.running.unknown} unknown`,
+    );
     expect([...region.querySelectorAll("[data-harness]")].map((el) => [el.getAttribute("data-harness"), el.getAttribute("data-count")]))
       .toEqual(ready.harness.map((h) => [h.providerId, String(h.count)]));
     await waitFor(() => expect(region.querySelectorAll("[data-spec-name]").length).toBe(2));
@@ -267,42 +271,46 @@ describe("S4: no bolt; N running with its hover card", () => {
     ]);
   });
 
-  // catches (0.5 E): the harness split as a list of rows with no bar, or a bar not split by the counts.
-  it("shows the harness split as one bar, then each harness and its count on one line", () => {
+  it("shows each harness name beside its logo and count on one line without a split bar", () => {
     render();
     fireEvent.pointerEnter(counter().parentElement!);
-    const bar = card()!.querySelector("[data-harness-bar]")!;
-    expect([...bar.children].map((el) => [el.getAttribute("data-harness-segment"), (el as HTMLElement).style.flexGrow]))
-      .toEqual([["harness-a", "6"], ["harness-b", "3"]]);
-    const names = [...card()!.querySelectorAll("[data-harness]")].map((el) => el.textContent);
-    expect(names).toEqual(["Harness A 6", "Harness B 3"]);
+    expect(card()!.querySelector("[data-harness-bar]")).toBeNull();
+    const counts = [...card()!.querySelectorAll("[data-harness]")].map((el) => [
+      el.getAttribute("data-harness"), el.textContent, el.querySelector('[role="img"]')?.getAttribute("aria-label"),
+    ]);
+    expect(counts).toEqual([
+      ["harness-a", "Harness A 6", "harness-a"],
+      ["harness-b", "Harness B 3", "harness-b"],
+    ]);
     expect(card()!.querySelector("[data-harness]")!.parentElement!.style.flexDirection).not.toBe("column");
   });
 
-  it("keeps three harness labels in one keyboard-scrollable row", () => {
-    render(v4Threads.map((row) => row.id === "thr_v4_untitled" ? { ...row, providerId: "harness-c" } : row));
+  it("shows Codex and Claude Code names beside their logos and counts, wrapping if needed", () => {
+    render(v4Threads.map((row) => ({
+      ...row,
+      providerId: row.id === "thr_v4_untitled" ? "harness-c"
+        : row.providerId === "harness-a" ? "codex" : "claude-code",
+    })));
     fireEvent.pointerEnter(counter().parentElement!);
     const legend = within(card()!).getByRole("list", { name: "Harness" });
     const entries = within(legend).getAllByRole("listitem");
-    expect(entries.map((entry) => entry.textContent)).toEqual(["Harness A 5", "Harness B 3", "Harness C 1"]);
-    expect(legend.style.flexWrap).toBe("nowrap");
-    expect(legend.style.overflowX).toBe("auto");
+    expect(entries.map((entry) => entry.textContent)).toEqual(["Codex 5", "Claude Code 3", "Harness C 1"]);
+    expect(legend.style.flexWrap).toBe("wrap");
     expect(entries.map((entry) => entry.style.flexShrink)).toEqual(["0", "0", "0"]);
-    expect(legend.tabIndex).toBe(0);
+    // The legend wraps, so it is no longer a scroll target and not a tab stop.
+    expect(legend.hasAttribute("tabindex")).toBe(false);
   });
 
-  // catches (#159 R2): the Claude Code segment mixed from --warning, so a theme's alert colour leaks into a bar of
-  // ordinary running sessions; or its replacement drawn the same as another harness's segment.
-  it("colours the harness segments from neutral host tones, never the warning, each harness apart", () => {
-    const named: Record<string, string> = { "harness-a": "claude-code", "harness-b": "codex" };
-    render(v4Threads.map((t) => ({ ...t, providerId: named[t.providerId] ?? t.providerId })));
+  it("shows waiting on you in the warning colour only when non-zero", () => {
+    render();
     fireEvent.pointerEnter(counter().parentElement!);
-    const segments = [...card()!.querySelector("[data-harness-bar]")!.children] as HTMLElement[];
-    expect(segments.map((el) => el.getAttribute("data-harness-segment"))).toEqual(["claude-code", "codex"]);
-    const colours = segments.map((el) => el.style.background);
-    expect(colours.filter((c) => c.includes("--warning"))).toEqual([]);
-    expect(colours.every((c) => c.length > 0)).toBe(true);
-    expect(new Set(colours).size).toBe(colours.length);
+    const waiting = card()!.querySelector("[data-waiting-on-you]") as HTMLElement;
+    expect(waiting?.textContent).toBe("1 waiting on you");
+    expect(waiting?.style.color).toContain("--warning");
+    cleanup();
+    render(v4Threads.map((t) => ({ ...t, hasPendingInteraction: false })));
+    fireEvent.pointerEnter(counter().parentElement!);
+    expect(card()!.querySelector("[data-waiting-on-you]")).toBeNull();
   });
 
   // catches (0.5 E): the half-width card; it must fill the sidebar, inset 8 px each side.
@@ -416,19 +424,14 @@ describe("WB4-10: the running card stays reachable", () => {
 
   // catches (#1532): the card mounted before its trigger, so Tab from the trigger leaves the card
   // (and the blur closes it), or thread buttons that hide the focus ring.
-  it("Tab reaches the legend and then the first group with visible focus while the card stays open", () => {
+  it("Tab goes from the trigger to the first group with visible focus while the card stays open", () => {
     render();
     act(() => trigger().focus());
     expect(card()).toBeTruthy();
     const order = tabbables();
-    const legend = within(card()!).getByRole("list", { name: "Harness" });
     const first = within(card()!).getAllByRole("button")[0]!;
-    expect(order.slice(order.indexOf(trigger()) + 1, order.indexOf(trigger()) + 3)).toEqual([legend, first]);
-    fireEvent.blur(trigger(), { relatedTarget: legend });
-    act(() => legend.focus());
-    expect(card()).toBeTruthy();
-    expect(document.activeElement).toBe(legend);
-    fireEvent.blur(legend, { relatedTarget: first });
+    expect(order[order.indexOf(trigger()) + 1]).toBe(first);
+    fireEvent.blur(trigger(), { relatedTarget: first });
     act(() => first.focus());
     expect(card()).toBeTruthy();
     expect(document.activeElement).toBe(first);

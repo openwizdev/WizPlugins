@@ -4,6 +4,7 @@ const primary = "var(--primary, #c0ff04)";
 const sidebar = "var(--sidebar, #161616)";
 const warning = "var(--warning, #fc8c45)";
 const mutedText = "var(--muted-foreground, #b7b7b7)";
+const border = "var(--border, #292929)";
 /**
  * Done (0.5.x C2, #155): the host's success colour, else a neutral, never the warning or the accent,
  * so done stays apart from needs-you whatever `--primary` or a theme tint is.
@@ -16,8 +17,8 @@ const success = `var(--success, ${mutedText})`;
 const done = (percent: number, into: string) => `color-mix(in oklab, ${success} ${percent}%, ${into})`;
 export const tokens = {
   accent: primary,
-  /** The done rule line beside a section's name: quieter than the done dots. */
-  rule: done(40, sidebar),
+  /** The neutral border rule line beside a section's name. */
+  rule: border,
   /** The owner's "olive": done dots and done marks. */
   mutedAccent: done(55, sidebar),
   /** "N done in the last hour": exactly the host's text, so its contrast is the host's own; the dots carry "done" (#155 lead decision). */
@@ -26,7 +27,7 @@ export const tokens = {
   brightOlive: done(85, sidebar),
   /** Needs-you only. */
   warning,
-  border: "var(--border, #292929)",
+  border,
   mutedText,
   /** A1 (#186): an active spec's name, the host's text. An inactive one's is `mutedText`. */
   text: "var(--foreground)",

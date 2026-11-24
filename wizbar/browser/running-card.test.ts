@@ -163,12 +163,13 @@ it.skipIf(!browserPath).each([600, 900])("shows all 100 threads in a %i px windo
     const summary = await card.locator("p").evaluateAll((lines) =>
       lines.map((line) => ({ text: line.textContent, height: line.getBoundingClientRect().height, fits: line.scrollWidth <= line.clientWidth })));
     expect.soft(summary).toEqual([
+      { text: "100 running", height: 30, fits: true },
       { text: "100 awake · 0 starting · 0 asleep", height: 20, fits: true },
-      { text: "0 waiting on you · 0 cloud, 100 local", height: 20, fits: true },
       expect.objectContaining({
         text: "Cloud agents in their own sandbox may be missing from this list. GitHub agent data is unavailable.",
         fits: true,
       }),
+      { text: "0 cloud, 100 local", height: 18, fits: true },
     ]);
     if (evidence) await page.screenshot({ path: resolve(evidence, `${height}-top.png`) });
     await list.hover();
@@ -191,7 +192,8 @@ it.skipIf(!browserPath).each([600, 900])("shows all 100 threads in a %i px windo
 
     const rows = Array.from({ length: 100 }, (_, index) => `sample-${index + 1}`);
     const controls = rows.length + 3; // Three expanded group headings.
-    const forward = await tabThroughRows(page, list, "Tab", controls);
+    // Focus already sits on the first group heading (the harness legend is not a tab stop).
+    const forward = await tabThroughRows(page, list, "Tab", controls - 1);
     expect.soft(forward.visited).toEqual(rows);
     expect.soft(forward.obscured, "forward Tab keeps each row clear").toEqual([]);
     const backward = await tabThroughRows(page, list, "Shift+Tab", controls - 1);
@@ -208,14 +210,18 @@ it.skipIf(!browserPath)("shows all large machine totals without clipping or elli
     await page.goto(`${url}?large-summary=1`);
     await page.getByRole("button", { name: "360 running" }).hover();
     const card = page.getByRole("region", { name: "Running threads" });
-    const summary = card.getByText("120 waiting on you · 120 cloud, 120 local, 120 unknown");
-    await summary.waitFor({ state: "visible" });
-    const layout = await summary.evaluate((line) => ({
-      fitsWidth: line.scrollWidth <= line.clientWidth,
-      fitsHeight: line.scrollHeight <= line.clientHeight,
-      textOverflow: getComputedStyle(line).textOverflow,
-    }));
-    expect(layout).toEqual({ fitsWidth: true, fitsHeight: true, textOverflow: "clip" });
+    const waiting = card.getByText("120 waiting on you");
+    const machines = card.getByText("120 cloud, 120 local, 120 unknown");
+    await waiting.waitFor({ state: "visible" });
+    await machines.waitFor({ state: "visible" });
+    for (const line of [waiting, machines]) {
+      const layout = await line.evaluate((node) => ({
+        fitsWidth: node.scrollWidth <= node.clientWidth,
+        fitsHeight: node.scrollHeight <= node.clientHeight,
+        textOverflow: getComputedStyle(node).textOverflow,
+      }));
+      expect(layout).toEqual({ fitsWidth: true, fitsHeight: true, textOverflow: "clip" });
+    }
   } finally {
     await page.close();
   }

@@ -275,15 +275,17 @@ describe("yoursThreads", () => {
     expect(yoursThreads([row], v4SpecsFile, [row]).map((t) => t.id)).toEqual(shown ? ["thr_x"] : []);
   });
 
-  // catches: a fleet loop run let into Unread because it is unread, a loop of a repository outside the
-  // binding hidden, or a near-miss title (another loop, extra words) hidden by a loose match. Every row
+  // catches: a fleet loop run let into Yours because it is unread or for a repository outside the
+  // binding, or a near-miss title (another loop, extra words) hidden by a loose match. Every row
   // carries `originKind` and `originPluginId` null, as the owner's host answers for every thread.
   it.each([
     ["launch-fleet example/sample-plans", false],
     ["launch-fleet wakes example/sample-plans", false],
     ["launch-fleet #181 example/sample-plans", false],
     ["launch-fleet wakes example/sample-tools", false],
-    ["launch-fleet wakes example/elsewhere", true],
+    ["launch-fleet wakes example/elsewhere", false],
+    ["launch-fleet example/elsewhere", false],
+    ["launch-fleet #42 example/elsewhere", false],
     ["launch-fleet #0181 example/sample-plans", true],
     ["launch-fleet wakes example/sample-plans now", true],
     ["Re: launch-fleet example/sample-plans", true],

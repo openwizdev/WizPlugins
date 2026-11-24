@@ -1,4 +1,5 @@
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk";
+import { repositoryPattern } from "./agents/format";
 import type { SpecsFileV4 } from "./fixtures/v4";
 import { matchSpec, type SpecsThreadRow } from "./specs/rows";
 
@@ -155,15 +156,15 @@ export function hasSomethingNew(thread: Pick<PluginSidebarThread, "isUnread" | "
 const fleetWakeTitle = /^Fleet #[1-9][0-9]*: /;
 
 /**
- * A fleet loop run's title: exactly one of the fleet skill's loop names for one of
- * `repositories` (`launch-fleet <owner>/<repo>`, `launch-fleet wakes <owner>/<repo>`,
+ * A fleet loop run's title: one of the fleet skill's loop names for any
+ * repository (`launch-fleet <owner>/<repo>`, `launch-fleet wakes <owner>/<repo>`,
  * `launch-fleet #<N> <owner>/<repo>`). The host marks no loop run (SDK 0.6.33's
  * `originKind` and `originPluginId` are null on every thread), so the title is the
  * only record; any other loop's run is not recognised.
  */
-export function isFleetLoopTitle(title: string, repositories: readonly string[]): boolean {
+export function isFleetLoopTitle(title: string, _repositories?: readonly string[]): boolean {
   const match = /^launch-fleet (?:wakes |#[1-9][0-9]* )?(.+)$/.exec(title);
-  return match !== null && repositories.includes(match[1]!);
+  return match !== null && repositoryPattern.test(match[1]!);
 }
 
 export type YoursThread = SpecsThreadRow & Pick<PluginSidebarThread, "isUnread" | "indicator">;

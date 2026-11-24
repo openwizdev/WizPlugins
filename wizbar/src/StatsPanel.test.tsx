@@ -51,6 +51,7 @@ afterEach(() => { cleanup(); fixtureFeed.current = null; settingsFeed.current = 
 
 const lines = () => [...(screen.queryByRole("region", { name: "Running threads" })?.querySelectorAll("p") ?? [])].map((p) => p.textContent);
 const agentCoverage = "Cloud agents in their own sandbox may be missing from this list. GitHub agent data is unavailable.";
+const fixtureCount = "4 running";
 const fixtureLine = "3 awake · 1 starting · 8 asleep";
 
 describe("V3: footer stats panel", () => {
@@ -67,7 +68,7 @@ describe("V3: footer stats panel", () => {
         }),
       } as never,
     });
-    expect(lines()).toEqual([fixtureLine, "3 waiting on you · 1 cloud, 2 local, 1 unknown", agentCoverage]);
+    expect(lines()).toEqual([fixtureCount, fixtureLine, "3 waiting on you", agentCoverage, "1 cloud, 2 local, 1 unknown"]);
     expect(await screen.findByRole("button", { name: /Sample refine command palette.*Opus 5\.5 · High/ })).toBeDefined();
     expect(screen.getByRole("button", { name: /Sample audit shortcuts$/ })).toBeDefined();
     expect(rendered.sdkCalls).toEqual([]);
@@ -86,7 +87,8 @@ describe("V3: footer stats panel", () => {
 
   it("drops its numbers when the realtime connection is lost", async () => {
     const rendered = renderSlot(panel, props, { sidebarThreads: { status: "ready", threads: fresh() } });
-    expect(lines()[0]).toBe(fixtureLine);
+    expect(lines()[0]).toBe(fixtureCount);
+    expect(lines()[1]).toBe(fixtureLine);
     await rendered.setRealtimeConnectionState("reconnecting");
     expect(lines()[0]).toBe("Stats unavailable");
     await rendered.setRealtimeConnectionState("connected");
@@ -122,7 +124,8 @@ describe("V3: footer stats panel", () => {
     expect(lines()[0]).toBe("Stats unavailable");
     fixtureFeed.current = { status: "ready", threads: changed() };
     rendered.rerender(createElement(View, { open: true }));
-    expect(lines()[0]).toBe(fixtureLine);
+    expect(lines()[0]).toBe(fixtureCount);
+    expect(lines()[1]).toBe(fixtureLine);
     expect(screen.getByRole("status", { name: "4 running" })).toBeDefined();
   });
 
@@ -142,15 +145,16 @@ describe("V3: footer stats panel", () => {
 
   // R3: duplicates are compared on the running rule's facts, never the indicator.
   it.each([
-    ["agree on runtime work but differ only in indicator", "none", "active", "1 awake · 0 starting · 0 asleep", "1 running"],
-    ["genuinely conflict on runtime work", "runtime", "idle", "Stats unavailable", null],
-  ])("counts duplicate rows that %s by the running rule", (_, indicator, runtimeStatus, panelLine, lineName) => {
+    ["agree on runtime work but differ only in indicator", "none", "active", "1 running", "1 awake · 0 starting · 0 asleep", "1 running"],
+    ["genuinely conflict on runtime work", "runtime", "idle", "Stats unavailable", null, null],
+  ])("counts duplicate rows that %s by the running rule", (_, indicator, runtimeStatus, panelLine, statesLine, lineName) => {
     const row = { ...v3Threads.find(({ id }) => id === "thr_v3_pinned_idle")!, status: "active" as const, runtimeStatus: "active" as const, indicator: "runtime" as const };
     const copy = { ...row, indicator, runtimeStatus } as PluginSidebarThread;
     renderSlot({ component: () => createElement("div", null, createElement(FooterCounter), createElement(Panel, props)) }, {}, {
       sidebarThreads: { status: "ready", threads: [row, copy] },
     });
     expect(lines()[0]).toBe(panelLine);
+    if (statesLine) expect(lines()[1]).toBe(statesLine);
     if (lineName) expect(screen.getByRole("status", { name: lineName })).toBeDefined();
     else expect(screen.queryByRole("status", { name: /running$/ })).toBeNull();
   });

@@ -1118,13 +1118,14 @@ describe("round 5 shelves", () => {
   // The heading's rule: the last thing in the shelf's header line.
   const rule = (region: HTMLElement) => region.querySelector<HTMLElement>(":scope > h2 > span:last-child, button[aria-expanded] > span:last-child")!;
 
-  // catches: a shelf left on the grey border rule, or on the text olive, while Specs uses its quieter rule olive.
+  // catches: a shelf whose rule diverges from the neutral border rule token.
   // E1 (#187): Settled is a quiet link with no rule now, tested in the E1 block.
-  it.each(["Pinned", "Yours", "Snoozed", "Muted"])("draws the %s rule in the Specs rule olive", async (name) => {
+  it.each(["Pinned", "Yours", "Snoozed", "Muted"])("draws the %s rule in the neutral border rule", async (name) => {
     renderShelves();
     const region = await screen.findByRole("region", { name });
     const specs = await screen.findByRole("region", { name: "Specs" });
     const specsRule = specs.querySelector<HTMLElement>("[data-rule-line]")!;
+    expect(tokens.rule).toBe(tokens.border);
     expect(specsRule.style.background).toBe(tokens.rule);
     expect(rule(region).style.background).toBe(specsRule.style.background);
   });
@@ -1747,10 +1748,15 @@ it("keeps Yours options across mounts and clears both filters in one click", asy
   const first = mount();
   const open = async () => {
     const trigger = await screen.findByRole("button", { name: "Sort and filter Yours" });
+    expect(trigger.className).toContain("opacity-0");
+    expect(trigger.className).toContain("group-hover/header:opacity-100");
+    expect(trigger.className).toContain("group-has-[:focus-visible]/header:opacity-100");
     trigger.focus();
     expect(document.activeElement).toBe(trigger);
     expect(trigger.hasAttribute("aria-controls")).toBe(false);
     fireEvent.click(trigger);
+    expect(trigger.className).toContain("opacity-100");
+    expect(trigger.className).not.toContain("opacity-0");
     const panelId = trigger.getAttribute("aria-controls");
     expect(panelId && document.getElementById(panelId)).toBeTruthy();
     return trigger;
