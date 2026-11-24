@@ -334,7 +334,7 @@ describe("0.5 C: the rule, the spec rows and the open panel", () => {
     const success = "var(--success, var(--muted-foreground, #b7b7b7))";
     const sidebar = "var(--sidebar, #161616)";
     const roles: Record<string, string> = {
-      rule: `color-mix(in oklab, ${success} 40%, ${sidebar})`,
+      rule: "var(--border, #292929)",
       mutedAccent: `color-mix(in oklab, ${success} 55%, ${sidebar})`,
       brightOlive: `color-mix(in oklab, ${success} 85%, ${sidebar})`,
       doneNote: "var(--foreground)",
@@ -726,6 +726,11 @@ describe("S1: the Specs sort", () => {
       ["needs-you", "Needs you first"], ["recent", "Recently active"], ["closest", "Closest to done"], ["newest", "Newest"],
     ]);
     expect(within(region).getByRole("heading").contains(picker(region))).toBe(false);
+    const wrap = region.querySelector<HTMLElement>("[data-sort-picker]")!;
+    expect(wrap.className).toContain("opacity-0");
+    expect(wrap.className).toContain("group-hover/header:opacity-100");
+    expect(wrap.className).toContain("group-has-[:focus-visible]/header:opacity-100");
+    expect(wrap.className).toContain("focus-within:opacity-100");
   });
 
   // catches: a picker out of the tab order, a choice that waits for the save to show, or a write touching other keys.
