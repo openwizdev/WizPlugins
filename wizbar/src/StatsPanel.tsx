@@ -327,7 +327,6 @@ export function StatsPanel({ rows, stale = false }: { rows: readonly PluginSideb
   const file = specs?.status === "ready" ? specs.file : null;
   const agents = useAgentsRead(now);
   const stats = computeStatsV4(rows, file, models, now, Intl.DateTimeFormat().resolvedOptions().timeZone, agents);
-  const resolved = cardRowLabels(rows ?? [], file, now);
   const sortedSpecs = file ? specRows(file, active, [], now, null, sort).specs : [];
   const resolved = cardRowLabels(active, sortedSpecs);
   const threads = useCardThreads(stats.threads);

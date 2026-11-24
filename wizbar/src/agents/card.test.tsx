@@ -42,11 +42,19 @@ function card(agents: readonly GitHubAgent[] | null, generatedAt = now) {
 
 afterEach(() => { cleanup(); vi.useRealTimers(); });
 
-it("shows two unseen GitHub rows, groups by ticket and opens their destinations", async () => {
+it("counts GitHub rows in the running groups and opens their destinations", async () => {
   const rendered = card([builder, reviewer, matched, { ...builder, commentId: 14 }]);
-  expect(await screen.findByText("1 running · 2 more on GitHub")).toBeDefined();
-  const spec = screen.getByRole("list", { name: "Sample kernel" });
-  const other = screen.getByRole("list", { name: "Other" });
+  const panel = screen.getByRole("region", { name: "Running threads" });
+  const groups = within(panel).getByRole("list", { name: "Threads" });
+  const specHeader = await within(groups).findByRole("button", { name: "Sample kernel 2" });
+  const otherHeader = within(groups).getByRole("button", { name: "Other 1" });
+  expect(panel.querySelector("p")?.textContent).toBe("1 awake · 0 starting · 0 asleep · 2 more on GitHub");
+  const spec = document.getElementById(specHeader.getAttribute("aria-controls")!)!;
+  const other = document.getElementById(otherHeader.getAttribute("aria-controls")!)!;
+  expect(within(spec).getByRole("button", { name: "Working Builder · KN3" })).toBeDefined();
+  fireEvent.click(specHeader);
+  expect(within(spec).queryByRole("button", { name: /Builder · #902/ })).toBeNull();
+  fireEvent.click(specHeader);
   fireEvent.click(within(spec).getByRole("button", { name: /Builder · #902.*Antigravity · Gemini 4 Neon Medium/ }));
   fireEvent.click(within(other).getByRole("button", { name: /Reviewer · #990.*Cursor · Sample Model High/ }));
   expect(rendered.navigateCalls).toEqual([
