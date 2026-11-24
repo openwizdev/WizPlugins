@@ -27,7 +27,7 @@ const note = (n: number, state: string, model: string, age: number, more = {}) =
   updatedAt: stamp(age), time: stamp(age), commentId: n, harness: "Synthetic", step: "Ran the fixture", ...more,
 });
 const agents = [
-  note(15, "done", "claude-opus-5-5", 2, { live: false }),
+  note(15, "done", "Cursor Claude Opus 5.5 xhigh", 2, { live: false, harness: "Cursor" }),
   note(12, "working", "Gemini 4 Neon Medium", 3),
   note(13, "asking", "GPT-6.2-Sol medium effort", 42, { agent: "reviewer", pr: `https://github.com/${repository}/pull/22` }),
   note(14, "asking", "neon", 12),
@@ -73,7 +73,7 @@ it("renders the same Cloud agents as the CLI, including lapsed, finished and not
   expect(observed()).toEqual([
     "Builder · OpenWiz #12Neon · Medium · working · 3m",
     "Builder · OpenWiz #14Neon · asking · 12m",
-    "Builder · OpenWiz #15Opus 5.5 · done · 2m",
+    "Builder · OpenWiz #15Opus 5.5 · XHigh · done · 2m",
     "Reviewer · OpenWiz #13Sol 6.2 · Medium · lapsed · 42mPR #22",
   ]);
   fireEvent.click(lapsed);
