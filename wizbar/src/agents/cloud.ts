@@ -13,11 +13,13 @@ const labelFor = (role: keyof typeof roles, repository: string, number: string |
 
 export function cloudModel(value: string): string {
   const trimmed = value.trim();
-  const normalized = trimmed.toLowerCase().replace(/[-_]/g, " ");
+  const normalized = trimmed.toLowerCase()
+    .replace(/[-_]/g, " ")
+    .replace(/^(?:codex|claude(?:\s+code)?|antigravity)\s+/, "");
   const effort = /\b(low|medium|high|xhigh|max|ultra)\s*(?:effort)?$/.exec(normalized)?.[1];
   const name = /^(?:gemini\s+[\d.]+\s+)?neon(?:\s|$)/.test(normalized) ? "Neon"
     : /^(?:gpt\s+)?6\.2\s+sol(?:\s|$)|^sol\s+6\.2(?:\s|$)/.test(normalized) ? "Sol 6.2"
-    : /^(?:claude\s+)?opus\s+5[. ]5(?:\s|$)/.test(normalized) ? "Opus 5.5" : null;
+    : /^opus\s+5[. ]5(?:\s|$)/.test(normalized) ? "Opus 5.5" : null;
   if (!name) return trimmed;
   return effort ? `${name} · ${effort[0].toUpperCase()}${effort.slice(1)}` : name;
 }
