@@ -204,7 +204,7 @@ are in the [v0.3 sidebar contract](contracts/sidebar-v3.v1.md) and the
   Cloudroom theme you use; a literal colour appears only as the fallback for a
   missing variable.
 - **CLI.** `wizbar specs`, `wizbar spec <n> --open|--close`,
-  `wizbar section <pinned|specs|yours> --collapse|--expand`, the extended
+  `wizbar section <pinned|cloud|specs|yours> --collapse|--expand`, the extended
   `wizbar stats` and the read-only `wizbar models <id>... [--raw]` return what
   the sidebar shows, as JSON with `--json`.
 
@@ -307,7 +307,7 @@ wizbar stats [--json]
 wizbar agents [--json]
 wizbar specs [--sort <needs-you|recent|closest|newest>] [--json]
 wizbar spec <n> (--open | --close) [--json]
-wizbar section <pinned|specs|yours> (--collapse | --expand) [--json]
+wizbar section <pinned|cloud|specs|yours> (--collapse | --expand) [--json]
 wizbar models <id>... [--raw] [--json]
 wizbar threads [--search <text>] [--sort <newest|activity|status|harness|model|effort>] [--status <s>] [--harness <h>] [--model <m>] [--effort <e>] [--all] [--json]
 ```
