@@ -1,6 +1,6 @@
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk";
 import type { SpecsFileV4 } from "./fixtures/v4";
-import { matchSpec } from "./specs/rows";
+import { matchSpec, type SpecsThreadRow } from "./specs/rows";
 
 /**
  * The sort that defines this sidebar: newest thread on top, and NOTHING moves
@@ -19,22 +19,21 @@ export function sortByCreatedAtDescending<
   );
 }
 
-export function threadDisplayTitle(thread: PluginSidebarThread): string {
+export function threadDisplayTitle(thread: Pick<PluginSidebarThread, "title" | "titleFallback">): string {
   const title = thread.title?.trim();
   if (title) return title;
   const fallback = thread.titleFallback?.trim();
   return fallback ? fallback : "Untitled thread";
 }
 
-/** Substring match on the visible title only, preserving the incoming order. */
-export function searchThreadsByTitle(
-  threads: readonly PluginSidebarThread[],
-  query: string,
-): PluginSidebarThread[] {
+/** Substring match on the title or first prompt, preserving the incoming order. */
+export function searchThreadsByTitle<T extends Pick<PluginSidebarThread, "title" | "titleFallback">>(
+  threads: readonly T[], query: string,
+): T[] {
   const normalized = query.trim().toLowerCase();
   if (normalized.length === 0) return [...threads];
   return threads.filter((thread) =>
-    threadDisplayTitle(thread).toLowerCase().includes(normalized),
+    [threadDisplayTitle(thread), thread.titleFallback].some((title) => title?.toLowerCase().includes(normalized)),
   );
 }
 
@@ -81,9 +80,9 @@ export function partitionPinned(threads: readonly PluginSidebarThread[]): {
  * (parent archived, deleted, or filtered out by the project scope) stays in
  * the list, because hiding it would make it unreachable everywhere.
  */
-export function hideChildrenOfVisibleParents(
-  threads: readonly PluginSidebarThread[],
-): PluginSidebarThread[] {
+export function hideChildrenOfVisibleParents<T extends Pick<PluginSidebarThread, "id" | "parentThreadId">>(
+  threads: readonly T[],
+): T[] {
   const visibleIds = new Set(threads.map((thread) => thread.id));
   return threads.filter(
     (thread) =>
@@ -148,7 +147,7 @@ export function sortPinned<T extends PinnedSortable>(threads: readonly T[]): T[]
 const attentionIndicators: ReadonlySet<string> = new Set(["unread-error", "unread-success", "waiting-for-input", "queued-failed"]);
 
 /** Something new for the owner: `isUnread`, a pending question, or a host attention marker. */
-export function hasSomethingNew(thread: PluginSidebarThread): boolean {
+export function hasSomethingNew(thread: Pick<PluginSidebarThread, "isUnread" | "hasPendingInteraction" | "indicator">): boolean {
   return thread.isUnread || thread.hasPendingInteraction || attentionIndicators.has(thread.indicator);
 }
 
@@ -167,23 +166,20 @@ export function isFleetLoopTitle(title: string, repositories: readonly string[])
   return match !== null && repositories.includes(match[1]!);
 }
 
-/**
- * E2 (#188), Unread (sidebar-v3.v1.md section 10): of `threads`, in their order,
- * those that match no spec (specs-section section 3, against `rows`, every
- * sidebar row), are not fleet wakes and are not fleet loop runs for
- * `repositories`, and have something new for the owner themselves or in a child
- * hidden under them (`hiddenChildren`, shown in the parent's chip) that would
- * itself qualify. With no specs file nothing matches a spec.
- */
-export function unreadThreads<T extends PluginSidebarThread>(
-  threads: readonly T[], file: SpecsFileV4 | null, rows: readonly PluginSidebarThread[],
+export type YoursThread = SpecsThreadRow & Pick<PluginSidebarThread, "isUnread" | "indicator">;
+
+/** Includes top-level threads and the attention rows inherited from Unread. */
+export function yoursThreads<T extends YoursThread>(
+  threads: readonly T[], file: SpecsFileV4 | null, rows: readonly YoursThread[],
   repositories: readonly string[] = [],
-  hiddenChildren: readonly PluginSidebarThread[] = [],
+  hiddenChildren: readonly YoursThread[] = [],
 ): T[] {
-  const eligible = (thread: PluginSidebarThread) => !fleetWakeTitle.test(thread.displayTitle)
+  const eligible = (thread: YoursThread) => !fleetWakeTitle.test(thread.displayTitle)
     && !isFleetLoopTitle(thread.displayTitle, repositories)
     && (file === null || matchSpec(file, thread, rows) === null);
-  const qualifies = (thread: PluginSidebarThread) => hasSomethingNew(thread) && eligible(thread);
-  const newsUnder = new Set(hiddenChildren.filter(qualifies).map((child) => child.parentThreadId));
-  return threads.filter((thread) => eligible(thread) && (hasSomethingNew(thread) || newsUnder.has(thread.id)));
+  const newsUnder = new Set(hiddenChildren
+    .filter((child) => hasSomethingNew(child) && eligible(child))
+    .map((child) => child.parentThreadId));
+  return threads.filter((thread) => eligible(thread) &&
+    (thread.parentThreadId === null || hasSomethingNew(thread) || newsUnder.has(thread.id)));
 }

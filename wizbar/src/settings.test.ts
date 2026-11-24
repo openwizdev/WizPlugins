@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createFakePluginHost, type FakePluginHost } from "@get-bb/plugin-sdk/testing";
 import plugin from "./server";
 import type { BbPluginApi } from "@get-bb/plugin-sdk";
-import { v6NewSettingDefaults, v6SpecsSortCases, v6Store050 } from "./fixtures/v6";
+import { v6SpecsSortCases, v6Store050 } from "./fixtures/v6";
 
 // N1: the real backend must declare writable keys in the host's persistent store.
 // App SDK fakes alone would incorrectly pass if server declaration were omitted.
@@ -31,10 +31,12 @@ describe("N1: actual WizBar settings declarations and persistent reload", () => 
     const descriptors = host.harness.inspection.registrations.settingsDescriptors;
     expect(Object.keys(descriptors).sort()).toEqual([
       "childrenChipEnabled", "footerCountEnabled", "machineIconsEnabled", "parentChipEnabled", "sectionsCollapsed",
-      "sectionsOrder", "specsOpen", "specsSort", "wizdeckFactories", "wizdeckGithubToken",
+      "sectionsOrder", "specsOpen", "specsSort", "threadsFilter", "threadsSort", "wizdeckFactories", "wizdeckGithubToken",
     ]);
     expect(descriptors.specsSort).toMatchObject({ type: "string", default: "needs-you" });
-    expect(descriptors.sectionsOrder).toMatchObject({ type: "string", default: "[\"pinned\",\"specs\",\"unread\"]" });
+    expect(descriptors.sectionsOrder).toMatchObject({ type: "string", default: "[\"pinned\",\"specs\",\"yours\"]" });
+    expect(descriptors.threadsSort).toMatchObject({ type: "string", default: "newest" });
+    expect(descriptors.threadsFilter).toMatchObject({ type: "string", default: "{}" });
     expect(descriptors.specsOpen).toMatchObject({ type: "string", default: "[]" });
     expect(descriptors.footerCountEnabled).toMatchObject({ type: "boolean", label: "Footer count", default: true });
     expect(descriptors.machineIconsEnabled).toMatchObject({ type: "boolean", label: "Cloud/Local row icons", default: true });
@@ -92,10 +94,10 @@ describe("N1: actual WizBar settings declarations and persistent reload", () => 
     expect((await host.harness.behavior.runCli(["section", "inbox", "--collapse", "--json"])).exitCode).toBe(0);
     host = await host.harness.lifecycle.reload(factory);
     hosts.push(host);
-    expect(await read()).toEqual({ ...before, sectionsCollapsed: "[\"unread\"]" });
+    expect(await read()).toEqual({ ...before, sectionsCollapsed: "[\"yours\"]" });
     expect(JSON.parse((await host.harness.behavior.runCli(["section", "specs", "--collapse", "--json"])).stdout!))
       .toEqual({ section: "specs", collapsed: true });
-    expect(await read()).toEqual({ ...before, sectionsCollapsed: "[\"unread\",\"specs\"]" });
+    expect(await read()).toEqual({ ...before, sectionsCollapsed: "[\"yours\",\"specs\"]" });
   });
 
   // C0 (#182), Q5: a 0.5.0 store must come back whole in 0.6, with the new keys at their defaults.
@@ -114,11 +116,11 @@ describe("N1: actual WizBar settings declarations and persistent reload", () => 
     await host.harness.behavior.setSettings({ ...v6Store050 });
     host = await host.harness.lifecycle.reload(factory);
     hosts.push(host);
-    expect(await read()).toEqual({ ...v6Store050, ...v6NewSettingDefaults });
+    expect(await read()).toEqual({ ...v6Store050, specsSort: "needs-you", sectionsOrder: '["pinned","specs","yours"]', threadsSort: "newest", threadsFilter: "{}" });
     await host.harness.behavior.setSettings({ specsSort: "closest", sectionsOrder: "[\"unread\",\"pinned\",\"specs\"]" });
     host = await host.harness.lifecycle.reload(factory);
     hosts.push(host);
-    expect(await read()).toEqual({ ...v6Store050, specsSort: "closest", sectionsOrder: "[\"unread\",\"pinned\",\"specs\"]" });
+    expect(await read()).toEqual({ ...v6Store050, threadsSort: "newest", threadsFilter: "{}", specsSort: "closest", sectionsOrder: "[\"unread\",\"pinned\",\"specs\"]" });
   });
 
   it("rejects wrong types and unknown keys without changing saved settings", async () => {

@@ -53,14 +53,56 @@ export function readSpecsSort(raw: unknown): SpecsSort {
 export const sectionsSettingDescriptors = {
   sectionsCollapsed: {
     type: "string", label: "Collapsed sections", default: "[]",
-    description: "JSON list of the collapsed sidebar sections (pinned, inbox, specs). Every section starts expanded.",
+    description: "JSON list of the collapsed sidebar sections (pinned, specs, yours). Every section starts expanded.",
   },
   // C0 (#182): the sections' order (sidebar-v3.v1.md section 10).
   sectionsOrder: {
-    type: "string", label: "Section order", default: "[\"pinned\",\"specs\",\"unread\"]",
-    description: "JSON list of the sidebar sections in the order shown: pinned, specs and unread.",
+    type: "string", label: "Section order", default: "[\"pinned\",\"specs\",\"yours\"]",
+    description: "JSON list of the sidebar sections in the order shown: pinned, specs and yours.",
   },
 } satisfies PluginSettingDescriptors;
+
+export const threadsSettingDescriptors = {
+  threadsSort: {
+    type: "string", label: "Yours sort", default: "newest",
+    description: "How Yours is ordered: newest, activity, status, harness, model or effort.",
+  },
+  threadsFilter: {
+    type: "string", label: "Yours filters", default: "{}",
+    description: "JSON object with an optional status and harness ID.",
+  },
+} satisfies PluginSettingDescriptors;
+
+export const threadSorts = ["newest", "activity", "status", "harness", "model", "effort"] as const;
+export type ThreadSort = (typeof threadSorts)[number];
+export const threadStatuses = ["needs-you", "failed", "working", "unread", "idle"] as const;
+export type ThreadStatus = (typeof threadStatuses)[number];
+export const yoursStatuses = ["working", "needs-you", "unread", "idle"] as const satisfies readonly ThreadStatus[];
+
+export type ThreadsFilter = {
+  status?: (typeof yoursStatuses)[number];
+  harness?: string;
+};
+
+export function readThreadsSort(raw: unknown): ThreadSort {
+  return (threadSorts as readonly unknown[]).includes(raw) ? raw as ThreadSort : "newest";
+}
+
+export function readThreadsFilter(raw: unknown): ThreadsFilter {
+  if (typeof raw !== "string") return {};
+  let value: unknown;
+  try {
+    value = JSON.parse(raw);
+  } catch {
+    return {};
+  }
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const { status, harness } = value as Record<string, unknown>;
+  return {
+    ...((yoursStatuses as readonly unknown[]).includes(status) ? { status: status as ThreadsFilter["status"] } : {}),
+    ...(typeof harness === "string" && harness.trim() ? { harness: harness.trim() } : {}),
+  };
+}
 
 export type WizBarSettings = {
   footerCountEnabled: boolean; machineIconsEnabled: boolean;

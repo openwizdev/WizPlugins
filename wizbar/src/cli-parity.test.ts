@@ -72,8 +72,8 @@ const raw = (t: PluginSidebarThread) => ({
 
 const hosts: FakePluginHost[] = [];
 /** A server on the fixture rows, with host pins that record each call. */
-function server() {
-  const rows = v3Threads.map(raw);
+function server(threads = v3Threads, options = async (_args: { threadId: string }): Promise<unknown> => null) {
+  const rows = threads.map(raw);
   const byId = (threadId: string) => {
     const row = rows.find((r) => r.id === threadId);
     if (!row) throw Object.assign(new Error("not found"), { status: 404 });
@@ -90,6 +90,7 @@ function server() {
   const host = createFakePluginHost({ pluginId: "wizbar", sdk: { threads: {
     get: vi.fn(async ({ threadId }: { threadId: string }) => byId(threadId)),
     list: vi.fn(async ({ offset = 0 }: { offset?: number } = {}) => rows.slice(offset, offset + 100)),
+    defaultExecutionOptions: options as never,
     pin: record("pin"), unpin: record("unpin"), reorderPinned: record("reorderPinned"),
   } } });
   hosts.push(host);
@@ -142,7 +143,7 @@ describe("V5: every UI action has a wizbar command with --json", () => {
     const names = cli.commands.map((c) => c.name);
     // #156: `models` is a read-only diagnostic of the model source, no UI action of its own.
     // S1 (#169): `section` collapses a sidebar section, the agent-first route to a header click.
-    expect(names.sort()).toEqual([...wizbarOperationsV4, "models", "section"].sort());
+    expect(names.sort()).toEqual([...wizbarOperationsV4, "models", "section", "threads"].sort());
     expect(names).toEqual(expect.arrayContaining(Object.values(uiActions)));
     for (const command of cli.commands) expect(command.usage, command.name).toMatch(/\[--json\]$/);
   });
@@ -280,15 +281,16 @@ describe("V5: children and stats JSON equal the UI for the same fixtures", () =>
   });
 });
 
-// S1 (#169), E2 (#188): `wizbar section <pinned|specs|unread> --collapse|--expand --json` does what a header
-// click does; a 0.5 `inbox` is accepted as Unread, and both store `unread`.
+// S1 (#169), E2 (#188): `wizbar section <pinned|specs|yours> --collapse|--expand --json` does what a header
+// click does, including the two legacy aliases.
 describe("V5: section --json matches the sidebar's collapsible headers", () => {
   // catches: the CLI and a header click storing different values, the CLI's answer disagreeing with what the
-  // sidebar then shows, `unread` refused, or `inbox` written back instead of `unread`.
+  // sidebar then shows, or either legacy alias being refused or written back.
   it.each([
-    ["unread", "--collapse", "[]", "unread"],
-    ["inbox", "--collapse", "[]", "unread"],
-    ["unread", "--expand", "[\"inbox\",\"pinned\"]", "unread"],
+    ["yours", "--collapse", "[]", "yours"],
+    ["unread", "--collapse", "[]", "yours"],
+    ["inbox", "--collapse", "[]", "yours"],
+    ["unread", "--expand", "[\"inbox\",\"pinned\"]", "yours"],
     ["pinned", "--expand", "[\"pinned\",\"inbox\"]", "pinned"],
   ] as const)(
     "%s %s from %s", async (asked, flag, start, section) => {
@@ -306,7 +308,7 @@ describe("V5: section --json matches the sidebar's collapsible headers", () => {
       expect(stored).not.toContain("inbox");
       // The same change through the UI: a header click on a sidebar mounted on the same stored value.
       const updates: { values: Record<string, unknown> }[] = [];
-      const name = section === "unread" ? "Unread" : "Pinned";
+      const name = section === "yours" ? "Yours" : "Pinned";
       renderSlot(app.threadLists[0]!, {
         activeThreadId: null, activeProjectId: null, isCompactViewport: true, onNavigate() {}, searchQuery: "",
       }, {
@@ -323,4 +325,104 @@ describe("V5: section --json matches the sidebar's collapsible headers", () => {
       await waitFor(() => expect(header().getAttribute("aria-expanded")).toBe(String(!collapsed)));
       expect(updates.map((u) => u.values)).toEqual([{ sectionsCollapsed: stored }]);
     });
+});
+
+describe("Yours threads CLI parity", () => {
+  const threads = [
+    { id: "thr_sample_background", title: "Sample background", createdAt: 1, updatedAt: 4 },
+    { id: "thr_sample_planning", title: "Sample planning", titleFallback: "Synthetic release question", createdAt: 2, updatedAt: 3 },
+    { id: "thr_sample_pinned", title: "Sample pinned", isPinned: true, pinnedAt: 1, createdAt: 3, updatedAt: 5 },
+    { id: "thr_sample_child", title: "Sample child", createdAt: 6, updatedAt: 2, titleFallback: "Synthetic release question", parentThreadId: "thr_sample_planning" },
+    { id: "thr_sample_fleet", title: "Fleet #22: Sample fleet", createdAt: 5, updatedAt: 1 },
+    { id: "thr_sample_queued", title: "Sample failed child", createdAt: 4, updatedAt: 6, queuedWork: "failed" as const, parentThreadId: "thr_sample_missing" },
+  ].map((sample): PluginSidebarThread => ({
+    ...v3Threads[0]!, status: "idle", runtimeStatus: "idle", queuedWork: "none", indicator: "none",
+    hasPendingInteraction: false, isUnread: false, pinnedAt: null, isPinned: false, pinSortKey: null,
+    parentThreadId: null, titleFallback: null, providerId: "codex", lastReadAt: 1, latestAttentionAt: 1,
+    activity: { workflows: 0, backgroundAgents: 0, backgroundCommands: 0, planMode: 0, goals: 0 },
+    ...sample, displayTitle: sample.title, href: `/projects/sample/threads/${sample.id}`,
+    ...(sample.queuedWork === "failed" ? { indicator: "queued-failed" } : {}),
+  }));
+  const execution = async ({ threadId }: { threadId: string }) =>
+    threadId === "thr_sample_background" ? null : { model: "gpt-6.2-sol", reasoningLevel: "high" };
+
+  it.each(["", "release harness:codex model:sol effort:high status:idle"])("matches sidebar order in text and JSON for %j", async (searchQuery) => {
+    const { host, run } = server(threads, execution);
+    const settings = { threadsSort: "activity", threadsFilter: '{"harness":"codex"}' };
+    await host.harness.behavior.setSettings(settings);
+    renderSlot(app.threadLists[0]!, {
+      activeThreadId: null, activeProjectId: null, isCompactViewport: true, onNavigate() {}, searchQuery,
+    }, {
+      pluginId: "wizbar-yours-cli",
+      settings,
+      sidebarThreads: { status: "ready", threads },
+      rpc: { listLifecycle: () => ({ rows: [] }), cardModels: (input: unknown) => host.harness.behavior.callRpc("cardModels", input) },
+    });
+    const args = searchQuery ? ["threads", "--search", searchQuery] : ["threads"];
+    const { exitCode, json } = await run([...args, "--json"]);
+    expect(exitCode).toBe(0);
+    const yours = within(await screen.findByRole("region", { name: "Yours" }));
+    const ids = json.threads.map((row: { id: string }) => row.id);
+    expect(ids).toEqual(searchQuery ? ["thr_sample_planning", "thr_sample_child"]
+      : ["thr_sample_queued", "thr_sample_background", "thr_sample_planning"]);
+    await waitFor(() => expect(yours.getAllByRole("link").map((link) => link.getAttribute("data-sidebar-thread-id"))).toEqual(ids));
+    const text = await host.harness.behavior.runCli(args);
+    expect(text.exitCode).toBe(0);
+    expect(text.stdout.trim().split("\n").map((line: string) => JSON.parse(line.split(":")[0]!))).toEqual(ids);
+    expect(json.threads.find(({ id }: { id: string }) => id === "thr_sample_planning")).toEqual({
+      id: "thr_sample_planning", title: "Sample planning", section: "yours", status: "idle", providerId: "codex",
+      harness: "Codex", model: "gpt-6.2-sol", modelLabel: "Sol 6.2 · High", effort: "high", createdAt: 2, updatedAt: 3,
+      unread: false, parentThreadId: null,
+    });
+  });
+
+  it("ignores saved filters with --all and applies explicit flags without saving", async () => {
+    const { host, run } = server(threads, execution);
+    await host.harness.behavior.setSettings({ threadsSort: "status", threadsFilter: '{"status":"unread","harness":"claude-code"}' });
+    expect((await run(["threads", "--json"])).json.threads).toEqual([]);
+    const unfiltered = await run(["threads", "--all", "--json"]);
+    expect(unfiltered.json.threads).toHaveLength(threads.length);
+    expect(unfiltered.json.threads[0]).toMatchObject({ id: "thr_sample_queued", status: "failed" });
+    const seen = await run(["threads", "--all", "--sort", "model", "--json"]);
+    expect(seen.exitCode).toBe(0);
+    expect(seen.json.threads).toHaveLength(threads.length);
+    expect(seen.json.threads).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: "thr_sample_pinned", section: "pinned" }),
+      expect.objectContaining({ id: "thr_sample_child", parentThreadId: "thr_sample_planning" }),
+      expect.objectContaining({ id: "thr_sample_fleet", section: null }),
+    ]));
+    expect(seen.json.threads.at(-1)).toEqual(expect.objectContaining({ id: "thr_sample_background", model: null, modelLabel: null, effort: null }));
+    const filtered = await run(["threads", "--all", "--status", "idle", "--model", "Sol", "--harness", "Codex", "--effort", "high", "--json"]);
+    expect(filtered.json.threads.map(({ id }: { id: string }) => id)).toEqual([
+      "thr_sample_child", "thr_sample_fleet", "thr_sample_pinned", "thr_sample_planning",
+    ]);
+    expect((await run(["threads", "--json"])).json.threads).toEqual([]);
+  });
+
+  it("finishes one batch of model reads before starting the next", async () => {
+    let inFlight = 0;
+    let peak = 0;
+    const rows = Array.from({ length: 101 }, (_, index) => ({ ...threads[0]!, id: `thr_sample_batch_${index}` }));
+    const { run } = server(rows, async () => {
+      peak = Math.max(peak, ++inFlight);
+      await Promise.resolve();
+      inFlight--;
+      return { model: "gpt-6.2-sol", reasoningLevel: "high" };
+    });
+    const result = await run(["threads", "--all", "--json"]);
+    expect(result.exitCode).toBe(0);
+    expect(result.json.threads).toHaveLength(101);
+    expect(result.json.threads.every(({ model }: { model: string }) => model === "gpt-6.2-sol")).toBe(true);
+    expect(peak).toBeLessThanOrEqual(100);
+  });
+
+  it.each([
+    ["--sort", "other"], ["--status", "other"], ["--effort", "other"], ["--harness"],
+    ["--where", "sample"], ["--all", "--all"], ["--json"], ["literal"],
+  ])("returns a usage error for %j %j", async (...flags) => {
+    const { run } = server(threads);
+    const result = await run(["threads", ...flags, "--json"]);
+    expect(result.exitCode).toBe(2);
+    expect(result.json.error.code).toBe("usage");
+  });
 });

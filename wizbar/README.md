@@ -1,10 +1,9 @@
 # WizBar
 
 WizBar is an agent-first Cloudroom sidebar plugin for fleets of agent threads,
-version 0.6.0. It keeps T3 Sidebar's cards, which never re-order themselves,
-on Pinned, Unread, Snoozed, Muted and Settled shelves: Pinned in the host's
-pinned order, Snoozed soonest wake first, and Unread, Muted and Settled newest
-first.
+version 0.6.0. It keeps T3 Sidebar's cards on Pinned, Yours, Snoozed, Muted
+and Settled shelves. Pinned follows the host's order. Snoozed displays the
+soonest wake first. Yours, Muted and Settled start in newest-first order.
 v0.3 added richer cards, children on hover, a live running count, drag to pin,
 and a `wizbar` CLI with JSON for the sidebar's thread actions. v0.4 added a
 Specs section under the list, matrix status marks and a quiet footer with a
@@ -28,29 +27,31 @@ covered is under Known limits. The rules and sources
 are in the [v0.3 sidebar contract](contracts/sidebar-v3.v1.md) and the
 [v0.4 specs section contract](contracts/specs-section.v1.md).
 
+## Yours and thread search
+
+**Yours** keeps active, unpinned top-level threads in the chosen project whether
+they are read or unread. It also shows eligible threads with something new in
+themselves or a hidden child. Spec agents, fleet wakes and fleet loop runs for
+bound repositories are excluded from the ordinary list. The section remembers
+where you put it and whether it is collapsed. Saved `unread` and `inbox` keys
+both carry over as `yours`.
+
+Use the picker on the Yours rule to sort by Newest, Last activity, Status,
+Harness, Model or Effort. Status and harness filters are saved with your sort.
+When they hide rows, the rule shows how many remain and offers Clear filters.
+
+The host search matches the thread title or first prompt, including children.
+Combine free text with `harness:<id or name>`, `model:<text>`, `effort:<level>`
+and `status:<working|needs-you|failed|unread|idle>`. Quote values with spaces,
+as in `harness:"Claude Code"`. Active, unpinned matches appear in Yours.
+Pinned, snoozed, muted and settled matches stay on their shelves.
+
 ## What v0.6 changes
 
-- **Sections you order.** The sidebar has three sections, Pinned, Specs and
-  Unread, top to bottom by default. Drag a section by the faint grip on the left
-  of its header (shown on hover), or focus its header and press Alt+Up or
-  Alt+Down. The order is saved in the plugin setting `sectionsOrder`. Pinned
-  shows while anything is pinned or a card is being dragged; Unread shows
-  while it has a thread. Snoozed and Muted stay below the sections.
-- **Unread** replaces the Inbox. Of the active, unpinned threads, newest first,
-  it lists only one with something new for you (unread, waiting on your input,
-  or the host's unread error, unread success or failed-queue marker), itself
-  or in a child under its chip, that is not working for a spec (a running
-  agent matched to a spec), not a fleet thread titled `Fleet #<N>: …`, and not
-  a run of a fleet loop for a bound repository (`launch-fleet <owner>/<repo>`,
-  `launch-fleet wakes <owner>/<repo>`, `launch-fleet #<N> <owner>/<repo>`).
-  Any other thread is out of Unread until it has something new; search finds
-  it. The host does not mark loop runs, so another loop's run with something
-  new can still appear. Until the settings and the first specs read are
-  known, the list does not fill, so no thread shows and then leaves. While a
-  search is active, Unread drops its filter: it shows the matching active,
-  unpinned threads in the current project scope, children included, read or
-  not; matching snoozed, muted and settled threads stay on their own shelves.
-  A 0.5 Inbox collapse carries over as an Unread collapse.
+- **Sections you order.** The default order is Pinned, Specs and Yours.
+  Drag a section by the faint grip on the left of its header, or focus its
+  header and press Alt+Up or Alt+Down. The order is saved in `sectionsOrder`.
+  Snoozed and Muted stay below the sections.
 - **Settled** is not a section any more: one quiet `Settled N` link at the
   very bottom of the list opens it, and a search shows its matches.
 - **Specs sort by what needs you.** Default order: specs with a ticket due
@@ -97,8 +98,7 @@ are in the [v0.3 sidebar contract](contracts/sidebar-v3.v1.md) and the
 - **CLI.** `wizbar specs` takes `--sort <needs-you|recent|closest|newest>`
   (without it, the saved sort), lists quiet rows last, adds `sort` to the JSON
   and `quiet` and `activityAt` to each row, and ends a quiet row's text with
-  ` · quiet`. `wizbar section` takes `unread` and still accepts `inbox` as the
-  same section. The sort picker, the section order, the Quiet group and the
+  ` · quiet`. `wizbar section` takes `yours` and also accepts `unread` and `inbox`. The sort picker, the section order, the Quiet group and the
   Snoozed, Muted and Settled shelves' open state have no command.
 - **Settings kept.** Every 0.5.0 setting reloads into 0.6.0 unchanged; the
   two new keys, `specsSort` and `sectionsOrder`, start at their defaults.
@@ -146,10 +146,10 @@ are in the [v0.3 sidebar contract](contracts/sidebar-v3.v1.md) and the
 - **Host file reads.** WizBar reads the specs files and the factory's files
   from the host by absolute path: the bound factory's root joined with the
   file's relative path.
-- **Collapsible sections.** Click the Pinned, Unread (0.5: Inbox) or Specs
+- **Collapsible sections.** Click the Pinned, Yours or Specs
   header to collapse or expand it; every section starts expanded. The state is
   saved in the plugin setting `sectionsCollapsed`, so it is remembered. While a
-  search is active, Pinned and Unread show their matches even when collapsed,
+  search is active, Pinned and Yours show their matches even when collapsed,
   and their headers do nothing. `wizbar section` does the same from the CLI.
 - **Open a spec.** Click a spec to open it in a raised panel with its running
   builders and reviewers; specs start collapsed and each one's open state is
@@ -173,7 +173,7 @@ are in the [v0.3 sidebar contract](contracts/sidebar-v3.v1.md) and the
   centre only.
   No mark uses the accent colour. Reduced motion shows the still pattern.
   Thread cards show no mark.
-- **Shelves.** Pinned, Unread, Snoozed and Muted use the same done-colour
+- **Shelves.** Pinned, Yours, Snoozed and Muted use the same done-colour
   rule as Specs. A parked shelf reads `Snoozed 4` with no chevron; a click
   still opens it. A running card shows its age (`now`) in the corner.
 - **Footer.** No bolt: a matrix mark and `6 running`, counting threads, never
@@ -189,7 +189,7 @@ are in the [v0.3 sidebar contract](contracts/sidebar-v3.v1.md) and the
   Cloudroom theme you use; a literal colour appears only as the fallback for a
   missing variable.
 - **CLI.** `wizbar specs`, `wizbar spec <n> --open|--close`,
-  `wizbar section <pinned|specs|unread> --collapse|--expand`, the extended
+  `wizbar section <pinned|specs|yours> --collapse|--expand`, the extended
   `wizbar stats` and the read-only `wizbar models <id>... [--raw]` return what
   the sidebar shows, as JSON with `--json`.
 
@@ -262,7 +262,7 @@ cover these sidebar actions: settle, unsettle, snooze, unsnooze, mute,
 unmute, pin, unpin and move a thread; list a thread's shelf and its children;
 read the running card (`stats`) and the specs (`specs`, in any sort with
 `--sort`, without saving it); open or close one spec (`spec`); and collapse or
-expand Pinned, Specs or Unread (`section`, with `inbox` as Unread). There is
+expand Pinned, Specs or Yours (`section`, with `unread` and `inbox` as aliases). There is
 no command for the Specs sort picker, the section order, the Quiet group, or
 opening the Snoozed, Muted and Settled shelves. Every command takes `--json`;
 the [parity test](src/cli-parity.test.ts) checks that every WizBar operation
@@ -286,9 +286,20 @@ wizbar children <id> [--json]
 wizbar stats [--json]
 wizbar specs [--sort <needs-you|recent|closest|newest>] [--json]
 wizbar spec <n> (--open | --close) [--json]
-wizbar section <pinned|specs|unread> (--collapse | --expand) [--json]
+wizbar section <pinned|specs|yours> (--collapse | --expand) [--json]
 wizbar models <id>... [--raw] [--json]
+wizbar threads [--search <text>] [--sort <newest|activity|status|harness|model|effort>] [--status <s>] [--harness <h>] [--model <m>] [--effort <e>] [--all] [--json]
 ```
+
+`wizbar threads` lists Yours across the host's project scope using the saved
+sort and filter. Flags override those choices for the invocation. Use
+`--status all` or `--harness all` to clear a saved filter for that run.
+`--all` includes every active thread in scope, including children, and ignores
+the saved Yours filter. It still applies explicit `--status`, `--harness`,
+`--model` and `--effort` filters and uses the saved sort unless overridden.
+JSON includes the row's IDs, title, section, status, harness, model, effort,
+timestamps and unread state. Invalid arguments exit 2.
+
 
 **Exit codes**, every command: `0` success; `1` any thread or the whole command
 failed; `2` usage error. The exception is `models`: a failed host read gives
@@ -311,7 +322,7 @@ failure never hides the others, and gives exit 1.
 - `mute` is the running-thread exception for keeper-selected fleet work: it
   needs a running, unpinned thread with no pending input or failure. A
   question, failure or stopped work with newer unread attention returns the
-  thread to the active list, where Unread shows it if it has something new;
+  thread to the active list, where Yours applies its usual rules;
   `unmute` undoes it. See the
   [mute contract](contracts/mute.v1.md).
 - `pin` and `unpin` print `{"results":[{"threadId","ok":true,"pinned":true}]}`.
@@ -353,8 +364,8 @@ a spec with none prints `"open":false` with exit 0. An unavailable specs
 file prints `{"error":{"code":"specs_unavailable",…,"reason":…}}` with exit 1.
 
 **`section`** collapses or expands one sidebar section, the same as a click
-on its header, and prints `{"section":"unread","collapsed":true}`; `inbox` is
-accepted as `unread`. A failed
+on its header. Collapsing Yours prints `{"section":"yours","collapsed":true}`.
+The command accepts `unread` and `inbox` as aliases for `yours`. A failed
 settings read or write prints `{"error":{"code":"settings_failed",…}}` with
 exit 1 and writes nothing from a failed read.
 
@@ -378,7 +389,7 @@ item that is neither a command nor listed here.
 | Menu item | Agent route |
 | --- | --- |
 | Archive | `room-cli thread archive`, the host's own command. The help read for this change shows only `--self`; archiving another thread by ID is unverified |
-| Mark read / Mark unread | **Gap:** no read-state route ([#60](https://github.com/openwizdev/WizPlugins/issues/60), v0.4). For attention, `wizbar settle` and `wizbar mute` move a thread off Unread; neither changes the host's read state |
+| Mark read / Mark unread | **Gap:** no read-state route ([#60](https://github.com/openwizdev/WizPlugins/issues/60), v0.4). For attention, `wizbar settle` and `wizbar mute` move a thread off Yours; neither changes the host's read state |
 | Open in split | None: UI-only host navigation |
 | Delete | None: UI-only, and it keeps the host's confirmation |
 
@@ -392,9 +403,9 @@ item that is neither a command nor listed here.
   rollback to T3 Sidebar are unverified until #9. PR badges have appeared
   inconsistently on real hosts; a missing badge alone is not a WizBar regression.
 - 0.6.0 has not been installed on a real host: the breath, section drag,
-  Unread's filter on real threads and the steady card are proved by fixture
+  Yours on real threads and the steady card are proved by fixture
   tests only.
-- Unread cannot tell another loop's run from a thread you started: the host
+- Yours cannot tell another loop's run from a thread you started: the host
   does not mark loop runs.
 
 ## Credit and licence
