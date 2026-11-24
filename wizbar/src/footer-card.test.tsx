@@ -64,8 +64,8 @@ describe("S4: the card's data is one computation (sections 7 and 8)", () => {
 
   // catches: the Unknown part shown at zero or dropped when non-zero.
   it("writes the one summary line, Unknown only when non-zero", () => {
-    expect(cardSummary(ready)).toBe("9 running · 1 waiting on you · 7 cloud, 1 local, 1 unknown");
-    expect(cardSummary({ ...ready, running: { ...ready.running, unknown: 0 } })).toBe("9 running · 1 waiting on you · 7 cloud, 1 local");
+    expect(cardSummary(ready)).toBe("1 waiting on you · 7 cloud, 1 local, 1 unknown");
+    expect(cardSummary({ ...ready, running: { ...ready.running, unknown: 0 } })).toBe("1 waiting on you · 7 cloud, 1 local");
   });
 
   it("groups in Specs order, starts open, and remembers a fold when the card closes", async () => {

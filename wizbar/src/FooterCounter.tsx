@@ -5,6 +5,7 @@ import { cardPinNext, isRunning, readSidebarRows, type SidebarRowsStatus } from 
 import type { CardEventV4, CardStateV4 } from "./fixtures/v4";
 import { MatrixMark } from "./MatrixMark";
 import { StatsPanel } from "./StatsPanel";
+import { SpecsReadContext, useSpecsRead } from "./specs/SpecsSection";
 import { experimental_usePluginId, experimental_useSidebarThreads, useRealtimeConnectionState } from "@get-bb/plugin-sdk/app";
 import { useFeatureSourceStatus, useWizBarSettings } from "./SettingsPage";
 
@@ -54,6 +55,7 @@ export function useObservableRows(): { status: SidebarRowsStatus; rows: readonly
  * card is `StatsPanel`, the `wizbar stats` data for the same rows. */
 export function FooterCounter({ className }: { className?: string }) {
   const { status, rows } = useObservableRows();
+  const specsRead = useSpecsRead();
   const base = { version: 1, scope: "observable-sidebar", subagents: { status: "unproven", count: null } } as const;
   const source: ObservableRunningSource = rows && status === "ready"
     ? { ...base, status, threads: rows.filter((t) => !t.isArchived).map((t) => ({ id: t.id, projectId: t.projectId, parentThreadId: t.parentThreadId, isWorking: isRunning(t) })) }
@@ -63,7 +65,11 @@ export function FooterCounter({ className }: { className?: string }) {
   const held = useRef<readonly PluginSidebarThread[] | null>(null);
   if (rows && status === "ready") held.current = rows;
   const cardRows = rows ?? held.current;
-  return <FooterCounterArtwork className={className} source={source} card={(stale) => <StatsPanel rows={cardRows} stale={stale} />} />;
+  return <FooterCounterArtwork className={className} source={source} card={(stale) => (
+    <SpecsReadContext.Provider value={specsRead}>
+      <StatsPanel rows={cardRows} stale={stale} />
+    </SpecsReadContext.Provider>
+  )} />;
 }
 
 /** R1 (#172): how long a source gap shows the last known count unmarked; past it, only an open card keeps it. */

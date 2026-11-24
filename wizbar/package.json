@@ -35,6 +35,7 @@
   "scripts": {
     "build": "room-cli plugin build .",
     "test": "vitest run --config vitest.config.ts",
+    "test:browser": "WIZBAR_BROWSER_TEST=1 vitest run --config vitest.config.ts browser/",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

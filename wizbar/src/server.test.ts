@@ -389,7 +389,7 @@ describe("wizbar stats", () => {
   const harness = [{ providerId: "synthetic-provider", count: 4 }];
   const v3StatsV4 = {
     ...v3Stats, version: 2, harness,
-    states: { awake: 4, starting: 0, asleep: 8, needsYou: 3, awakeByHarness: harness },
+    states: { awake: 3, starting: 1, asleep: 8, needsYou: 3, awakeByHarness: [{ providerId: "synthetic-provider", count: 3 }] },
     threads: [
       thread("thr_v3_child_local", "Sample measure cache hits"), thread("thr_v3_parent_many", "Sample refine command palette"),
       thread("thr_v3_child_working", "Sample audit shortcuts"), thread("thr_v3_starting", "Sample update color tokens"),

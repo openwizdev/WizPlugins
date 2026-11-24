@@ -268,13 +268,13 @@ describe("V5: children and stats JSON equal the UI for the same fixtures", () =>
     const card = screen.getByRole("region", { name: "Running threads" });
     await waitFor(() => expect(card.querySelectorAll("[data-spec-name]").length).toBe(2));
     expect({
-      summary: card.querySelector("p")?.textContent,
-      states: card.querySelectorAll("p")[1]?.textContent,
+      summary: card.querySelectorAll("p")[1]?.textContent,
+      states: card.querySelector("p")?.textContent,
       harness: [...card.querySelectorAll("[data-harness]")].map((el) => ({ providerId: el.getAttribute("data-harness"), count: Number(el.getAttribute("data-count")) })),
       threads: [...card.querySelectorAll("[data-thread]")].map((el) => ({ id: el.getAttribute("data-thread"),
         matrix: el.querySelector("[data-matrix]")?.getAttribute("data-matrix"), shortName: el.getAttribute("data-thread-spec") ?? null })),
     }).toEqual({
-      summary: `${cli.running.total} running · ${cli.waitingOnYou} waiting on you · ${cli.running.cloud} cloud, ${cli.running.local} local, ${cli.running.unknown} unknown`,
+      summary: `${cli.waitingOnYou} waiting on you · ${cli.running.cloud} cloud, ${cli.running.local} local, ${cli.running.unknown} unknown`,
       states: `${cli.states.awake} awake · ${cli.states.starting} starting · ${cli.states.asleep} asleep`,
       harness: cli.harness,
       threads: ["Sample palette", "Sample finished", null].flatMap((name) => cli.threads

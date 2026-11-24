@@ -209,6 +209,8 @@ function RunningThreadsList({ groups, labels, pluginId }: {
   const viewport = useRef<HTMLUListElement>(null);
   const [edges, setEdges] = useState({ top: false, bottom: false, height: 0 });
 
+  const sticky = edges.height >= 2 * ROW_HEIGHT;
+
   function readEdges() {
     const node = viewport.current;
     if (!node) return;
@@ -234,15 +236,20 @@ function RunningThreadsList({ groups, labels, pluginId }: {
       <div style={{ position: "relative", containerType: "size", height: lineCount * ROW_HEIGHT, minHeight: 0 }}>
         <ul ref={viewport} aria-label="Threads" onScroll={readEdges} style={{
           ...list, position: "absolute", inset: 0, minHeight: 0, maxHeight: `round(down, 100cqh, ${ROW_HEIGHT}px)`, overflowY: "auto", overscrollBehaviorY: "contain",
+          scrollPaddingTop: sticky ? ROW_HEIGHT : 0,
         }}>
-          {groups.flatMap(({ key, name, threads }) => {
+          {groups.map(({ key, name, threads }) => {
             const expanded = !folded?.has(key);
             const count = threads.filter((thread) => !thread.leaving).length;
             const heading = `${groupId}-${key ?? "other"}`;
-            return [
+            const contents = `${heading}-threads`;
+            return (
               <li key={heading}>
-                <button id={heading} type="button" aria-expanded={expanded} className={rowClass}
-                  style={{ ...rowButton, color: tokens.mutedText }}
+                <button id={heading} type="button" aria-expanded={expanded} aria-controls={contents} className={rowClass}
+                  style={{
+                    ...rowButton, color: tokens.mutedText, backgroundColor: cardBackground,
+                    position: sticky ? "sticky" : "relative", top: 0, zIndex: 2,
+                  }}
                   onClick={() => {
                     const next = new Set(collapsedGroups.get(pluginId));
                     if (next.has(key)) next.delete(key);
@@ -250,35 +257,44 @@ function RunningThreadsList({ groups, labels, pluginId }: {
                     collapsedGroups.set(pluginId, next);
                     refresh();
                   }}>
+                  <svg aria-hidden="true" data-chevron={expanded ? "open" : "closed"}
+                    width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth={1.6}
+                    style={{ flexShrink: 0, transform: expanded ? "rotate(90deg)" : undefined }}>
+                    <path d="M3.5 1.5 7 5l-3.5 3.5" />
+                  </svg>
                   <span data-spec-name={key === null ? undefined : ""} style={oneLine}>{name}</span>{" "}<span>{count}</span>
                 </button>
-              </li>,
-              // Share a parent so a row keeps its DOM identity when its spec arrives or changes.
-              ...(expanded ? threads.map((thread) => {
-                const model = modelLabel(thread.model, thread.effort);
-                return (
-                  <li key={`thread-${thread.id}`} data-thread={thread.id} data-thread-spec={thread.shortName ?? undefined}
-                    data-leaving={thread.leaving ? "true" : undefined}
-                    style={{ opacity: thread.leaving ? 0.45 : 1, transition: "opacity 300ms" }}>
-                    <button type="button" className={rowClass} style={rowButton} aria-describedby={heading}
-                      onClick={(event) => actions.open(thread.id, { split: event.metaKey || event.ctrlKey })}>
-                      <MatrixMark state={thread.matrix} />
-                      <span data-title="" style={{ ...oneLine, minWidth: 0, flexShrink: 1 }}>{labels.get(thread.id)}</span>
-                      {model ? <span data-model="" style={{ marginLeft: "auto", paddingLeft: 8, flexShrink: 0, whiteSpace: "nowrap", color: tokens.mutedText }}>{model}</span> : null}
-                    </button>
-                  </li>
-                );
-              }) : []),
-            ];
+                <ul id={contents} hidden={!expanded} style={list}>
+                  {expanded && threads.map((thread) => {
+                    const model = modelLabel(thread.model, thread.effort);
+                    return (
+                      <li key={`thread-${thread.id}`} data-thread={thread.id} data-thread-spec={thread.shortName ?? undefined}
+                        data-leaving={thread.leaving ? "true" : undefined}
+                        style={{ opacity: thread.leaving ? 0.45 : 1, transition: "opacity 300ms" }}>
+                        <button type="button" className={rowClass} style={rowButton} aria-describedby={heading}
+                          onClick={(event) => actions.open(thread.id, { split: event.metaKey || event.ctrlKey })}>
+                          <MatrixMark state={thread.matrix} />
+                          <span data-title="" style={{ ...oneLine, minWidth: 0, flexShrink: 1 }}>{labels.get(thread.id)}</span>
+                          {model ? <span data-model="" style={{ marginLeft: "auto", paddingLeft: 8, flexShrink: 0, whiteSpace: "nowrap", color: tokens.mutedText }}>{model}</span> : null}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </li>
+            );
           })}
         </ul>
-        {(["top", "bottom"] as const).map((edge) => edges[edge] && (
-          <div key={edge} data-scroll-fade={edge} aria-hidden="true" style={{
-            position: "absolute", pointerEvents: "none", left: 0, right: 0, height: 8,
-            top: edge === "top" ? 0 : edges.height - 8,
-            background: `linear-gradient(to ${edge}, transparent, ${cardBackground})`,
-          }} />
-        ))}
+        {(["top", "bottom"] as const).map((edge) => {
+          // Keep the active heading legible and fade the text just under it.
+          const top = edge === "top" ? (sticky ? ROW_HEIGHT : 0) : edges.height - ROW_HEIGHT;
+          return edges[edge] && (
+            <div key={edge} data-scroll-fade={edge} aria-hidden="true" style={{
+              position: "absolute", pointerEvents: "none", left: 0, right: 0, height: ROW_HEIGHT,
+              top, zIndex: 1, background: `linear-gradient(to ${edge}, transparent, ${cardBackground} 85%)`,
+            }} />
+          );
+        })}
       </div>
     </div>
   );
@@ -323,6 +339,7 @@ export function StatsPanel({ rows, stale = false }: { rows: readonly PluginSideb
     }
   }
   const groups = [...bySpec.values(), other].filter((group) => group.threads.length > 0);
+  const summary = stats.status === "ready" ? `${cardSummary(stats)}${stale ? " · last known" : ""}` : "";
   return (
     <section aria-label="Running threads" data-stale={stale ? "true" : undefined} style={{
       display: "flex", flexDirection: "column", gap: 10, minHeight: 0, boxSizing: "border-box",
@@ -331,9 +348,9 @@ export function StatsPanel({ rows, stale = false }: { rows: readonly PluginSideb
     }}>
       {stats.status !== "ready" ? <p style={quiet}>Stats unavailable</p> : (
         <>
-          <div style={{ flexShrink: 0 }}>
-            <p style={quiet}>{cardSummary(stats)}{stale ? " · last known" : ""}</p>
-            <p style={quiet}>{stats.states.awake} awake · {stats.states.starting} starting · {stats.states.asleep} asleep</p>
+          <div style={{ flexShrink: 0, fontSize: 12 }}>
+            <p style={{ ...quiet, ...oneLine }}>{stats.states.awake} awake · {stats.states.starting} starting · {stats.states.asleep} asleep</p>
+            <p style={{ ...quiet, ...oneLine }} title={summary}>{summary}</p>
           </div>
           {stats.harness.length > 0 ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 8, flexShrink: 0 }}>

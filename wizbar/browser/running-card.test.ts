@@ -1,8 +1,31 @@
+import { accessSync, constants } from "node:fs";
 import { mkdir } from "node:fs/promises";
-import { resolve } from "node:path";
+import { delimiter, join, resolve } from "node:path";
 import { chromium, type Browser, type Locator } from "playwright-core";
 import { createServer, type ViteDevServer } from "vite";
 import { afterAll, beforeAll, expect, it } from "vitest";
+
+const candidates = process.env.CHROMIUM_PATH ? [process.env.CHROMIUM_PATH] : [
+  chromium.executablePath(),
+  ...(process.env.PATH ?? "").split(delimiter).flatMap((dir) =>
+    ["google-chrome", "google-chrome-stable", "chromium", "chromium-browser"].map((name) => join(dir, name))),
+  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+  "/Applications/Chromium.app/Contents/MacOS/Chromium",
+];
+const browserPath = candidates.find((path) => {
+  try {
+    accessSync(path, constants.X_OK);
+    return true;
+  } catch {
+    return false;
+  }
+});
+
+if (!browserPath) {
+  const message = "No Chromium or Chrome found. Install Chromium with Playwright or set CHROMIUM_PATH.";
+  if (process.env.WIZBAR_REQUIRE_BROWSER === "1") throw new Error(message);
+  process.stderr.write(`Skipping WizBar browser tests. ${message}\n`);
+}
 
 let server: ViteDevServer;
 let browser: Browser;
@@ -19,7 +42,7 @@ beforeAll(async () => {
   });
   await server.listen();
   url = new URL("/browser/running-card.html", server.resolvedUrls!.local[0]).href;
-  browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH });
+  browser = await chromium.launch({ executablePath: browserPath });
   if (evidence) await mkdir(evidence, { recursive: true });
 }, 30_000);
 
@@ -49,12 +72,18 @@ async function expectFade(fade: Locator, list: Locator, edge: "top" | "bottom") 
   const [overlay, viewport] = await Promise.all([fade.boundingBox(), list.boundingBox()]);
   expect.soft(overlay?.height, `${edge} fade covers one row of text`).toBeGreaterThanOrEqual(24);
   expect.soft(overlay?.width).toBe(viewport?.width);
-  const gradient = await fade.evaluate((node) => getComputedStyle(node).backgroundImage);
-  expect.soft(gradient).toContain(`linear-gradient(to ${edge},`);
-  expect.soft(gradient).toMatch(/(?:transparent|rgba\(0, 0, 0, 0\)).*rgb\(.*\) 85%/);
+  const { gradient, surface } = await fade.evaluate((node) => ({
+    gradient: getComputedStyle(node).backgroundImage,
+    surface: getComputedStyle(node.closest('[aria-label="Running threads"]')!).backgroundColor,
+  }));
+  expect.soft(gradient).toContain(edge === "top" ? "linear-gradient(to top," : "linear-gradient(");
+  expect.soft(gradient).toMatch(/transparent|rgba\(0, 0, 0, 0\)/);
+  expect.soft(gradient).toContain(`${surface} 85%`);
+  const y = edge === "top" ? viewport!.y + 24 : viewport!.y + viewport!.height - 24;
+  expect.soft(overlay?.y, `${edge} fade overlaps the edge row`).toBe(y);
 }
 
-it.each([600, 900])("shows all 100 threads in a %i px window", async (height) => {
+it.skipIf(!browserPath).each([600, 900])("shows all 100 threads in a %i px window", async (height) => {
   const page = await browser.newPage({ viewport: { width: 350, height }, reducedMotion: "reduce" });
   try {
     await page.goto(url);
@@ -96,10 +125,10 @@ it.each([600, 900])("shows all 100 threads in a %i px window", async (height) =>
     });
     await expectFade(bottomFade, list, "bottom");
     const summary = await card.locator("p").evaluateAll((lines) =>
-      lines.map((line) => ({ text: line.textContent, height: line.getBoundingClientRect().height })));
+      lines.map((line) => ({ text: line.textContent, height: line.getBoundingClientRect().height, fits: line.scrollWidth <= line.clientWidth })));
     expect.soft(summary).toEqual([
-      { text: "100 awake · 0 starting · 0 asleep", height: 20 },
-      { text: "0 waiting on you · 0 cloud, 100 local", height: 20 },
+      { text: "100 awake · 0 starting · 0 asleep", height: 20, fits: true },
+      { text: "0 waiting on you · 0 cloud, 100 local", height: 20, fits: true },
     ]);
     if (evidence) await page.screenshot({ path: resolve(evidence, `${height}-top.png`) });
     await list.hover();

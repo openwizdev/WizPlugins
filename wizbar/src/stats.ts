@@ -168,28 +168,32 @@ export function computeStatsV4(
   });
   if (v3.status !== "ready") return unavailable();
   const unique = new Map<string, StatsV4Row>();
+  const awakeCounts = new Map<string, number>();
+  let awake = 0;
   let starting = 0;
   let asleep = 0;
   const running: StatsV4Row[] = [];
   for (const row of active ?? []) {
-    const awake = isRunning(row);
+    const counted = isRunning(row);
     const waking = startingStatuses.has(row.runtimeStatus);
     const previous = unique.get(row.id);
     if (previous) {
-      const conflict = awake ? previous.providerId !== row.providerId : startingStatuses.has(previous.runtimeStatus) !== waking;
-      if (conflict) return unavailable();
+      if (startingStatuses.has(previous.runtimeStatus) !== waking || (counted && previous.providerId !== row.providerId))
+        return unavailable();
       continue;
     }
     unique.set(row.id, row);
-    if (awake) running.push(row);
-    else if (waking) starting++;
-    else asleep++;
+    if (counted) running.push(row);
+    if (waking) starting++;
+    else if (counted) {
+      awake++;
+      awakeCounts.set(row.providerId, (awakeCounts.get(row.providerId) ?? 0) + 1);
+    } else asleep++;
   }
   running.sort((a, b) => a.createdAt - b.createdAt || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   const counts = new Map<string, number>();
   for (const row of running) counts.set(row.providerId, (counts.get(row.providerId) ?? 0) + 1);
-  const harness = [...counts].map(([providerId, count]) => ({ providerId, count }))
-    .sort((a, b) => b.count - a.count || (a.providerId < b.providerId ? -1 : a.providerId > b.providerId ? 1 : 0));
+  const harness = sortedHarnessCounts(counts);
   const served = new Map(models?.source === "host" ? models.items.map((item) => [item.threadId, item]) : []);
   const threads = running.map((row): FooterThreadV4 => {
     // Every row goes in too, so a child of a `Fleet #S:` thread finds spec S (section 3).
@@ -203,13 +207,18 @@ export function computeStatsV4(
       model: model?.model ?? null, effort: model?.model ? model.effort : null,
     };
   });
-  const states = { awake: running.length, starting, asleep, needsYou: v3.waitingOnYou, awakeByHarness: harness };
+  const states = { awake, starting, asleep, needsYou: v3.waitingOnYou, awakeByHarness: sortedHarnessCounts(awakeCounts) };
   return { ...v3, version: 2, harness, threads, states };
 }
 
-/** The card's first line (section 7), including the machine split. */
+function sortedHarnessCounts(counts: ReadonlyMap<string, number>) {
+  return [...counts].map(([providerId, count]) => ({ providerId, count }))
+    .sort((a, b) => b.count - a.count || (a.providerId < b.providerId ? -1 : a.providerId > b.providerId ? 1 : 0));
+}
+
+/** The card's machine and pending-interaction summary (section 7). */
 export function cardSummary({ waitingOnYou, running }: Extract<StatsV4, { status: "ready" }>): string {
-  return `${running.total} running · ${waitingOnYou} waiting on you · ${running.cloud} cloud, ${running.local} local${running.unknown > 0 ? `, ${running.unknown} unknown` : ""}`;
+  return `${waitingOnYou} waiting on you · ${running.cloud} cloud, ${running.local} local${running.unknown > 0 ? `, ${running.unknown} unknown` : ""}`;
 }
 
 /** A card row's label (section 7) from its title alone: `Role · CODE` when the title carries its code (section 3), else the full title. */
@@ -237,7 +246,7 @@ export function cardRowLabels(
       continue;
     }
     const fallback = row.titleFallback?.trim() ?? "";
-    const builder = /^you are the builder for\s+[\w.-]+\/[\w.-]+#([1-9]\d*)\b/i.exec(fallback);
+    const builder = /^you are the builder for\s+(?:(?:[\w.-]+\/)?[\w.-]+)?#([1-9]\d*)\b/i.exec(fallback);
     const reviewer = /^you are a fresh reviewer for\s+.*?#([1-9]\d*)\b/is.exec(fallback);
     const text = builder ? `Builder · #${builder[1]}`
       : reviewer ? `Reviewer · #${reviewer[1]}` : `${harnessName(row.providerId)} thread`;
