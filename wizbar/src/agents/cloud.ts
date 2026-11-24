@@ -1,4 +1,6 @@
 import type { MatrixStateV4, SpecsFileV4 } from "../fixtures/v4";
+import { effortName } from "../model-names";
+import type { EffortV3 } from "../v3-types";
 import { relativeTimeLabel } from "../relative-time";
 import { isActiveNote, pullPattern, type GitHubAgent } from "./format";
 import { issueNumber, unseenSnapshot, type AgentSidebarRow } from "./match";
@@ -11,15 +13,24 @@ const isLive = (agent: GitHubAgent) => agent.live ?? isActiveNote(agent.state);
 const labelFor = (role: keyof typeof roles, repository: string, number: string | number) =>
   `${roles[role]} · ${repository.slice(repository.indexOf("/") + 1)} #${number}`;
 
-export function cloudModel(value: string): string {
+const modelWords = (value: string) => value.toLowerCase().replace(/[-_\s]+/g, " ").trim();
+
+function knownCloudModel(words: string): string | null {
+  return /^(?:gemini\s+[\d.]+\s+)?neon(?:\s|$)/.test(words) ? "Neon"
+    : /^(?:gpt\s+)?6\.2\s+sol(?:\s|$)|^sol\s+6\.2(?:\s|$)/.test(words) ? "Sol 6.2"
+    : /^(?:claude\s+)?opus\s+5[. ]5(?:\s|$)/.test(words) ? "Opus 5.5" : null;
+}
+
+export function cloudModel(value: string, harness?: string): string {
   const trimmed = value.trim();
-  const normalized = trimmed.toLowerCase().replace(/[-_]/g, " ");
-  const effort = /\b(low|medium|high|xhigh|max|ultra)\s*(?:effort)?$/.exec(normalized)?.[1];
-  const name = /^(?:gemini\s+[\d.]+\s+)?neon(?:\s|$)/.test(normalized) ? "Neon"
-    : /^(?:gpt\s+)?6\.2\s+sol(?:\s|$)|^sol\s+6\.2(?:\s|$)/.test(normalized) ? "Sol 6.2"
-    : /^(?:claude\s+)?opus\s+5[. ]5(?:\s|$)/.test(normalized) ? "Opus 5.5" : null;
+  const words = modelWords(trimmed);
+  const prefix = modelWords(harness ?? "");
+  const withoutHarness = prefix && words.startsWith(`${prefix} `) ? words.slice(prefix.length + 1) : "";
+  const name = knownCloudModel(withoutHarness) ?? knownCloudModel(words.replace(/^(?:codex|claude(?:\s+code)?|antigravity)\s+/, ""));
   if (!name) return trimmed;
-  return effort ? `${name} · ${effort[0].toUpperCase()}${effort.slice(1)}` : name;
+  const effort = /\b(low|medium|high|xhigh|max|ultra)\s*(?:effort)?$/.exec(words)?.[1] as EffortV3 | undefined;
+  const level = effortName(effort);
+  return level ? `${name} · ${level}` : name;
 }
 
 export interface CloudRow {
@@ -47,7 +58,7 @@ export function cloudAgents(read: AgentsRead, specs: SpecsFileV4 | null, rows: r
     const state = isActiveNote(agent.state) && !isLive(agent) ? "lapsed" : agent.state;
     return {
       label: labelFor(agent.agent, agent.repository, number),
-      detail: `${cloudModel(agent.model)} · ${state} · ${relativeTimeLabel(Date.parse(agent.updatedAt), now)}`,
+      detail: `${cloudModel(agent.model, agent.harness)} · ${state} · ${relativeTimeLabel(Date.parse(agent.updatedAt), now)}`,
       matrix: state === "lapsed" ? "idle" : matrices[agent.state],
       pull: pr ? `PR #${pr[2]}` : null,
       url: agent.pr ?? `https://github.com/${agent.repository}/issues/${number}`,
