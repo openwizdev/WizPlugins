@@ -19,7 +19,7 @@ import { modelLabel } from "./card-meta";
 import { harnessName } from "./model-names";
 import { MatrixMark } from "./MatrixMark";
 import { ProviderGlyph } from "./ProviderGlyph";
-import { cardBatch, cardRowLabels, cardSummary, computeStatsV4, emptyCardBatch, isRunning, type CardThread } from "./stats";
+import { cardBatch, cardRowLabels, computeStatsV4, emptyCardBatch, isRunning, type CardThread } from "./stats";
 import { readSpecsSort } from "./settings";
 import { specRows } from "./specs/rows";
 import { readSpecsFile } from "./specs/read";
@@ -184,14 +184,6 @@ function useCardThreads(threads: readonly FooterThreadV4[] | null): readonly Car
 const quiet = { margin: 0, color: tokens.mutedText } as const;
 const list = { margin: 0, padding: 0, listStyle: "none" } as const;
 const oneLine = { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } as const;
-
-/**
- * A harness's segment colour: host variables only (section 9), never the warning, which is needs-you's (#159 R2).
- * Claude Code the host's text, the others muted text sunk into the card, so the two read apart on dark and light themes.
- */
-const segmentColour = (providerId: string, index: number): string => providerId === "claude-code"
-  ? `var(--foreground, ${tokens.mutedText})`
-  : `color-mix(in oklab, ${tokens.mutedText} ${index % 2 === 0 ? 55 : 35}%, var(--card, #222222))`;
 
 const ROW_HEIGHT = 24;
 const collapsedGroups = new Map<string, ReadonlySet<SpecKeyV4 | null>>();
@@ -363,7 +355,9 @@ export function StatsPanel({ rows, stale = false }: { rows: readonly PluginSideb
     .filter((group) => group.threads.length > 0 || group.githubAgents.length > 0);
   const githubSummary = agentsSummary(stats.unseen);
   const sharedNumbers = sharedIssueNumbers(file, agents.status === "ready" ? agents.agents : []);
-  const summary = stats.status === "ready" ? `${cardSummary(stats)}${stale ? " · last known" : ""}` : "";
+  const machines = stats.status === "ready"
+    ? `${stats.running.cloud} cloud, ${stats.running.local} local${stats.running.unknown > 0 ? `, ${stats.running.unknown} unknown` : ""}`
+    : "";
   return (
     <section aria-label="Running threads" data-stale={stale ? "true" : undefined} style={{
       display: "flex", flexDirection: "column", gap: 10, minHeight: 0, boxSizing: "border-box",
@@ -372,35 +366,45 @@ export function StatsPanel({ rows, stale = false }: { rows: readonly PluginSideb
     }}>
       {stats.status !== "ready" ? <p style={quiet}>Stats unavailable</p> : (
         <>
-          <div style={{ flexShrink: 0, fontSize: 12 }}>
-            <p style={githubSummary ? quiet : { ...quiet, ...oneLine }}>
-              {stats.states.awake} awake · {stats.states.starting} starting · {stats.states.asleep} asleep{githubSummary}
+          <div style={{ display: "flex", flexDirection: "column", gap: 2, flexShrink: 0 }}>
+            <p data-running-count="" style={{
+              margin: 0, display: "flex", alignItems: "baseline", flexWrap: "wrap", columnGap: 6, rowGap: 2,
+            }}>
+              <span style={{ fontSize: 28, lineHeight: "30px", fontWeight: 400, letterSpacing: "-0.02em", color: tokens.text }}>
+                {stats.running.total}
+              </span>{" "}
+              <span style={{ fontSize: 12, lineHeight: "20px", color: tokens.mutedText }}>
+                running{githubSummary}{stale ? " · last known" : ""}
+              </span>
             </p>
-            <p style={quiet}>{summary}</p>
+            <p data-states="" style={{ ...quiet, ...oneLine, fontSize: 12 }}>
+              {stats.states.awake} awake · {stats.states.starting} starting · {stats.states.asleep} asleep
+            </p>
           </div>
           {stats.harness.length > 0 ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, flexShrink: 0 }}>
-              <div data-harness-bar="" aria-hidden="true" style={{ display: "flex", gap: 3, height: 4 }}>
-                {stats.harness.map(({ providerId, count }, i) => (
-                  <span key={providerId} data-harness-segment={providerId}
-                    style={{ flexGrow: count, flexBasis: 0, borderRadius: 2, background: segmentColour(providerId, i) }} />
-                ))}
-              </div>
-              <ul aria-label="Harness" tabIndex={0} className="rounded focus-visible:ring-1 focus-visible:ring-inset"
-                style={{ ...list, display: "flex", flexDirection: "row", flexWrap: "nowrap", columnGap: 16, minWidth: 0, overflowX: "auto" }}>
-                {stats.harness.map(({ providerId, count }) => (
-                  <li key={providerId} data-harness={providerId} data-count={count} style={{ display: "flex", flexShrink: 0, alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
-                    <ProviderGlyph providerId={providerId} className="justify-start" />
-                    <span>{harnessName(providerId)} {count}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <ul aria-label="Harness" tabIndex={0} className="rounded focus-visible:ring-1 focus-visible:ring-inset"
+              style={{ ...list, display: "flex", flexDirection: "row", flexWrap: "nowrap", columnGap: 14, minWidth: 0, overflowX: "auto", flexShrink: 0, fontSize: 12 }}>
+              {stats.harness.map(({ providerId, count }) => (
+                <li key={providerId} data-harness={providerId} data-count={count} title={harnessName(providerId)}
+                  style={{ display: "flex", flexShrink: 0, alignItems: "center", gap: 5, whiteSpace: "nowrap", color: tokens.mutedText }}>
+                  <ProviderGlyph providerId={providerId} className="justify-start" />
+                  <span style={{ color: tokens.text }}>{count}</span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {stats.waitingOnYou > 0 ? (
+            <p data-waiting-on-you="" style={{ margin: 0, fontSize: 12, color: tokens.warning, flexShrink: 0 }}>
+              {stats.waitingOnYou} waiting on you
+            </p>
           ) : null}
           {groups.length > 0 ? <RunningThreadsList groups={groups} labels={labels} pluginId={pluginId} sharedNumbers={sharedNumbers} /> : null}
         </>
       )}
-      <UnseenDisclosure unseen={stats.unseen} />
+      <div style={{ display: "flex", flexDirection: "column", gap: 4, flexShrink: 0, fontSize: 12, lineHeight: "18px" }}>
+        <UnseenDisclosure unseen={stats.unseen} />
+        {stats.status === "ready" ? <p data-machines="" style={quiet}>{machines}</p> : null}
+      </div>
     </section>
   );
 }
