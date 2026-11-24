@@ -1,3 +1,5 @@
 kind: changed
 
 WizBar 0.7.1 look and polish (#231): the running card leads with one large live count, shows each harness's name beside its logo and count, and sets its right-aligned model column in 11 px muted text; sidebar section rules use calmer neutral borders with tighter header spacing and sort/filter pickers shown on hover or focus; Cloud agents parse `Gemini Neon, Medium` and `GPT-6.2 medium effort` into plain model words and fold older done, stopped and lapsed agents into an expandable `N earlier` line while keeping live and recently finished (last 30 minutes) agents visible; and Yours excludes `launch-fleet` loop runs regardless of repository (search still finds them). The running card's harness bar is replaced by named counts, the cloud and local split moves to the card's last line, and the waiting line shows only when something waits on you. `wizbar agents --json` lists recent agents in `rows` and folded older ones in a new `earlier` field.
+
+The look update also puts each thread card on two lines (title, status and age; then the quiet details), and the footer line adds what is waiting on you and how many live agents are on GitHub.
