@@ -25,6 +25,15 @@
       "items": {
         "$ref": "#/$defs/agent"
       }
+    },
+    "runMap": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "$ref": "#/$defs/runMapEntry"
+      }
     }
   },
   "$defs": {
@@ -62,7 +71,9 @@
         "state": {
           "enum": [
             "working",
-            "asking"
+            "asking",
+            "done",
+            "stopped"
           ]
         },
         "harness": {
@@ -102,6 +113,64 @@
           "type": "integer",
           "minimum": 1,
           "maximum": 9007199254740991
+        },
+        "live": {
+          "type": "boolean"
+        }
+      }
+    },
+    "runMapEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role",
+        "repository",
+        "number",
+        "threadId",
+        "run"
+      ],
+      "properties": {
+        "role": {
+          "enum": [
+            "builder",
+            "reviewer"
+          ]
+        },
+        "repository": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9-]*/(?!\\.{1,2}(?:[#/]|$))[A-Za-z0-9._-]+$"
+        },
+        "number": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "threadId": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,199}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "run": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,199}$"
+            },
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       }
     }

@@ -166,7 +166,7 @@ it.skipIf(!browserPath).each([600, 900])("shows all 100 threads in a %i px windo
       { text: "100 awake · 0 starting · 0 asleep", height: 20, fits: true },
       { text: "0 waiting on you · 0 cloud, 100 local", height: 20, fits: true },
       expect.objectContaining({
-        text: "Cloud agents in their own sandbox may be missing from this list.",
+        text: "Cloud agents in their own sandbox may be missing from this list. GitHub agent data is unavailable.",
         fits: true,
       }),
     ]);

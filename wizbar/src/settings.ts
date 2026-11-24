@@ -53,12 +53,12 @@ export function readSpecsSort(raw: unknown): SpecsSort {
 export const sectionsSettingDescriptors = {
   sectionsCollapsed: {
     type: "string", label: "Collapsed sections", default: "[]",
-    description: "JSON list of the collapsed sidebar sections (pinned, specs, yours). Every section starts expanded.",
+    description: "JSON list of the collapsed sidebar sections (pinned, cloud, specs, yours). Every section starts expanded.",
   },
   // C0 (#182): the sections' order (sidebar-v3.v1.md section 10).
   sectionsOrder: {
-    type: "string", label: "Section order", default: "[\"pinned\",\"specs\",\"yours\"]",
-    description: "JSON list of the sidebar sections in the order shown: pinned, specs and yours.",
+    type: "string", label: "Section order", default: "[\"pinned\",\"cloud\",\"specs\",\"yours\"]",
+    description: "JSON list of the sidebar sections in the order shown: pinned, cloud, specs and yours.",
   },
 } satisfies PluginSettingDescriptors;
 

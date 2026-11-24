@@ -417,7 +417,7 @@ describe("wizbar stats", () => {
       "\"thr_v3_parent_many\": working Sample refine command palette",
       "\"thr_v3_child_working\": working Sample audit shortcuts",
       "\"thr_v3_starting\": working Sample update color tokens",
-      "Cloud agents in their own sandbox may be missing from this list.",
+      "Cloud agents in their own sandbox may be missing from this list. GitHub agent data is unavailable.",
     ].join("\n") + "\n");
   });
 
@@ -441,7 +441,7 @@ describe("wizbar stats", () => {
     expect(JSON.parse(json.stdout!)).toEqual({ error: { code: "state_unavailable", message: "Thread state is unavailable." } });
     const text = await host.run(["stats"]);
     expect(text.exitCode).toBe(1);
-    expect(text.stdout).toBe("ERROR state_unavailable: Thread state is unavailable.\nCloud agents in their own sandbox may be missing from this list.\n");
+    expect(text.stdout).toBe("ERROR state_unavailable: Thread state is unavailable.\nCloud agents in their own sandbox may be missing from this list. GitHub agent data is unavailable.\n");
   });
 
   it.each([["stats", "thr_v3_parent_many"], ["stats", "--json", "--json"], ["stats", "--until", "hour"], ["stats", "--", "x"]])(

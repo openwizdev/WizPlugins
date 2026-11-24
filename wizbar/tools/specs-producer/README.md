@@ -25,12 +25,17 @@ With one repository under 100 open issues and pull requests, and specs of up to 
 
 After the specs scan, the producer uses the remaining request budget to write
 `.openwiz/agents.v1.json`. It reads at most three pages of recently updated
-issue comments per repository and caches their ETags separately in
+issue comments per repository, newest updates first, from a two-hour window.
+The request start rounds down to ten minutes for conditional reads.
+The producer caches those ETags separately in
 `.openwiz/agents.v1.etags.json`. Repeat `--author <login>` to set record
 authors for the run. Without these flags, each repository supplies its record
 authors in the GitHub identity table in `docs/agents/fleet.md`. A repository
 without a record author contributes no notes. A failed agents read or
-exhausted budget keeps the last agents file. See the
+exhausted budget keeps the last agents file. Pass every product repository with
+`--repo`. Optionally pass `--run-map 'owner/name#comment-id'` to read the run map
+through the same `gh` login. A private run map needs the `repo` scope. Its data
+stays in the local snapshot. See the
 [agents file contract](../../contracts/agents.v1.md).
 
 ## Run it once
@@ -38,7 +43,7 @@ exhausted budget keeps the last agents file. See the
 Use the factory home and repositories of your WizDeck factory binding (the `wizdeckFactories` setting):
 
 ```sh
-node wizbar/tools/specs-producer/producer.ts --home /path/to/factory-home --repo owner/name [--repo owner/other] [--gh /path/to/gh] [--author login ...]
+node wizbar/tools/specs-producer/producer.ts --home /path/to/factory-home --repo owner/name [--repo owner/other] [--gh /path/to/gh] [--author login ...] [--run-map 'owner/name#comment-id']
 ```
 
 It prints `wrote …/.openwiz/specs.v2.json and …/.openwiz/specs.v1.json: N specs, M requests (K unchanged)`, for example `25 specs, 31 requests (29 unchanged)`. `K` is how many of the `M` requests GitHub answered 304 unchanged. The run line also reports the agents scan result. These requests count toward the 59-request budget, but not toward GitHub's rate limit. `--gh` is the `gh` to run, by default `gh` on `PATH`; a missing `gh` fails, keeps the last file and names `--gh` and `PATH`. WizBar calls a file older than 30 minutes stale, so run it on a timer.

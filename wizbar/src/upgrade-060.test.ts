@@ -27,7 +27,7 @@ it("reloads every 0.6 setting and writes canonical section keys only when edited
     const values = await read();
     expect(values).toEqual({ ...stored, threadsSort: "newest", threadsFilter: "{}" });
     expect(readCollapsedSections(values.sectionsCollapsed)).toEqual(["yours", "specs"]);
-    expect(readSectionsOrder(values.sectionsOrder)).toEqual(["yours", "pinned", "specs"]);
+    expect(readSectionsOrder(values.sectionsOrder)).toEqual(["yours", "pinned", "cloud", "specs"]);
     expect((await reload.harness.behavior.runCli(["section", "specs", "--expand"])).exitCode).toBe(0);
     expect(await read()).toEqual({ ...values, sectionsCollapsed: '["yours"]' });
 

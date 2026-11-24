@@ -18,7 +18,7 @@ const bound = JSON.stringify([{
   orchestratorThreadId: "sample-orchestrator", statusWriterLogin: "sample-manager",
 }]);
 const row = {
-  ...v4Threads[0]!, id: "sample-active", title: "#17: Sample ticket", displayTitle: "#17: Sample ticket",
+  ...v4Threads[0]!, id: "sample-active", title: "Sample desktop work", displayTitle: "Sample desktop work",
   isArchived: false, isHidden: false, isPinned: true,
 };
 const stamp = (age: number) => new Date(v4Now - age * 60_000).toISOString().replace(".000Z", "Z");

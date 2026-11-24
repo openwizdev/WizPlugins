@@ -1,5 +1,5 @@
 // @ts-expect-error Node runs this producer directly and requires the source extension.
-import { agentKinds, agentLeaseMs, liveStates, publicText, pullPattern, repositoryPattern, type GitHubAgent } from "../../src/agents/format.ts";
+import { agentKinds, agentStates, agentWindowMs, noteIsLive, publicText, pullPattern, repositoryPattern, type GitHubAgent } from "../../src/agents/format.ts";
 
 const login = "[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*(?:\\[bot\\])?";
 export const loginPattern = new RegExp(`^${login}$`);
@@ -30,7 +30,7 @@ const validTime = (value: string) => {
 };
 const positiveInt = (value: unknown): value is number => typeof value === "number" && Number.isSafeInteger(value) && value > 0;
 
-type Note = Omit<GitHubAgent, "repository" | "ticket" | "commentId" | "updatedAt">;
+type Note = Omit<GitHubAgent, "repository" | "ticket" | "commentId" | "updatedAt" | "live">;
 
 function parseNote(body: unknown): Note | null {
   if (typeof body !== "string") return null;
@@ -58,10 +58,10 @@ function parseNote(body: unknown): Note | null {
   const pr = fields.get("pr");
   const preview = fields.get("preview");
   const kind = agentKinds.find((kind) => kind === agent);
-  const live = liveStates.find((live) => live === state);
-  if (!kind || !live || !skillsPattern.test(skills) || !validTime(time)) return null;
+  const parsedState = /^stopped \([^()]{1,100}\)$/u.test(state) ? "stopped" : agentStates.find((value) => value === state);
+  if (!kind || !parsedState || !skillsPattern.test(skills) || !validTime(time)) return null;
   if ((pr && !pullPattern.test(pr)) || (preview && !previewPattern.test(preview))) return null;
-  return { agent: kind, state: live, harness, model, step, time, ...(pr ? { pr } : {}) };
+  return { agent: kind, state: parsedState, harness, model, step, time, ...(pr ? { pr } : {}) };
 }
 
 /** Cache only valid public fields and the metadata needed to apply the current authors and lease. */
@@ -82,18 +82,20 @@ export function slimComment(value: unknown): Record<string, unknown>[] {
   }];
 }
 
-export function liveAgents(
+export function recentAgents(
   comments: Record<string, unknown>[], repository: string, authors: ReadonlySet<string>, now: Date,
 ): GitHubAgent[] {
   const claims = new Map<string, GitHubAgent>();
   for (const comment of comments as (Record<string, unknown> & GitHubAgent & { author: string })[]) {
-    const { author, ...agent } = comment;
+    const { author, ...note } = comment;
+    const agent = { ...note, live: noteIsLive(note, now.getTime()) };
     const age = now.getTime() - Date.parse(agent.updatedAt);
     if (!authors.has(author) || agent.repository.toLowerCase() !== repository.toLowerCase()
-      || age >= agentLeaseMs || age < 0) continue;
+      || age >= agentWindowMs || age < 0) continue;
     const key = `${agent.ticket.toLowerCase()}:${agent.agent}`;
-    const earlier = claims.get(key);
-    if (!earlier || agent.commentId < earlier.commentId) claims.set(key, agent);
+    const previous = claims.get(key);
+    if (!previous || agent.updatedAt > previous.updatedAt
+      || (agent.updatedAt === previous.updatedAt && agent.commentId > previous.commentId)) claims.set(key, agent);
   }
   return [...claims.values()].sort((a, b) => a.commentId - b.commentId);
 }

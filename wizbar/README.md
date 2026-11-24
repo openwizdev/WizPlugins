@@ -101,10 +101,13 @@ Pinned, snoozed, muted and settled matches stay on their shelves.
   Chromium with `npx playwright-core install chromium` or set
   `CHROMIUM_PATH` to select a browser. Set `WIZBAR_BROWSER_EVIDENCE=1`
   to save the four screenshots.
-  The card lists live GitHub status notes with no matching running sidebar
-  thread. These rows show the note's harness and model and open its issue or
+  The card lists live GitHub status notes for agents the sidebar cannot match. These rows show the note's harness and model and open its issue or
   pull request. The card reports their count separately as `N more on GitHub`.
   `wizbar stats --json` reports the same rows in `unseen`.
+- **Cloud agents.** The sidebar lists GitHub agents with no matching desktop
+  thread. It starts after Pinned and can be moved or collapsed. Working and
+  asking agents appear first, followed by recent done and stopped agents.
+  Names link to GitHub. `wizbar agents [--json]` lists the same rows.
 - **The producer** adds each ticket's last activity (`updatedAt`, from the
   issue's `updated_at` in the answer it already reads, no added requests) to
   `specs.v2.json` only; `specs.v1.json` is unchanged. WizBar 0.5.0 does not
@@ -156,6 +159,9 @@ Pinned, snoozed, muted and settled matches stay on their shelves.
   remaining requests from the run's 59-request budget to write
   `.openwiz/agents.v1.json`. Repeat `--author <login>` to set record authors
   or use each repository's `Record authors` row in `docs/agents/fleet.md`.
+  Pass `--repo` for each product repository and optionally
+  `--run-map 'owner/name#comment-id'` for a GitHub run map. The producer uses
+  its existing `gh` login. A private run map needs the `repo` scope.
   A failed agents read or exhausted budget keeps the last agents file.
   The [agents file contract](contracts/agents.v1.md) describes the format. Unchanged pages cost
   nothing against GitHub's rate limit, by ETag, and the run line reports how
@@ -303,6 +309,7 @@ wizbar unpin <id>... [--json]
 wizbar move <id> (--before <id> | --after <id> | --first | --last) [--json]
 wizbar children <id> [--json]
 wizbar stats [--json]
+wizbar agents [--json]
 wizbar specs [--sort <needs-you|recent|closest|newest>] [--json]
 wizbar spec <n> (--open | --close) [--json]
 wizbar section <pinned|specs|yours> (--collapse | --expand) [--json]

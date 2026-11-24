@@ -23,10 +23,10 @@ export interface SectionsSettingHandle {
   experimental_set(values: { sectionsCollapsed?: string | null }): Promise<{ sectionsCollapsed?: unknown }>;
 }
 
-const sectionUsage = "section <pinned|specs|yours> --collapse|--expand [--json]";
+const sectionUsage = "section <pinned|cloud|specs|yours> --collapse|--expand [--json]";
 
 /**
- * `wizbar section <pinned|specs|yours> --collapse|--expand [--json]`, the
+ * `wizbar section <pinned|cloud|specs|yours> --collapse|--expand [--json]`, the
  * agent-first route to a header click: the same read-modify-write of
  * `sectionsCollapsed`, one at a time, never writing from a failed read.
  * Both previous names for Yours are accepted.
@@ -82,7 +82,7 @@ export function withSectionCommand(cli: PluginCliRegistration, settings: Section
 }
 
 /** The sidebar sections in their default order. */
-export const sidebarSections = ["pinned", "specs", "yours"] as const;
+export const sidebarSections = ["pinned", "cloud", "specs", "yours"] as const;
 export type SidebarSection = (typeof sidebarSections)[number];
 
 const canonical = (key: string) => (key === "inbox" || key === "unread" ? "yours" : key);
@@ -107,7 +107,9 @@ export function readSectionsOrder(raw: unknown): SidebarSection[] {
   const known = (key: string): key is SidebarSection => (sidebarSections as readonly string[]).includes(key);
   // The same JSON-list-of-strings rule as `sectionsCollapsed`.
   const stored = unique(readCollapsedKeys(raw).map(canonical)).filter(known);
-  return [...stored, ...sidebarSections.filter((key) => !stored.includes(key))];
+  const order = [...stored, ...sidebarSections.filter((key) => key !== "cloud" && !stored.includes(key))];
+  if (!order.includes("cloud")) order.splice(order.indexOf("pinned") + 1, 0, "cloud");
+  return order;
 }
 
 /** The `sectionsOrder` value after moving one section to index `to` (clamped), as a drop or Alt+Up/Alt+Down does. */

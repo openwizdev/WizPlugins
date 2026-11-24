@@ -50,7 +50,7 @@ const props = { dismiss() {} };
 afterEach(() => { cleanup(); fixtureFeed.current = null; settingsFeed.current = null; vi.useRealTimers(); });
 
 const lines = () => [...(screen.queryByRole("region", { name: "Running threads" })?.querySelectorAll("p") ?? [])].map((p) => p.textContent);
-const agentCoverage = "Cloud agents in their own sandbox may be missing from this list.";
+const agentCoverage = "Cloud agents in their own sandbox may be missing from this list. GitHub agent data is unavailable.";
 const fixtureLine = "3 awake · 1 starting · 8 asleep";
 
 describe("V3: footer stats panel", () => {

@@ -5,7 +5,7 @@
 import { describe, it } from "vitest";
 import { act, fireEvent, screen } from "@testing-library/react";
 import { loadPluginApp, renderSlot } from "@get-bb/plugin-sdk/testing/app";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { scene } from "./scene";
 
@@ -51,18 +51,23 @@ describe.skipIf(!out)("render", () => {
         rpc: {
           listLifecycle: () => ({ rows: [] }),
           specsFile: () => ({ kind: "content", text: s.specsText }),
+          agentsFile: () => ({ kind: "content", text: s.agentsText }),
           cardModels: (input: unknown) => ({ source: "host", items: (input as { threadIds: string[] }).threadIds
             .map((threadId) => ({ threadId, model: s.models[threadId]?.model ?? null, effort: s.models[threadId]?.effort ?? null })) }),
         },
       });
       await screen.findAllByText(/running/);
+      await screen.findByRole("region", { name: "Cloud agents" });
       await act(async () => { await new Promise((done) => setTimeout(done, 300)); });
       if (view === "card") {
         const trigger = screen.getAllByRole("button").find((b) => /running/.test(b.getAttribute("aria-label") ?? ""));
         if (trigger) fireEvent.click(trigger);
         await act(async () => { await new Promise((done) => setTimeout(done, 300)); });
       }
-      const css = readFileSync(join(__dirname, "../../dist/app.css"), "utf8");
+      const pluginCss = join(__dirname, "../../dist/app.css");
+      const hostAssets = join(__dirname, "../../node_modules/bb-app/app/dist/assets");
+      const hostCss = readdirSync(hostAssets).find((file) => /^index-.+\.css$/.test(file))!;
+      const css = readFileSync(existsSync(pluginCss) ? pluginCss : join(hostAssets, hostCss), "utf8");
       const html = `<!doctype html><html class="dark"><head><meta charset="utf-8"><style>@layer base, properties, theme, utilities;</style><style>${hostVars}</style><style>${css}</style></head>
 <body><div class="host"><aside class="side"><div class="chrome"><div class="btn">+ New thread</div><div class="search">Search threads</div></div>
 <div class="list" data-bb-plugin="wizbar">${r.container.innerHTML}</div></aside><div class="main">Thread</div></div></body></html>`;

@@ -90,6 +90,6 @@ it.each([
   [[builder], new Date(v4Now - 30 * 60_000).toISOString()],
 ] as const)("shows only the coverage line for unavailable data", async (agents, at) => {
   card(agents, at);
-  expect(await screen.findByText(coverage)).toBeDefined();
+  expect(await screen.findByText(`${coverage} GitHub agent data is unavailable.`)).toBeDefined();
   expect(screen.queryByText(/seen on GitHub\.|more on GitHub/)).toBeNull();
 });

@@ -6,7 +6,7 @@ import { runOnce } from "./producer";
 import { fakeGitHub, FLEET, recordedAnswers } from "./fixtures/recorded";
 
 const now = () => new Date("2026-11-20T12:00:00Z");
-const comments = `repos/${FLEET}/issues/comments?since=2026-11-20T11:30:00Z&sort=updated&direction=desc&per_page=100`;
+const comments = `repos/${FLEET}/issues/comments?since=2026-11-20T10:00:00Z&sort=updated&direction=desc&per_page=100`;
 const fleet = `repos/${FLEET}/contents/docs/agents/fleet.md`;
 const body = [
   "<!-- openwiz:status v1 -->",
@@ -26,12 +26,14 @@ const note = (id: number, patch: Record<string, unknown> = {}) => ({
 const builder = {
   repository: FLEET, ticket: `${FLEET}#902`, agent: "builder", state: "working",
   harness: "Antigravity", model: "Gemini 4 Neon Medium", step: "Ran the fixture",
-  time: "2026-11-20T11:55:00Z", updatedAt: "2026-11-20T11:55:00Z", commentId: 10,
+  time: "2026-11-20T11:55:00Z", updatedAt: "2026-11-20T11:55:00Z", commentId: 11, live: true,
 };
 const pr = `https://github.com/${FLEET}/pull/951`;
 const reviewer = {
   ...builder, ticket: `${FLEET}#903`, agent: "reviewer", state: "asking", pr, commentId: 20,
 };
+const stopped = { ...builder, ticket: `${FLEET}#904`, state: "stopped", live: false, commentId: 13 };
+const ageing = { ...builder, ticket: `${FLEET}#990`, updatedAt: "2026-11-20T11:31:00Z", commentId: 21 };
 const homes: string[] = [];
 afterEach(async () => {
   for (const home of homes.splice(0)) await rm(home, { recursive: true, force: true });
@@ -45,7 +47,7 @@ async function fixture() {
     note(10),
     note(11),
     note(12, { updated_at: "2026-11-20T11:30:00Z" }),
-    note(13, { body: body.replace("working", "stopped (completed)") }),
+    note(13, { body: body.replace("working", "stopped (completed)"), issue_url: `https://api.github.com/repos/${FLEET}/issues/904` }),
     note(14, { user: { login: "sample-guest" } }),
     note(15, { body: body.replace("v1", "v2") }),
     note(16, { body: body + "\nstep: Duplicate field" }),
@@ -69,11 +71,11 @@ async function fixture() {
   return { home, answers, github, run, file: join(home, ".openwiz", "agents.v1.json") };
 }
 
-it("writes only live v1 claims by record authors, follows up to three pages and reuses ETags", async () => {
+it("writes recent v1 notes by record authors, follows up to three pages and reuses ETags", async () => {
   const { file, github, run } = await fixture();
   expect((await run(["sample-builder", "sample-reviewer"])).ok).toBe(true);
   expect(JSON.parse(await readFile(file, "utf8"))).toEqual({
-    version: 1, generatedAt: now().toISOString().replace(".000", ""), agents: [builder, reviewer, { ...builder, ticket: `${FLEET}#990`, updatedAt: "2026-11-20T11:31:00Z", commentId: 21 }],
+    version: 1, generatedAt: now().toISOString().replace(".000", ""), agents: [builder, stopped, reviewer, ageing],
   });
   const paths = [comments, `${comments}&page=2`, `${comments}&page=3`];
   expect(github.calls.slice(-3).map((call) => call.path)).toEqual(paths);
@@ -83,7 +85,7 @@ it("writes only live v1 claims by record authors, follows up to three pages and 
   expect(github.calls.slice(-3).map(({ path, status }) => [path, status])).toEqual(paths.map((path) => [path, 304]));
   expect(second).toMatchObject({ agents: { status: "wrote", truncated: 1 } });
   expect(JSON.parse(await readFile(file, "utf8"))).toEqual({
-    version: 1, generatedAt: "2026-11-20T12:04:15Z", agents: [builder, reviewer],
+    version: 1, generatedAt: "2026-11-20T12:04:15Z", agents: [builder, stopped, reviewer, { ...ageing, live: false }],
   });
 });
 
@@ -92,7 +94,7 @@ it("reads the repository's GitHub identity table and marks absent authors unknow
   const content = Buffer.from("## GitHub identity\n| Field | Value |\n| --- | --- |\n| Record authors | `Sample-Builder`, `sample-bot[bot]` |\n").toString("base64");
   answers.set(fleet, { body: { type: "file", encoding: "base64", content } });
   await run();
-  expect(JSON.parse(await readFile(file, "utf8")).agents).toEqual([builder, reviewer, expect.objectContaining({ commentId: 21 })]);
+  expect(JSON.parse(await readFile(file, "utf8")).agents).toEqual([builder, stopped, reviewer, ageing]);
   answers.delete(fleet);
   expect(await run()).toMatchObject({ agents: { status: "wrote", unknownAuthors: 1, truncated: 0 } });
   expect(JSON.parse(await readFile(file, "utf8"))).toMatchObject({ authors: "unknown", agents: [] });

@@ -1,5 +1,6 @@
 // A synthetic scene for screenshots of the real WizBar sidebar (tools/render/README.md).
 // Every name, number and id here is made up; nothing comes from a real account.
+import type { GitHubAgent } from "../../src/agents/format";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk";
 
 const MINUTE = 60_000;
@@ -9,6 +10,7 @@ export interface Scene {
   now: number;
   threads: PluginSidebarThread[];
   specsText: string;
+  agentsText: string;
   models: Record<string, { model: string; effort: string | null }>;
   binding: string;
 }
@@ -32,7 +34,7 @@ function row(now: number, id: string, title: string | null, over: Partial<Plugin
 const running = (over: Partial<PluginSidebarThread> = {}): Partial<PluginSidebarThread> =>
   ({ status: "active", runtimeStatus: "active", indicator: "runtime", ...over });
 
-const specNames = ["Sidebar search", "Running card", "Release notes", "Cloud agents", "Settings sync", "Docs refresh"];
+const specNames = ["Sidebar search", "Running card", "Release notes", "Hosted runs", "Settings sync", "Docs refresh"];
 
 /**
  * `agents` running spec agents spread over six specs, plus a pinned orchestrator,
@@ -83,5 +85,20 @@ export function scene(agents = 24, now = Date.now()): Scene {
   }
   const binding = JSON.stringify([{ projectKey: "sample-factory", cloudroomProjectId: "prj_sample", repositories: [REPO],
     home: { hostId: "hst_sample", rootPath: "/synthetic/home" }, orchestratorThreadId: "thr_orch", statusWriterLogin: "sample-writer" }]);
-  return { now, threads, models, binding, specsText: JSON.stringify({ schema: "openwiz.specs.v2", generatedAt: iso(now - MINUTE), specs }) };
+  const stamp = (at: number) => iso(at).replace(/\.\d{3}Z$/, "Z");
+  const cloud = (number: number, model: string, state: GitHubAgent["state"], age: number, more: Partial<GitHubAgent> = {}): GitHubAgent => ({
+    repository: REPO, ticket: `${REPO}#${number}`, commentId: number, agent: "builder", harness: "Synthetic",
+    model, state, live: state !== "done" && age < 30, step: "Ran the fixture", updatedAt: stamp(now - age * MINUTE),
+    time: stamp(now - age * MINUTE), ...more,
+  });
+  const githubAgents = [
+    cloud(1201, "Gemini 4 Neon Medium", "working", 3),
+    cloud(1202, "GPT-6.2-Sol medium effort", "asking", 42, { agent: "reviewer", pr: `https://github.com/${REPO}/pull/1215` }),
+    cloud(1203, "claude-opus-5-5", "done", 16),
+  ];
+  return {
+    now, threads, models, binding,
+    specsText: JSON.stringify({ schema: "openwiz.specs.v2", generatedAt: iso(now - MINUTE), specs }),
+    agentsText: JSON.stringify({ version: 1, generatedAt: stamp(now), agents: githubAgents }),
+  };
 }

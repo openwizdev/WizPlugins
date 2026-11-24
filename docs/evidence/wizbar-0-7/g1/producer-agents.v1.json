@@ -3,29 +3,44 @@
   "generatedAt": "2026-11-20T12:00:00Z",
   "agents": [
     {
-      "repository": "example/sample-fleet",
-      "ticket": "example/sample-fleet#902",
+      "repository": "example/sample-factory",
+      "ticket": "example/sample-factory#1201",
       "agent": "builder",
       "state": "working",
-      "harness": "Antigravity",
+      "harness": "Sample harness",
       "model": "Gemini 4 Neon Medium",
       "step": "Ran the fixture",
-      "time": "2026-11-20T11:55:00Z",
-      "updatedAt": "2026-11-20T11:55:00Z",
-      "commentId": 10
+      "time": "2026-11-20T11:57:00Z",
+      "updatedAt": "2026-11-20T11:57:00Z",
+      "commentId": 1201,
+      "live": true
     },
     {
-      "repository": "example/sample-fleet",
-      "ticket": "example/sample-fleet#903",
+      "repository": "example/sample-factory",
+      "ticket": "example/sample-factory#1202",
       "agent": "reviewer",
       "state": "asking",
-      "harness": "Antigravity",
-      "model": "Gemini 4 Neon Medium",
+      "harness": "Sample harness",
+      "model": "GPT-6.2-Sol medium effort",
       "step": "Ran the fixture",
-      "time": "2026-11-20T11:55:00Z",
-      "pr": "https://github.com/example/sample-fleet/pull/951",
-      "updatedAt": "2026-11-20T11:55:00Z",
-      "commentId": 20
+      "time": "2026-11-20T11:18:00Z",
+      "pr": "https://github.com/example/sample-factory/pull/1215",
+      "updatedAt": "2026-11-20T11:18:00Z",
+      "commentId": 1202,
+      "live": false
+    },
+    {
+      "repository": "example/sample-factory",
+      "ticket": "example/sample-factory#1203",
+      "agent": "builder",
+      "state": "done",
+      "harness": "Sample harness",
+      "model": "claude-opus-5-5",
+      "step": "Ran the fixture",
+      "time": "2026-11-20T11:44:00Z",
+      "updatedAt": "2026-11-20T11:44:00Z",
+      "commentId": 1203,
+      "live": false
     }
   ]
 }

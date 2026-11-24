@@ -215,7 +215,8 @@ export function computeStatsV4(
     };
   });
   const states = { awake, starting, asleep, needsYou: v3.waitingOnYou, awakeByHarness: sortedHarnessCounts(awakeCounts) };
-  const unseen = agents ? { unseen: unseenAgents(agents, specs, [...unique.values()]) } : {};
+  const seenRows = [...unique.values(), ...(rows?.filter((row) => row.isArchived) ?? [])];
+  const unseen = agents ? { unseen: unseenAgents(agents, specs, seenRows) } : {};
   return { ...v3, ...unseen, version: 2, harness, threads, states };
 }
 

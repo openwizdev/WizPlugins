@@ -7,6 +7,8 @@
 import { createHash } from "node:crypto";
 import { defineRpcContract, type BbPluginApi } from "@get-bb/plugin-sdk";
 import { z } from "zod";
+import { archivedAgentIds, mappedThreadIds } from "../agents/archive";
+import { readAgentsFile } from "../agents/read";
 import { agentsRelativePath } from "../agents/format";
 import { runtimeStatusesV3 } from "../children";
 import type { SpecsFileReadV4 } from "../fixtures/v4";
@@ -26,6 +28,7 @@ const readOutput = z.union([
 export const specsRpcContract = defineRpcContract({
   specsFile: { input: z.object({}).strict(), output: readOutput },
   agentsFile: { input: z.object({}).strict(), output: readOutput },
+  agentsArchive: { input: z.object({}).strict(), output: z.array(z.string()) },
 });
 
 interface Handles {
@@ -122,6 +125,7 @@ async function readRows(bb: BbPluginApi, signal?: AbortSignal): Promise<SpecsThr
 export function registerSpecs(bb: BbPluginApi, handles: Handles): SpecsCommands & {
   specsFile(): Promise<SpecsFileReadV4>;
   agentsFile(): Promise<SpecsFileReadV4>;
+  agentsArchive(): Promise<string[]>;
 } {
   type Cached = { key: string; at: number; read: Promise<SpecsFileReadV4> };
   let cached: Cached | null = null;
@@ -165,7 +169,18 @@ export function registerSpecs(bb: BbPluginApi, handles: Handles): SpecsCommands 
     return cachedAgents.read;
   };
 
-  bb.rpc.register(specsRpcContract, { specsFile, agentsFile });
+  const archive = new WeakMap<SpecsFileReadV4, Promise<string[]>>();
+  const agentsArchive = async () => {
+    const raw = await agentsFile();
+    let result = archive.get(raw);
+    if (!result) {
+      result = archivedAgentIds(bb, mappedThreadIds(readAgentsFile(raw, Date.now())));
+      archive.set(raw, result);
+    }
+    return result;
+  };
+
+  bb.rpc.register(specsRpcContract, { specsFile, agentsFile, agentsArchive });
 
   const commands = createSpecsCommands({
     specsFile,
@@ -178,5 +193,5 @@ export function registerSpecs(bb: BbPluginApi, handles: Handles): SpecsCommands 
     writeOpenSetting: async (value) => (await handles.settings.experimental_set({ specsOpen: value })).specsOpen,
   });
   // WB4-3 (#1437): `wizbar stats` reads the same cached file.
-  return { ...commands, specsFile, agentsFile };
+  return { ...commands, specsFile, agentsFile, agentsArchive };
 }

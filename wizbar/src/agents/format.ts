@@ -1,7 +1,10 @@
 export const agentsRelativePath = ".openwiz/agents.v1.json";
 export const agentLeaseMs = 30 * 60_000;
+export const agentWindowMs = 2 * 60 * 60_000;
 export const agentKinds = ["builder", "reviewer", "fleet"] as const;
 export const liveStates = ["working", "asking"] as const;
+export const agentStates = [...liveStates, "done", "stopped"] as const;
+export const runMapRoles = ["builder", "reviewer"] as const;
 
 export const repositoryPattern = /^[A-Za-z0-9][A-Za-z0-9-]*\/(?!\.{1,2}$)[A-Za-z0-9._-]+$/;
 export const pullPattern = /^https:\/\/github\.com\/([A-Za-z0-9][A-Za-z0-9-]*\/(?!\.{1,2}\/)[A-Za-z0-9._-]+)\/pull\/([1-9][0-9]*)$/;
@@ -29,7 +32,8 @@ export interface GitHubAgent {
   repository: string;
   ticket: string;
   agent: typeof agentKinds[number];
-  state: typeof liveStates[number];
+  state: typeof agentStates[number];
+  live?: boolean;
   harness: string;
   model: string;
   step: string;
@@ -37,4 +41,21 @@ export interface GitHubAgent {
   pr?: string;
   updatedAt: string;
   commentId: number;
+}
+
+export interface AgentRun {
+  role: typeof runMapRoles[number];
+  repository: string;
+  number: number;
+  threadId: string | null;
+  run: string | number | null;
+}
+
+export function isActiveNote(state: GitHubAgent["state"]): boolean {
+  return state === "working" || state === "asking";
+}
+
+export function noteIsLive(agent: GitHubAgent, now: number): boolean {
+  const age = now - Date.parse(agent.updatedAt);
+  return isActiveNote(agent.state) && age >= 0 && age < agentLeaseMs;
 }

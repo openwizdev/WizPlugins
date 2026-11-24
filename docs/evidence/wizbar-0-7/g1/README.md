@@ -1,12 +1,17 @@
 # WizBar 0.7.0 G1 fixture evidence
 
-- [Producer output](producer-agents.v1.json) from the paginated synthetic
-  GitHub fixture in `tools/specs-producer/agents.test.ts`. The run retained two
-  live claims. A repeat run made conditional requests and received three
-  unchanged comments pages.
-- [Running card](running-card.png) rendered from the plugin SDK fixture in
-  headless Chromium. The Sample kernel header counts its running sidebar
-  thread and GitHub builder. The Other header counts its GitHub reviewer.
-  The card test checks folding and both GitHub destinations. A second
-  Chromium scene with 100 running threads and the same two GitHub rows
-  verified the fades, sticky header, scroll padding and the whole last row.
+- [Producer output](producer-agents.v1.json) from a paginated synthetic GitHub
+  fixture with a live builder, a lapsed reviewer, and a finished builder. A
+  repeat run four minutes later received unchanged responses for both comment
+  pages. No run map was used for this artifact.
+- [Cloud agents sidebar](sidebar.png) rendered by the SDK fixture with the
+  installed host stylesheet and headless Chromium. The section follows Pinned
+  and shows Neon, Sol and Opus with their state and age. Two working or asking
+  claims count in the section header.
+- [Running card](running-card.png) from the grouped-card fixture. Sample kernel
+  counts its desktop thread and GitHub builder. Other counts its GitHub
+  reviewer. A Chromium scene with 100 desktop rows and two GitHub rows checked
+  sticky headers, fades, scroll padding, and full visibility of the last row.
+
+The Cloud agents test compares the sidebar with `wizbar agents --json`, including
+an archived run-map match and an unmatched entry with no recent note.
