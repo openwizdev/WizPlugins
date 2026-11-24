@@ -171,7 +171,7 @@ export function SpecsSection({ threads, now, activeThreadId, onNavigate, collaps
   return (
     <section ref={sectionRef} aria-label="Specs">
       {view === "unavailable" ? (
-        <h2 className="flex items-center gap-2 px-2.5 pb-1 pt-3 text-[11.5px] font-medium">
+        <h2 className="flex items-center gap-2 px-2.5 pb-1 pt-2 text-[11.5px] font-medium">
           <span className="text-muted-foreground">Specs unavailable</span>
           <span data-rule-line="" className="h-px flex-1" style={{ background: tokens.rule }} />
         </h2>
@@ -233,7 +233,7 @@ function SpecsRule({ result, collapsed, onToggle, picker }: { result: SpecsResul
   const label = (after: string | null) => (
     <>
       <span className="text-muted-foreground">Specs</span>{" "}
-      <span className="font-normal tabular-nums text-muted-foreground/60">{mainRows(result.specs).length}</span>
+      <span className="font-normal tabular-nums text-muted-foreground/40">{mainRows(result.specs).length}</span>
       {after !== null ? <>{" "}<span style={{ color: tokens.warning }}>· {after}</span></> : null}
     </>
   );
@@ -244,9 +244,9 @@ function SpecsRule({ result, collapsed, onToggle, picker }: { result: SpecsResul
     </>
   );
   return (
-    <div className="relative flex items-end">
+    <div className="group/header relative flex items-end">
       <h2 ref={rule} aria-label={sentence} title={sentence}
-        className={cn("flex min-w-0 flex-1 items-center gap-2 px-2.5 pb-1 pt-3 text-[11.5px] font-medium", picker && "pr-1")}>
+        className={cn("flex min-w-0 flex-1 items-center gap-2 px-2.5 pb-1 pt-2 text-[11.5px] font-medium", picker && "pr-1")}>
         {/* S1 (#169): with a toggle, the whole line is the collapse button, named by the full sentence. */}
         {onToggle ? (
           <button type="button" aria-expanded={!collapsed} aria-label={sentence} onClick={onToggle}
@@ -295,13 +295,13 @@ const sortLabels: Record<SpecsSort, string> = {
 };
 
 /**
- * S1 (#184): the Specs sort, a small sort-lines mark and chevron at the rule's right, faint until hovered
- * or focused. A native select lies over it, so the keyboard, a screen reader and the host's menu all work.
+ * S1 (#184): the Specs sort, a small sort-lines mark and chevron at the rule's right, hidden until the header
+ * is hovered or focused. A native select lies over it, so the keyboard, a screen reader and the host's menu all work.
  */
 function SortPicker({ sort, onChoose }: { sort: SpecsSort; onChoose: (sort: SpecsSort) => void }) {
   return (
     <span data-sort-picker="" title={`Sort: ${sortLabels[sort]}`}
-      className="relative mb-1 mr-2 flex h-[18px] shrink-0 items-center gap-px rounded px-1 text-muted-foreground opacity-50 hover:bg-sidebar-accent/60 hover:opacity-100 focus-within:opacity-100 has-[:focus-visible]:ring-1 has-[:focus-visible]:ring-sidebar-ring">
+      className="relative mb-1 mr-2 flex h-[18px] shrink-0 items-center gap-px rounded px-1 text-muted-foreground opacity-0 hover:bg-sidebar-accent/60 group-hover/header:opacity-100 group-has-[:focus-visible]/header:opacity-100 focus-within:opacity-100 has-[:focus-visible]:ring-1 has-[:focus-visible]:ring-sidebar-ring">
       <svg aria-hidden viewBox="0 0 12 12" className="size-3" fill="none" stroke="currentColor" strokeWidth={1.3} strokeLinecap="round">
         <path d="M2 3.5h8M3.5 6h5M5 8.5h2" />
       </svg>

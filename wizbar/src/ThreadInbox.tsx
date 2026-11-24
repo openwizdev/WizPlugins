@@ -405,7 +405,7 @@ function ParkedShelf({
         aria-expanded={expanded}
         // Round 5 A: "Snoozed 4", the count faint, the rule running to the
         // edge like every shelf's, and no chevron; the whole line toggles.
-        className="mt-3 flex w-full items-center gap-2 px-2.5 pb-1 text-left"
+        className="mt-2 flex w-full items-center gap-2 px-2.5 pb-1 text-left"
       >
         <span className="text-[11.5px] font-medium text-muted-foreground">
           {label}{" "}
@@ -505,7 +505,7 @@ function Shelf({
   const header = (
     <button type="button" onClick={searching ? undefined : onToggle} aria-expanded={!collapsed}
       {...(searching ? { "aria-disabled": true, title: "Clear the search to collapse" } : {})}
-      className="flex w-full min-w-0 flex-1 items-center gap-2 px-2.5 pb-1 pt-3 text-left aria-disabled:cursor-default">
+      className="flex w-full min-w-0 flex-1 items-center gap-2 px-2.5 pb-1 pt-2 text-left aria-disabled:cursor-default">
       <span className="shrink-0 text-[11.5px] font-medium text-muted-foreground">
         {label}
         {showCount || collapsed || filteredTotal !== undefined ? <>{" "}<span className={cn("ml-1 font-normal",
@@ -518,7 +518,7 @@ function Shelf({
   );
   return (
     <section aria-label={label} {...(pinnedDropZone ? { "data-wizbar-pinned": "" } : {})}>
-      {controls ? <div className="flex items-baseline pr-2">{header}{controls}</div> : header}
+      {controls ? <div className="group/header flex items-baseline pr-2">{header}{controls}</div> : header}
       {saveFailed ? <p role="status" className="px-2.5 text-xs text-muted-foreground">{SAVE_FAILED}</p> : null}
       {collapsed ? null : <ul className="flex flex-col gap-px">{children}</ul>}
     </section>
@@ -554,7 +554,10 @@ function YoursPicker({ sort, filter, harnesses, onSort, onFilter }: {
     }}>
       <button ref={trigger} type="button" aria-label="Sort and filter Yours" aria-expanded={open} aria-controls={open ? panelId : undefined}
         title={`Sort: ${sortLabels[sort]}`} onClick={() => setOpen(!open)}
-        className="relative flex h-[18px] items-center gap-px rounded px-1 text-muted-foreground opacity-50 hover:bg-sidebar-accent/60 hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-sidebar-ring">
+        className={cn(
+          "relative flex h-[18px] items-center gap-px rounded px-1 text-muted-foreground hover:bg-sidebar-accent/60 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-sidebar-ring",
+          open ? "opacity-100" : "opacity-0 group-hover/header:opacity-100 group-has-[:focus-visible]/header:opacity-100 focus-visible:opacity-100",
+        )}>
         <svg aria-hidden viewBox="0 0 12 12" className="size-3" fill="none" stroke="currentColor" strokeWidth={1.3} strokeLinecap="round">
           <path d="M2 3.5h8M3.5 6h5M5 8.5h2" />
         </svg>
@@ -740,7 +743,7 @@ function SectionFrame({ section, order, children }: {
           order.setDragging(section);
         }}
         onDragEnd={() => { order.setDragging(null); order.setDropAt(null); }}
-        className="absolute left-0 top-[13px] z-10 flex h-3.5 w-2 cursor-grab items-center justify-center text-muted-foreground opacity-0 hover:opacity-100 group-has-[>section>:first-child:hover]/section:opacity-60 group-has-[>section>:first-child:focus-visible]/section:opacity-60"
+        className="absolute left-0 top-[9px] z-10 flex h-3.5 w-2 cursor-grab items-center justify-center text-muted-foreground opacity-0 hover:opacity-100 group-has-[>section>:first-child:hover]/section:opacity-60 group-has-[>section>:first-child:focus-visible]/section:opacity-60"
       >
         <svg width="5" height="9" viewBox="0 0 5 9" fill="currentColor">
           {[1, 4.5, 8].flatMap((y) => [<circle key={`l${y}`} cx="1" cy={y} r="0.9" />, <circle key={`r${y}`} cx="4" cy={y} r="0.9" />])}
@@ -771,7 +774,7 @@ function SettledLink({ threads, open, searching, onToggle, activeThreadId, lifec
   const now = Date.now();
   return (
     // A small landmark for the link and its list; not one of the ordered sections.
-    <section aria-label="Settled" className="mt-4">
+    <section aria-label="Settled" className="mt-2.5">
       <button type="button" aria-expanded={expanded} onClick={searching ? undefined : onToggle}
         {...(searching ? { "aria-disabled": true } : {})}
         className="rounded px-2.5 py-1 text-left text-[11.5px] text-muted-foreground/70 hover:text-muted-foreground focus-visible:ring-1 aria-disabled:cursor-default">
@@ -790,7 +793,7 @@ function SettledLink({ threads, open, searching, onToggle, activeThreadId, lifec
   );
 }
 
-/** A shelf's rule: the Specs section's rule olive (round 5 A), so every shelf reads as one list. */
+/** A shelf's rule: the neutral border rule (`tokens.rule`), so every shelf reads as one calm list. */
 function ShelfRule() {
   return <span aria-hidden="true" className="h-px flex-1" style={{ background: tokens.rule }} />;
 }
