@@ -10,7 +10,7 @@ Unread lists only threads with something new for you (unread, waiting on your in
 
 A rule such as `Specs 24 · 5 tickets need you (3 specs)`, then one row per spec from your factory's specs file, specs with a ticket due now first, then the most recently active. A picker switches to Recently active, Closest to done or Newest, and is remembered. Each ticket is a dot: done, building, in review, needs you, later, held or not started. The dot of a ticket whose agent is working breathes slowly unless the ticket is done or in review; a spec with nothing running and nothing due now shows its name muted. Finished specs, and specs with nothing moving for more than 3 days, fold into a collapsed `Quiet N` group. Open a spec to see its running builders and reviewers with their model and effort.
 
-A small producer in the plugin's `tools/specs-producer/` keeps the specs file fresh from GitHub through your `gh` login. When WizBar selects a legacy v1 specs file, there is no separate later state. The producer folds those tickets into needs you in its v1 output.
+A small producer in the plugin's `tools/specs-producer/` keeps the specs file fresh from GitHub through your `gh` login. A legacy v1 specs file has no separate later state. The producer counts blocked `ready-for-human` tickets as needs you in its v1 output.
 
 ## Cards and running work
 
