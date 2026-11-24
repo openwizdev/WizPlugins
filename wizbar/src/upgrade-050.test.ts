@@ -14,11 +14,11 @@ afterEach(async () => {
   for (const host of hosts.splice(0)) await host.harness.lifecycle.dispose();
 });
 
-describe("V: a 0.5.0 store reloads into 0.6.0", () => {
-  it("is version 0.6.0 in the manifest and its lockfile", () => {
-    expect(manifest.version).toBe("0.6.0");
-    expect(lock.version).toBe("0.6.0");
-    expect(lock.packages[""].version).toBe("0.6.0");
+describe("V: a 0.5.0 store reloads into 0.7.0", () => {
+  it("is version 0.7.0 in the manifest and its lockfile", () => {
+    expect(manifest.version).toBe("0.7.0");
+    expect(lock.version).toBe("0.7.0");
+    expect(lock.packages[""].version).toBe("0.7.0");
   });
 
   it("keeps all eight 0.5.0 values and reads the inbox collapse as Yours", async () => {
