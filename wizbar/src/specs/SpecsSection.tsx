@@ -283,8 +283,8 @@ function QuietGroup({ count, open, onToggle }: { count: number; open: boolean; o
             <path d="M3.5 1.5 7 5l-3.5 3.5" />
           </svg>
         </span>
-        <span className="text-[13px] text-muted-foreground">Quiet</span>
-        <span className="text-[13px] tabular-nums text-muted-foreground/60">{count}</span>
+        <span className="text-sm font-medium text-muted-foreground">Quiet</span>
+        <span className="text-sm tabular-nums text-muted-foreground/60">{count}</span>
       </button>
     </li>
   );
@@ -348,13 +348,14 @@ function SpecRow({ row, threads, now, activeThreadId, breath, onNavigate, onTogg
   // A1 (#186): nothing running and nothing due now mutes the name, in place; host text colours only.
   const muted = nameMuted(row);
   const name = (
-    <span data-spec-name="" data-muted={muted ? "" : undefined} className="min-w-[6rem] flex-1 truncate text-[13px]"
+    <span data-spec-name="" data-muted={muted ? "" : undefined} className="min-w-[6rem] flex-1 basis-auto truncate text-sm font-medium"
       style={{ color: muted ? tokens.mutedText : tokens.text }}>{row.shortName}</span>
   );
   // One clipped, wrapping line in priority order (#164 R2): when space is short the last note wraps out of
-  // sight first, so done in the last hour goes, then later, and needs you stays longest.
+  // sight first, so done · 1h goes, then later, and needs you stays in full before the name truncates.
   const notes = row.needsYou > 0 || row.yoursLater > 0 || row.doneLastHour > 0 ? (
-    <span data-notes="" className="flex h-[18px] min-w-0 flex-wrap justify-end gap-x-2 overflow-hidden text-[11.5px] leading-[18px]">
+    <span data-notes="" className="flex h-[18px] min-w-0 shrink-[999] flex-wrap justify-end gap-x-2 overflow-hidden text-xs leading-[18px]"
+      style={row.needsYou > 0 ? { minWidth: "min-content" } : undefined}>
       {row.needsYou > 0 ? <span data-needs-you="" className="shrink-0" style={{ color: tokens.warning }}>{row.needsYou} needs you</span> : null}
       {/* #162: tickets the owner gets once their blockers close, quiet beside the due-now count. */}
       {row.yoursLater > 0 ? (
@@ -362,7 +363,11 @@ function SpecRow({ row, threads, now, activeThreadId, breath, onNavigate, onTogg
           {row.needsYou > 0 ? `· ${row.yoursLater} later` : `${row.yoursLater} later`}
         </span>
       ) : null}
-      {row.doneLastHour > 0 ? <span data-done-last-hour="" className="shrink-0" style={{ color: tokens.doneNote }}>{row.doneLastHour} done in the last hour</span> : null}
+      {row.doneLastHour > 0 ? (
+        <span data-done-last-hour="" title={`${row.doneLastHour} done in the last hour`} className="shrink-0" style={{ color: tokens.doneNote }}>
+          {row.doneLastHour} done · 1h
+        </span>
+      ) : null}
     </span>
   ) : null;
   return (
