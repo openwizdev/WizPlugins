@@ -1,7 +1,7 @@
 # WizBar
 
 WizBar is an agent-first Cloudroom sidebar plugin for fleets of agent threads,
-version 0.6.0. It keeps T3 Sidebar's cards on Pinned, Yours, Snoozed, Muted
+version 0.7.0. It keeps T3 Sidebar's cards on Pinned, Yours, Snoozed, Muted
 and Settled shelves. Pinned follows the host's order. Snoozed displays the
 soonest wake first. Yours, Muted and Settled start in newest-first order.
 v0.3 added richer cards, children on hover, a live running count, drag to pin,
@@ -13,7 +13,10 @@ labels, takes the confirmed 0.4 design, splits what needs you into due now and
 later, and lets you collapse Pinned, Inbox and Specs. v0.6 sorts the specs by
 what needs you, folds finished and idle specs into Quiet, shows which specs are
 moving, turns the Inbox into Unread, lets you reorder the sections, makes
-Settled one link at the bottom, and keeps the running card steady. The project lives in
+Settled one link at the bottom, and keeps the running card steady. v0.7 keeps
+every thread you started in Yours until you settle it, adds search, sort and
+filters, lists every running thread in the card, and shows cloud agents the
+desktop cannot see in a Cloud agents section. The project lives in
 [openwizdev/WizPlugins](https://github.com/openwizdev/WizPlugins).
 
 <img alt="WizBar rendered with synthetic example rows" src="../docs/images/wizbar.png" width="300">
@@ -22,29 +25,39 @@ The image shows WizBar's real sidebar component and compiled styles in a
 headless browser, with synthetic data and a copy of the host's chrome around
 it, not an installed app. Everything below is proved by fixture tests in CI unless
 it says otherwise. 0.5.0 was installed from source and run on a real Cloudroom
-host for its live check; 0.6.0 has not had a live check yet. What is not
+host for its live check; 0.6.0 and 0.7.0 have not had a live check yet. What is not
 covered is under Known limits. The rules and sources
 are in the [v0.3 sidebar contract](contracts/sidebar-v3.v1.md) and the
 [v0.4 specs section contract](contracts/specs-section.v1.md).
 
-## Yours and thread search
+## What v0.7 changes
 
-**Yours** keeps active, unpinned top-level threads in the chosen project whether
-they are read or unread. It also shows eligible threads with something new in
-themselves or a hidden child. Spec agents, fleet wakes and fleet loop runs for
-bound repositories are excluded from the ordinary list. The section remembers
-where you put it and whether it is collapsed. Saved `unread` and `inbox` keys
-both carry over as `yours`.
+- **Yours: nothing gets lost.** Yours keeps active, unpinned top-level threads in the chosen project whether
+  they are read or unread. It also shows eligible threads with something new in
+  themselves or a hidden child. Spec agents, fleet wakes and fleet loop runs for
+  bound repositories are excluded from the ordinary list. The section remembers
+  where you put it and whether it is collapsed. Saved `unread` and `inbox` keys
+  both carry over as `yours`.
 
-Use the picker on the Yours rule to sort by Newest, Last activity, Status,
-Harness, Model or Effort. Status and harness filters are saved with your sort.
-When they hide rows, the rule shows how many remain and offers Clear filters.
+  Use the picker on the Yours rule to sort by Newest, Last activity, Status,
+  Harness, Model or Effort. Status and harness filters are saved with your sort.
+  When they hide rows, the rule shows how many remain and offers Clear filters.
 
-The host search matches the thread title or first prompt, including children.
-Combine free text with `harness:<id or name>`, `model:<text>`, `effort:<level>`
-and `status:<working|needs-you|failed|unread|idle>`. Quote values with spaces,
-as in `harness:"Claude Code"`. Active, unpinned matches appear in Yours.
-Pinned, snoozed, muted and settled matches stay on their shelves.
+  The host search matches the thread title or first prompt, including children.
+  Combine free text with `harness:<id or name>`, `model:<text>`, `effort:<level>`
+  and `status:<working|needs-you|failed|unread|idle>`. Quote values with spaces,
+  as in `harness:"Claude Code"`. Active, unpinned matches appear in Yours.
+  Pinned, snoozed, muted and settled matches stay on their shelves.
+- **The running card shows every running thread.** The card shows awake, starting and asleep totals and scrolls through every running thread. Specs follow the sidebar's sort, with `Other` last. Click a group heading to fold or open it for the session. Untitled rows show a role and ticket when the fallback names one, or the harness name otherwise. The current heading stays visible as you scroll, and a fade shows when more rows are available. The card lists live GitHub status notes for agents the sidebar cannot match. These rows show the note's harness and model and open its issue or pull request. The card reports their count separately as `N more on GitHub`. `wizbar stats --json` reports the same rows in `unseen`.
+- **Cloud agents.** The sidebar lists GitHub agents with no matching desktop thread. It starts after Pinned and can be moved or collapsed. Working and asking agents with live notes appear first and count in the header. Lapsed, done and stopped agents follow by most recent update. Names link to GitHub. `wizbar agents [--json]` lists the same rows. The host's desktop thread list leaves out agents that run in their own cloud sandbox (such as Antigravity), so WizBar reads them from GitHub: live `openwiz:status v1` notes, and optionally a fleet's run map (`--run-map`), whose thread ids tell which agents the desktop cannot see. Rows show the role, the repository and ticket, the model in plain words (for example `Neon · Medium`), the state and the last activity, and open the pull request, or the ticket when the note names none. The card ends with a plain line that agents in their own cloud sandbox may be missing.
+- **The producer** writes `.openwiz/agents.v1.json` beside the specs files, with its own 20-request budget after the specs scan. To fill Cloud agents, add a `--repo` for each product repository and, optionally, `--run-map 'owner/name#<comment id>'`.
+- **A calmer thread view.** A new setting, Composer footer, hides the bar under
+  the thread composer on pinned threads or everywhere (`wizbar footer`). The host
+  has no API for that bar: WizBar matches its `data-follow-up-composer-footer`
+  attribute from a content script, and while WizBar's thread list is not on
+  screen the bar may show again (#246).
+- **CLI.** New `wizbar threads` (search, sort and filters, `--all`), `wizbar agents` and `wizbar footer`; `wizbar section` takes `cloud` and `yours` (and still `unread` and `inbox`).
+- **Settings kept.** Every 0.6.0 setting reloads into 0.7.0 unchanged; a stored `unread` section reads as `yours`, and a stored order without `cloud` gets it after Pinned. New keys: `threadsSort`, `threadsFilter` and `composerFooter`.
 
 ## What v0.6 changes
 
@@ -90,25 +103,6 @@ Pinned, snoozed, muted and settled matches stay on their shelves.
   and threads that left are removed together at most once every 3 seconds.
   Through a brief gap, `N running` keeps its last count; after 5 seconds it is
   marked last known while the card is open, and hidden once it is closed.
-  The card shows awake, starting and asleep totals and scrolls through every
-  running thread. Specs follow the sidebar's sort, with `Other` last. Click a
-  group heading to fold or open it for the session. Untitled rows show a role
-  and ticket when the fallback names one, or the harness name otherwise.
-  The current heading stays visible as you scroll, and a fade shows
-  when more rows are available. Run `npm run test:browser` from `wizbar/`
-  to run the same Chromium regression as CI. Locally it uses Chrome or
-  Chromium when available and skips with a message otherwise. Install
-  Chromium with `npx playwright-core install chromium` or set
-  `CHROMIUM_PATH` to select a browser. Set `WIZBAR_BROWSER_EVIDENCE=1`
-  to save the four screenshots.
-  The card lists live GitHub status notes for agents the sidebar cannot match. These rows show the note's harness and model and open its issue or
-  pull request. The card reports their count separately as `N more on GitHub`.
-  `wizbar stats --json` reports the same rows in `unseen`.
-- **Cloud agents.** The sidebar lists GitHub agents with no matching desktop
-  thread. It starts after Pinned and can be moved or collapsed. Working and
-  asking agents with live notes appear first and count in the header.
-  Lapsed, done and stopped agents follow by most recent update.
-  Names link to GitHub. `wizbar agents [--json]` lists the same rows.
 - **The producer** adds each ticket's last activity (`updatedAt`, from the
   issue's `updated_at` in the answer it already reads, no added requests) to
   `specs.v2.json` only; `specs.v1.json` is unchanged. WizBar 0.5.0 does not
@@ -215,7 +209,7 @@ Pinned, snoozed, muted and settled matches stay on their shelves.
   Cloudroom theme you use; a literal colour appears only as the fallback for a
   missing variable.
 - **CLI.** `wizbar specs`, `wizbar spec <n> --open|--close`,
-  `wizbar section <pinned|specs|yours> --collapse|--expand`, the extended
+  `wizbar section <pinned|cloud|specs|yours> --collapse|--expand`, the extended
   `wizbar stats` and the read-only `wizbar models <id>... [--raw]` return what
   the sidebar shows, as JSON with `--json`.
 
@@ -247,17 +241,17 @@ The matrix status idea is credited to Conductor's workspace status matrix
 
 ## Install
 
-**From the BB Marketplace:** 0.6.0 is the release being prepared, not
-published. The marketplace serves it only once both hold: the `wizbar/v0.6.0`
-release tag exists, and the registry's WizBar entry has the range `^0.6.0`
-(this repository's [marketplace entry](../marketplace/wizbar.json) has it).
-Until then the listing serves what the registry's current range resolves to.
+**From the BB Marketplace:** 0.7.0 is the release being prepared. The
+marketplace serves it once both hold: the `wizbar/v0.7.0` release tag exists,
+and the registry's WizBar entry has the range `^0.7.0` (this repository's
+[marketplace entry](../marketplace/wizbar.json) has it). Until then the listing
+serves 0.6.0.
 
 **From source.** These steps were run for 0.5.0 on a real Cloudroom host for
 its live check: build, install, reload, and an upgrade from 0.3.0 that kept
-WizBar's settings; they have not been run for 0.6.0 on a real host yet. The
-0.5.0 to 0.6.0 settings reload is proved by a fixture test
-([`src/upgrade-050.test.ts`](src/upgrade-050.test.ts)). `room-cli plugin build .` builds the plugin into `dist/`.
+WizBar's settings; they have not been run for 0.6.0 or 0.7.0 on a real host
+yet. The 0.6.0 to 0.7.0 settings reload is proved by a fixture test
+([`src/upgrade-060.test.ts`](src/upgrade-060.test.ts)). `room-cli plugin build .` builds the plugin into `dist/`.
 To fill the Specs section, also set up the
 [specs producer](tools/specs-producer/README.md). The
 desktop CLI's help supplies these preparation commands. Read the
@@ -272,6 +266,11 @@ room-cli plugin build .
 room-cli plugin install .
 room-cli plugin list
 ```
+
+Developers: `npm run test:browser` runs the running card's Chromium regression,
+as CI does. It uses Chrome or Chromium when available (or `CHROMIUM_PATH`) and
+skips with a message otherwise; `WIZBAR_BROWSER_EVIDENCE=1` saves its
+screenshots.
 
 Record the current sidebar settings first. Select WizBar in
 **Settings → Appearance → Sidebar**, or use
@@ -313,7 +312,7 @@ wizbar stats [--json]
 wizbar agents [--json]
 wizbar specs [--sort <needs-you|recent|closest|newest>] [--json]
 wizbar spec <n> (--open | --close) [--json]
-wizbar section <pinned|specs|yours> (--collapse | --expand) [--json]
+wizbar section <pinned|cloud|specs|yours> (--collapse | --expand) [--json]
 wizbar models <id>... [--raw] [--json]
 wizbar threads [--search <text>] [--sort <newest|activity|status|harness|model|effort>] [--status <s>] [--harness <h>] [--model <m>] [--effort <e>] [--all] [--json]
 ```
@@ -437,9 +436,11 @@ item that is neither a command nor listed here.
 - The real pinned order, footer placement, the hover card's real look and
   rollback to T3 Sidebar are unverified until #9. PR badges have appeared
   inconsistently on real hosts; a missing badge alone is not a WizBar regression.
-- 0.6.0 has not been installed on a real host: the breath, section drag,
-  Yours on real threads and the steady card are proved by fixture
-  tests only.
+- 0.6.0 and 0.7.0 have not been installed on a real host: the breath, section
+  drag, Yours on real threads, the running card's groups and the Cloud agents
+  section are proved by fixture and browser tests only.
+- Cloud agents are only as fresh as the producer's last run (every 10
+  minutes with the suggested timer) and only as complete as the agents' status notes and the run map.
 - Yours cannot tell another loop's run from a thread you started: the host
   does not mark loop runs.
 

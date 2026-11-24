@@ -1,8 +1,8 @@
 {
   "name": "bb-plugin-wizbar",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "type": "module",
-  "description": "An agent-first sidebar for fleets of agent threads: cards with the issue or pull request link and child count, children on hover, specs sorted by what needs you, an Unread section, a live running count with a hover card, drag to pin, and a wizbar CLI with JSON.",
+  "description": "An agent-first sidebar for fleets of agent threads: a Yours section that keeps every thread you started, with search, sort and filters; cloud agents the desktop does not list, from GitHub; specs sorted by what needs you; a running card that lists every running thread; drag to pin; and a wizbar CLI with JSON.",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -16,7 +16,7 @@
   },
   "bb": {
     "name": "WizBar",
-    "description": "OpenWiz sidebar for agent fleets: Pinned, Specs and Unread, in the order you choose.",
+    "description": "OpenWiz sidebar for agent fleets: Pinned, Cloud agents, Specs and Yours, in the order you choose.",
     "branding": {
       "icon": "Zap"
     },
