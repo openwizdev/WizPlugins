@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest";
 import { v6CollapseWrites, v6CollapsedCases, v6OrderCases, v6OrderMoves } from "./fixtures/v6";
 import {
-  readCollapsedKeys, readCollapsedSections, readSectionsOrder, sidebarSections, withCollapsed, withSectionCollapsed, withSectionMoved,
+  readCollapsedKeys, readCollapsedSections, readSectionsOrder, sidebarSections, withSectionCollapsed, withSectionMoved,
 } from "./sections";
 
 describe("S1: sectionsCollapsed reads fail open and writes touch one key", () => {
@@ -15,18 +15,6 @@ describe("S1: sectionsCollapsed reads fail open and writes touch one key", () =>
     expect(readCollapsedKeys(raw)).toEqual(expected);
   });
 
-  // catches: a collapse that drops another section's saved state, adds a key twice, or a stale key that blocks an expand.
-  it.each([
-    ["[]", "pinned", true, "[\"pinned\"]"],
-    ["[\"pinned\"]", "pinned", true, "[\"pinned\"]"],
-    ["[\"pinned\",\"specs\"]", "inbox", true, "[\"pinned\",\"specs\",\"inbox\"]"],
-    ["[\"pinned\",\"specs\"]", "pinned", false, "[\"specs\"]"],
-    ["[\"later-section\",\"inbox\"]", "inbox", false, "[\"later-section\"]"],
-    ["garbage", "specs", true, "[\"specs\"]"],
-    [undefined, "inbox", false, "[]"],
-  ] as const)("from %j, sets %s collapsed=%s to %j", (raw, key, collapsed, expected) => {
-    expect(withCollapsed(raw, key, collapsed)).toBe(expected);
-  });
 });
 
 describe("S1: wizbar section errors", () => {
@@ -65,31 +53,36 @@ describe("S1: wizbar section errors", () => {
   });
 });
 
-// C0 (#182): the 0.6 section keys (sidebar-v3.v1.md section 10). Every value is a
-// hand-worked fixture from src/fixtures/v6.ts, never computed the way the code does.
-describe("C0: 0.6 section keys, a stored inbox reads as unread", () => {
-  it("names the three 0.6 sections in their default order", () => {
-    expect(sidebarSections).toEqual(["pinned", "specs", "unread"]);
+describe("Yours section preferences", () => {
+  const toYours = (key: string) => key === "unread" ? "yours" as const : key;
+  const storedYours = (stored: string) => stored.replaceAll('"unread"', '"yours"');
+
+  it("names the sections in default order", () => {
+    expect(sidebarSections).toEqual(["pinned", "specs", "yours"]);
   });
 
-  // catches: an owner's 0.5 Inbox collapse lost on upgrade (Unread opens again), or listed twice.
-  it.each(v6CollapsedCases.map((c) => [c.raw, c.keys] as const))("reads collapsed %j as %j", (raw, keys) => {
-    expect(readCollapsedSections(raw)).toEqual(keys);
+  it.each(v6CollapsedCases.map((c) => [c.raw, c.keys] as const))("normalizes aliases in %j", (raw, keys) => {
+    expect(readCollapsedSections(raw)).toEqual(keys.map(toYours));
   });
 
-  // catches: a write that keeps the old `inbox` beside `unread`, so expanding Unread leaves it collapsed after a reload.
   it.each(v6CollapseWrites.map((c) => [c.raw, c.key, c.collapsed, c.stored] as const))(
-    "from %j, sets %s collapsed=%s to %j", (raw, key, collapsed, stored) => {
-      expect(withSectionCollapsed(raw, key, collapsed)).toBe(stored);
+    "writes canonical keys from %j when setting %s to %s", (raw, key, collapsed, stored) => {
+      expect(withSectionCollapsed(raw, key === "unread" ? "yours" : key, collapsed)).toBe(storedYours(stored));
     });
 
-  // catches: a malformed or partial `sectionsOrder` that drops a section from the sidebar.
-  it.each(v6OrderCases.map((c) => [c.raw, c.order] as const))("reads order %j as %j", (raw, order) => {
-    expect(readSectionsOrder(raw)).toEqual(order);
+  it.each(v6OrderCases.map((c) => [c.raw, c.order] as const))("reads the order in %j", (raw, order) => {
+    expect(readSectionsOrder(raw)).toEqual(order.map(toYours));
   });
 
-  // catches: a move that loses or duplicates a section, or an Alt+Up at the top that wraps round.
-  it.each(v6OrderMoves.map((c) => [c.raw, c.key, c.to, c.stored] as const))("from %j, moves %s to %i: %j", (raw, key, to, stored) => {
-    expect(withSectionMoved(raw, key, to)).toBe(stored);
+  it.each(v6OrderMoves.map((c) => [c.raw, c.key, c.to, c.stored] as const))(
+    "moves %j section %s to %i", (raw, key, to, stored) => {
+      expect(withSectionMoved(raw, key === "unread" ? "yours" : key, to)).toBe(storedYours(stored));
+    });
+
+  it("deduplicates both legacy keys and Yours", () => {
+    const raw = '["unread","inbox","yours","specs"]';
+    expect(readCollapsedSections(raw)).toEqual(["yours", "specs"]);
+    expect(readSectionsOrder(raw)).toEqual(["yours", "specs", "pinned"]);
+    expect(withSectionCollapsed(raw, "yours", false)).toBe('["specs"]');
   });
 });

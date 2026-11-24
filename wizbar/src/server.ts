@@ -6,15 +6,18 @@
 // understands. Here, uninstalling the plugin removes its state with it.
 import { defineRpcContract, type BbPluginApi, type PluginCliRegistration } from "@get-bb/plugin-sdk";
 import { z } from "zod";
-import { sectionsSettingDescriptors, specsSettingDescriptors, wizbarSettingDescriptors } from "./settings";
+import { readThreadsFilter, readThreadsSort, sectionsSettingDescriptors, specsSettingDescriptors, threadsSettingDescriptors, wizbarSettingDescriptors } from "./settings";
 import { withSectionCommand } from "./sections";
 import { canMute, canPark, hasRuntimeWork, resolveShelf, type ThreadActivitySignals } from "./lifecycle";
 import { cardModelsNone } from "./card-meta";
 import { withModelLabel } from "./model-names";
-import { createLifecycleCommand, LifecycleError, type LifecycleOperation, type LifecycleSuccess, type PinOperations } from "./command";
+import { createLifecycleCommand, LifecycleError, type LifecycleOperation, type LifecycleSuccess, type PinOperations, type ThreadsOptions } from "./command";
 import { placePinned } from "./drag";
 import type { CardModelsResultV3, MovePositionV3 } from "./v3-types";
-import { sortPinned } from "./inbox";
+import { sortPinned, threadDisplayTitle } from "./inbox";
+import { matchesThreadFilters, modelItems, parseThreadSearch, searchThreadRows, sortThreadRows, threadListCandidates, threadRow, type ListThreadSource } from "./threads";
+import { readDeckFactories } from "./deck/data/binding";
+import type { PluginSidebarThread } from "@get-bb/plugin-sdk";
 import { computeStatsV4, isRunning, runtimeDisplayStatuses, type StatsRow, type StatsV4Row } from "./stats";
 import { readSpecsFile } from "./specs/read";
 import { childrenList, runtimeStatusesV3, type ChildrenRow } from "./children";
@@ -257,6 +260,56 @@ async function readStatsRows(bb: BbPluginApi, signal?: AbortSignal): Promise<Sta
     }
   } catch {
     return null;
+  }
+}
+
+// The threads command projects the host's paginated rows onto the sidebar fields
+// used by Yours, keeping the same read and attention rules as the other commands.
+const threadsRowSchema = liveThreadSchema.extend({
+  parentThreadId: z.string().nullable(),
+  title: z.string().nullable().optional(),
+  titleFallback: z.string().nullable().optional(),
+  providerId: z.string(),
+  createdAt: z.number().finite(),
+  updatedAt: z.number().finite(),
+  status: z.string(),
+  queuedWork: muteThreadSchema.shape.queuedWork,
+  runtime: z.object({ displayStatus: z.enum([...runtimeStatusesV3, "host-reconnecting"]) }),
+  pinnedAt: z.number().finite().nullable(),
+});
+
+async function readThreadList(bb: BbPluginApi, signal?: AbortSignal): Promise<ListThreadSource[]> {
+  const threads: ListThreadSource[] = [];
+  const seen = new Set<string>();
+  for (let offset = 0; ; offset += 100) {
+    const page = await bb.sdk.threads.list({ archived: false, includeHidden: true, limit: 100, offset, signal });
+    if (!Array.isArray(page)) throw stateUnavailable();
+    for (const item of page) {
+      const raw = threadsRowSchema.parse(item);
+      if (seen.has(raw.id)) throw stateUnavailable();
+      seen.add(raw.id);
+      if (raw.archivedAt !== null || raw.deletedAt !== null) continue;
+      const title = raw.title ?? null;
+      const titleFallback = raw.titleFallback ?? null;
+      const runtimeStatus = raw.runtime.displayStatus as PluginSidebarThread["runtimeStatus"];
+      threads.push({
+        id: raw.id, title, titleFallback, displayTitle: threadDisplayTitle({ title, titleFallback }),
+        parentThreadId: raw.parentThreadId, providerId: raw.providerId,
+        createdAt: raw.createdAt, updatedAt: raw.updatedAt,
+        status: raw.status as PluginSidebarThread["status"], runtimeStatus, queuedWork: raw.queuedWork,
+        hasPendingInteraction: raw.hasPendingInteraction,
+        isUnread: (raw.lastReadAt ?? 0) < raw.latestAttentionAt,
+        latestAttentionAt: raw.latestAttentionAt,
+        isPinned: raw.pinnedAt !== null,
+        indicator: raw.queuedWork === "failed" ? "queued-failed" : "none",
+        activity: {
+          workflows: raw.activity.activeWorkflowCount, backgroundAgents: raw.activity.activeBackgroundAgentCount,
+          backgroundCommands: raw.activity.activeBackgroundCommandCount, planMode: raw.activity.activePlanModeCount,
+          goals: raw.activity.activeGoalCount,
+        },
+      });
+    }
+    if (page.length < 100) return threads;
   }
 }
 
@@ -739,6 +792,32 @@ export default function plugin(bb: BbPluginApi) {
   // file (a spec only when it is ready) and the gated model source.
   // S1 (#169): `wizbar section`, beside the commands it wraps.
   const sections = bb.settings.define(sectionsSettingDescriptors);
+  const threadsSettings = bb.settings.define(threadsSettingDescriptors);
+  const readThreads = async (options: ThreadsOptions, signal?: AbortSignal) => {
+    const [threads, settings, factories, specAnswer] = await Promise.all([
+      readThreadList(bb, signal), threadsSettings.get(), deckReaders.settings.get(), specs.specsFile(), startupReconciliation,
+    ]);
+    const now = Date.now();
+    const specsRead = readSpecsFile(specAnswer, now);
+    const file = specsRead.status === "ready" ? specsRead.file : null;
+    const binding = readDeckFactories(factories.wizdeckFactories);
+    const repositories = binding.ok ? binding.factories.flatMap(({ binding }) => binding.repositories) : [];
+    const search = parseThreadSearch(options.search);
+    const { threads: candidates, sectionFor } = threadListCandidates(
+      threads, readAll(), now, file, repositories, options.all, options.search !== "");
+    const selectors = { ...readThreadsFilter(settings.threadsFilter), ...options.filters };
+    if (selectors.status === "all") delete selectors.status;
+    if (selectors.harness === "all") delete selectors.harness;
+    const batches: Promise<CardModelsResultV3>[] = [];
+    for (let start = 0; start < candidates.length; start += 100) {
+      batches.push(models(candidates.slice(start, start + 100).map(({ id }) => id)));
+    }
+    const served = new Map((await Promise.all(batches)).flatMap((result) => [...modelItems(result)]));
+    const rowFor = (thread: ListThreadSource) => threadRow(thread, sectionFor(thread), served.get(thread.id));
+    const matched = searchThreadRows(candidates, search, rowFor).map(rowFor)
+      .filter((row) => matchesThreadFilters(row, selectors));
+    return sortThreadRows(matched, options.sort ?? readThreadsSort(settings.threadsSort), (row) => row);
+  };
   bb.cli.register(withSectionCommand(withModelsCommand(createLifecycleCommand(perform, async (signal) => {
     const rows = await readStatsRows(bb, signal);
     const now = Date.now();
@@ -748,7 +827,7 @@ export default function plugin(bb: BbPluginApi) {
       now, Intl.DateTimeFormat().resolvedOptions().timeZone);
     return stats.threads ? { ...stats, threads: stats.threads.map(withModelLabel) } : stats;
   }, pins,
-    (threadId, signal) => readChildren(bb, threadId, signal), withSpecsModelLabels(specs)), hostOptions(bb), hostContext(bb)), sections));
+    (threadId, signal) => readChildren(bb, threadId, signal), withSpecsModelLabels(specs), readThreads), hostOptions(bb), hostContext(bb)), sections));
 
   bb.events.on("interaction.pending", ({ thread }) => breakMute(thread.id));
   bb.events.on("thread.failed", ({ thread }) => breakMute(thread.id));

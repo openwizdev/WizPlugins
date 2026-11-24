@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   experimental_usePluginId,
   experimental_useSidebarThreadActions as useSidebarThreadActions,
@@ -51,22 +51,23 @@ import {
   filterByProject,
   hideChildrenOfVisibleParents,
   partitionPinned,
-  searchThreadsByTitle,
   sortByCreatedAtDescending,
   sortPinned,
   threadDisplayTitle,
-  unreadThreads,
+  yoursThreads,
   visibleInboxThreads,
 } from "./inbox";
+
+import { harnessName } from "./model-names";
+import { isRunning } from "./stats";
+import { useModels } from "./StatsPanel";
+import { matchesThreadFilters, modelItems, parseThreadSearch, searchThreadRows, sortThreadRows, threadRow } from "./threads";
+import { readThreadsFilter, readThreadsSort, threadSorts, yoursStatuses, type ThreadSort, type ThreadsFilter } from "./settings";
 
 const ALL_PROJECTS = "__all__";
 
 /**
- * The sidebar's scrolling list: one flat, statically ordered stack of cards.
- *
- * The host owns the New-thread button and the search field above it, so this
- * ships neither. It filters by the `searchQuery` prop and keeps only the one
- * control the host has no equivalent for: the project scope picker.
+ * The sidebar's thread shelves. The host provides the search query and WizBar owns the project picker.
  */
 export function ThreadInbox({
   activeThreadId,
@@ -108,18 +109,25 @@ export function ThreadInbox({
     [projects],
   );
 
+  const sortSetting = useSectionSetting<true>("threadsSort");
+  const filterSetting = useSectionSetting<true>("threadsFilter");
+  const sort = readThreadsSort(sortSetting.value);
+  const filter = useMemo(() => readThreadsFilter(filterSetting.value), [filterSetting.value]);
+  const search = useMemo(() => parseThreadSearch(searchQuery), [searchQuery]);
+  const searchActive = searchQuery.trim() !== "";
+  const projectId = scope === ALL_PROJECTS ? null : scope;
+  const scoped = useMemo(() => filterByProject(visibleInboxThreads(threads), projectId), [threads, projectId]);
+  const metadataNeeded = sort === "model" || sort === "effort" || search.filters.some(({ model, effort }) => model || effort);
+  const runningIds = useMemo(() => threads.filter(isRunning).map((thread) => thread.id), [threads]);
+  const models = useModels(metadataNeeded ? scoped.map((thread) => thread.id) : [],
+    metadataNeeded ? scoped.map((thread) => thread.updatedAt).join(",") : "", runningIds);
+  const byId = useMemo(() => modelItems(models), [models]);
+  const rowFor = useCallback((thread: PluginSidebarThread) => threadRow(thread, "yours", byId.get(thread.id)), [byId]);
+
   const { pinned, inbox, snoozed, settled, muted, hiddenChildren } = useMemo(() => {
-    const scoped = filterByProject(
-      visibleInboxThreads(threads),
-      scope === ALL_PROJECTS ? null : scope,
-    );
-    // Children live in their parent's header chip instead of the flat list;
-    // an orphan whose parent is not on screen stays here. #211 R1: a search
-    // matches every row by its own title, children included, so they show.
-    const searching = searchQuery.trim() !== "";
-    const listed = searching ? scoped : hideChildrenOfVisibleParents(scoped);
+    const listed = searchActive ? scoped : hideChildrenOfVisibleParents(scoped);
     const listedIds = new Set(listed.map((thread) => thread.id));
-    const matched = searchThreadsByTitle(listed, searchQuery);
+    const matched = searchThreadRows(listed, search, rowFor);
     const active: typeof matched = [];
     const onSnoozeShelf: typeof matched = [];
     const onSettledShelf: typeof matched = [];
@@ -137,7 +145,7 @@ export function ThreadInbox({
     return {
       // The host's pinned order, so a drag's reorder shows as the host stores it.
       pinned: sortPinned(split.pinned),
-      inbox: sortByCreatedAtDescending(split.inbox),
+      inbox: split.inbox,
       // Soonest wake first: "what comes back next" is the shelf's question.
       snoozed: [...onSnoozeShelf].sort(
         (left, right) =>
@@ -145,15 +153,12 @@ export function ThreadInbox({
       ),
       settled: sortByCreatedAtDescending(onSettledShelf),
       muted: sortByCreatedAtDescending(onMutedShelf),
-      // #211 R1: the active children in their parents' chips; their news brings the parent into Unread.
+      // #211 R1: the active children in their parents' chips; their news brings the parent into Yours.
       hiddenChildren: scoped.filter((thread) => !listedIds.has(thread.id) && lifecycle.shelfFor(thread) === "active"),
     };
-  }, [lifecycle, scope, searchQuery, threads]);
-  // E2 (#188): Unread. While a search is active every match shows, read or not, as the 0.5 Inbox did.
-  // #211 R2: the filtered list needs the plugin settings (the binding) and the first specs-file answer;
-  // until both are known the last filtered list stays on screen (none at first), so no spec agent or
-  // fleet loop run shows and then leaves.
-  const searchActive = searchQuery.trim() !== "";
+  }, [lifecycle, rowFor, scoped, search, searchActive]);
+  // Wait for the binding and first specs answer before classifying threads.
+  // Search continues to show every match, including children.
   const settingsState = useSettings();
   const factories = settingsState.values?.wizdeckFactories;
   // The fleet loops' names use the bound factories' repositories (section 10).
@@ -162,12 +167,16 @@ export function ThreadInbox({
     return binding.ok ? binding.factories.flatMap((factory) => factory.binding.repositories) : [];
   }, [factories]);
   const filtered = useMemo(() => settingsState.isLoading || specsFile === undefined ? null
-    : unreadThreads(inbox, specsFile, threads, repositories, hiddenChildren),
+    : yoursThreads(inbox, specsFile, threads, repositories, hiddenChildren),
   [hiddenChildren, inbox, repositories, settingsState.isLoading, specsFile, threads]);
-  const lastFiltered = useRef<typeof inbox>([]);
-  if (filtered !== null) lastFiltered.current = filtered;
-  const unread = searchActive ? inbox : filtered ??
-    filterByProject(lastFiltered.current, scope === ALL_PROJECTS ? null : scope);
+  const lastFiltered = useRef(new Set<string>());
+  if (filtered !== null) lastFiltered.current = new Set(filtered.map(({ id }) => id));
+  const allYours = searchActive ? inbox : filtered ?? inbox.filter(({ id }) => lastFiltered.current.has(id));
+  const yours = sortThreadRows(allYours.filter((thread) => matchesThreadFilters(rowFor(thread), filter)), sort, rowFor);
+  const harnesses = [...new Set(allYours.map((thread) => thread.providerId))]
+    .sort((left, right) => harnessName(left).localeCompare(harnessName(right)));
+  const saveFilter = (next: ThreadsFilter) => filterSetting.save(() => JSON.stringify(next), true);
+  const hiddenByFilter = yours.length < allYours.length;
 
   const connection = useRealtimeConnectionState();
   const drag = useDragPins(status, connection, threads, pinned);
@@ -245,7 +254,7 @@ export function ThreadInbox({
                 <button type="button" className="rounded underline focus-visible:ring-1" onClick={order.retry}>Retry</button>
               </div>
             ) : null}
-            {/* E1 (#187): Pinned, Specs and Unread in the owner's order (`sectionsOrder`). */}
+            {/* E1 (#187): Pinned, Specs and Yours in the owner's order (`sectionsOrder`). */}
             {order.order.map((key) => {
               const content = key === "pinned" ? (pinnedShown ? (
                 <Shelf label="Pinned" pinnedDropZone count={pinned.length} searching={searching} collapsed={isCollapsed("pinned")}
@@ -271,11 +280,21 @@ export function ThreadInbox({
                   ])}
                   {drag.markerAtEnd() ? <DropMarker /> : null}
                 </Shelf>
-              ) : null) : key === "unread" ? (unread.length > 0 ? (
-                // #170 R1: Unread always has its header, so it can always be collapsed and expanded.
-                <Shelf label="Unread" count={unread.length} searching={searching}
-                  collapsed={isCollapsed("unread")} onToggle={() => sections.toggle("unread")} saveFailed={sections.failed === "unread"}>
-                  {unread.map((thread) => (
+              ) : null) : key === "yours" ? (allYours.length > 0 || filter.status || filter.harness ? (
+                <Shelf label="Yours" count={yours.length} searching={searching}
+                  collapsed={isCollapsed("yours")} onToggle={() => sections.toggle("yours")} saveFailed={sections.failed === "yours"}
+                  filteredTotal={hiddenByFilter ? allYours.length : undefined}
+                  controls={<>
+                    {hiddenByFilter ? <button type="button" onClick={() => saveFilter({})}
+                      className="shrink-0 rounded px-1 text-[11px] text-muted-foreground hover:text-foreground focus-visible:ring-1">
+                      Clear filters
+                    </button> : null}
+                    <YoursPicker sort={sort} filter={filter} harnesses={harnesses}
+                      onSort={(next) => sortSetting.save(() => next, true)} onFilter={saveFilter} />
+                  </>}>
+                  {sortSetting.failed || filterSetting.failed
+                    ? <li role="status" className="px-2.5 text-xs text-muted-foreground">Could not save the Yours options.</li> : null}
+                  {yours.map((thread) => (
                     <ThreadCard
                       key={thread.id}
                       thread={thread}
@@ -455,35 +474,109 @@ function Shelf({
   onToggle,
   saveFailed,
   searching,
+  controls,
+  filteredTotal,
 }: {
   label: string;
   children: React.ReactNode;
   /** Marks Pinned as the drop zone that pins, places and reorders (WZ21). */
   pinnedDropZone?: boolean;
   count: number;
+  controls?: ReactNode;
+  filteredTotal?: number;
   collapsed: boolean;
   onToggle: () => void;
   saveFailed: boolean;
   /** #170 R2: a search holds the section open, so its header does not toggle and nothing is written. */
   searching: boolean;
 }) {
+  const header = (
+    <button type="button" onClick={searching ? undefined : onToggle} aria-expanded={!collapsed}
+      {...(searching ? { "aria-disabled": true, title: "Clear the search to collapse" } : {})}
+      className="flex w-full min-w-0 flex-1 items-center gap-2 px-2.5 pb-1 pt-3 text-left aria-disabled:cursor-default">
+      <span className="shrink-0 text-[11.5px] font-medium text-muted-foreground">
+        {label}
+        {collapsed || filteredTotal !== undefined ? <>{" "}<span className={cn("ml-1 font-normal",
+          filteredTotal === undefined ? "text-muted-foreground/40" : "text-muted-foreground/70")}>
+          {count}{filteredTotal === undefined ? "" : ` of ${filteredTotal}`}
+        </span></> : null}
+      </span>
+      <ShelfRule />
+    </button>
+  );
   return (
-    // Each shelf is a named landmark region. A collapsed Pinned stays the
-    // drop zone: its header is inside the section.
     <section aria-label={label} {...(pinnedDropZone ? { "data-wizbar-pinned": "" } : {})}>
-      {/* S1 (#169): the whole line toggles, like Settled; collapsed shows "Pinned 3", the count faint. */}
-      <button type="button" onClick={searching ? undefined : onToggle} aria-expanded={!collapsed}
-        {...(searching ? { "aria-disabled": true, title: "Clear the search to collapse" } : {})}
-        className="flex w-full items-center gap-2 px-2.5 pb-1 pt-3 text-left aria-disabled:cursor-default">
-        <span className="text-[11.5px] font-medium text-muted-foreground">
-          {label}
-          {collapsed ? <>{" "}<span className="ml-1 font-normal text-muted-foreground/40">{count}</span></> : null}
-        </span>
-        <ShelfRule />
-      </button>
+      {controls ? <div className="flex items-baseline pr-2">{header}{controls}</div> : header}
       {saveFailed ? <p role="status" className="px-2.5 text-xs text-muted-foreground">{SAVE_FAILED}</p> : null}
       {collapsed ? null : <ul className="flex flex-col gap-px">{children}</ul>}
     </section>
+  );
+}
+
+const sortLabels: Record<ThreadSort, string> = {
+  newest: "Newest", activity: "Last activity", status: "Status", harness: "Harness", model: "Model", effort: "Effort",
+};
+
+const statusLabels = { working: "Working", "needs-you": "Needs you", unread: "Unread", idle: "Idle" };
+
+function YoursPicker({ sort, filter, harnesses, onSort, onFilter }: {
+  sort: ThreadSort;
+  filter: ThreadsFilter;
+  harnesses: readonly string[];
+  onSort: (sort: ThreadSort) => void;
+  onFilter: (filter: ThreadsFilter) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const panelId = useId();
+  const trigger = useRef<HTMLButtonElement>(null);
+  const selectClass = "rounded border border-sidebar-border bg-sidebar px-1.5 py-1 text-sidebar-foreground";
+  return (
+    <div className="relative shrink-0" onBlur={(event) => {
+      if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
+    }} onKeyDown={(event) => {
+      if (event.key === "Escape" && open) {
+        event.stopPropagation();
+        setOpen(false);
+        trigger.current?.focus();
+      }
+    }}>
+      <button ref={trigger} type="button" aria-label="Sort and filter Yours" aria-expanded={open} aria-controls={panelId}
+        title={`Sort: ${sortLabels[sort]}`} onClick={() => setOpen(!open)}
+        className="relative flex h-[18px] items-center gap-px rounded px-1 text-muted-foreground opacity-50 hover:bg-sidebar-accent/60 hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-sidebar-ring">
+        <svg aria-hidden viewBox="0 0 12 12" className="size-3" fill="none" stroke="currentColor" strokeWidth={1.3} strokeLinecap="round">
+          <path d="M2 3.5h8M3.5 6h5M5 8.5h2" />
+        </svg>
+        <svg aria-hidden viewBox="0 0 10 10" className="size-2.5" fill="none" stroke="currentColor" strokeWidth={1.4}>
+          <path d="M2.5 4 5 6.5 7.5 4" />
+        </svg>
+      </button>
+      {open ? (
+        <div id={panelId} className="absolute right-0 top-full z-20 grid w-48 gap-2 rounded-md border border-sidebar-border bg-sidebar p-2 text-xs text-sidebar-foreground shadow-md">
+          <label className="grid grid-cols-[1fr_7rem] items-center gap-2">Sort
+            <select aria-label="Sort Yours" className={selectClass} value={sort}
+              onChange={(event) => onSort(readThreadsSort(event.currentTarget.value))}>
+              {threadSorts.map((value) => <option key={value} value={value}>{sortLabels[value]}</option>)}
+            </select>
+          </label>
+          <label className="grid grid-cols-[1fr_7rem] items-center gap-2">Status
+            <select aria-label="Filter Yours by status" className={selectClass} value={filter.status ?? ""}
+              onChange={(event) => onFilter({ ...filter, status: (event.currentTarget.value || undefined) as ThreadsFilter["status"] })}>
+              <option value="">All</option>
+              {yoursStatuses.map((value) => <option key={value} value={value}>{statusLabels[value]}</option>)}
+            </select>
+          </label>
+          <label className="grid grid-cols-[1fr_7rem] items-center gap-2">Harness
+            <select aria-label="Filter Yours by harness" className={selectClass} value={filter.harness ?? ""}
+              onChange={(event) => onFilter({ ...filter, harness: event.currentTarget.value || undefined })}>
+              <option value="">All</option>
+              {filter.harness && !harnesses.includes(filter.harness)
+                ? <option value={filter.harness}>{harnessName(filter.harness)}</option> : null}
+              {harnesses.map((value) => <option key={value} value={value}>{harnessName(value)}</option>)}
+            </select>
+          </label>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -495,7 +588,7 @@ const SAVE_FAILED = "Could not save the collapsed section. Try again.";
  * a time and the newest change wins, and only this one key is written. A failed
  * save keeps the changed state on screen and reports the change's tag.
  */
-function useSectionSetting<Tag>(name: "sectionsCollapsed" | "sectionsOrder") {
+function useSectionSetting<Tag>(name: "sectionsCollapsed" | "sectionsOrder" | "threadsSort" | "threadsFilter") {
   const pluginId = experimental_usePluginId();
   const host = useSettings();
   const sdk = useSdk();
@@ -532,7 +625,6 @@ function useSectionSetting<Tag>(name: "sectionsCollapsed" | "sectionsOrder") {
 
 /** S1 (#169): `sectionsCollapsed`; a toggle names the section whose save failed. */
 function useSectionsCollapsed() {
-  // E2 (#188): the 0.6 readers, so a stored 0.5 `inbox` reads as `unread` and every write stores `unread`.
   const { value, save, failed } = useSectionSetting<SidebarSection>("sectionsCollapsed");
   const collapsed = useMemo(() => new Set(readCollapsedSections(value)), [value]);
   const toggle = useCallback((key: SidebarSection) =>

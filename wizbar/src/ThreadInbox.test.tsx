@@ -50,7 +50,6 @@ function thread(
     },
     indicator: "none",
     indicatorLabel: null,
-    // E2 (#188): the list's rows have something new, so Unread shows them; a read row is set per case.
     isUnread: true,
     isPinned: false,
     pinnedAt: null,
@@ -1117,11 +1116,11 @@ describe("round 5 shelves", () => {
     });
   }
   // The heading's rule: the last thing in the shelf's header line.
-  const rule = (region: HTMLElement) => region.querySelector<HTMLElement>(":scope > h2 > span:last-child, :scope > button > span:last-child")!;
+  const rule = (region: HTMLElement) => region.querySelector<HTMLElement>(":scope > h2 > span:last-child, button[aria-expanded] > span:last-child")!;
 
   // catches: a shelf left on the grey border rule, or on the text olive, while Specs uses its quieter rule olive.
   // E1 (#187): Settled is a quiet link with no rule now, tested in the E1 block.
-  it.each(["Pinned", "Unread", "Snoozed", "Muted"])("draws the %s rule in the Specs rule olive", async (name) => {
+  it.each(["Pinned", "Yours", "Snoozed", "Muted"])("draws the %s rule in the Specs rule olive", async (name) => {
     renderShelves();
     const region = await screen.findByRole("region", { name });
     const specs = await screen.findByRole("region", { name: "Specs" });
@@ -1162,9 +1161,9 @@ describe("round 5 shelves", () => {
   });
 });
 
-// S1 (#169), E2 (#188): Pinned and Unread (the 0.5 Inbox) collapse like Settled, and the choice is kept in
+// S1 (#169), E2 (#188): Pinned and Yours (the 0.5 Inbox) collapse like Settled, and the choice is kept in
 // `sectionsCollapsed` (sidebar-v3.v1.md section 9). Every row is synthetic.
-describe("S1: collapsible Pinned and Unread", () => {
+describe("S1: collapsible Pinned and Yours", () => {
   const rows = () => [
     thread({ id: "pin_b", title: "Pinned second", isPinned: true, pinnedAt: 50, pinSortKey: "a1", createdAt: 300 }),
     thread({ id: "pin_a", title: "Pinned first", isPinned: true, pinnedAt: 40, pinSortKey: "a0", createdAt: 100 }),
@@ -1189,15 +1188,15 @@ describe("S1: collapsible Pinned and Unread", () => {
     });
     return { rendered, updates };
   }
-  const header = (name: "Pinned" | "Unread") =>
+  const header = (name: "Pinned" | "Yours") =>
     within(screen.getByRole("region", { name })).getByRole("button", { name: new RegExp(`^${name}( \\d+)?$`) });
-  const links = (name: "Pinned" | "Unread") => within(screen.getByRole("region", { name })).queryAllByRole("link").map((l) => l.getAttribute("aria-label"));
+  const links = (name: "Pinned" | "Yours") => within(screen.getByRole("region", { name })).queryAllByRole("link").map((l) => l.getAttribute("aria-label"));
   const pinCalls = (rendered: { rpcCalls: { method: string; input: unknown }[] }) =>
     rendered.rpcCalls.filter((c) => ["pin", "unpin", "move"].includes(c.method)).map((c) => [c.method, c.input]);
 
   // catches: a header that is only text, so neither a click nor Enter/Space (a native button's keys) can collapse it,
   // or a collapse that hides the header, drops the rule, or writes any key but sectionsCollapsed.
-  it.each(["Pinned", "Unread"] as const)("collapses and expands %s from its header, keeping the header, rule and count", async (name) => {
+  it.each(["Pinned", "Yours"] as const)("collapses and expands %s from its header, keeping the header, rule and count", async (name) => {
     const { updates } = renderSections();
     const button = header(name);
     expect(button.tagName).toBe("BUTTON");
@@ -1222,19 +1221,19 @@ describe("S1: collapsible Pinned and Unread", () => {
   it("restores collapsed sections from the stored setting on a fresh mount", async () => {
     renderSections({ stored: "[\"pinned\",\"inbox\"]" });
     expect(header("Pinned").getAttribute("aria-expanded")).toBe("false");
-    expect(header("Unread").getAttribute("aria-expanded")).toBe("false");
+    expect(header("Yours").getAttribute("aria-expanded")).toBe("false");
     expect(header("Pinned").textContent).toBe("Pinned 2");
-    expect(header("Unread").textContent).toBe("Unread 2");
+    expect(header("Yours").textContent).toBe("Yours 2");
     expect(screen.queryAllByRole("link")).toEqual([]);
   });
 
   // catches: a refused save that snaps the section back without a word, or that leaves no notice.
   it("keeps the on-screen state and says so when the save fails", async () => {
     renderSections({ save: () => { throw new Error("refused"); } });
-    fireEvent.click(header("Unread"));
+    fireEvent.click(header("Yours"));
     expect(await screen.findByText("Could not save the collapsed section. Try again.")).toBeTruthy();
-    expect(header("Unread").getAttribute("aria-expanded")).toBe("false");
-    expect(links("Unread")).toEqual([]);
+    expect(header("Yours").getAttribute("aria-expanded")).toBe("false");
+    expect(links("Yours")).toEqual([]);
   });
 
   // catches: a collapsed Pinned that stops being a drop zone, so a card dropped on its header is not pinned.
@@ -1259,8 +1258,8 @@ describe("S1: collapsible Pinned and Unread", () => {
     ]));
   });
 
-  // #170 R1: catches an Unread with no pinned rows that has no header, so it can never be collapsed.
-  it("gives an Unread-only list a native Unread header that collapses and expands", async () => {
+  // #170 R1: catches an Yours with no pinned rows that has no header, so it can never be collapsed.
+  it("gives an Yours-only list a native Yours header that collapses and expands", async () => {
     const updates: unknown[] = [];
     renderSlot(inbox, listProps, {
       pluginId: "wizbar", settings: {},
@@ -1271,19 +1270,19 @@ describe("S1: collapsible Pinned and Unread", () => {
       }) as never } },
     });
     expect(screen.queryByRole("region", { name: "Pinned" })).toBeNull();
-    const button = header("Unread");
+    const button = header("Yours");
     expect(button.tagName).toBe("BUTTON");
     expect(button.getAttribute("aria-expanded")).toBe("true");
     fireEvent.click(button);
-    await waitFor(() => expect(header("Unread").getAttribute("aria-expanded")).toBe("false"));
-    expect(header("Unread").textContent).toBe("Unread 1");
+    await waitFor(() => expect(header("Yours").getAttribute("aria-expanded")).toBe("false"));
+    expect(header("Yours").textContent).toBe("Yours 1");
     expect(screen.queryByRole("link", { name: "Inbox alone" })).toBeNull();
-    expect(updates).toEqual([{ pluginId: "wizbar", values: { sectionsCollapsed: "[\"unread\"]" } }]);
+    expect(updates).toEqual([{ pluginId: "wizbar", values: { sectionsCollapsed: "[\"yours\"]" } }]);
   });
 
   // #170 R2: catches a header click during a search that saves a collapse the owner cannot see,
   // which then hides the section once the search clears.
-  it.each(["Pinned", "Unread"] as const)("leaves %s untoggleable while a search holds it open, and writes nothing", async (name) => {
+  it.each(["Pinned", "Yours"] as const)("leaves %s untoggleable while a search holds it open, and writes nothing", async (name) => {
     const { rendered, updates } = renderSections({ searchQuery: name === "Pinned" ? "first" : "older" });
     const button = header(name);
     expect(button.getAttribute("aria-disabled")).toBe("true");
@@ -1305,8 +1304,8 @@ describe("S1: collapsible Pinned and Unread", () => {
   // catches: a search that finds nothing inside a collapsed section, or one that writes the expansion to the store.
   it("shows matches in a collapsed section while searching, without saving anything", async () => {
     const { updates } = renderSections({ stored: "[\"pinned\",\"inbox\"]", searchQuery: "older" });
-    expect(header("Unread").getAttribute("aria-expanded")).toBe("true");
-    expect(links("Unread")).toEqual(["Inbox older"]);
+    expect(header("Yours").getAttribute("aria-expanded")).toBe("true");
+    expect(links("Yours")).toEqual(["Inbox older"]);
     expect(screen.queryByRole("region", { name: "Pinned" })).toBeNull();
     await new Promise((resolve) => setTimeout(resolve, 10));
     expect(updates).toEqual([]);
@@ -1349,8 +1348,8 @@ describe("E1: section order and the Settled link", () => {
   }
   // The three sections' regions, top to bottom.
   const sectionOrder = () => screen.getAllByRole("region").map((r) => r.getAttribute("aria-label"))
-    .filter((name) => name === "Pinned" || name === "Specs" || name === "Unread");
-  const header = (name: "Pinned" | "Unread") =>
+    .filter((name) => name === "Pinned" || name === "Specs" || name === "Yours");
+  const header = (name: "Pinned" | "Yours") =>
     within(screen.getByRole("region", { name })).getByRole("button", { name: new RegExp(`^${name}( \\d+)?$`) });
   const specsHeader = () => within(screen.getByRole("region", { name: "Specs" })).getAllByRole("button")
     .find((b) => b.closest("h2") !== null)!;
@@ -1363,18 +1362,18 @@ describe("E1: section order and the Settled link", () => {
   beforeEach(() => { vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(v4Now); });
   afterEach(() => { vi.useRealTimers(); });
 
-  // catches: 0.5's fixed Pinned, Inbox, Specs order kept, so the approved Pinned, Specs, Unread default never shows.
-  it("draws Pinned, Specs, then the Unread place by default", async () => {
+  // catches: 0.5's fixed Pinned, Inbox, Specs order kept, so the approved Pinned, Specs, Yours default never shows.
+  it("draws Pinned, Specs, then the Yours place by default", async () => {
     renderOrder();
     await screen.findByRole("region", { name: "Specs" });
-    expect(sectionOrder()).toEqual(["Pinned", "Specs", "Unread"]);
+    expect(sectionOrder()).toEqual(["Pinned", "Specs", "Yours"]);
   });
 
   // catches: a stored order that is read but not drawn, or a malformed value that hides a section.
   it.each([
-    ["[\"unread\",\"pinned\",\"specs\"]", ["Unread", "Pinned", "Specs"]],
-    ["[\"inbox\",\"specs\"]", ["Unread", "Specs", "Pinned"]],
-    ["garbage", ["Pinned", "Specs", "Unread"]],
+    ["[\"unread\",\"pinned\",\"specs\"]", ["Yours", "Pinned", "Specs"]],
+    ["[\"inbox\",\"specs\"]", ["Yours", "Specs", "Pinned"]],
+    ["garbage", ["Pinned", "Specs", "Yours"]],
   ])("draws the stored order %s", async (stored, expected) => {
     renderOrder({ stored: { sectionsOrder: stored } });
     await screen.findByRole("region", { name: "Specs" });
@@ -1387,16 +1386,16 @@ describe("E1: section order and the Settled link", () => {
     await waitFor(() => expect(specsHeader()).toBeDefined());
     header("Pinned").focus();
     fireEvent.keyDown(header("Pinned"), { key: "ArrowDown", altKey: true });
-    await waitFor(() => expect(sectionOrder()).toEqual(["Specs", "Pinned", "Unread"]));
+    await waitFor(() => expect(sectionOrder()).toEqual(["Specs", "Pinned", "Yours"]));
     expect(document.activeElement).toBe(header("Pinned"));
-    expect(updates).toEqual([{ pluginId: "wizbar", values: { sectionsOrder: "[\"specs\",\"pinned\",\"unread\"]" } }]);
+    expect(updates).toEqual([{ pluginId: "wizbar", values: { sectionsOrder: "[\"specs\",\"pinned\",\"yours\"]" } }]);
     specsHeader().focus();
     fireEvent.keyDown(specsHeader(), { key: "ArrowDown", altKey: true });
-    await waitFor(() => expect(sectionOrder()).toEqual(["Pinned", "Specs", "Unread"]));
+    await waitFor(() => expect(sectionOrder()).toEqual(["Pinned", "Specs", "Yours"]));
     expect(document.activeElement).toBe(specsHeader());
-    fireEvent.keyDown(header("Unread"), { key: "ArrowUp", altKey: true });
-    await waitFor(() => expect(sectionOrder()).toEqual(["Pinned", "Unread", "Specs"]));
-    expect(orderWrites(updates).at(-1)).toEqual({ sectionsOrder: "[\"pinned\",\"unread\",\"specs\"]" });
+    fireEvent.keyDown(header("Yours"), { key: "ArrowUp", altKey: true });
+    await waitFor(() => expect(sectionOrder()).toEqual(["Pinned", "Yours", "Specs"]));
+    expect(orderWrites(updates).at(-1)).toEqual({ sectionsOrder: "[\"pinned\",\"yours\",\"specs\"]" });
     // A plain arrow, or Alt at the top, moves nothing and toggles nothing.
     fireEvent.keyDown(header("Pinned"), { key: "ArrowUp", altKey: true });
     fireEvent.keyDown(header("Pinned"), { key: "ArrowDown" });
@@ -1405,36 +1404,36 @@ describe("E1: section order and the Settled link", () => {
   });
 
   it("moves across the nearest rendered section while keeping empty Pinned in storage", async () => {
-    const { updates } = renderOrder({ specs: true, hidePinned: true, stored: { sectionsOrder: '["specs","pinned","unread"]' } });
+    const { updates } = renderOrder({ specs: true, hidePinned: true, stored: { sectionsOrder: '["specs","pinned","yours"]' } });
     await waitFor(() => expect(specsHeader()).toBeDefined());
-    expect(sectionOrder()).toEqual(["Specs", "Unread"]);
+    expect(sectionOrder()).toEqual(["Specs", "Yours"]);
     specsHeader().focus();
     fireEvent.keyDown(specsHeader(), { key: "ArrowUp", altKey: true });
     expect(orderWrites(updates)).toEqual([]);
     fireEvent.keyDown(specsHeader(), { key: "ArrowDown", altKey: true });
-    await waitFor(() => expect(sectionOrder()).toEqual(["Unread", "Specs"]));
+    await waitFor(() => expect(sectionOrder()).toEqual(["Yours", "Specs"]));
     expect(document.activeElement).toBe(specsHeader());
-    expect(orderWrites(updates)).toEqual([{ sectionsOrder: '["pinned","unread","specs"]' }]);
+    expect(orderWrites(updates)).toEqual([{ sectionsOrder: '["pinned","yours","specs"]' }]);
   });
 
   // catches: a header that cannot be dragged, or a drop that lands on the wrong side of its target.
   it("reorders by dragging a header's grip onto another section", async () => {
     const { updates } = renderOrder();
     await screen.findByRole("region", { name: "Specs" });
-    const from = grip("Unread");
+    const from = grip("Yours");
     expect(from.getAttribute("draggable")).toBe("true");
     fireEvent.dragStart(from, { dataTransfer: { setData() {}, effectAllowed: "all" } });
     const onto = header("Pinned");
     fireEvent(onto, at(createEvent.dragOver(onto), 0));
     fireEvent(onto, at(createEvent.drop(onto), 0));
     fireEvent.dragEnd(from);
-    await waitFor(() => expect(sectionOrder()).toEqual(["Unread", "Pinned", "Specs"]));
-    expect(orderWrites(updates)).toEqual([{ sectionsOrder: "[\"unread\",\"pinned\",\"specs\"]" }]);
+    await waitFor(() => expect(sectionOrder()).toEqual(["Yours", "Pinned", "Specs"]));
+    expect(orderWrites(updates)).toEqual([{ sectionsOrder: "[\"yours\",\"pinned\",\"specs\"]" }]);
   });
 
   // catches: section reordering that breaks card drag-to-pin, or a card drop read as a section move.
   it("keeps card drag-to-pin working in a reordered list, writing no order", async () => {
-    const { rendered, updates } = renderOrder({ stored: { sectionsOrder: "[\"unread\",\"specs\",\"pinned\"]" } });
+    const { rendered, updates } = renderOrder({ stored: { sectionsOrder: "[\"yours\",\"specs\",\"pinned\"]" } });
     await screen.findByRole("region", { name: "Specs" });
     const from = screen.getByRole("link", { name: "Inbox older" });
     fireEvent.dragStart(from, { dataTransfer: { setData() {}, effectAllowed: "all" } });
@@ -1452,25 +1451,25 @@ describe("E1: section order and the Settled link", () => {
   it("keeps the moved order on screen and says so when the save fails", async () => {
     renderOrder({ save: (values) => { if ("sectionsOrder" in values) throw new Error("refused"); return { values }; } });
     await screen.findByRole("region", { name: "Specs" });
-    fireEvent.keyDown(header("Unread"), { key: "ArrowUp", altKey: true });
+    fireEvent.keyDown(header("Yours"), { key: "ArrowUp", altKey: true });
     expect(await screen.findByText("Could not save the section order. Try again.")).toBeTruthy();
-    expect(sectionOrder()).toEqual(["Pinned", "Unread", "Specs"]);
+    expect(sectionOrder()).toEqual(["Pinned", "Yours", "Specs"]);
   });
 
   it("retries the displayed section order after a refusal without moving again", async () => {
     const save = vi.fn().mockRejectedValueOnce(new Error("refused")).mockImplementation((values) => ({ values }));
     const { updates } = renderOrder({ save });
     await screen.findByRole("region", { name: "Specs" });
-    fireEvent.keyDown(header("Unread"), { key: "ArrowUp", altKey: true });
+    fireEvent.keyDown(header("Yours"), { key: "ArrowUp", altKey: true });
     const retry = await screen.findByRole("button", { name: "Retry" });
-    expect(sectionOrder()).toEqual(["Pinned", "Unread", "Specs"]);
+    expect(sectionOrder()).toEqual(["Pinned", "Yours", "Specs"]);
     fireEvent.click(retry);
     await waitFor(() => expect(orderWrites(updates)).toEqual([
-      { sectionsOrder: '["pinned","unread","specs"]' },
-      { sectionsOrder: '["pinned","unread","specs"]' },
+      { sectionsOrder: '["pinned","yours","specs"]' },
+      { sectionsOrder: '["pinned","yours","specs"]' },
     ]));
     expect(screen.queryByText(/Could not save the section order/)).toBeNull();
-    expect(sectionOrder()).toEqual(["Pinned", "Unread", "Specs"]);
+    expect(sectionOrder()).toEqual(["Pinned", "Yours", "Specs"]);
   });
 
   // catches: Settled still drawn as a shelf, its threads in the list, or a link that is not last.
@@ -1511,9 +1510,9 @@ describe("E1: section order and the Settled link", () => {
   });
 });
 
-// E2 (#188): Inbox becomes Unread (sidebar-v3.v1.md section 10): only threads with something new
+// E2 (#188): Inbox becomes Yours (sidebar-v3.v1.md section 10): only threads with something new
 // for the owner that match no spec, and never a fleet wake. Every row is synthetic.
-describe("E2: Unread", () => {
+describe("E2: Yours", () => {
   const binding = JSON.stringify([{ projectKey: "sample-factory", cloudroomProjectId: "prj_v4_atlas", repositories: ["example/sample-plans"],
     home: { hostId: "hst_v4_home", rootPath: "/synthetic/home" }, orchestratorThreadId: "thr_v4_orchestrator", statusWriterLogin: "sample-manager" }]);
   const working = { status: "active", runtimeStatus: "active", indicator: "runtime" } as const;
@@ -1527,7 +1526,7 @@ describe("E2: Unread", () => {
     thread({ id: "u_wake", title: "launch-fleet wakes example/sample-plans", displayTitle: "launch-fleet wakes example/sample-plans", isUnread: true, createdAt: 8 }),
     thread({ id: "u_loop", title: "Sample weekly loop", displayTitle: "Sample weekly loop", isUnread: true, createdAt: 6 }),
   ];
-  function renderUnread(options: { stored?: string; specsFile?: () => unknown; searchQuery?: string } = {}) {
+  function renderYours(options: { stored?: string; specsFile?: () => unknown; searchQuery?: string } = {}) {
     const updates: unknown[] = [];
     const settings: Record<string, string> = { wizdeckFactories: binding, ...(options.stored === undefined ? {} : { sectionsCollapsed: options.stored }) };
     const rendered = renderSlot(inbox, { ...listProps, searchQuery: options.searchQuery ?? "" }, {
@@ -1543,28 +1542,28 @@ describe("E2: Unread", () => {
   // The specs file is read at its own time, so it is fresh (specs-section section 1).
   beforeEach(() => { vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(v4Now); });
   afterEach(() => { vi.useRealTimers(); });
-  const unread = () => screen.getByRole("region", { name: "Unread" });
-  const header = () => within(unread()).getByRole("button", { name: /^Unread( \d+)?$/ });
-  const links = () => within(unread()).queryAllByRole("link").map((l) => l.getAttribute("aria-label"));
+  const yours = () => screen.getByRole("region", { name: "Yours" });
+  const header = () => within(yours()).getByRole("button", { name: /^Yours( \d+)?$/ });
+  const links = () => within(yours()).queryAllByRole("link").map((l) => l.getAttribute("aria-label"));
 
   // catches: the 0.5 Inbox kept under a new name (every thread), a spec's running agent listed twice,
   // a fleet wake let in, or a running thread that matches no spec dropped with them.
-  it("lists exactly the threads with something new that are under no spec and are not fleet wakes or fleet loop runs", async () => {
-    renderUnread();
+  it("keeps read and unread roots and excludes spec agents, fleet wakes and fleet loop runs", async () => {
+    renderYours();
     // The bound repository's `launch-fleet wakes` loop run is out; another loop's run, unmarked by the host, stays.
-    await waitFor(() => expect(links()).toEqual(["Sample new", "Sample waiting", "Builder · ZZ-9: Sample stray", "Sample weekly loop"]));
+    await waitFor(() => expect(links()).toEqual(["Sample read", "Sample new", "Sample waiting", "Builder · ZZ-9: Sample stray", "Sample weekly loop"]));
     expect(screen.queryByRole("region", { name: "Inbox" })).toBeNull();
-    expect(header().textContent).toBe("Unread");
+    expect(header().textContent).toBe("Yours");
   });
 
-  // catches: a running spec agent shown in Unread until the specs file answers, then pulled out (a flash).
-  // #211 R2: Unread's filtered list waits for the first specs answer; nothing shows and then leaves.
+  // catches: a running spec agent shown in Yours until the specs file answers, then pulled out (a flash).
+  // #211 R2: Yours's filtered list waits for the first specs answer; nothing shows and then leaves.
   it("never shows a running thread before the specs file says whether it is a spec's", async () => {
     let answer: (value: unknown) => void = () => {};
-    renderUnread({ specsFile: () => new Promise((resolve) => { answer = resolve; }) });
-    expect(screen.queryByRole("region", { name: "Unread" })).toBeNull();
+    renderYours({ specsFile: () => new Promise((resolve) => { answer = resolve; }) });
+    expect(screen.queryByRole("region", { name: "Yours" })).toBeNull();
     await act(async () => answer({ kind: "content", text: v4SpecsFileText }));
-    await waitFor(() => expect(links()).toEqual(["Sample new", "Sample waiting", "Builder · ZZ-9: Sample stray", "Sample weekly loop"]));
+    await waitFor(() => expect(links()).toEqual(["Sample read", "Sample new", "Sample waiting", "Builder · ZZ-9: Sample stray", "Sample weekly loop"]));
   });
 
   it("shares one bound Specs read and its minute refresh across the mounted sidebar and open footer", async () => {
@@ -1572,12 +1571,12 @@ describe("E2: Unread", () => {
     vi.useFakeTimers();
     vi.setSystemTime(v4Now);
     const specsFile = vi.fn(() => ({ kind: "content", text: v4SpecsFileText }));
-    await act(async () => { renderUnread({ specsFile }); });
+    await act(async () => { renderYours({ specsFile }); });
     fireEvent.click(screen.getByRole("button", { name: /^\d+ running$/ }));
     await act(async () => {});
     expect(within(screen.getByRole("region", { name: "Running threads" })).getByText("Sample cache")).toBeDefined();
     expect(within(screen.getByRole("region", { name: "Specs" })).getByText("Sample cache")).toBeDefined();
-    expect(links()).toEqual(["Sample new", "Sample waiting", "Builder · ZZ-9: Sample stray", "Sample weekly loop"]);
+    expect(links()).toEqual(["Sample read", "Sample new", "Sample waiting", "Builder · ZZ-9: Sample stray", "Sample weekly loop"]);
     expect(specsFile).toHaveBeenCalledTimes(1);
     await act(() => vi.advanceTimersByTimeAsync(59_999));
     expect(specsFile).toHaveBeenCalledTimes(1);
@@ -1590,12 +1589,12 @@ describe("E2: Unread", () => {
     vi.setSystemTime(now);
     const file = JSON.parse(v4SpecsFileText);
     file.generatedAt = new Date(now + 285_000).toISOString();
-    renderUnread({ specsFile: () => ({ kind: "content", text: JSON.stringify(file) }) });
+    renderYours({ specsFile: () => ({ kind: "content", text: JSON.stringify(file) }) });
     const specs = await screen.findByRole("region", { name: "Specs" });
     expect(within(specs).getByText("Sample cache")).toBeDefined();
   });
 
-  it("filters retained Unread by the chosen project while a new binding is pending", async () => {
+  it("filters retained Yours by the chosen project while a new binding is pending", async () => {
     const settings = { wizdeckFactories: binding };
     const projects = ["Alpha", "Beta"].map((name) => ({
       name, id: name, isPersonal: false, href: `/projects/${name}`, settingsHref: `/projects/${name}/settings`,
@@ -1629,17 +1628,17 @@ describe("E2: Unread", () => {
   });
 
   // catches: a search that can no longer find a read thread, a fleet wake or a spec's agent, because
-  // Unread's filter still applies while searching (the 0.5 Inbox found every match).
+  // Yours's filter still applies while searching (the 0.5 Inbox found every match).
   it("shows every matching thread while a search is active, read or not, and filters again once it clears", async () => {
-    const { rendered } = renderUnread({ searchQuery: "Sample" });
+    const { rendered } = renderYours({ searchQuery: "Sample" });
     await waitFor(() => expect(links()).toEqual(["Sample read", "Sample new", "Sample waiting", "Fleet #77: Sample cache",
       "Builder · SC-1: Sample borrowed code", "Builder · ZZ-9: Sample stray", "launch-fleet wakes example/sample-plans", "Sample weekly loop"]));
     rendered.rerender(createElement(inbox.component, { ...listProps, searchQuery: "" }));
-    await waitFor(() => expect(links()).toEqual(["Sample new", "Sample waiting", "Builder · ZZ-9: Sample stray", "Sample weekly loop"]));
+    await waitFor(() => expect(links()).toEqual(["Sample read", "Sample new", "Sample waiting", "Builder · ZZ-9: Sample stray", "Sample weekly loop"]));
   });
 
   // #211 R2: catches the plugin settings' loading read as "no factory bound", so a running spec agent and the
-  // bound repository's fleet loop run flash into Unread until the binding arrives.
+  // bound repository's fleet loop run flash into Yours until the binding arrives.
   it("shows no filtered row while the plugin settings load, then the settled list", async () => {
     const sdkApp = (globalThis as unknown as { __bbPluginRuntime: { pluginSdkApp: { useSettings: () => { values: unknown; isLoading: boolean } } } })
       .__bbPluginRuntime.pluginSdkApp;
@@ -1655,12 +1654,12 @@ describe("E2: Unread", () => {
         for (const link of document.querySelectorAll("a[aria-label]")) seen.add(link.getAttribute("aria-label")!);
       });
       observer.observe(document.body, { childList: true, subtree: true });
-      const { rendered } = renderUnread();
+      const { rendered } = renderYours();
       await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)); });
-      expect(screen.queryByRole("region", { name: "Unread" })).toBeNull();
+      expect(screen.queryByRole("region", { name: "Yours" })).toBeNull();
       loading = false;
       rendered.rerender(createElement(inbox.component, listProps));
-      await waitFor(() => expect(links()).toEqual(["Sample new", "Sample waiting", "Builder · ZZ-9: Sample stray", "Sample weekly loop"]));
+      await waitFor(() => expect(links()).toEqual(["Sample read", "Sample new", "Sample waiting", "Builder · ZZ-9: Sample stray", "Sample weekly loop"]));
       observer.disconnect();
       expect(seen.has("Builder · SC-1: Sample borrowed code")).toBe(false);
       expect(seen.has("launch-fleet wakes example/sample-plans")).toBe(false);
@@ -1669,7 +1668,7 @@ describe("E2: Unread", () => {
     }
   });
 
-  // #211 R1: catches a hand-back in a child of a read parent that shows nowhere: not in Unread (its parent is
+  // #211 R1: catches a hand-back in a child of a read parent that shows nowhere: not in Yours (its parent is
   // read, and the child lives in the parent's chip) and not in a search for the child's own title.
   it("shows a read parent whose hidden child has something new, and finds the child by its own title", async () => {
     const family = [
@@ -1686,10 +1685,10 @@ describe("E2: Unread", () => {
   });
 
   // catches: a 0.5 Inbox collapse lost on upgrade, or a write that still stores `inbox`.
-  it("reads a stored inbox collapse as Unread and writes unread", async () => {
-    const { updates } = renderUnread({ stored: "[\"inbox\"]" });
-    // Unread appears once the specs file has answered (#211 R2).
-    await screen.findByRole("region", { name: "Unread" });
+  it("reads a stored inbox collapse as Yours and writes yours", async () => {
+    const { updates } = renderYours({ stored: "[\"inbox\"]" });
+    // Yours appears once the specs file has answered (#211 R2).
+    await screen.findByRole("region", { name: "Yours" });
     expect(header().getAttribute("aria-expanded")).toBe("false");
     expect(links()).toEqual([]);
     fireEvent.click(header());
@@ -1697,7 +1696,7 @@ describe("E2: Unread", () => {
     expect(updates).toEqual([{ pluginId: "wizbar", values: { sectionsCollapsed: "[]" } }]);
     fireEvent.click(header());
     await waitFor(() => expect(header().getAttribute("aria-expanded")).toBe("false"));
-    expect(updates.at(-1)).toEqual({ pluginId: "wizbar", values: { sectionsCollapsed: "[\"unread\"]" } });
+    expect(updates.at(-1)).toEqual({ pluginId: "wizbar", values: { sectionsCollapsed: "[\"yours\"]" } });
   });
 });
 
@@ -1725,4 +1724,85 @@ describe("Yours and host search", () => {
     expect(await screen.findByText("Child")).toBeTruthy();
     expect(screen.queryByText("Parent")).toBeNull();
   });
+});
+
+it("keeps Yours options across mounts and clears both filters in one click", async () => {
+  const settings: Record<string, string> = {};
+  const writes: Record<string, unknown>[] = [];
+  const threads = [
+    thread({ id: "thr_idle", title: "Sample idle", isUnread: false, updatedAt: 120 }),
+    thread({ id: "thr_other", title: "Sample other harness", providerId: "claude-code", isUnread: false, updatedAt: 130 }),
+    thread({ id: "thr_unread", title: "Sample unread", updatedAt: 140 }),
+  ];
+  const mount = () => renderSlot(inbox, listProps, {
+    settings: { ...settings },
+    sidebarThreads: { status: "ready", threads, projects: [] },
+    rpc: { listLifecycle: () => ({ rows: [] }), cardModels: () => ({ source: "none", items: [] }) },
+    sdk: { plugins: { updateSettings: (async ({ values }: { values: Record<string, unknown> }) => {
+      writes.push(values);
+      Object.assign(settings, values);
+      return { values: { ...settings } };
+    }) as never } },
+  });
+  const first = mount();
+  const open = async () => {
+    const trigger = await screen.findByRole("button", { name: "Sort and filter Yours" });
+    trigger.focus();
+    expect(document.activeElement).toBe(trigger);
+    fireEvent.click(trigger);
+    return trigger;
+  };
+  const trigger = await open();
+  const sort = () => screen.getByRole<HTMLSelectElement>("combobox", { name: "Sort Yours" });
+  const status = () => screen.getByRole<HTMLSelectElement>("combobox", { name: "Filter Yours by status" });
+  const harness = () => screen.getByRole<HTMLSelectElement>("combobox", { name: "Filter Yours by harness" });
+  for (const value of ["activity", "status", "harness", "model", "effort", "newest", "activity"]) {
+    fireEvent.change(sort(), { target: { value } });
+    await waitFor(() => expect(writes.at(-1)).toEqual({ threadsSort: value }));
+  }
+  for (const value of ["working", "needs-you", "unread", "", "idle"]) {
+    fireEvent.change(status(), { target: { value } });
+    await waitFor(() => expect(writes.at(-1)).toEqual({ threadsFilter: value ? JSON.stringify({ status: value }) : "{}" }));
+  }
+  fireEvent.change(harness(), { target: { value: "codex" } });
+  await waitFor(() => expect(writes.at(-1)).toEqual({ threadsFilter: '{"status":"idle","harness":"codex"}' }));
+  const yours = () => within(screen.getByRole("region", { name: "Yours" }));
+  expect(yours().getByRole("button", { name: "Yours 1 of 3" })).toBeTruthy();
+  expect(yours().getAllByRole("link").map((link) => link.getAttribute("aria-label"))).toEqual(["Sample idle"]);
+  sort().focus();
+  fireEvent.keyDown(sort(), { key: "Escape" });
+  expect(trigger.getAttribute("aria-expanded")).toBe("false");
+  expect(document.activeElement).toBe(trigger);
+  first.unmount();
+
+  mount();
+  await open();
+  expect([sort().value, status().value, harness().value]).toEqual(["activity", "idle", "codex"]);
+  fireEvent.click(yours().getByRole("button", { name: "Clear filters" }));
+  await waitFor(() => expect(writes.at(-1)).toEqual({ threadsFilter: "{}" }));
+  expect(yours().getAllByRole("link").map((link) => link.getAttribute("aria-label")))
+    .toEqual(["Sample unread", "Sample other harness", "Sample idle"]);
+});
+
+it("batches Yours metadata reads at 100 and searches across batches", async () => {
+  const threads = Array.from({ length: 101 }, (_, index) => thread({
+    id: `thr_batch_${index}`, title: `Sample ${index}`, createdAt: index,
+  }));
+  const batches: string[][] = [];
+  renderSlot(inbox, { ...listProps, searchQuery: "model:sol" }, {
+    pluginId: "wizbar-yours-batches",
+    sidebarThreads: { status: "ready", threads },
+    rpc: {
+      listLifecycle: () => ({ rows: [] }),
+      cardModels: (input: unknown) => {
+        const { threadIds } = input as { threadIds: string[] };
+        batches.push(threadIds);
+        return { source: "host", items: threadIds.filter((id) => id === "thr_batch_100")
+          .map((threadId) => ({ threadId, model: "gpt-6.2-sol", effort: "high" })) };
+      },
+    },
+  });
+  expect(await screen.findByRole("link", { name: "Sample 100" })).toBeTruthy();
+  expect(screen.getAllByRole("link")).toHaveLength(1);
+  expect(batches.slice(0, 2).map((batch) => batch.length)).toEqual([100, 1]);
 });

@@ -272,38 +272,51 @@ Exactly one known section and exactly one of `--collapse` / `--expand`, else usa
 
 `collapsed` is read back from the stored value. Text: `inbox: collapsed` or `inbox: expanded`. A failed read or write: `{"error":{"code":"settings_failed","message":"The settings read failed."}}` (or `write`), exit 1. Parity with the sidebar is tested in `cli-parity.test.ts`.
 
-## 10. Sections in 0.6: Pinned, Specs, Unread (C0, #182)
+## 10. Pinned, Specs and Yours
 
-0.6 has three sections, **Pinned**, **Specs** and **Unread**, in an order the owner chooses. Inbox becomes Unread (#188), and Settled leaves the sidebar for one link (#187). Section 9's toggle, collapsed look, search and drag-to-pin rules carry over with `Unread` in place of `Inbox`. Fixtures: `src/fixtures/v6.ts`; the keys and readers: `src/sections.ts`.
+The sections appear in the owner's chosen order. Section 9's toggle, collapsed look, search expansion and drag-to-pin rules apply to Yours. The default order is `pinned`, `specs`, `yours`.
 
-**Keys.** `pinned`, `specs`, `unread` (`sidebarSections`), and that is the default order.
+- **Collapse.** `sectionsCollapsed` is a JSON array of collapsed section keys. Both `unread` (0.6) and `inbox` (0.5) read as `yours`. The reader deduplicates keys and keeps unknown keys. Every write stores the canonical key.
+- **Order.** `sectionsOrder` defaults to `["pinned","specs","yours"]`. The reader applies the same aliases, ignores unknown keys and appends missing sections in default order. Malformed values read as the default. Drag a header grip or press Alt+Up or Alt+Down on its header to reorder it. Hidden sections stay in the stored order. Every write stores canonical keys. If saving fails, Retry saves the displayed order.
+- **Section command.** `wizbar section <pinned|specs|yours> (--collapse | --expand) [--json]` accepts `unread` and `inbox` as aliases for `yours`. Output names the canonical section.
+- **Settled.** The `Settled N` link at the bottom opens settled threads. Host search also finds them.
 
-**`sectionsCollapsed` in 0.6.** The key and its rules are section 9's, read with `readCollapsedSections` and written with `withSectionCollapsed`: a stored `inbox` reads as `unread` (one key, however often either is stored), and every write stores `unread`, never `inbox`, so a 0.5 Inbox collapse stays collapsed as Unread and expanding Unread clears it. Unknown keys are kept (`v6CollapsedCases`, `v6CollapseWrites`). Until #188 moves the sidebar to these readers, section 9's `inbox` stays in use.
+**Yours.** Of the scoped, active, unpinned rows, Yours includes every top-level thread and any other row with something new in itself or in one of its eligible hidden children. A row has something new when it is unread, has a pending interaction, or has an `unread-error`, `unread-success`, `waiting-for-input`, or `queued-failed` indicator.
 
-**Order.**
+The same exclusions apply to each row and to children whose attention can surface their parent.
 
-| Key | Type | Default | Meaning |
-| --- | --- | --- | --- |
-| `sectionsOrder` | string | `"[\"pinned\",\"specs\",\"unread\"]"` | A JSON array of the section keys, top to bottom |
+- A running agent matched to a spec by `matchSpec` (specs-section section 3).
+- A fleet wake with a title starting with `Fleet #<N>: ` for a positive integer without a leading zero.
+- A run with a full title of `launch-fleet <owner>/<repo>`, `launch-fleet wakes <owner>/<repo>` or `launch-fleet #<N> <owner>/<repo>` for a repository in a readable factory binding.
 
-Declared in `sectionsSettingDescriptors` beside `sectionsCollapsed`, off the settings page, with the same store and write rule. `readSectionsOrder`: the known keys in stored order, each once (a stored `inbox` is `unread`), unknown keys ignored, then any missing key in default order; a missing setting or a value that is not a JSON array of strings is the default (`v6OrderCases`). `withSectionMoved(raw, key, to)` moves one section to index `to`, clamped to the ends, and stores the full order (`v6OrderMoves`): a header dropped on another section's place, or Alt+Up and Alt+Down on a focused header (move past the nearest rendered section in that direction, or stay if there is none). Hidden sections remain in the full stored order. Only `sectionsOrder` is written. If a write fails, Retry saves the displayed order through the same queue. The Specs section's rule and the "N running" footer keep their places within and below the sections.
+Other loop runs follow the ordinary eligibility rules. Unread cards keep their unread mark. While settings or the first specs answer for a binding are pending, the last classified list stays available, with its rows subject to the current scope and shelves. The list starts empty.
 
-**Unread** (#188, `unreadThreads` in `src/inbox.ts`). Of the active, unpinned rows (after the project scope, child hiding and parking, as before), in creation order newest first, Unread shows a row exactly when all of these hold:
+## 11. Thread search, Yours options and CLI
 
-1. **Something new for the owner,** in the row itself or in an active child hidden under it (in its chip) that meets 1 to 4 itself: `isUnread`, or `hasPendingInteraction`, or `indicator` is one of the host's attention markers `unread-error`, `unread-success`, `waiting-for-input`, `queued-failed`.
-2. **Under no spec:** it matches no spec by specs-section section 3 (only running rows match). With no binding or no readable file, nothing matches a spec.
-3. **Not a fleet wake:** its `displayTitle` does not start with `Fleet #<N>: ` (specs-section section 3's real fleet title; `N` has no leading zero).
-4. **Not a fleet loop run:** its `displayTitle` is not, as the whole title, one of the fleet skill's loop names for a repository in `wizdeckFactories` (every readable factory's `repositories`): `launch-fleet <owner>/<repo>`, `launch-fleet wakes <owner>/<repo>` or `launch-fleet #<N> <owner>/<repo>`.
+**Search.** The host's `searchQuery` matches the title or `titleFallback` (the first prompt) case-insensitively. Search includes children by their own fields. Active, unpinned matches appear in Yours, including fleet and spec rows. Pinned and parked matches stay on their shelves. The section's saved filters still apply to its matches.
 
-**Waiting.** The list needs the plugin settings (the binding) and the sidebar's first specs-file answer for the bound factory. Until both are known (while settings load, or after a binding change), the last list stays on screen (none at first), so no spec agent or fleet loop run shows and then leaves. The last specs answer is kept across refreshes.
+| Word | Match |
+| --- | --- |
+| `harness:<id or name>` | Exact provider ID or friendly harness name |
+| `model:<text>` | Substring of the raw model ID or friendly model label |
+| `effort:<level>` | Exact effort |
+| `status:<value>` | `working`, `needs-you`, `failed`, `unread` or `idle` |
 
-Only these records decide; nothing is guessed. The host does not mark loop runs (SDK 0.6.33's `originKind` and `originPluginId` are null on every thread, loop runs included, and the plugin SDK has no loops area), so **any other loop's run can appear in Unread when it has something new**, until the host marks loop runs.
+Search combines the filters with AND. Other words, including unknown `key:` words, form the title or prompt search. Quote filter values with spaces, such as `harness:"Claude Code"`.
 
-**While a search is active** every row matching by its own title shows in Unread, read or not, spec agent, fleet wake, loop run or a child (child hiding is off during a search); the filter returns when the search clears. The header and `Unread N` count follow section 9. `wizbar section` takes `unread` and accepts `inbox` as the same section.
+**Sort and filter.** The picker on the Yours rule offers native selects. `threadsSort` defaults to `newest`, ordered by creation time. `activity` orders by newest `updatedAt`, and `status` orders by needs you, failed, working, unread, then idle. `harness`, `model`, and `effort` group alphabetically with missing values last. Ties use newest creation time, then ID. `threadsFilter` is a JSON object whose optional fields are `status` (working, needs-you, unread or idle) and `harness` (provider ID). When rows are hidden, the header shows `Yours N of M` and Clear filters resets both fields.
 
-**Settled** (#187) is reachable by search and by one quiet `Settled N` link at the very bottom; it is not a section, has no key, and is absent from `sectionsOrder`.
+The sidebar uses the running card's session cache and `cardModels` source for model and effort. Reads contain at most 100 IDs. Unknown models sort last by model and never match a model filter.
 
-**CLI.** `wizbar section` keeps section 9's form until #188 moves it to `unread` (accepting `inbox` as the same section). A 0.6 command that reorders sections writes `sectionsOrder` with `withSectionMoved`.
+**CLI.**
+
+```text
+wizbar threads [--search <text>] [--sort <newest|activity|status|harness|model|effort>] [--status <s>] [--harness <h>] [--model <m>] [--effort <e>] [--all] [--json]
+```
+
+The command reads all projects in the host's scope. It lists the active rows in Yours order, applying the saved sort and filters and overriding individual settings with flags for this invocation. `--status all` and `--harness all` clear the corresponding saved filters for the command. `--all` includes active threads from other sections and children. No options are saved. Usage errors exit 2 with `error.code: "usage"` in JSON. A failed source read exits 1 with `error.code: "state_unavailable"`.
+
+The JSON object contains a `threads` array. Each row includes `id`, `title`, `section`, `status`, `providerId`, `harness`, `model`, `effort`, `modelLabel`, `createdAt`, `updatedAt`, `unread`, and `parentThreadId`. In `--all` results, `section` can be null for a thread without its own section row. Text lists the same rows in the same order.
 
 ## Seams
 

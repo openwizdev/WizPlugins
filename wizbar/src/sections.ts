@@ -1,12 +1,9 @@
-// S1 (#169): the collapsible Pinned, Inbox and Specs sections
+// The collapsible Pinned, Specs and Yours sections
 // (sidebar-v3.v1.md section 9). One plugin setting, `sectionsCollapsed`, a JSON
 // list of collapsed section keys; every section starts expanded and anything
 // malformed collapses nothing (fail open, so no thread is hidden by a bad value).
 // This file stays free of React: the server imports it for `wizbar section`.
 import type { PluginCliRegistration, PluginCliResult } from "@get-bb/plugin-sdk";
-
-export const sectionKeys = ["pinned", "inbox", "specs"] as const;
-export type SectionKey = (typeof sectionKeys)[number];
 
 /** The collapsed keys a raw `sectionsCollapsed` value names; anything malformed names none. */
 export function readCollapsedKeys(raw: unknown): string[] {
@@ -20,30 +17,19 @@ export function readCollapsedKeys(raw: unknown): string[] {
   return Array.isArray(value) && value.every((key) => typeof key === "string") ? value : [];
 }
 
-/**
- * The `sectionsCollapsed` value after collapsing or expanding one section.
- * Collapsing adds the key once, expanding removes it, and keys this version
- * does not know are kept.
- */
-export function withCollapsed(raw: unknown, key: SectionKey, collapsed: boolean): string {
-  const keys = readCollapsedKeys(raw);
-  if (collapsed) return JSON.stringify(keys.includes(key) ? keys : [...keys, key]);
-  return JSON.stringify(keys.filter((entry) => entry !== key));
-}
-
 /** The settings handle `bb.settings.define(sectionsSettingDescriptors)` returns. */
 export interface SectionsSettingHandle {
   get(): Promise<{ sectionsCollapsed?: unknown }>;
   experimental_set(values: { sectionsCollapsed?: string | null }): Promise<{ sectionsCollapsed?: unknown }>;
 }
 
-const sectionUsage = "section <pinned|specs|unread> --collapse|--expand [--json]";
+const sectionUsage = "section <pinned|specs|yours> --collapse|--expand [--json]";
 
 /**
- * `wizbar section <pinned|specs|unread> --collapse|--expand [--json]`, the
+ * `wizbar section <pinned|specs|yours> --collapse|--expand [--json]`, the
  * agent-first route to a header click: the same read-modify-write of
  * `sectionsCollapsed`, one at a time, never writing from a failed read.
- * E2 (#188): the 0.6 sections; a 0.5 `inbox` is accepted as `unread`.
+ * Both previous names for Yours are accepted.
  */
 export function withSectionCommand(cli: PluginCliRegistration, settings: SectionsSettingHandle): PluginCliRegistration {
   let queue: Promise<unknown> = Promise.resolve();
@@ -67,12 +53,12 @@ export function withSectionCommand(cli: PluginCliRegistration, settings: Section
       const options = end === -1 ? args : args.slice(0, end);
       const flags = options.filter((arg) => arg.startsWith("--"));
       const positional = [...options.filter((arg) => !arg.startsWith("--")), ...(end === -1 ? [] : args.slice(end + 1))];
-      const key = positional[0];
-      const ok = positional.length === 1 && (key === "inbox" || (sidebarSections as readonly string[]).includes(key!))
+      const key = canonical(positional[0] ?? "");
+      const ok = positional.length === 1 && (sidebarSections as readonly string[]).includes(key)
         && new Set(flags).size === flags.length && flags.every((flag) => ["--json", "--collapse", "--expand"].includes(flag))
         && flags.includes("--collapse") !== flags.includes("--expand");
       if (!ok) return fail(2, "usage", sectionUsage);
-      const section = (key === "inbox" ? "unread" : key) as SidebarSection;
+      const section = key as SidebarSection;
       const collapsed = flags.includes("--collapse");
       const written = await serial(async (): Promise<{ stored: unknown } | string> => {
         let raw: unknown;
@@ -95,27 +81,18 @@ export function withSectionCommand(cli: PluginCliRegistration, settings: Section
   };
 }
 
-// ---- 0.6 (C0, #182): sidebar-v3.v1.md section 10 ------------------------------
-// The 0.6 sections are Pinned, Specs and Unread. Until E2 (#188) moves the sidebar
-// and `wizbar section` to them, the 0.5 readers above stay as they are.
-
-/** The 0.6 sections, in their default order. */
-export const sidebarSections = ["pinned", "specs", "unread"] as const;
+/** The sidebar sections in their default order. */
+export const sidebarSections = ["pinned", "specs", "yours"] as const;
 export type SidebarSection = (typeof sidebarSections)[number];
 
-/** A stored key in 0.6 terms: the 0.5 `inbox` is `unread`. */
-const canonical = (key: string) => (key === "inbox" ? "unread" : key);
-const unique = (keys: readonly string[]) => keys.filter((key, index) => keys.indexOf(key) === index);
+const canonical = (key: string) => (key === "inbox" || key === "unread" ? "yours" : key);
+const unique = (keys: readonly string[]) => [...new Set(keys)];
 
-/**
- * The collapsed keys of a raw `sectionsCollapsed`, in 0.6 terms: a stored `inbox`
- * reads as `unread`, each key once, unknown keys kept; anything malformed names none.
- */
+/** Known aliases are normalized. Unknown keys are kept and malformed values collapse nothing. */
 export function readCollapsedSections(raw: unknown): string[] {
   return unique(readCollapsedKeys(raw).map(canonical));
 }
 
-/** The `sectionsCollapsed` value after collapsing or expanding one 0.6 section; a stored `inbox` is written as `unread`. */
 export function withSectionCollapsed(raw: unknown, key: SidebarSection, collapsed: boolean): string {
   const keys = readCollapsedSections(raw);
   if (collapsed) return JSON.stringify(keys.includes(key) ? keys : [...keys, key]);
