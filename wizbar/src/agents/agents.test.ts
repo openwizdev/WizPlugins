@@ -52,26 +52,26 @@ it("matches visible builders and reviewers by kind and ticket, deduplicating by 
   const reviewer = { ...note, agent: "reviewer" as const, pr: `https://github.com/${repository}/pull/950`, commentId: 2 };
   const other = { ...note, ticket: `${repository}#990`, commentId: 3 };
   const read = parse(file([note, { ...note, commentId: 10 }, reviewer, other]));
-  expect(unseenAgents(read, specs, [row("#902: Sample work")], v4Now))
+  expect(unseenAgents(read, specs, [row("#902: Sample work")]))
     .toEqual({ status: "ready", count: 2, agents: [reviewer, other] });
-  expect(unseenAgents(read, specs, [row("Review #950 at abcdef0"), row("#990: Sample work")], v4Now))
+  expect(unseenAgents(read, specs, [row("Review #950 at abcdef0"), row("#990: Sample work")]))
     .toEqual({ status: "ready", count: 1, agents: [note] });
-  expect(unseenAgents(read, specs, [row("Builder · KN2: Sample work")], v4Now))
+  expect(unseenAgents(read, specs, [row("Builder · KN2: Sample work")]))
     .toEqual({ status: "ready", count: 2, agents: [reviewer, other] });
-  expect(unseenAgents(read, null, [row("#902: Sample work", { hasPendingInteraction: true })], v4Now))
+  expect(unseenAgents(read, null, [row("#902: Sample work", { hasPendingInteraction: true })]))
     .toEqual({ status: "ready", count: 2, agents: [reviewer, other] });
-  expect(unseenAgents(read, specs, [row("Builder · KN2: Sample work", { runtimeStatus: "idle" })], v4Now))
+  expect(unseenAgents(read, specs, [row("Builder · KN2: Sample work", { runtimeStatus: "idle" })]))
     .toEqual({ status: "ready", count: 2, agents: [reviewer, other] });
-  expect(unseenAgents(read, specs, [row("Review #950 at abcdef0", { hasPendingInteraction: true })], v4Now))
+  expect(unseenAgents(read, specs, [row("Review #950 at abcdef0", { hasPendingInteraction: true })]))
     .toEqual({ status: "ready", count: 2, agents: [note, other] });
   expect(unseenAgents(read, specs, [
     row("#902: Sample work", { isHidden: true }), row("#990: Sample work", { isArchived: true }),
-  ], v4Now)).toEqual({ status: "ready", count: 3, agents: [note, reviewer, other] });
+  ])).toEqual({ status: "ready", count: 3, agents: [note, reviewer, other] });
 });
 
 it("keeps ambiguous numbers in separate repositories", () => {
   const another = { ...note, repository: "example/another", ticket: "example/another#902", commentId: 2 };
-  expect(unseenAgents(parse(file([note, another])), null, [row("#902: Sample work")], v4Now))
+  expect(unseenAgents(parse(file([note, another])), null, [row("#902: Sample work")]))
     .toEqual({ status: "ready", count: 2, agents: [note, another] });
 });
 

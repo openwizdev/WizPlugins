@@ -170,7 +170,7 @@ export function computeStatsV4(
   const v3 = computeStats(active, now, timeZone);
   const unavailable = (): StatsV4 => ({
     version: 2, status: "unavailable", window: v3.window, coverage: v3.coverage,
-    ...(agents ? { unseen: unseenAgents(agents, specs, null, now) } : {}),
+    ...(agents ? { unseen: unseenAgents(agents, specs, null) } : {}),
     running: null, waitingOnYou: null, finishedToday: null, harness: null, threads: null, states: null,
   });
   if (v3.status !== "ready") return unavailable();
@@ -215,7 +215,7 @@ export function computeStatsV4(
     };
   });
   const states = { awake, starting, asleep, needsYou: v3.waitingOnYou, awakeByHarness: sortedHarnessCounts(awakeCounts) };
-  const unseen = agents ? { unseen: unseenAgents(agents, specs, [...unique.values()], now) } : {};
+  const unseen = agents ? { unseen: unseenAgents(agents, specs, [...unique.values()]) } : {};
   return { ...v3, ...unseen, version: 2, harness, threads, states };
 }
 

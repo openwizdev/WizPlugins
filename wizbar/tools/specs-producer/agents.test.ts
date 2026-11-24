@@ -6,7 +6,7 @@ import { runOnce } from "./producer";
 import { fakeGitHub, FLEET, recordedAnswers } from "./fixtures/recorded";
 
 const now = () => new Date("2026-11-20T12:00:00Z");
-const comments = `repos/${FLEET}/issues/comments?since=2026-11-20T11:30:00Z&per_page=100`;
+const comments = `repos/${FLEET}/issues/comments?since=2026-11-20T11:30:00Z&sort=updated&direction=desc&per_page=100`;
 const fleet = `repos/${FLEET}/contents/docs/agents/fleet.md`;
 const body = [
   "<!-- openwiz:status v1 -->",

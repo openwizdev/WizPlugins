@@ -418,7 +418,10 @@ item that is neither a command nor listed here.
   omits or discloses them.
 - The desktop sidebar can omit cloud agents running in their own sandboxes.
   WizBar shows the ones with a live status note from a known GitHub record
-  author. Agents without a qualifying note may be missing. Subagents do not
+  author. Agents without a qualifying note may be missing. If a thread title
+  gives only an issue or pull number shared by multiple repositories, WizBar
+  may keep the GitHub rows visible and label shared issue numbers with their
+  repositories. Subagents do not
   count toward the running thread total.
 - Cloud rows carry no branch or pull request in observed host data.
 - The real pinned order, footer placement, the hover card's real look and

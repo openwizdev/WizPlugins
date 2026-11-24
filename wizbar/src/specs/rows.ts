@@ -92,9 +92,9 @@ const hasTicket = (spec: SpecEntryV4, ref: TitleRef) => ticketsOf(spec, ref).len
 /** Among several candidate specs, the one holding the title's ticket. */
 const byTicket = (specs: readonly SpecEntryV4[], ref: TitleRef) => only(specs.filter((s) => hasTicket(s, ref)));
 
-function matchEntry(file: SpecsFileV4, row: SpecsThreadRow, rows: readonly SpecsThreadRow[]): SpecEntryV4 | null {
-  if (!isRunning(row)) return null;
-  const ref = titleRef(row.displayTitle);
+function matchEntry(
+  file: SpecsFileV4, row: SpecsThreadRow, rows: readonly SpecsThreadRow[], ref = titleRef(row.displayTitle),
+): SpecEntryV4 | null {
   // A spec's fleet thread is never one of its agents.
   if (ref.kind === "fleet") return null;
   if (row.parentThreadId !== null) {
@@ -119,7 +119,16 @@ function matchEntry(file: SpecsFileV4, row: SpecsThreadRow, rows: readonly Specs
  * `rows` are every sidebar row, so a child of a `Fleet #S:` thread finds spec S.
  */
 export function matchSpec(file: SpecsFileV4, row: SpecsThreadRow, rows: readonly SpecsThreadRow[] = []): SpecKeyV4 | null {
-  return matchEntry(file, row, rows)?.spec ?? null;
+  return isRunning(row) ? matchEntry(file, row, rows)?.spec ?? null : null;
+}
+
+/** The ticket and role named by a sidebar row, regardless of its runtime state. */
+export function matchSpecTicket(file: SpecsFileV4, row: SpecsThreadRow, rows: readonly SpecsThreadRow[]) {
+  const ref = titleRef(row.displayTitle);
+  if (!ref.role) return null;
+  const spec = matchEntry(file, row, rows, ref);
+  const ticket = spec ? ticketOf(spec, ref) : null;
+  return ticket ? { ticket: ticket.ticket, role: ref.role } : null;
 }
 
 function dotState(ticket: TicketEntryV4, now: number): DotStateV4 {
@@ -183,6 +192,7 @@ export function specRows(
 ): SpecsResultV6 {
   const agents = new Map<SpecEntryV4, SpecAgentV4[]>();
   for (const row of rows) {
+    if (!isRunning(row)) continue;
     const spec = matchEntry(file, row, rows);
     if (spec) agents.set(spec, [...(agents.get(spec) ?? []), agentOf(spec, row, models)]);
   }

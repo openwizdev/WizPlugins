@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { SpecsFileReadV4 } from "../fixtures/v4";
 import { agentKinds, agentLeaseMs, liveStates, publicText, pullPattern, repositoryPattern, type GitHubAgent } from "./format";
 
-export type AgentsRead = { status: "ready"; agents: GitHubAgent[] } | { status: "unavailable" };
+export type AgentsRead = { status: "ready"; agents: GitHubAgent[]; authors?: "unknown" } | { status: "unavailable" };
 
 const unavailable: AgentsRead = { status: "unavailable" };
 const plain = (max: number) => z.string().refine((value) => publicText(value, max));
@@ -39,8 +39,12 @@ export function readAgentsFile(read: SpecsFileReadV4, now: number): AgentsRead {
   if (!parsed.success) return unavailable;
   const age = now - Date.parse(parsed.data.generatedAt);
   if (age >= agentLeaseMs || age < -5 * 60_000) return unavailable;
-  return { status: "ready", agents: parsed.data.agents.filter(({ updatedAt }) => {
-    const age = now - Date.parse(updatedAt);
-    return age >= 0 && age < agentLeaseMs;
-  }) };
+  const { agents, authors } = parsed.data;
+  return {
+    status: "ready", ...(authors ? { authors } : {}),
+    agents: agents.filter(({ updatedAt }) => {
+      const age = now - Date.parse(updatedAt);
+      return age >= 0 && age < agentLeaseMs;
+    }),
+  };
 }

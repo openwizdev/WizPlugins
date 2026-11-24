@@ -1,13 +1,13 @@
 import type { SpecsFileV4 } from "../fixtures/v4";
-import { isRunning, specRows, type SpecsThreadRow } from "../specs/rows";
+import { matchSpecTicket, type SpecsThreadRow } from "../specs/rows";
 import { pullPattern, type GitHubAgent } from "./format";
 import type { AgentsRead } from "./read";
 
 export type UnseenAgents =
-  | { status: "ready"; count: number; agents: GitHubAgent[] }
+  | { status: "ready"; count: number; agents: GitHubAgent[]; authors?: "unknown" }
   | { status: "unavailable"; count: null; agents: [] };
 
-const issueNumber = (ticket: string) => ticket.slice(ticket.lastIndexOf("#") + 1);
+export const issueNumber = (ticket: string) => ticket.slice(ticket.lastIndexOf("#") + 1);
 const claimKey = (ticket: string, kind: string) => `${ticket.toLowerCase()}:${kind.toLowerCase()}`;
 
 function indexTicket(index: Map<string, Set<string>>, number: string, ticket: string) {
@@ -16,10 +16,28 @@ function indexTicket(index: Map<string, Set<string>>, number: string, ticket: st
   index.set(number, known);
 }
 
-type SidebarRow = SpecsThreadRow & { isHidden?: boolean };
+function knownIssues(specs: SpecsFileV4 | null, agents: readonly GitHubAgent[]) {
+  const issues = new Map<string, Set<string>>();
+  for (const spec of specs?.specs ?? []) {
+    indexTicket(issues, issueNumber(spec.spec), spec.spec);
+    for (const { ticket } of spec.tickets) indexTicket(issues, issueNumber(ticket), ticket);
+  }
+  for (const { ticket } of agents) indexTicket(issues, issueNumber(ticket), ticket);
+  return issues;
+}
+
+export function sharedIssueNumbers(specs: SpecsFileV4 | null, agents: readonly GitHubAgent[]) {
+  const numbers = new Set<string>();
+  for (const [number, tickets] of knownIssues(specs, agents)) {
+    if (tickets.size > 1) numbers.add(number);
+  }
+  return numbers;
+}
+
+type SidebarRow = SpecsThreadRow & { isHidden?: boolean; isArchived?: boolean };
 
 export function unseenAgents(
-  read: AgentsRead, specs: SpecsFileV4 | null, rows: readonly SidebarRow[] | null, now: number,
+  read: AgentsRead, specs: SpecsFileV4 | null, rows: readonly SidebarRow[] | null,
 ): UnseenAgents {
   if (read.status !== "ready" || rows === null) return { status: "unavailable", count: null, agents: [] };
   const claims = new Map<string, GitHubAgent>();
@@ -28,35 +46,26 @@ export function unseenAgents(
     const prior = claims.get(key);
     if (!prior || agent.commentId < prior.commentId) claims.set(key, agent);
   }
-  const issues = new Map<string, Set<string>>();
+  const issues = knownIssues(specs, read.agents);
   const pulls = new Map<string, Set<string>>();
   for (const spec of specs?.specs ?? []) {
-    indexTicket(issues, issueNumber(spec.spec), spec.spec);
     for (const { ticket, pulls: numbers } of spec.tickets) {
-      indexTicket(issues, issueNumber(ticket), ticket);
       for (const number of numbers ?? []) indexTicket(pulls, String(number), ticket);
     }
   }
   for (const { ticket, pr } of claims.values()) {
-    indexTicket(issues, issueNumber(ticket), ticket);
     const pull = pr ? pullPattern.exec(pr) : null;
     if (pull) indexTicket(pulls, pull[2], ticket);
   }
 
-  const visible = new Set(rows.filter((row) => !row.isHidden && isRunning(row)).map((row) => row.id));
-  const matched = new Set<string>();
-  if (specs && visible.size) {
-    for (const spec of specRows(specs, rows, [], now).specs) {
-      for (const agent of spec.agents) {
-        if (!visible.has(agent.threadId) || !agent.ticket || !agent.role) continue;
-        claims.delete(claimKey(agent.ticket, agent.role));
-        matched.add(agent.threadId);
-      }
+  const visible = rows.filter((row) => !row.isHidden && !row.isArchived);
+  for (const row of visible) {
+    const match = specs ? matchSpecTicket(specs, row, visible) : null;
+    if (match) {
+      claims.delete(claimKey(match.ticket, match.role));
+      continue;
     }
-  }
-  // Outside a resolved spec, infer a ticket only when the issue or pull number has one candidate.
-  for (const row of rows) {
-    if (!visible.has(row.id) || matched.has(row.id)) continue;
+    // Outside a resolved spec, infer a ticket only when the issue or pull number has one candidate.
     const title = row.displayTitle;
     const builder = /^#([1-9][0-9]*): .+$/.exec(title);
     const reviewer = /^Review #([1-9][0-9]*) at [0-9a-f]{7,40}(?: .*)?$/.exec(title);
@@ -67,5 +76,5 @@ export function unseenAgents(
     claims.delete(claimKey(ticket, builder ? "builder" : reviewer ? "reviewer" : "fleet"));
   }
   const agents = [...claims.values()];
-  return { status: "ready", count: agents.length, agents };
+  return { status: "ready", count: agents.length, agents, ...(read.authors ? { authors: read.authors } : {}) };
 }

@@ -12,6 +12,7 @@ import {
 } from "@get-bb/plugin-sdk/app";
 import { agentsBySpec, UnseenAgentRows, UnseenDisclosure } from "./agents/UnseenAgents";
 import type { GitHubAgent } from "./agents/format";
+import { sharedIssueNumbers } from "./agents/match";
 import { agentsSummary } from "./agents/words";
 import { useAgentsRead } from "./agents/use-agents";
 import { modelLabel } from "./card-meta";
@@ -208,9 +209,10 @@ interface ThreadGroup {
   threads: CardThread[];
 }
 
-function RunningThreadsList({ groups, labels, pluginId }: {
+function RunningThreadsList({ groups, labels, pluginId, sharedNumbers }: {
   groups: readonly (ThreadGroup & { githubAgents: readonly GitHubAgent[] })[];
   labels: ReadonlyMap<string, string>;
+  sharedNumbers: ReadonlySet<string>;
   pluginId: string;
 }) {
   const actions = useSidebarThreadActions();
@@ -294,7 +296,7 @@ function RunningThreadsList({ groups, labels, pluginId }: {
                     );
                   })}
                   {expanded && githubAgents.length > 0 ? (
-                    <UnseenAgentRows agents={githubAgents} heading={heading} rowStyle={rowButton} rowClass={rowClass} />
+                    <UnseenAgentRows agents={githubAgents} sharedNumbers={sharedNumbers} heading={heading} rowStyle={rowButton} rowClass={rowClass} />
                   ) : null}
                 </ul>
               </li>
@@ -360,6 +362,7 @@ export function StatsPanel({ rows, stale = false }: { rows: readonly PluginSideb
     .map((group) => ({ ...group, githubAgents: githubBySpec.get(group.key) ?? [] }))
     .filter((group) => group.threads.length > 0 || group.githubAgents.length > 0);
   const githubSummary = agentsSummary(stats.unseen);
+  const sharedNumbers = sharedIssueNumbers(file, agents.status === "ready" ? agents.agents : []);
   const summary = stats.status === "ready" ? `${cardSummary(stats)}${stale ? " · last known" : ""}` : "";
   return (
     <section aria-label="Running threads" data-stale={stale ? "true" : undefined} style={{
@@ -394,7 +397,7 @@ export function StatsPanel({ rows, stale = false }: { rows: readonly PluginSideb
               </ul>
             </div>
           ) : null}
-          {groups.length > 0 ? <RunningThreadsList groups={groups} labels={labels} pluginId={pluginId} /> : null}
+          {groups.length > 0 ? <RunningThreadsList groups={groups} labels={labels} pluginId={pluginId} sharedNumbers={sharedNumbers} /> : null}
         </>
       )}
       <UnseenDisclosure unseen={stats.unseen} />

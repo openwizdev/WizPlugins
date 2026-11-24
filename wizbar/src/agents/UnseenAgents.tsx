@@ -5,7 +5,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import type { SpecKeyV4, SpecsFileV4 } from "../fixtures/v4";
 import { tokens } from "../specs/theme";
 import type { GitHubAgent } from "./format";
-import type { UnseenAgents } from "./match";
+import { issueNumber, type UnseenAgents } from "./match";
 import { agentsDisclosure } from "./words";
 
 const quiet = { color: tokens.mutedText } as const;
@@ -15,23 +15,25 @@ export function UnseenDisclosure({ unseen }: { unseen?: UnseenAgents }) {
   return <p style={{ ...quiet, margin: 0, flexShrink: 0 }}>{agentsDisclosure(unseen)}</p>;
 }
 
-export function UnseenAgentRows({ agents, heading, rowStyle, rowClass }: {
+export function UnseenAgentRows({ agents, sharedNumbers, heading, rowStyle, rowClass }: {
   agents: readonly GitHubAgent[];
+  sharedNumbers: ReadonlySet<string>;
   heading: string;
   rowStyle: CSSProperties;
   rowClass: string;
 }) {
   const navigate = useBbNavigate();
   return agents.map(({ repository, ticket, agent, harness, model, pr }) => {
-    const number = ticket.slice(ticket.lastIndexOf("#") + 1);
+    const number = issueNumber(ticket);
+    const label = `${roles[agent]} · ${sharedNumbers.has(number) ? ticket : `#${number}`}`;
     const url = pr ?? `https://github.com/${repository}/issues/${number}`;
     const details = `${harness} · ${model}`;
     return (
       <li key={`${ticket}:${agent}`}>
-        <button type="button" className={rowClass} style={rowStyle} aria-describedby={heading}
+        <button type="button" className={rowClass} style={rowStyle} aria-describedby={heading} aria-label={`${label}, ${details}, on GitHub, opens in browser`}
           onClick={() => navigate.openUrl(url)}>
           <HugeiconsIcon icon={GithubIcon} size={12} strokeWidth={1.5} aria-hidden="true" style={{ ...quiet, flexShrink: 0 }} />
-          <span style={{ flexShrink: 0 }}>{roles[agent]} · #{number}</span>{" "}
+          <span title={label} style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</span>{" "}
           <span title={details} style={{
             ...quiet, marginLeft: "auto", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
           }}>{details}</span>
