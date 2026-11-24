@@ -51,8 +51,13 @@ are in the [v0.3 sidebar contract](contracts/sidebar-v3.v1.md) and the
 - **The running card shows every running thread.** The card shows awake, starting and asleep totals and scrolls through every running thread. Specs follow the sidebar's sort, with `Other` last. Click a group heading to fold or open it for the session. Untitled rows show a role and ticket when the fallback names one, or the harness name otherwise. The current heading stays visible as you scroll, and a fade shows when more rows are available. The card lists live GitHub status notes for agents the sidebar cannot match. These rows show the note's harness and model and open its issue or pull request. The card reports their count separately as `N more on GitHub`. `wizbar stats --json` reports the same rows in `unseen`.
 - **Cloud agents.** The sidebar lists GitHub agents with no matching desktop thread. It starts after Pinned and can be moved or collapsed. Working and asking agents with live notes appear first and count in the header. Lapsed, done and stopped agents follow by most recent update. Names link to GitHub. `wizbar agents [--json]` lists the same rows. The host's desktop thread list leaves out agents that run in their own cloud sandbox (such as Antigravity), so WizBar reads them from GitHub: live `openwiz:status v1` notes, and optionally a fleet's run map (`--run-map`), whose thread ids tell which agents the desktop cannot see. Rows show the role, the repository and ticket, the model in plain words (for example `Neon · Medium`), the state and the last activity, and open the pull request, or the ticket when the note names none. The card ends with a plain line that agents in their own cloud sandbox may be missing.
 - **The producer** writes `.openwiz/agents.v1.json` beside the specs files, with its own 20-request budget after the specs scan. To fill Cloud agents, add a `--repo` for each product repository and, optionally, `--run-map 'owner/name#<comment id>'`.
-- **CLI.** New `wizbar threads` (search, sort and filters, `--all`) and `wizbar agents`; `wizbar section` takes `cloud` and `yours` (and still `unread` and `inbox`).
-- **Settings kept.** Every 0.6.0 setting reloads into 0.7.0 unchanged; a stored `unread` section reads as `yours`, and a stored order without `cloud` gets it after Pinned. New keys: `threadsSort` and `threadsFilter`.
+- **A calmer thread view.** A new setting, Composer footer, hides the bar under
+  the thread composer on pinned threads or everywhere (`wizbar footer`). The host
+  has no API for that bar: WizBar matches its `data-follow-up-composer-footer`
+  attribute from a content script, and while WizBar's thread list is not on
+  screen the bar may show again (#246).
+- **CLI.** New `wizbar threads` (search, sort and filters, `--all`), `wizbar agents` and `wizbar footer`; `wizbar section` takes `cloud` and `yours` (and still `unread` and `inbox`).
+- **Settings kept.** Every 0.6.0 setting reloads into 0.7.0 unchanged; a stored `unread` section reads as `yours`, and a stored order without `cloud` gets it after Pinned. New keys: `threadsSort`, `threadsFilter` and `composerFooter`.
 
 ## What v0.6 changes
 
