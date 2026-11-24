@@ -18,5 +18,10 @@
       "range": "^0.7.0",
       "tagPrefix": "wizbar/"
     }
-  }
+  },
+  "screenshots": [
+    "./screenshots/wizbar/wizbar-0-7-sidebar.png",
+    "./screenshots/wizbar/wizbar-0-7-running-card.png",
+    "./screenshots/wizbar/child-and-parent-chip.png"
+  ]
 }
