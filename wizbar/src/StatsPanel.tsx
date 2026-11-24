@@ -46,7 +46,7 @@ interface ModelCache {
   /** Threads whose last read failed: rejected, malformed, or a host answer with no model for them. */
   failed: Set<string>;
   inFlight: Set<string>;
-  /** The running threads last seen, to tell a new turn (not running, then running). */
+  /** The running card's last set, retained while it is closed. */
   running: Set<string> | null;
   /** The open card timer's last batch. */
   sweptAt: number;
@@ -114,25 +114,33 @@ function readModels(cache: ModelCache, rpc: ReturnType<typeof useRpc<typeof t3si
  * While it is open, a timer reads old labels and failed ones (after `MODEL_RETRY_MS`), at most one batch
  * per `MODEL_SWEEP_MS`, with no sidebar change needed (#175 R4).
  */
-function useModels(threadIds: readonly string[], revision: string): CardModelsResultV3 | null {
+export function useModels(threadIds: readonly string[], revision: string, runningIds?: readonly string[]): CardModelsResultV3 | null {
   const rpc = useRpc<typeof t3sidebarRpcContract>();
   const cache = modelCache(experimental_usePluginId());
   useSyncExternalStore((listener) => { cache.listeners.add(listener); return () => { cache.listeners.delete(listener); }; }, () => cache.version);
   const key = threadIds.join("\n");
+  const runningKey = (runningIds ?? threadIds).join("\n");
+  const runningCard = runningIds === undefined;
+  const hasCandidates = key !== "";
   const latest = useRef(key);
   latest.current = key;
   const opened = useRef(false);
+  const previousRunning = useRef<Set<string> | null>(null);
   useEffect(() => {
     const ids = key ? key.split("\n") : [];
     const now = Date.now();
     const age = (id: string) => now - (cache.readAt.get(id) ?? -Infinity);
     const reopen = !opened.current;
-    opened.current = true;
+    if (ids.length > 0 || runningCard) opened.current = true;
+    const running = new Set(runningKey ? runningKey.split("\n") : []);
+    const prior = runningCard ? cache.running : previousRunning.current;
     readModels(cache, rpc, ids.filter((id) => age(id) >= (reopen ? MODEL_REOPEN_MS : MODEL_REFRESH_MS) ||
-      (cache.running !== null && !cache.running.has(id))));
-    cache.running = new Set(ids);
-  }, [cache, rpc, key, revision]);
+      (running.has(id) && prior !== null && !prior.has(id))));
+    if (runningCard) cache.running = running;
+    else previousRunning.current = running;
+  }, [cache, rpc, key, revision, runningKey, runningCard]);
   useEffect(() => {
+    if (!hasCandidates) return;
     const timer = setInterval(() => {
       const now = Date.now();
       if (now - cache.sweptAt < MODEL_SWEEP_MS) return;
@@ -145,7 +153,7 @@ function useModels(threadIds: readonly string[], revision: string): CardModelsRe
       readModels(cache, rpc, due);
     }, MODEL_TICK_MS);
     return () => clearInterval(timer);
-  }, [cache, rpc]);
+  }, [cache, rpc, hasCandidates]);
   const items = threadIds.flatMap((id) => cache.labels.get(id) ?? []);
   return items.length > 0 ? { source: "host", items } : null;
 }
