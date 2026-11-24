@@ -50,12 +50,12 @@ const props = { dismiss() {} };
 afterEach(() => { cleanup(); fixtureFeed.current = null; settingsFeed.current = null; vi.useRealTimers(); });
 
 const lines = () => [...(screen.queryByRole("region", { name: "Running threads" })?.querySelectorAll("p") ?? [])].map((p) => p.textContent);
-const fixtureLine = "3 waiting on you · 1 cloud, 2 local, 1 unknown";
+const fixtureLine = "4 running · 3 waiting on you · 1 cloud, 2 local, 1 unknown";
 
 describe("V3: footer stats panel", () => {
   it("shows the contract's numbers and coverage disclosures for the fixture", () => {
     const rendered = renderSlot(panel, props, { sidebarThreads: { status: "ready", threads: v3Threads } });
-    expect(lines()).toEqual([fixtureLine]);
+    expect(lines()).toEqual([fixtureLine, "4 awake · 0 starting · 8 asleep"]);
     expect(rendered.sdkCalls).toEqual([]);
     expect(rendered.rpcCalls.map(({ method }) => method)).toEqual(["cardModels"]);
     expect(rendered.navigateCalls).toEqual([]);
@@ -129,7 +129,7 @@ describe("V3: footer stats panel", () => {
 
   // R3: duplicates are compared on the running rule's facts, never the indicator.
   it.each([
-    ["agree on runtime work but differ only in indicator", "none", "active", "0 waiting on you · 0 cloud, 1 local", "1 running"],
+    ["agree on runtime work but differ only in indicator", "none", "active", "1 running · 0 waiting on you · 0 cloud, 1 local", "1 running"],
     ["genuinely conflict on runtime work", "runtime", "idle", "Stats unavailable", null],
   ])("counts duplicate rows that %s by the running rule", (_, indicator, runtimeStatus, panelLine, lineName) => {
     const row = { ...v3Threads.find(({ id }) => id === "thr_v3_pinned_idle")!, status: "active" as const, runtimeStatus: "active" as const, indicator: "runtime" as const };

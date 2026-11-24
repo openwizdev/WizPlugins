@@ -14,6 +14,7 @@ import {
 import { cardBatch, cardPinNext, cardRowLabel, cardRowLabels, cardSummary, computeStatsV4, emptyCardBatch, formatStatsText } from "./stats";
 import { v6Now, v6SpecsFileText } from "./fixtures/v6";
 import { createSpecsCommands } from "./specs/cli";
+import { specRows } from "./specs/rows";
 
 // R1 (#172): a live host feed. While set, the sidebar hook reads these rows and re-renders when they change,
 // as the host does on every realtime update; unset, the harness's fixed rows stand.
@@ -63,8 +64,8 @@ describe("S4: the card's data is one computation (sections 7 and 8)", () => {
 
   // catches: the Unknown part shown at zero or dropped when non-zero.
   it("writes the one summary line, Unknown only when non-zero", () => {
-    expect(cardSummary(ready)).toBe("1 waiting on you · 7 cloud, 1 local, 1 unknown");
-    expect(cardSummary({ ...ready, running: { ...ready.running, unknown: 0 } })).toBe("1 waiting on you · 7 cloud, 1 local");
+    expect(cardSummary(ready)).toBe("9 running · 1 waiting on you · 7 cloud, 1 local, 1 unknown");
+    expect(cardSummary({ ...ready, running: { ...ready.running, unknown: 0 } })).toBe("9 running · 1 waiting on you · 7 cloud, 1 local");
   });
 
   it("groups in Specs order, starts open, and remembers a fold when the card closes", async () => {
@@ -136,7 +137,7 @@ describe("S4: the card's data is one computation (sections 7 and 8)", () => {
 
   // catches (#118 R2): real `#N:` and `Review #P at` titles shown raw on the card instead of role and ticket code.
   it("labels real titles by role and their ticket's code", () => {
-    const labels = cardRowLabels(v4RealTitleThreads, v4RealTitlesFile, v4Now);
+    const labels = cardRowLabels(v4RealTitleThreads, specRows(v4RealTitlesFile, v4RealTitleThreads, [], v4Now).specs);
     expect(Object.fromEntries(v4RealTitleThreads.map((t) => [t.id, labels.get(t.id)]))).toEqual({
       thr_rt_fleet: "Fleet #900: Sample kernel",
       thr_rt_builder: "Builder · KN2",
@@ -151,7 +152,7 @@ describe("S4: the card's data is one computation (sections 7 and 8)", () => {
       thr_rt_lost_child: "#5: Sample nothing",
     });
     // With no ready specs file, only the title's own form can give a code.
-    const bare = cardRowLabels(v4RealTitleThreads, null, v4Now);
+    const bare = cardRowLabels(v4RealTitleThreads, []);
     expect([bare.get("thr_rt_builder"), bare.get("thr_rt_no_hyphen")]).toEqual(["#902: Sample the driver", "Builder · AP11"]);
   });
 
@@ -217,23 +218,25 @@ describe("S4: no bolt; N running with its hover card", () => {
     expect(within(region).getByText(cardSummary(ready))).toBeTruthy();
     expect([...region.querySelectorAll("[data-harness]")].map((el) => [el.getAttribute("data-harness"), el.getAttribute("data-count")]))
       .toEqual(ready.harness.map((h) => [h.providerId, String(h.count)]));
-    await waitFor(() => expect(region.querySelectorAll("[data-spec-name]").length).toBe(5));
+    await waitFor(() => expect(region.querySelectorAll("[data-spec-name]").length).toBe(2));
     const rows = [...region.querySelectorAll("[data-thread]")].map((el) => ({
       id: el.getAttribute("data-thread"), matrix: el.querySelector("[data-matrix]")?.getAttribute("data-matrix"),
-      title: el.querySelector("[data-title]")?.textContent, shortName: el.querySelector("[data-spec-name]")?.textContent ?? null,
+      title: el.querySelector("[data-title]")?.textContent, shortName: el.getAttribute("data-thread-spec") ?? null,
     }));
     expect(rows.map(({ title, ...row }) => row)).toEqual(
-      ready.threads.map((t) => ({ id: t.id, matrix: t.matrix, shortName: t.shortName })),
+      ["Sample palette", "Sample finished", null].flatMap((name) => ready.threads
+        .filter((t) => t.shortName === name)
+        .map((t) => ({ id: t.id, matrix: t.matrix, shortName: t.shortName }))),
     );
     expect(rows.map(({ title }) => title)).toEqual([
-      "Sample palette fleet",
       "Builder · SP-2",
-      "Builder · SH-1",
-      "Reviewer · SF-2",
-      "Builder · ZZ-1",
       "Reviewer · SP-3",
       "Builder · SC-1",
       "Builder · SP-4",
+      "Reviewer · SF-2",
+      "Sample palette fleet",
+      "Builder · SH-1",
+      "Builder · ZZ-1",
       "Sample tidy imports",
     ]);
   });
@@ -294,10 +297,10 @@ describe("S4: no bolt; N running with its hover card", () => {
     });
     fireEvent.pointerEnter(counter().parentElement!);
     const row = (id: string) => card()!.querySelector(`[data-thread=${id}]`)!;
-    await waitFor(() => expect(row("thr_rt_builder").querySelector("[data-spec-name]")?.textContent).toBe("Sample kernel"));
+    await waitFor(() => expect(row("thr_rt_builder").getAttribute("data-thread-spec")).toBe("Sample kernel"));
     expect(row("thr_rt_builder").querySelector("[data-title]")?.textContent).toBe("Builder · KN2");
     expect(row("thr_rt_reviewer").querySelector("[data-title]")?.textContent).toBe("Reviewer · KN3");
-    expect(row("thr_rt_helper").querySelector("[data-spec-name]")?.textContent).toBe("Sample kernel");
+    expect(row("thr_rt_helper").getAttribute("data-thread-spec")).toBe("Sample kernel");
   });
 
   // catches (0.5 E): model · effort dropped from a one-line row, or put on a second line.
@@ -387,7 +390,7 @@ describe("WB4-10: the running card stays reachable", () => {
 
   // catches (#1532): the card mounted before its trigger, so Tab from the trigger leaves the card
   // (and the blur closes it), or thread buttons that hide the focus ring.
-  it("Tab reaches the legend and then the first thread with visible focus while the card stays open", () => {
+  it("Tab reaches the legend and then the first group with visible focus while the card stays open", () => {
     render();
     act(() => trigger().focus());
     expect(card()).toBeTruthy();

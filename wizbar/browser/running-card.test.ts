@@ -76,17 +76,27 @@ it.each([600, 900])("shows all 100 threads in a %i px window", async (height) =>
     });
     expect(focus).toEqual({ inCard: true, visible: true });
 
+    const topFade = card.locator('[data-scroll-fade="top"]');
+    const bottomFade = card.locator('[data-scroll-fade="bottom"]');
+    await expect.poll(async () => await bottomFade.isVisible()).toBe(true);
+    expect(await topFade.isVisible()).toBe(false);
+
     expect(await list.locator("[data-thread]").count()).toBe(100);
     expect.soft(await geometry(list), "top exposes the whole first row and clips no row").toMatchObject({
       atTop: true, atBottom: false, firstWhole: true, partialRows: 0,
     });
     if (evidence) await page.screenshot({ path: resolve(evidence, `${height}-top.png`) });
     await list.hover();
+    await page.mouse.wheel(0, 300);
+    await expect.poll(async () => await topFade.isVisible()).toBe(true);
+    expect(await bottomFade.isVisible()).toBe(true);
     await page.mouse.wheel(0, 10_000);
     await expect.poll(async () => (await geometry(list)).atBottom).toBe(true);
     expect.soft(await geometry(list), "bottom exposes the whole last row and clips no row").toMatchObject({
       atTop: false, atBottom: true, lastWhole: true, partialRows: 0,
     });
+    await expect.poll(async () => await bottomFade.isVisible()).toBe(false);
+    expect(await topFade.isVisible()).toBe(true);
     if (evidence) await page.screenshot({ path: resolve(evidence, `${height}-bottom.png`) });
     await page.mouse.wheel(0, -10_000);
     await expect.poll(async () => (await geometry(list)).firstWhole).toBe(true);

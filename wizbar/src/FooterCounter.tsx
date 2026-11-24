@@ -56,7 +56,7 @@ export function FooterCounter({ className }: { className?: string }) {
   const { status, rows } = useObservableRows();
   const base = { version: 1, scope: "observable-sidebar", subagents: { status: "unproven", count: null } } as const;
   const source: ObservableRunningSource = rows && status === "ready"
-    ? { ...base, status, threads: rows.map((t) => ({ id: t.id, projectId: t.projectId, parentThreadId: t.parentThreadId, isWorking: isRunning(t) })) }
+    ? { ...base, status, threads: rows.filter((t) => !t.isArchived).map((t) => ({ id: t.id, projectId: t.projectId, parentThreadId: t.parentThreadId, isWorking: isRunning(t) })) }
     : { ...base, status: status === "ready" ? "incomplete" : status, threads: null };
   useFeatureSourceStatus("footer", source.status === "ready" ? "unverified" : "unavailable");
   // R1 (#172): through a gap the card keeps the last ready rows; the artwork decides how long it shows them.

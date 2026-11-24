@@ -3,10 +3,11 @@
 // same rows give the same numbers everywhere.
 import { hasRuntimeWork } from "./lifecycle";
 import { classifyMachine } from "./machine-source";
+import { harnessName } from "./model-names";
 import type { PluginRealtimeConnectionState, PluginSidebarThreadsState } from "@get-bb/plugin-sdk";
 import type { CardModelsResultV3, StatsCoverageV3, StatsV3, StatsWindowV3, ThreadV3 } from "./v3-types";
-import type { CardEventV4, CardStateV4, FooterThreadV4, SpecsFileV4, StatsV4 } from "./fixtures/v4";
-import { matchSpec, matrixState, parseTitle, specRows, type SpecsThreadRow } from "./specs/rows";
+import type { CardEventV4, CardStateV4, FooterThreadV4, SpecRowV4, SpecsFileV4, StatsV4 } from "./fixtures/v4";
+import { matchSpec, matrixState, parseTitle, type SpecsThreadRow } from "./specs/rows";
 
 /** SDK 0.6.33 `ThreadRuntimeDisplayStatus`; anything else cannot mean idle. */
 export const runtimeDisplayStatuses = [
@@ -146,7 +147,9 @@ export function formatStatsText(stats: StatsV3 | StatsV4): string {
 // ---- WB4-3 (openwizdev/OpenWiz#1437): the hover card's data, specs-section.v1.md sections 7 and 8 ----
 
 /** A row with what the card reads too: the spec rows' fields beside the 0.3 stats fields. */
-export type StatsV4Row = StatsRow & SpecsThreadRow;
+export type StatsV4Row = StatsRow & SpecsThreadRow & Partial<Pick<ThreadV3, "isArchived">>;
+
+const startingStatuses: ReadonlySet<StatsRow["runtimeStatus"]> = new Set(["starting", "pending", "provisioning", "waiting-for-host"]);
 
 /**
  * `wizbar stats --json` from 0.4 and the hover card: one computation for both
@@ -157,11 +160,32 @@ export type StatsV4Row = StatsRow & SpecsThreadRow;
 export function computeStatsV4(
   rows: readonly StatsV4Row[] | null, specs: SpecsFileV4 | null, models: CardModelsResultV3 | null, now: number, timeZone: string,
 ): StatsV4 {
-  const v3 = computeStats(rows, now, timeZone);
-  if (v3.status !== "ready") return { ...v3, version: 2, harness: null, threads: null };
-  const seen = new Set<string>();
-  const running = (rows ?? []).filter((row) => isRunning(row) && !seen.has(row.id) && seen.add(row.id))
-    .sort((a, b) => a.createdAt - b.createdAt || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  const active = rows?.filter((row) => !row.isArchived) ?? null;
+  const v3 = computeStats(active, now, timeZone);
+  const unavailable = (): StatsV4 => ({
+    version: 2, status: "unavailable", window: v3.window, coverage: v3.coverage,
+    running: null, waitingOnYou: null, finishedToday: null, harness: null, threads: null, states: null,
+  });
+  if (v3.status !== "ready") return unavailable();
+  const unique = new Map<string, StatsV4Row>();
+  let starting = 0;
+  let asleep = 0;
+  const running: StatsV4Row[] = [];
+  for (const row of active ?? []) {
+    const awake = isRunning(row);
+    const waking = startingStatuses.has(row.runtimeStatus);
+    const previous = unique.get(row.id);
+    if (previous) {
+      const conflict = awake ? previous.providerId !== row.providerId : startingStatuses.has(previous.runtimeStatus) !== waking;
+      if (conflict) return unavailable();
+      continue;
+    }
+    unique.set(row.id, row);
+    if (awake) running.push(row);
+    else if (waking) starting++;
+    else asleep++;
+  }
+  running.sort((a, b) => a.createdAt - b.createdAt || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   const counts = new Map<string, number>();
   for (const row of running) counts.set(row.providerId, (counts.get(row.providerId) ?? 0) + 1);
   const harness = [...counts].map(([providerId, count]) => ({ providerId, count }))
@@ -169,7 +193,7 @@ export function computeStatsV4(
   const served = new Map(models?.source === "host" ? models.items.map((item) => [item.threadId, item]) : []);
   const threads = running.map((row): FooterThreadV4 => {
     // Every row goes in too, so a child of a `Fleet #S:` thread finds spec S (section 3).
-    const key = specs ? matchSpec(specs, row, rows ?? []) : null;
+    const key = specs ? matchSpec(specs, row, active ?? []) : null;
     // From 0.6 only a spec with no tickets is hidden; a finished one is quiet and named like any other (section 3).
     const entry = key ? specs!.specs.find((spec) => spec.spec === key && spec.tickets.length > 0) ?? null : null;
     const model = served.get(row.id);
@@ -179,12 +203,13 @@ export function computeStatsV4(
       model: model?.model ?? null, effort: model?.model ? model.effort : null,
     };
   });
-  return { ...v3, version: 2, harness, threads };
+  const states = { awake: running.length, starting, asleep, needsYou: v3.waitingOnYou, awakeByHarness: harness };
+  return { ...v3, version: 2, harness, threads, states };
 }
 
-/** The card's first line (section 7): `<W> waiting on you · <C> cloud, <L> local`, then `, <U> unknown` when over zero. */
+/** The card's first line (section 7), including the machine split. */
 export function cardSummary({ waitingOnYou, running }: Extract<StatsV4, { status: "ready" }>): string {
-  return `${waitingOnYou} waiting on you · ${running.cloud} cloud, ${running.local} local${running.unknown > 0 ? `, ${running.unknown} unknown` : ""}`;
+  return `${running.total} running · ${waitingOnYou} waiting on you · ${running.cloud} cloud, ${running.local} local${running.unknown > 0 ? `, ${running.unknown} unknown` : ""}`;
 }
 
 /** A card row's label (section 7) from its title alone: `Role · CODE` when the title carries its code (section 3), else the full title. */
@@ -196,16 +221,32 @@ export function cardRowLabel(title: string): string {
 /**
  * Every row's card label (section 7). An agent of a visible spec takes its role
  * and its ticket's code from section 3's resolution (`#N` for a ticket with no
- * code), so `#902: …` reads `Builder · KN2`; any other row `cardRowLabel`. The
- * labels are the card's only: `wizbar stats --json` keeps the raw titles.
+ * code), so `#902: …` reads `Builder · KN2`. For untitled rows, use the
+ * brief's role and ticket when available, or the harness name.
  */
-export function cardRowLabels(rows: readonly StatsV4Row[], specs: SpecsFileV4 | null, now: number): Map<string, string> {
-  const labels = new Map(rows.map((row) => [row.id, cardRowLabel(row.displayTitle)]));
-  if (!specs) return labels;
-  for (const spec of specRows(specs, rows, [], now).specs) {
+export function cardRowLabels(
+  rows: readonly Pick<ThreadV3, "id" | "title" | "titleFallback" | "providerId">[],
+  specs: readonly SpecRowV4[],
+): Map<string, string> {
+  const labels = new Map<string, string>();
+  const titled = new Set<string>();
+  for (const row of rows) {
+    if (row.title?.trim()) {
+      titled.add(row.id);
+      labels.set(row.id, cardRowLabel(row.title));
+      continue;
+    }
+    const fallback = row.titleFallback?.trim() ?? "";
+    const builder = /^you are the builder for\s+[\w.-]+\/[\w.-]+#([1-9]\d*)\b/i.exec(fallback);
+    const reviewer = /^you are a fresh reviewer for\s+.*?#([1-9]\d*)\b/is.exec(fallback);
+    const text = builder ? `Builder · #${builder[1]}`
+      : reviewer ? `Reviewer · #${reviewer[1]}` : `${harnessName(row.providerId)} thread`;
+    labels.set(row.id, text);
+  }
+  for (const spec of specs) {
     for (const agent of spec.agents) {
       const code = agent.code ?? (agent.ticket ? `#${agent.ticket.slice(agent.ticket.lastIndexOf("#") + 1)}` : null);
-      if (agent.role && code) labels.set(agent.threadId, `${agent.role} · ${code}`);
+      if (agent.role && code && titled.has(agent.threadId)) labels.set(agent.threadId, `${agent.role} · ${code}`);
     }
   }
   return labels;
