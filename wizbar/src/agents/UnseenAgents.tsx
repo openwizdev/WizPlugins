@@ -1,9 +1,9 @@
 import type { CSSProperties } from "react";
 import { useBbNavigate } from "@get-bb/plugin-sdk/app";
-import { GithubIcon } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
 import type { SpecKeyV4, SpecsFileV4 } from "../fixtures/v4";
+import { MatrixMark } from "../MatrixMark";
 import { tokens } from "../specs/theme";
+import { agentMatrix, cloudModel } from "./cloud";
 import type { GitHubAgent } from "./format";
 import { issueNumber, type UnseenAgents } from "./match";
 import { agentsDisclosure } from "./words";
@@ -23,20 +23,24 @@ export function UnseenAgentRows({ agents, sharedNumbers, heading, rowStyle, rowC
   rowClass: string;
 }) {
   const navigate = useBbNavigate();
-  return agents.map(({ repository, ticket, agent, harness, model, pr }) => {
+  return agents.map((item) => {
+    const { repository, ticket, agent, harness, model, pr } = item;
     const number = issueNumber(ticket);
     const label = `${roles[agent]} · ${sharedNumbers.has(number) ? ticket : `#${number}`}`;
     const url = pr ?? `https://github.com/${repository}/issues/${number}`;
     const details = `${harness} · ${model}`;
+    const shortModel = cloudModel(model, harness);
     return (
       <li key={`${ticket}:${agent}`}>
-        <button type="button" className={rowClass} style={rowStyle} aria-describedby={heading} aria-label={`${label}, ${details}, on GitHub, opens in browser`}
+        <button type="button" className={rowClass} style={rowStyle} aria-describedby={heading}
+          title={`${label} — ${details}`}
+          aria-label={`${label}, ${details}, on GitHub, opens in browser`}
           onClick={() => navigate.openUrl(url)}>
-          <HugeiconsIcon icon={GithubIcon} size={12} strokeWidth={1.5} aria-hidden="true" style={{ ...quiet, flexShrink: 0 }} />
-          <span title={label} style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</span>{" "}
-          <span title={details} style={{
-            ...quiet, marginLeft: "auto", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-          }}>{details}</span>
+          <MatrixMark state={agentMatrix(item)} />
+          <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 12, color: tokens.text }}>{label}</span>
+          <span style={{
+            ...quiet, marginLeft: "auto", paddingLeft: 8, flexShrink: 0, whiteSpace: "nowrap", fontSize: 11,
+          }}>{shortModel}</span>
         </button>
       </li>
     );

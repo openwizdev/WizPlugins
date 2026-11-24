@@ -69,13 +69,15 @@ it("renders the same Cloud agents as the CLI, including lapsed, finished and not
   const header = within(section).getByRole("button", { name: "Cloud agents 2" });
   const frame = section.closest("[data-wizbar-section]")!;
   expect(frame.previousElementSibling?.getAttribute("data-wizbar-section")).toBe("pinned");
-  const observed = () => within(section).getAllByRole("button", { name: /on GitHub, opens in browser/ }).map((item) => item.textContent);
+  const observed = () => within(section).getAllByRole("button", { name: /on GitHub, opens in browser/ }).map((item) => item.getAttribute("aria-label"));
   expect(observed()).toEqual([
-    "Builder · OpenWiz #12Neon · Medium · working · 3m",
-    "Builder · OpenWiz #14Neon · asking · 12m",
-    "Builder · OpenWiz #15Opus 5.5 · XHigh · done · 2m",
-    "Reviewer · OpenWiz #13Sol 6.2 · Medium · lapsed · 42mPR #22",
+    "Builder · OpenWiz #12, Neon · Medium · working · 3m, on GitHub, opens in browser",
+    "Builder · OpenWiz #14, Neon · asking · 12m, on GitHub, opens in browser",
+    "Builder · OpenWiz #15, Opus 5.5 · XHigh · done · 2m, on GitHub, opens in browser",
+    "Reviewer · OpenWiz #13, Sol 6.2 · Medium · lapsed · 42m, PR #22, on GitHub, opens in browser",
   ]);
+  expect(within(section).getByText("Builder · #12")).toBeDefined();
+  expect(within(section).getByText("Reviewer · #13")).toBeDefined();
   fireEvent.click(lapsed);
   expect(rendered.navigateCalls).toEqual([{ method: "openUrl", url: `https://github.com/${repository}/pull/22` }]);
   expect(within(section).queryByText("Reviewer · OpenWiz #24")).toBeNull();
@@ -97,7 +99,8 @@ it("renders the same Cloud agents as the CLI, including lapsed, finished and not
     expect(cli.exitCode).toBe(0);
     const result = JSON.parse(cli.stdout!);
     expect(result).toMatchObject({ status: "ready", active: 2, more: [{ label: "Reviewer · OpenWiz #24" }] });
-    expect(result.rows.map((item: { label: string; detail: string; pull: string | null }) => item.label + item.detail + (item.pull ?? ""))).toEqual(observed());
+    expect(result.rows.map((item: { label: string; detail: string; pull: string | null }) =>
+      `${item.label}, ${item.detail}${item.pull ? `, ${item.pull}` : ""}, on GitHub, opens in browser`)).toEqual(observed());
     expect(cli.stdout).not.toContain("sample-archived");
     expect((await host.harness.behavior.runCli(["agents"])).stdout).toContain("Neon · Medium · working · 3m");
   } finally {

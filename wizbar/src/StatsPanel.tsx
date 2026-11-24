@@ -17,7 +17,7 @@ import { agentsSummary } from "./agents/words";
 import { useAgentsRead } from "./agents/use-agents";
 import { modelLabel } from "./card-meta";
 import { harnessName } from "./model-names";
-import { MatrixMark } from "./MatrixMark";
+import { MatrixMark, matrixWords } from "./MatrixMark";
 import { ProviderGlyph } from "./ProviderGlyph";
 import { cardBatch, cardRowLabels, cardSummary, computeStatsV4, emptyCardBatch, isRunning, type CardThread } from "./stats";
 import { readSpecsSort } from "./settings";
@@ -282,15 +282,22 @@ function RunningThreadsList({ groups, labels, pluginId, sharedNumbers }: {
                 <ul id={contents} hidden={!expanded} style={list}>
                   {expanded && threads.map((thread) => {
                     const model = modelLabel(thread.model, thread.effort);
+                    const rowLabel = labels.get(thread.id) ?? thread.title;
+                    const fullTitle = thread.title;
+                    const accessibleName = fullTitle && fullTitle !== rowLabel
+                      ? [matrixWords[thread.matrix], rowLabel, fullTitle, model].filter(Boolean).join(", ")
+                      : undefined;
                     return (
                       <li key={`thread-${thread.id}`} data-thread={thread.id} data-thread-spec={thread.shortName ?? undefined}
                         data-leaving={thread.leaving ? "true" : undefined}
                         style={{ opacity: thread.leaving ? 0.45 : 1, transition: "opacity 300ms" }}>
                         <button type="button" className={rowClass} style={rowButton} aria-describedby={heading}
+                          aria-label={accessibleName}
+                          title={fullTitle || rowLabel}
                           onClick={(event) => actions.open(thread.id, { split: event.metaKey || event.ctrlKey })}>
                           <MatrixMark state={thread.matrix} />
-                          <span data-title="" style={{ ...oneLine, minWidth: 0, flexShrink: 1 }}>{labels.get(thread.id)}</span>
-                          {model ? <span data-model="" style={{ marginLeft: "auto", paddingLeft: 8, flexShrink: 0, whiteSpace: "nowrap", color: tokens.mutedText }}>{model}</span> : null}
+                          <span data-title="" style={{ ...oneLine, minWidth: 0, flexShrink: 1, fontSize: 12, color: tokens.text }}>{rowLabel}</span>
+                          {model ? <span data-model="" style={{ marginLeft: "auto", paddingLeft: 8, flexShrink: 0, whiteSpace: "nowrap", fontSize: 11, color: tokens.mutedText }}>{model}</span> : null}
                         </button>
                       </li>
                     );
