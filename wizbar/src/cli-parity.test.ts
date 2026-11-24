@@ -143,7 +143,7 @@ describe("V5: every UI action has a wizbar command with --json", () => {
     const names = cli.commands.map((c) => c.name);
     // #156: `models` is a read-only diagnostic of the model source, no UI action of its own.
     // S1 (#169): `section` collapses a sidebar section, the agent-first route to a header click.
-    expect(names.sort()).toEqual([...wizbarOperationsV4, "models", "section", "threads"].sort());
+    expect(names.sort()).toEqual([...wizbarOperationsV4, "agents", "models", "section", "threads"].sort());
     expect(names).toEqual(expect.arrayContaining(Object.values(uiActions)));
     for (const command of cli.commands) expect(command.usage, command.name).toMatch(/\[--json\]$/);
   });
@@ -255,7 +255,7 @@ describe("V5: children and stats JSON equal the UI for the same fixtures", () =>
     plugin(host.bb);
     await host.harness.behavior.setSettings({ wizdeckFactories: v4Binding });
     const cli = JSON.parse((await host.harness.behavior.runCli(["stats", "--json"])).stdout!);
-    expect(cli).toEqual(v4Stats);
+    expect(cli).toEqual({ ...v4Stats, unseen: { status: "unavailable", count: null, agents: [] } });
     const served = await host.harness.behavior.callRpc("specsFile", {});
     renderSlot(app.threadLists[0]!, {
       activeThreadId: null, activeProjectId: null, isCompactViewport: true, onNavigate() {}, searchQuery: "",

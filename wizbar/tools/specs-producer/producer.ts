@@ -13,25 +13,35 @@
 // requests. Any failed read, or a scan that would need more, writes nothing: the
 // last file stays and the run exits 1 naming the reason. Otherwise the file is
 // written whole (temp file, then rename) with `generatedAt` the run's time.
+// The agents scan has its own 20-request budget and publishes independently.
 import { execFile } from "node:child_process";
 import { link, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+// @ts-expect-error Node runs this producer directly and requires the source extension.
+import { agentWindowMs, agentsRelativePath, type GitHubAgent } from "../../src/agents/format.ts";
+// @ts-expect-error Node runs this producer directly and requires the source extension.
+import { recentAgents, loginPattern, slimComment, slimFleet } from "./agents.ts";
+// @ts-expect-error Node runs this producer directly and requires the source extension.
+import { runMapPath, slimRunMap } from "./run-map.ts";
 
 export interface GitHubResponse { status: number; etag: string | null; next: string | null; body: unknown }
 /** One REST read of `path` (relative to the API root), conditional when `etag` is not null. */
 export type GitHubRequest = (path: string, etag: string | null) => Promise<GitHubResponse>;
 /** A run either wrote the whole file, or wrote nothing and says why. */
-/** `unchanged`: requests GitHub answered 304. They count toward `BUDGET`, not toward GitHub's rate limit. */
-export type RunResult = { ok: true; calls: number; specs: number; unchanged: number } | { ok: false; calls: number; error: string };
+/** `unchanged`: requests GitHub answered 304. They count toward the scan budget, not GitHub's rate limit. */
+type AgentsRun = { status: "wrote"; count: number; truncated: number; unknownAuthors: number; mapUnavailable: boolean } | { status: "kept"; reason: string };
+export type RunResult = { ok: true; calls: number; specs: number; unchanged: number; agentsCalls: number; agentsUnchanged: number; agents: AgentsRun } | { ok: false; calls: number; error: string };
 
 /** v1 as before #162, a later ticket written as needs-you, so a WizBar from before #162 keeps working (#164 R1). */
 export const OUTPUT = join(".openwiz", "specs.v1.json");
 /** v2 (#162): due now and later apart. A WizBar from #162 on reads it first. */
 export const OUTPUT_V2 = join(".openwiz", "specs.v2.json");
+const AGENTS_CACHE = join(".openwiz", "agents.v1.etags.json");
 export const CACHE = join(".openwiz", "specs.v1.etags.json");
 /** Requests per run (the ticket's "under 60"). A scan that needs more fails loudly. */
 export const BUDGET = 59;
+const AGENTS_BUDGET = 20;
 
 type State = "done" | "building" | "review" | "needs-you" | "yours-later" | "held" | "not-started";
 /** `updatedAt` (#183, v2 only): the issue's `updated_at`, its last activity; absent when the answer has none. */
@@ -107,12 +117,12 @@ async function readCache(path: string): Promise<Record<string, CacheEntry>> {
  * Every file whole (temp file, then rename), or none (#164 R1): all temp files are written first, and when
  * a later rename fails, the files already renamed go back to their last contents (kept as hard links).
  */
-async function writeAllOrNothing(files: readonly (readonly [path: string, text: string])[]): Promise<void> {
+async function writeAllOrNothing(files: readonly (readonly [path: string, text: string, mode?: number])[]): Promise<void> {
   const temp = (path: string) => `${path}.${process.pid}.tmp`;
   const kept = (path: string) => `${path}.${process.pid}.last`;
   const renamed: { path: string; hadLast: boolean }[] = [];
   try {
-    for (const [path, text] of files) await writeFile(temp(path), text, "utf8");
+    for (const [path, text, mode] of files) await writeFile(temp(path), text, { encoding: "utf8", mode });
     try {
       for (const [path] of files) {
         let hadLast = true;
@@ -201,33 +211,95 @@ class Reader {
   calls = 0;
   unchanged = 0;
   readonly pages: Record<string, CacheEntry> = {};
+  truncated = 0;
   readonly request: GitHubRequest;
   readonly cached: Record<string, CacheEntry>;
-  constructor(request: GitHubRequest, cached: Record<string, CacheEntry>) {
+  readonly limit: number;
+  readonly budgetError: string;
+
+  constructor(request: GitHubRequest, cached: Record<string, CacheEntry>, limit = BUDGET, budgetError = `the scan needs more than ${BUDGET} requests`) {
     this.request = request;
     this.cached = cached;
+    this.limit = limit;
+    this.budgetError = budgetError;
   }
 
-  /** Every page of a list endpoint, following GitHub's own links; a 304 reuses the cached page. */
-  async list(path: string): Promise<Record<string, unknown>[]> {
-    const items: Record<string, unknown>[] = [];
-    for (let page: string | null = path; page !== null;) {
-      if (this.calls >= BUDGET) throw new ReadFailed(`the scan needs more than ${BUDGET} requests`);
-      if (this.pages[page]) throw new ReadFailed(`GitHub linked ${page} twice`);
-      this.calls += 1;
-      const cached = this.cached[page];
-      const response = await this.request(page, cached?.etag || null);
-      let entry: CacheEntry;
-      if (response.status === 304 && cached) { entry = cached; this.unchanged += 1; }
-      else if (response.status === 200) {
-        if (!Array.isArray(response.body)) throw new ReadFailed(`GitHub answered something other than a list for ${page}`);
-        entry = { etag: response.etag ?? "", next: response.next, body: response.body.map(slim) };
-      } else throw new ReadFailed(`GitHub answered ${response.status} for ${page}`);
-      this.pages[page] = entry;
+  async page(path: string, normalize: (body: unknown) => CacheEntry["body"], missingOk = false): Promise<CacheEntry> {
+    if (this.calls >= this.limit) throw new ReadFailed(this.budgetError);
+    if (this.pages[path]) throw new ReadFailed(`GitHub linked ${path} twice`);
+    this.calls += 1;
+    const cached = this.cached[path];
+    const response = await this.request(path, cached?.etag || null);
+    let entry: CacheEntry;
+    if (response.status === 304 && cached) { entry = cached; this.unchanged += 1; }
+    else if (response.status === 404 && missingOk) return { etag: "", next: null, body: [] };
+    else if (response.status === 200) {
+      entry = { etag: response.etag ?? "", next: response.next, body: normalize(response.body) };
+    } else throw new ReadFailed(`GitHub answered ${response.status} for ${path}`);
+    this.pages[path] = entry;
+    return entry;
+  }
+
+  /** Follows GitHub's own links up to the requested page limit. */
+  async list(path: string, limit = Infinity, slimItems = (items: unknown[]) => items.map(slim)): Promise<CacheEntry["body"]> {
+    const items: CacheEntry["body"] = [];
+    let page: string | null = path;
+    for (let count = 0; page !== null && count < limit; count++) {
+      const entry: CacheEntry = await this.page(page, (body) => {
+        if (!Array.isArray(body)) throw new ReadFailed(`GitHub answered something other than a list for ${page}`);
+        return slimItems(body);
+      });
       items.push(...entry.body);
       page = entry.next;
     }
+    if (page !== null) this.truncated += 1;
     return items;
+  }
+}
+
+async function scanAgents(
+  reader: Reader, home: string, repositories: readonly string[], flags: readonly string[], now: Date, generatedAt: string, mapReference?: string,
+): Promise<AgentsRun> {
+  const step = 10 * 60_000;
+  const since = new Date(Math.floor((now.getTime() - agentWindowMs) / step) * step).toISOString().replace(/\.000Z$/, "Z");
+  const explicit = new Set(flags.map((author) => author.toLowerCase()));
+  const agents: GitHubAgent[] = [];
+  let unknownAuthors = 0;
+  try {
+    for (const repository of repositories) {
+      const authors = explicit.size > 0 ? explicit : new Set(
+        (await reader.page(`repos/${repository}/contents/docs/agents/fleet.md`, slimFleet, true)).body
+          .map(({ author }) => String(author)),
+      );
+      if (authors.size === 0) {
+        unknownAuthors += 1;
+        continue;
+      }
+      const comments = await reader.list(`repos/${repository}/issues/comments?since=${since}&sort=updated&direction=desc&per_page=100`, 3,
+        (items) => items.flatMap(slimComment));
+      agents.push(...recentAgents(comments, repository, authors, now));
+    }
+    let runMap: CacheEntry["body"] | null = null;
+    if (mapReference) {
+      const path = runMapPath(mapReference);
+      if (path) {
+        try {
+          runMap = (await reader.page(path, slimRunMap)).body;
+        } catch {
+          // Notes remain usable when the optional map cannot be read.
+        }
+      }
+    }
+    await writeAllOrNothing([
+      [join(home, agentsRelativePath), `${JSON.stringify({
+        version: 1, generatedAt, ...(unknownAuthors ? { authors: "unknown" } : {}), agents,
+        ...(mapReference ? { runMap } : {}),
+      }, null, 2)}\n`, 0o600],
+      [join(home, AGENTS_CACHE), JSON.stringify({ version: 5, pages: reader.pages } satisfies Cache), 0o600],
+    ]);
+    return { status: "wrote", count: agents.filter((agent) => agent.live).length, truncated: reader.truncated, unknownAuthors, mapUnavailable: !!mapReference && runMap === null };
+  } catch (error) {
+    return { status: "kept", reason: error instanceof Error ? error.message : String(error) };
   }
 }
 
@@ -236,8 +308,8 @@ class Reader {
  * that would pass `BUDGET` requests, writes nothing (the last file and cache stay). A ticket in another
  * bound repository than its spec takes the pulls of its own repository (#122 R1).
  */
-export async function runOnce(options: { home: string; repositories: readonly string[]; request: GitHubRequest; now?: () => Date }): Promise<RunResult> {
-  const repositories = [...new Set(options.repositories)];
+export async function runOnce(options: { home: string; repositories: readonly string[]; request: GitHubRequest; now?: () => Date; authors?: readonly string[]; runMap?: string }): Promise<RunResult> {
+  const repositories = [...new Map(options.repositories.map((repo) => [repo.toLowerCase(), repo])).values()];
   const cachePath = join(options.home, CACHE);
   const reader = new Reader(options.request, await readCache(cachePath));
   try {
@@ -277,14 +349,22 @@ export async function runOnce(options: { home: string; repositories: readonly st
         });
       }
     }
-    const generatedAt = (options.now?.() ?? new Date()).toISOString().replace(/\.\d+Z$/, "Z");
+    const now = options.now?.() ?? new Date();
+    const generatedAt = now.toISOString().replace(/\.\d+Z$/, "Z");
     await mkdir(join(options.home, ".openwiz"), { recursive: true });
     await writeAllOrNothing([
       [join(options.home, OUTPUT), `${JSON.stringify({ schema: "openwiz.specs.v1", generatedAt, specs: asV1(specs) }, null, 2)}\n`],
       [join(options.home, OUTPUT_V2), `${JSON.stringify({ schema: "openwiz.specs.v2", generatedAt, specs }, null, 2)}\n`],
     ]);
     await writeAllOrNothing([[cachePath, JSON.stringify({ version: 5, pages: reader.pages } satisfies Cache)]]);
-    return { ok: true, calls: reader.calls, specs: specs.length, unchanged: reader.unchanged };
+    const agentsReader = new Reader(options.request, await readCache(join(options.home, AGENTS_CACHE)), AGENTS_BUDGET,
+      `no requests left in the ${AGENTS_BUDGET}-request agents budget`);
+    const agents = await scanAgents(agentsReader, options.home, repositories, options.authors ?? [], now, generatedAt, options.runMap);
+    return {
+      ok: true, calls: reader.calls + agentsReader.calls, specs: specs.length,
+      unchanged: reader.unchanged + agentsReader.unchanged,
+      agentsCalls: agentsReader.calls, agentsUnchanged: agentsReader.unchanged, agents,
+    };
   } catch (error) {
     return { ok: false, calls: reader.calls, error: error instanceof Error ? error.message : String(error) };
   }
@@ -318,7 +398,7 @@ export const ghRequest = (gh = "gh"): GitHubRequest => (path, etag) => new Promi
 });
 
 function usage(): never {
-  process.stderr.write("usage: node producer.ts --home <factory home> --repo <owner/name> [--repo <owner/name> ...] [--gh <path to gh>]\n");
+  process.stderr.write("usage: node producer.ts --home <factory home> --repo <owner/name> [--repo <owner/name> ...] [--gh <path to gh>] [--author <login> ...] [--run-map <owner/name#comment-id>]\n");
   process.exit(2);
 }
 
@@ -326,17 +406,33 @@ async function main(argv: readonly string[]): Promise<void> {
   let home: string | null = null;
   let gh = "gh";
   const repositories: string[] = [];
+  const authors: string[] = [];
+  let runMap: string | undefined;
   for (let i = 0; i < argv.length; i += 2) {
     const value = argv[i + 1];
     if (value === undefined) usage();
     if (argv[i] === "--home") home = value;
     else if (argv[i] === "--gh" && value !== "") gh = value;
     else if (argv[i] === "--repo" && /^[\w.-]+\/[\w.-]+$/.test(value)) repositories.push(value);
+    else if (argv[i] === "--author" && loginPattern.test(value)) authors.push(value);
+    else if (argv[i] === "--run-map" && !runMap && runMapPath(value)) runMap = value;
     else usage();
   }
   if (home === null || repositories.length === 0) usage();
-  const result = await runOnce({ home, repositories, request: ghRequest(gh) });
-  if (result.ok) process.stdout.write(`wrote ${join(home, OUTPUT_V2)} and ${join(home, OUTPUT)}: ${result.specs} specs, ${result.calls} requests (${result.unchanged} unchanged)\n`);
+  const result = await runOnce({ home, repositories, authors, runMap, request: ghRequest(gh) });
+  if (result.ok) {
+    const agents = result.agents.status === "wrote"
+      ? [
+        `wrote agents.v1.json: ${result.agents.count} live agents`,
+        ...(result.agents.truncated ? [`agents list cut at 3 pages in ${result.agents.truncated} ${result.agents.truncated === 1 ? "repository" : "repositories"}`] : []),
+        ...(result.agents.unknownAuthors ? [`no record authors set for ${result.agents.unknownAuthors} ${result.agents.unknownAuthors === 1 ? "repository" : "repositories"}`] : []),
+        ...(result.agents.mapUnavailable ? ["run map unavailable"] : []),
+      ].join(" · ")
+      : `kept the last agents file: ${result.agents.reason}`;
+    const specsUsage = `${result.calls - result.agentsCalls} of ${BUDGET} specs requests (${result.unchanged - result.agentsUnchanged} unchanged)`;
+    const agentsUsage = `${result.agentsCalls} of ${AGENTS_BUDGET} agents requests (${result.agentsUnchanged} unchanged)`;
+    process.stdout.write(`wrote ${join(home, OUTPUT_V2)} and ${join(home, OUTPUT)}: ${result.specs} specs, ${specsUsage} · ${agentsUsage} · ${agents}\n`);
+  }
   else process.stderr.write(`kept the last file: ${result.error} (${result.calls} requests)\n`);
   process.exitCode = result.ok ? 0 : 1;
 }

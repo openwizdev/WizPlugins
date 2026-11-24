@@ -207,7 +207,9 @@ describe("WB4-6: missing fleet ids and failed running rows (sections 3 and 5)", 
   // catches: the CLI readers dropping the null parent or the failed queued work, so the CLI and the app disagree.
   it("wizbar specs --json and wizbar stats --json give the same", async () => {
     expect(await cli(["specs"])).toEqual({ exitCode: 0, body: { ...asV6(expectedRows), needsYouSpecs: 2 } });
-    expect(await cli(["stats"])).toEqual({ exitCode: 0, body: v4FleetIdStats });
+    expect(await cli(["stats"])).toEqual({
+      exitCode: 0, body: { ...v4FleetIdStats, unseen: { status: "unavailable", count: null, agents: [] } },
+    });
   });
 
   // catches (#153): the reader passing `.openwiz/specs.v1.json` relative to rootPath, which the real host refuses

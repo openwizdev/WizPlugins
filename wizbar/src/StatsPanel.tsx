@@ -10,6 +10,11 @@ import {
   useSettings,
   type PluginSidebarThread,
 } from "@get-bb/plugin-sdk/app";
+import { agentsBySpec, UnseenAgentRows, UnseenDisclosure } from "./agents/UnseenAgents";
+import type { GitHubAgent } from "./agents/format";
+import { sharedIssueNumbers } from "./agents/match";
+import { agentsSummary } from "./agents/words";
+import { useAgentsRead } from "./agents/use-agents";
 import { modelLabel } from "./card-meta";
 import { harnessName } from "./model-names";
 import { MatrixMark } from "./MatrixMark";
@@ -204,16 +209,17 @@ interface ThreadGroup {
   threads: CardThread[];
 }
 
-function RunningThreadsList({ groups, labels, pluginId }: {
-  groups: readonly ThreadGroup[];
+function RunningThreadsList({ groups, labels, pluginId, sharedNumbers }: {
+  groups: readonly (ThreadGroup & { githubAgents: readonly GitHubAgent[] })[];
   labels: ReadonlyMap<string, string>;
+  sharedNumbers: ReadonlySet<string>;
   pluginId: string;
 }) {
   const actions = useSidebarThreadActions();
   const groupId = useId();
   const [, refresh] = useReducer((n: number) => n + 1, 0);
   const folded = collapsedGroups.get(pluginId);
-  const lineCount = groups.reduce((count, group) => count + 1 + (folded?.has(group.key) ? 0 : group.threads.length), 0);
+  const lineCount = groups.reduce((count, group) => count + 1 + (folded?.has(group.key) ? 0 : group.threads.length + group.githubAgents.length), 0);
   const viewport = useRef<HTMLUListElement>(null);
   const [edges, setEdges] = useState({ top: false, bottom: false, height: 0 });
 
@@ -246,9 +252,9 @@ function RunningThreadsList({ groups, labels, pluginId }: {
           ...list, position: "absolute", inset: 0, minHeight: 0, maxHeight: `round(down, 100cqh, ${ROW_HEIGHT}px)`, overflowY: "auto", overscrollBehaviorY: "contain",
           scrollPaddingTop: (sticky ? 2 : 1) * ROW_HEIGHT, scrollPaddingBottom: ROW_HEIGHT,
         }}>
-          {groups.map(({ key, name, threads }) => {
+          {groups.map(({ key, name, threads, githubAgents }) => {
             const expanded = !folded?.has(key);
-            const count = threads.filter((thread) => !thread.leaving).length;
+            const count = threads.filter((thread) => !thread.leaving).length + githubAgents.length;
             const heading = `${groupId}-${key ?? "other"}`;
             const contents = `${heading}-threads`;
             return (
@@ -289,6 +295,9 @@ function RunningThreadsList({ groups, labels, pluginId }: {
                       </li>
                     );
                   })}
+                  {expanded && githubAgents.length > 0 ? (
+                    <UnseenAgentRows agents={githubAgents} sharedNumbers={sharedNumbers} heading={heading} rowStyle={rowButton} rowClass={rowClass} />
+                  ) : null}
                 </ul>
               </li>
             );
@@ -323,7 +332,8 @@ export function StatsPanel({ rows, stale = false }: { rows: readonly PluginSideb
   const now = Date.now();
   const specs = read ? readSpecsFile(read, now) : null;
   const file = specs?.status === "ready" ? specs.file : null;
-  const stats = computeStatsV4(rows, file, models, now, Intl.DateTimeFormat().resolvedOptions().timeZone);
+  const agents = useAgentsRead(now);
+  const stats = computeStatsV4(rows, file, models, now, Intl.DateTimeFormat().resolvedOptions().timeZone, agents);
   const sortedSpecs = file ? specRows(file, active, [], now, null, sort).specs : [];
   const resolved = cardRowLabels(active, sortedSpecs);
   const threads = useCardThreads(stats.threads);
@@ -347,7 +357,12 @@ export function StatsPanel({ rows, stale = false }: { rows: readonly PluginSideb
       group.threads.push(thread);
     }
   }
-  const groups = [...bySpec.values(), other].filter((group) => group.threads.length > 0);
+  const githubBySpec = agentsBySpec(stats.unseen?.agents ?? [], file);
+  const groups = [...bySpec.values(), other]
+    .map((group) => ({ ...group, githubAgents: githubBySpec.get(group.key) ?? [] }))
+    .filter((group) => group.threads.length > 0 || group.githubAgents.length > 0);
+  const githubSummary = agentsSummary(stats.unseen);
+  const sharedNumbers = sharedIssueNumbers(file, agents.status === "ready" ? agents.agents : []);
   const summary = stats.status === "ready" ? `${cardSummary(stats)}${stale ? " · last known" : ""}` : "";
   return (
     <section aria-label="Running threads" data-stale={stale ? "true" : undefined} style={{
@@ -358,7 +373,9 @@ export function StatsPanel({ rows, stale = false }: { rows: readonly PluginSideb
       {stats.status !== "ready" ? <p style={quiet}>Stats unavailable</p> : (
         <>
           <div style={{ flexShrink: 0, fontSize: 12 }}>
-            <p style={{ ...quiet, ...oneLine }}>{stats.states.awake} awake · {stats.states.starting} starting · {stats.states.asleep} asleep</p>
+            <p style={githubSummary ? quiet : { ...quiet, ...oneLine }}>
+              {stats.states.awake} awake · {stats.states.starting} starting · {stats.states.asleep} asleep{githubSummary}
+            </p>
             <p style={quiet}>{summary}</p>
           </div>
           {stats.harness.length > 0 ? (
@@ -380,9 +397,10 @@ export function StatsPanel({ rows, stale = false }: { rows: readonly PluginSideb
               </ul>
             </div>
           ) : null}
-          {groups.length > 0 ? <RunningThreadsList groups={groups} labels={labels} pluginId={pluginId} /> : null}
+          {groups.length > 0 ? <RunningThreadsList groups={groups} labels={labels} pluginId={pluginId} sharedNumbers={sharedNumbers} /> : null}
         </>
       )}
+      <UnseenDisclosure unseen={stats.unseen} />
     </section>
   );
 }

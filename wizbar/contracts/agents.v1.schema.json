@@ -1,0 +1,178 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "WizBar agents.v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "generatedAt",
+    "agents"
+  ],
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "authors": {
+      "const": "unknown"
+    },
+    "agents": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/agent"
+      }
+    },
+    "runMap": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "$ref": "#/$defs/runMapEntry"
+      }
+    }
+  },
+  "$defs": {
+    "agent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repository",
+        "ticket",
+        "agent",
+        "state",
+        "harness",
+        "model",
+        "step",
+        "time",
+        "updatedAt",
+        "commentId"
+      ],
+      "properties": {
+        "repository": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9-]*/(?!\\.{1,2}(?:[#/]|$))[A-Za-z0-9._-]+$"
+        },
+        "ticket": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9-]*/(?!\\.{1,2}(?:[#/]|$))[A-Za-z0-9._-]+#[1-9][0-9]*$"
+        },
+        "agent": {
+          "enum": [
+            "builder",
+            "reviewer",
+            "fleet"
+          ]
+        },
+        "state": {
+          "enum": [
+            "working",
+            "asking",
+            "done",
+            "stopped"
+          ]
+        },
+        "harness": {
+          "type": "string",
+          "pattern": "^(?!>)[^\\x00-\\x1f\\x7f\"“”]+$",
+          "minLength": 1,
+          "maxLength": 60
+        },
+        "model": {
+          "type": "string",
+          "pattern": "^(?!>)[^\\x00-\\x1f\\x7f\"“”]+$",
+          "minLength": 1,
+          "maxLength": 60
+        },
+        "step": {
+          "type": "string",
+          "pattern": "^(?!>)[^\\x00-\\x1f\\x7f\"“”]+$",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "time": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+        },
+        "pr": {
+          "type": "string",
+          "pattern": "^https://github\\.com/[A-Za-z0-9][A-Za-z0-9-]*/(?!\\.{1,2}(?:[#/]|$))[A-Za-z0-9._-]+/pull/[1-9][0-9]*$",
+          "maxLength": 300
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+        },
+        "commentId": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "live": {
+          "type": "boolean"
+        }
+      }
+    },
+    "runMapEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role",
+        "repository",
+        "number",
+        "threadId",
+        "run"
+      ],
+      "properties": {
+        "role": {
+          "enum": [
+            "builder",
+            "reviewer"
+          ]
+        },
+        "repository": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9-]*/(?!\\.{1,2}(?:[#/]|$))[A-Za-z0-9._-]+$"
+        },
+        "number": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "threadId": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,199}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "run": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,199}$"
+            },
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

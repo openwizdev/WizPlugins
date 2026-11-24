@@ -19,6 +19,9 @@ import {
   SelectValue,
 } from "./components/Select";
 import { ThreadCard } from "./ThreadCard";
+import { CloudAgentRows } from "./agents/CloudAgentRows";
+import { cloudAgents } from "./agents/cloud";
+import { useAgentsRead } from "./agents/use-agents";
 import { FooterCounter } from "./FooterCounter";
 import { MachineIcon } from "./MachineIcon";
 import { useFeatureSourceStatus } from "./SettingsPage";
@@ -179,6 +182,8 @@ export function ThreadInbox({
   const hiddenByFilter = yours.length < allYours.length;
 
   const connection = useRealtimeConnectionState();
+  const agents = useAgentsRead(specsNow);
+  const cloud = cloudAgents(agents, specsFile ?? null, status === "ready" && connection === "connected" ? threads : null, specsNow);
   const drag = useDragPins(status, connection, threads, pinned);
   const sections = useSectionsCollapsed();
   // While a search is active its matches show even in a collapsed section; nothing is stored.
@@ -279,6 +284,11 @@ export function ThreadInbox({
                     />,
                   ])}
                   {drag.markerAtEnd() ? <DropMarker /> : null}
+                </Shelf>
+              ) : null) : key === "cloud" ? (cloud.status === "ready" && (cloud.rows.length > 0 || cloud.more.length > 0) ? (
+                <Shelf label="Cloud agents" count={cloud.active} showCount searching={false} collapsed={sections.collapsed.has("cloud")}
+                  onToggle={() => sections.toggle("cloud")} saveFailed={sections.failed === "cloud"}>
+                  <CloudAgentRows result={cloud} />
                 </Shelf>
               ) : null) : key === "yours" ? (allYours.length > 0 || filter.status || filter.harness ? (
                 <Shelf label="Yours" count={yours.length} searching={searching}
@@ -476,6 +486,7 @@ function Shelf({
   searching,
   controls,
   filteredTotal,
+  showCount = false,
 }: {
   label: string;
   children: React.ReactNode;
@@ -484,6 +495,7 @@ function Shelf({
   count: number;
   controls?: ReactNode;
   filteredTotal?: number;
+  showCount?: boolean;
   collapsed: boolean;
   onToggle: () => void;
   saveFailed: boolean;
@@ -496,7 +508,7 @@ function Shelf({
       className="flex w-full min-w-0 flex-1 items-center gap-2 px-2.5 pb-1 pt-3 text-left aria-disabled:cursor-default">
       <span className="shrink-0 text-[11.5px] font-medium text-muted-foreground">
         {label}
-        {collapsed || filteredTotal !== undefined ? <>{" "}<span className={cn("ml-1 font-normal",
+        {showCount || collapsed || filteredTotal !== undefined ? <>{" "}<span className={cn("ml-1 font-normal",
           filteredTotal === undefined ? "text-muted-foreground/40" : "text-muted-foreground/70")}>
           {count}{filteredTotal === undefined ? "" : ` of ${filteredTotal}`}
         </span></> : null}

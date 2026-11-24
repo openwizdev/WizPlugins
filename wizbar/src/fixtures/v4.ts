@@ -1,3 +1,4 @@
+import type { UnseenAgents } from "../agents/match";
 // WizBar v0.4 contract shapes and synthetic fixtures (WB4-0, openwizdev/OpenWiz#1434).
 // The rules behind every shape are in contracts/specs-section.v1.md. Every id,
 // title, repository, number and URL here is made up. Expected values are worked
@@ -141,7 +142,7 @@ export interface FooterThreadV4 {
   effort: EffortV3 | null;
 }
 /** `wizbar stats --json` from 0.4, and the hover card's data: 0.3's `StatsV3` at version 2, plus `harness`, `threads` and `states`. */
-export type StatsV4 = { version: 2; window: StatsWindowV3; coverage: StatsCoverageV3 } & (
+export type StatsV4 = { version: 2; window: StatsWindowV3; coverage: StatsCoverageV3; unseen?: UnseenAgents } & (
   | { status: "ready"; running: RunningSplitV3; waitingOnYou: number; finishedToday: FinishedTodayV3; harness: HarnessCountV4[]; threads: FooterThreadV4[];
       states: { awake: number; starting: number; asleep: number; needsYou: number; awakeByHarness: HarnessCountV4[] } }
   | { status: "unavailable"; running: null; waitingOnYou: null; finishedToday: null; harness: null; threads: null; states: null }

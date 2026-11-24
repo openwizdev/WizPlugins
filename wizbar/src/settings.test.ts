@@ -34,7 +34,7 @@ describe("N1: actual WizBar settings declarations and persistent reload", () => 
       "sectionsOrder", "specsOpen", "specsSort", "threadsFilter", "threadsSort", "wizdeckFactories", "wizdeckGithubToken",
     ]);
     expect(descriptors.specsSort).toMatchObject({ type: "string", default: "needs-you" });
-    expect(descriptors.sectionsOrder).toMatchObject({ type: "string", default: "[\"pinned\",\"specs\",\"yours\"]" });
+    expect(descriptors.sectionsOrder).toMatchObject({ type: "string", default: "[\"pinned\",\"cloud\",\"specs\",\"yours\"]" });
     expect(descriptors.threadsSort).toMatchObject({ type: "string", default: "newest" });
     expect(descriptors.threadsFilter).toMatchObject({ type: "string", default: "{}" });
     expect(descriptors.specsOpen).toMatchObject({ type: "string", default: "[]" });
@@ -116,7 +116,7 @@ describe("N1: actual WizBar settings declarations and persistent reload", () => 
     await host.harness.behavior.setSettings({ ...v6Store050 });
     host = await host.harness.lifecycle.reload(factory);
     hosts.push(host);
-    expect(await read()).toEqual({ ...v6Store050, specsSort: "needs-you", sectionsOrder: '["pinned","specs","yours"]', threadsSort: "newest", threadsFilter: "{}" });
+    expect(await read()).toEqual({ ...v6Store050, specsSort: "needs-you", sectionsOrder: '["pinned","cloud","specs","yours"]', threadsSort: "newest", threadsFilter: "{}" });
     await host.harness.behavior.setSettings({ specsSort: "closest", sectionsOrder: "[\"unread\",\"pinned\",\"specs\"]" });
     host = await host.harness.lifecycle.reload(factory);
     hosts.push(host);

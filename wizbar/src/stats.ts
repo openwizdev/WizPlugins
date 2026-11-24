@@ -1,6 +1,9 @@
 // WZ20 (#41): the one stats computation (contracts/sidebar-v3.v1.md, section 4).
 // The footer panel, the list-bottom line and `wizbar stats` all call it, so the
 // same rows give the same numbers everywhere.
+import { unseenAgents } from "./agents/match";
+import type { AgentsRead } from "./agents/read";
+import { agentsDisclosure, agentsSummary } from "./agents/words";
 import { hasRuntimeWork } from "./lifecycle";
 import { classifyMachine } from "./machine-source";
 import { harnessName } from "./model-names";
@@ -131,23 +134,26 @@ export const disclosureText = "subagents not counted yet · some threads may be 
 
 /** `wizbar stats` text: three lines; from 0.4 the harness split, then one line per running thread. */
 export function formatStatsText(stats: StatsV3 | StatsV4): string {
-  if (stats.status !== "ready") return "ERROR state_unavailable: Thread state is unavailable.";
+  const unseen = stats.version === 2 ? stats.unseen : undefined;
+  const lastLine = unseen ? agentsDisclosure(unseen) : null;
+  if (stats.status !== "ready") return ["ERROR state_unavailable: Thread state is unavailable.", ...(lastLine ? [lastLine] : [])].join("\n");
   const { running: r } = stats;
   return [
-    `${r.total} running · ${r.topLevel} top-level, ${r.children} children · ${r.cloud} cloud, ${r.local} local, ${r.unknown} unknown · ${disclosureText}`,
+    `${r.total} running${agentsSummary(unseen)} · ${r.topLevel} top-level, ${r.children} children · ${r.cloud} cloud, ${r.local} local, ${r.unknown} unknown · ${disclosureText}`,
     `Waiting on you: ${stats.waitingOnYou}`,
     finishedTodayText(stats),
     ...(stats.version === 2 ? [
       `Harness: ${stats.harness.map((h) => `${h.providerId} ${h.count}`).join(", ")}`,
       ...stats.threads.map((t) => `${JSON.stringify(t.id)}: ${t.matrix} ${t.title}${t.shortName === null ? "" : ` [${t.shortName}]`}`),
     ] : []),
+    ...(lastLine ? [lastLine] : []),
   ].join("\n");
 }
 
 // ---- WB4-3 (openwizdev/OpenWiz#1437): the hover card's data, specs-section.v1.md sections 7 and 8 ----
 
 /** A row with what the card reads too: the spec rows' fields beside the 0.3 stats fields. */
-export type StatsV4Row = StatsRow & SpecsThreadRow & Partial<Pick<ThreadV3, "isArchived">>;
+export type StatsV4Row = StatsRow & SpecsThreadRow & Partial<Pick<ThreadV3, "isArchived">> & { isHidden?: boolean };
 
 const startingStatuses: ReadonlySet<StatsRow["runtimeStatus"]> = new Set(["starting", "pending", "provisioning", "waiting-for-host"]);
 
@@ -158,12 +164,13 @@ const startingStatuses: ReadonlySet<StatsRow["runtimeStatus"]> = new Set(["start
  * ready specs file every thread names no spec; the numbers stand.
  */
 export function computeStatsV4(
-  rows: readonly StatsV4Row[] | null, specs: SpecsFileV4 | null, models: CardModelsResultV3 | null, now: number, timeZone: string,
+  rows: readonly StatsV4Row[] | null, specs: SpecsFileV4 | null, models: CardModelsResultV3 | null, now: number, timeZone: string, agents?: AgentsRead,
 ): StatsV4 {
   const active = rows?.filter((row) => !row.isArchived) ?? null;
   const v3 = computeStats(active, now, timeZone);
   const unavailable = (): StatsV4 => ({
     version: 2, status: "unavailable", window: v3.window, coverage: v3.coverage,
+    ...(agents ? { unseen: unseenAgents(agents, specs, null) } : {}),
     running: null, waitingOnYou: null, finishedToday: null, harness: null, threads: null, states: null,
   });
   if (v3.status !== "ready") return unavailable();
@@ -208,7 +215,9 @@ export function computeStatsV4(
     };
   });
   const states = { awake, starting, asleep, needsYou: v3.waitingOnYou, awakeByHarness: sortedHarnessCounts(awakeCounts) };
-  return { ...v3, version: 2, harness, threads, states };
+  const seenRows = [...unique.values(), ...(rows?.filter((row) => row.isArchived) ?? [])];
+  const unseen = agents ? { unseen: unseenAgents(agents, specs, seenRows) } : {};
+  return { ...v3, ...unseen, version: 2, harness, threads, states };
 }
 
 function sortedHarnessCounts(counts: ReadonlyMap<string, number>) {

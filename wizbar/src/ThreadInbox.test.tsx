@@ -1388,14 +1388,14 @@ describe("E1: section order and the Settled link", () => {
     fireEvent.keyDown(header("Pinned"), { key: "ArrowDown", altKey: true });
     await waitFor(() => expect(sectionOrder()).toEqual(["Specs", "Pinned", "Yours"]));
     expect(document.activeElement).toBe(header("Pinned"));
-    expect(updates).toEqual([{ pluginId: "wizbar", values: { sectionsOrder: "[\"specs\",\"pinned\",\"yours\"]" } }]);
+    expect(updates).toEqual([{ pluginId: "wizbar", values: { sectionsOrder: "[\"cloud\",\"specs\",\"pinned\",\"yours\"]" } }]);
     specsHeader().focus();
     fireEvent.keyDown(specsHeader(), { key: "ArrowDown", altKey: true });
     await waitFor(() => expect(sectionOrder()).toEqual(["Pinned", "Specs", "Yours"]));
     expect(document.activeElement).toBe(specsHeader());
     fireEvent.keyDown(header("Yours"), { key: "ArrowUp", altKey: true });
     await waitFor(() => expect(sectionOrder()).toEqual(["Pinned", "Yours", "Specs"]));
-    expect(orderWrites(updates).at(-1)).toEqual({ sectionsOrder: "[\"pinned\",\"yours\",\"specs\"]" });
+    expect(orderWrites(updates).at(-1)).toEqual({ sectionsOrder: "[\"cloud\",\"pinned\",\"yours\",\"specs\"]" });
     // A plain arrow, or Alt at the top, moves nothing and toggles nothing.
     fireEvent.keyDown(header("Pinned"), { key: "ArrowUp", altKey: true });
     fireEvent.keyDown(header("Pinned"), { key: "ArrowDown" });
@@ -1413,7 +1413,7 @@ describe("E1: section order and the Settled link", () => {
     fireEvent.keyDown(specsHeader(), { key: "ArrowDown", altKey: true });
     await waitFor(() => expect(sectionOrder()).toEqual(["Yours", "Specs"]));
     expect(document.activeElement).toBe(specsHeader());
-    expect(orderWrites(updates)).toEqual([{ sectionsOrder: '["pinned","yours","specs"]' }]);
+    expect(orderWrites(updates)).toEqual([{ sectionsOrder: '["pinned","cloud","yours","specs"]' }]);
   });
 
   // catches: a header that cannot be dragged, or a drop that lands on the wrong side of its target.
@@ -1428,7 +1428,7 @@ describe("E1: section order and the Settled link", () => {
     fireEvent(onto, at(createEvent.drop(onto), 0));
     fireEvent.dragEnd(from);
     await waitFor(() => expect(sectionOrder()).toEqual(["Yours", "Pinned", "Specs"]));
-    expect(orderWrites(updates)).toEqual([{ sectionsOrder: "[\"yours\",\"pinned\",\"specs\"]" }]);
+    expect(orderWrites(updates)).toEqual([{ sectionsOrder: "[\"yours\",\"pinned\",\"cloud\",\"specs\"]" }]);
   });
 
   // catches: section reordering that breaks card drag-to-pin, or a card drop read as a section move.
@@ -1465,8 +1465,8 @@ describe("E1: section order and the Settled link", () => {
     expect(sectionOrder()).toEqual(["Pinned", "Yours", "Specs"]);
     fireEvent.click(retry);
     await waitFor(() => expect(orderWrites(updates)).toEqual([
-      { sectionsOrder: '["pinned","yours","specs"]' },
-      { sectionsOrder: '["pinned","yours","specs"]' },
+      { sectionsOrder: '["pinned","cloud","yours","specs"]' },
+      { sectionsOrder: '["pinned","cloud","yours","specs"]' },
     ]));
     expect(screen.queryByText(/Could not save the section order/)).toBeNull();
     expect(sectionOrder()).toEqual(["Pinned", "Yours", "Specs"]);

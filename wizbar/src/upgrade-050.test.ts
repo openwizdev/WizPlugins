@@ -52,12 +52,12 @@ describe("V: a 0.5.0 store reloads into 0.6.0", () => {
       wizdeckFactories: "[]",
       wizdeckGithubToken: "synthetic-token-not-real",
       specsSort: "needs-you",
-      sectionsOrder: "[\"pinned\",\"specs\",\"yours\"]",
+      sectionsOrder: "[\"pinned\",\"cloud\",\"specs\",\"yours\"]",
       threadsSort: "newest",
       threadsFilter: "{}",
     });
     expect(readSpecsSort(values.specsSort)).toBe("needs-you");
-    expect(readSectionsOrder(values.sectionsOrder)).toEqual(["pinned", "specs", "yours"]);
+    expect(readSectionsOrder(values.sectionsOrder)).toEqual(["pinned", "cloud", "specs", "yours"]);
     expect(readCollapsedSections(values.sectionsCollapsed)).toEqual(["yours", "specs"]);
 
     // Expanding Specs rewrites the old alias and keeps Yours collapsed.

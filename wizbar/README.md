@@ -101,6 +101,14 @@ Pinned, snoozed, muted and settled matches stay on their shelves.
   Chromium with `npx playwright-core install chromium` or set
   `CHROMIUM_PATH` to select a browser. Set `WIZBAR_BROWSER_EVIDENCE=1`
   to save the four screenshots.
+  The card lists live GitHub status notes for agents the sidebar cannot match. These rows show the note's harness and model and open its issue or
+  pull request. The card reports their count separately as `N more on GitHub`.
+  `wizbar stats --json` reports the same rows in `unseen`.
+- **Cloud agents.** The sidebar lists GitHub agents with no matching desktop
+  thread. It starts after Pinned and can be moved or collapsed. Working and
+  asking agents with live notes appear first and count in the header.
+  Lapsed, done and stopped agents follow by most recent update.
+  Names link to GitHub. `wizbar agents [--json]` lists the same rows.
 - **The producer** adds each ticket's last activity (`updatedAt`, from the
   issue's `updated_at` in the answer it already reads, no added requests) to
   `specs.v2.json` only; `specs.v1.json` is unchanged. WizBar 0.5.0 does not
@@ -148,8 +156,15 @@ Pinned, snoozed, muted and settled matches stay on their shelves.
   v2 on a tie; when neither is ready, it shows "Specs unavailable". So the
   producer and WizBar can be upgraded in either order. `--gh`
   names the `gh` to run (default: `gh` on `PATH`). Each run is one complete
-  scan, all or nothing: any failed read, or a scan needing more than 59
-  requests, writes nothing and keeps the last files. Unchanged pages cost
+  specs scan, all or nothing, with up to 59 requests. After writing both
+  specs files, it uses a separate 20-request budget to write
+  `.openwiz/agents.v1.json`. Repeat `--author <login>` to set record authors
+  or use each repository's `Record authors` row in `docs/agents/fleet.md`.
+  Pass `--repo` for each product repository and optionally
+  `--run-map 'owner/name#comment-id'` for a GitHub run map. The producer uses
+  its existing `gh` login. A private run map needs the `repo` scope.
+  A failed agents read or exhausted budget keeps the last agents file.
+  The [agents file contract](contracts/agents.v1.md) describes the format. Unchanged pages cost
   nothing against GitHub's rate limit, by ETag, and the run line reports how
   many requests came back 304 unchanged. Run it every 10 minutes as a systemd user timer; how to run
   it once, install the timer, remove it, and how many specs fit in 59 requests
@@ -295,6 +310,7 @@ wizbar unpin <id>... [--json]
 wizbar move <id> (--before <id> | --after <id> | --first | --last) [--json]
 wizbar children <id> [--json]
 wizbar stats [--json]
+wizbar agents [--json]
 wizbar specs [--sort <needs-you|recent|closest|newest>] [--json]
 wizbar spec <n> (--open | --close) [--json]
 wizbar section <pinned|specs|yours> (--collapse | --expand) [--json]
@@ -408,7 +424,13 @@ item that is neither a command nor listed here.
 
 - A finish time and an issue field are not exposed by the host yet; WizBar
   omits or discloses them.
-- Subagents are not counted; threads the sidebar does not see may be missing.
+- The desktop sidebar can omit cloud agents running in their own sandboxes.
+  WizBar shows the ones with a live status note from a known GitHub record
+  author. Agents without a qualifying note may be missing. If a thread title
+  gives only an issue or pull number shared by multiple repositories, WizBar
+  may keep the GitHub rows visible and label shared issue numbers with their
+  repositories. Subagents do not
+  count toward the running thread total.
 - Cloud rows carry no branch or pull request in observed host data.
 - The real pinned order, footer placement, the hover card's real look and
   rollback to T3 Sidebar are unverified until #9. PR badges have appeared

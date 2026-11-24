@@ -1,7 +1,7 @@
 // S1 (#169): the `sectionsCollapsed` setting (sidebar-v3.v1.md section 9). Every
 // value is a known literal from the contract, never computed the way the code does.
 import { describe, expect, it, vi } from "vitest";
-import { v6CollapseWrites, v6CollapsedCases, v6OrderCases, v6OrderMoves } from "./fixtures/v6";
+import { v6CollapseWrites, v6CollapsedCases } from "./fixtures/v6";
 import {
   readCollapsedKeys, readCollapsedSections, readSectionsOrder, sidebarSections, withSectionCollapsed, withSectionMoved,
 } from "./sections";
@@ -60,7 +60,7 @@ describe("Yours section preferences", () => {
   const storedYours = (stored: string) => stored.replaceAll('"unread"', '"yours"');
 
   it("names the sections in default order", () => {
-    expect(sidebarSections).toEqual(["pinned", "specs", "yours"]);
+    expect(sidebarSections).toEqual(["pinned", "cloud", "specs", "yours"]);
   });
 
   it.each(v6CollapsedCases.map((c) => [c.raw, c.keys] as const))("normalizes aliases in %j", (raw, keys) => {
@@ -72,19 +72,34 @@ describe("Yours section preferences", () => {
       expect(withSectionCollapsed(raw, key === "unread" ? "yours" : key, collapsed)).toBe(storedYours(stored));
     });
 
-  it.each(v6OrderCases.map((c) => [c.raw, c.order] as const))("reads the order in %j", (raw, order) => {
-    expect(readSectionsOrder(raw)).toEqual(order.map(toYours));
+  it.each([
+    [undefined, ["pinned", "cloud", "specs", "yours"]],
+    ["", ["pinned", "cloud", "specs", "yours"]],
+    ["{}", ["pinned", "cloud", "specs", "yours"]],
+    ['[1,"specs"]', ["pinned", "cloud", "specs", "yours"]],
+    ["[]", ["pinned", "cloud", "specs", "yours"]],
+    ['["unread","specs","pinned"]', ["yours", "specs", "pinned", "cloud"]],
+    ['["specs"]', ["specs", "pinned", "cloud", "yours"]],
+    ['["specs","specs","inbox","settled"]', ["specs", "yours", "pinned", "cloud"]],
+  ] as const)("reads the order in %j", (raw, order) => {
+    expect(readSectionsOrder(raw)).toEqual(order);
   });
 
-  it.each(v6OrderMoves.map((c) => [c.raw, c.key, c.to, c.stored] as const))(
-    "moves %j section %s to %i", (raw, key, to, stored) => {
-      expect(withSectionMoved(raw, key === "unread" ? "yours" : key, to)).toBe(storedYours(stored));
-    });
+  it.each([
+    [undefined, "yours", 0, '["yours","pinned","cloud","specs"]'],
+    ['["unread","pinned","specs"]', "yours", 1, '["pinned","yours","cloud","specs"]'],
+    ['["pinned","specs","unread"]', "pinned", 2, '["cloud","specs","pinned","yours"]'],
+    ['["pinned","specs","unread"]', "pinned", -1, '["pinned","cloud","specs","yours"]'],
+    ['["pinned","specs","unread"]', "yours", 3, '["pinned","cloud","specs","yours"]'],
+    ["garbage", "specs", 0, '["specs","pinned","cloud","yours"]'],
+  ] as const)("moves %j section %s to %i", (raw, key, to, stored) => {
+    expect(withSectionMoved(raw, key, to)).toBe(stored);
+  });
 
   it("deduplicates both legacy keys and Yours", () => {
     const raw = '["unread","inbox","yours","specs"]';
     expect(readCollapsedSections(raw)).toEqual(["yours", "specs"]);
-    expect(readSectionsOrder(raw)).toEqual(["yours", "specs", "pinned"]);
+    expect(readSectionsOrder(raw)).toEqual(["yours", "specs", "pinned", "cloud"]);
     expect(withSectionCollapsed(raw, "yours", false)).toBe('["specs"]');
   });
 });

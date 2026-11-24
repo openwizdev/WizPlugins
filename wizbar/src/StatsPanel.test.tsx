@@ -50,6 +50,7 @@ const props = { dismiss() {} };
 afterEach(() => { cleanup(); fixtureFeed.current = null; settingsFeed.current = null; vi.useRealTimers(); });
 
 const lines = () => [...(screen.queryByRole("region", { name: "Running threads" })?.querySelectorAll("p") ?? [])].map((p) => p.textContent);
+const agentCoverage = "Cloud agents in their own sandbox may be missing from this list. GitHub agent data is unavailable.";
 const fixtureLine = "3 awake · 1 starting · 8 asleep";
 
 describe("V3: footer stats panel", () => {
@@ -66,7 +67,7 @@ describe("V3: footer stats panel", () => {
         }),
       } as never,
     });
-    expect(lines()).toEqual([fixtureLine, "3 waiting on you · 1 cloud, 2 local, 1 unknown"]);
+    expect(lines()).toEqual([fixtureLine, "3 waiting on you · 1 cloud, 2 local, 1 unknown", agentCoverage]);
     expect(await screen.findByRole("button", { name: /Sample refine command palette.*Opus 5\.5 · High/ })).toBeDefined();
     expect(screen.getByRole("button", { name: /Sample audit shortcuts$/ })).toBeDefined();
     expect(rendered.sdkCalls).toEqual([]);
@@ -80,7 +81,7 @@ describe("V3: footer stats panel", () => {
     ["an unrecognised runtime status", { status: "ready" as const, threads: unknownRuntime as PluginSidebarThread[] }],
   ])("shows a plain unavailable state, never a number, for %s", (_, sidebarThreads) => {
     renderSlot(panel, props, { sidebarThreads });
-    expect(lines()).toEqual(["Stats unavailable"]);
+    expect(lines()).toEqual(["Stats unavailable", agentCoverage]);
   });
 
   it("drops its numbers when the realtime connection is lost", async () => {
