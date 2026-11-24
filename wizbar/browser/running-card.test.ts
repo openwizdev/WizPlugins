@@ -1,7 +1,7 @@
 import { accessSync, constants } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { delimiter, join, resolve } from "node:path";
-import { chromium, type Browser, type Locator } from "playwright-core";
+import { chromium, type Browser, type Locator, type Page } from "playwright-core";
 import { createServer, type ViteDevServer } from "vite";
 import { afterAll, beforeAll, expect, it } from "vitest";
 
@@ -83,6 +83,42 @@ async function expectFade(fade: Locator, list: Locator, edge: "top" | "bottom") 
   expect.soft(overlay?.y, `${edge} fade overlaps the edge row`).toBe(y);
 }
 
+async function tabThroughRows(page: Page, list: Locator, key: "Tab" | "Shift+Tab", steps: number) {
+  const visited: string[] = [];
+  const obscured: { row: string; by: string[] }[] = [];
+  for (let i = 0; i < steps; i++) {
+    await page.keyboard.press(key);
+    const result = await list.evaluate(async (viewport) => {
+      // Let the scroll event update the fades before checking their painted bounds.
+      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+      const button = document.activeElement;
+      const row = button?.closest("[data-thread]");
+      if (!row || !viewport.contains(row)) return null;
+      const bounds = button!.getBoundingClientRect();
+      const visible = viewport.getBoundingClientRect();
+      const by: string[] = [];
+      if (bounds.top < visible.top - 0.5 || bounds.bottom > visible.bottom + 0.5) by.push("list edge");
+      for (const overlay of [
+        ...viewport.parentElement!.querySelectorAll("[data-scroll-fade]"),
+        ...viewport.querySelectorAll("button[aria-controls]"),
+      ]) {
+        const rect = overlay.getBoundingClientRect();
+        if (bounds.bottom > rect.top + 0.5 && bounds.top < rect.bottom - 0.5 &&
+          bounds.right > rect.left + 0.5 && bounds.left < rect.right - 0.5) {
+          by.push(overlay.getAttribute("data-scroll-fade") ?? "group heading");
+        }
+      }
+      if (!button!.matches(":focus-visible")) by.push("no keyboard focus indicator");
+      return { row: row.getAttribute("data-thread")!, by };
+    });
+    if (result) {
+      visited.push(result.row);
+      if (result.by.length > 0) obscured.push(result);
+    }
+  }
+  return { visited, obscured };
+}
+
 it.skipIf(!browserPath).each([600, 900])("shows all 100 threads in a %i px window", async (height) => {
   const page = await browser.newPage({ viewport: { width: 350, height }, reducedMotion: "reduce" });
   try {
@@ -148,7 +184,36 @@ it.skipIf(!browserPath).each([600, 900])("shows all 100 threads in a %i px windo
     if (evidence) await page.screenshot({ path: resolve(evidence, `${height}-bottom.png`) });
     await page.mouse.wheel(0, -10_000);
     await expect.poll(async () => (await geometry(list)).firstWhole).toBe(true);
+
+    const rows = Array.from({ length: 100 }, (_, index) => `sample-${index + 1}`);
+    const controls = rows.length + 3; // Three expanded group headings.
+    const forward = await tabThroughRows(page, list, "Tab", controls);
+    expect.soft(forward.visited).toEqual(rows);
+    expect.soft(forward.obscured, "forward Tab keeps each row clear").toEqual([]);
+    const backward = await tabThroughRows(page, list, "Shift+Tab", controls - 1);
+    expect.soft(backward.visited).toEqual(rows.slice(0, -1).reverse());
+    expect.soft(backward.obscured, "reverse Tab keeps each row clear").toEqual([]);
   } finally {
     await page.close();
   }
-}, 15_000);
+}, 30_000);
+
+
+it.skipIf(!browserPath)("wraps large machine totals without hiding the unknown count", async () => {
+  const page = await browser.newPage({ viewport: { width: 350, height: 600 } });
+  try {
+    await page.goto(`${url}?large-summary=1`);
+    await page.getByRole("button", { name: "360 running" }).hover();
+    const card = page.getByRole("region", { name: "Running threads" });
+    const summary = card.getByText("120 waiting on you · 120 cloud, 120 local, 120 unknown");
+    const bounds = await summary.evaluate((line) => ({
+      height: line.getBoundingClientRect().height,
+      lineHeight: parseFloat(getComputedStyle(line).lineHeight),
+      fits: line.scrollWidth <= line.clientWidth,
+    }));
+    expect.soft(bounds.height).toBeGreaterThan(bounds.lineHeight);
+    expect(bounds.fits).toBe(true);
+  } finally {
+    await page.close();
+  }
+});

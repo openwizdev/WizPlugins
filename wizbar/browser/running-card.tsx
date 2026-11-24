@@ -25,14 +25,19 @@ const binding = JSON.stringify([{
   orchestratorThreadId: "sample-orchestrator", statusWriterLogin: "sample-user",
 }]);
 
-const threads = Array.from({ length: 100 }, (_, index) => {
+const largeSummary = new URLSearchParams(location.search).has("large-summary");
+const total = largeSummary ? 480 : 100;
+const threads = Array.from({ length: total }, (_, index) => {
   const n = index + 1;
   const title = `Sample thread ${n}`;
+  const local = !largeSummary || n <= 120;
   return {
-    ...v4Threads[0]!, id: `sample-${n}`, title, displayTitle: title,
-    runtimeStatus: "active" as const, providerId: n % 2 ? "codex" : "claude-code",
+    ...v4Threads[local ? 0 : 1]!, id: `sample-${n}`, title, displayTitle: title,
+    runtimeStatus: largeSummary && n > 240 && n <= 360 ? "starting" as const : "active" as const,
+    hasPendingInteraction: largeSummary && n > 360,
+    providerId: n % 2 ? "codex" : "claude-code",
     parentThreadId: n <= 60 ? "sample-fleet-0" : n <= 90 ? "sample-fleet-1" : null,
-    createdAt: now - 100 + index, updatedAt: now,
+    createdAt: now - total + index, updatedAt: now,
   };
 });
 

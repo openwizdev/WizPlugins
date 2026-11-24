@@ -525,6 +525,18 @@ describe("R1 (#172): the open card updates in place, with no flashing", () => {
     }
   });
 
+  it("keeps keyboard focus on a row updated within the same spec", async () => {
+    await pinned();
+    const id = "thr_v4_code_a";
+    const button = rowNode(id)!.querySelector("button")!;
+    act(() => button.focus());
+    const title = "Builder · SP-3: Sample revised task";
+    await push(snapshot().map((row) => row.id === id ? { ...row, title, displayTitle: title } : row));
+    expect(button.textContent).toContain("Builder · SP-3");
+    expect(rowNode(id)?.getAttribute("data-thread-spec")).toBe("Sample palette");
+    expect(document.activeElement).toBe(button);
+  });
+
   it("keeps a departing row's resolved title until the faded row is removed", async () => {
     await pinned();
     const id = "thr_v4_builder_a";
