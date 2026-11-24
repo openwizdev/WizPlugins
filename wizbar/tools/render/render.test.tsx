@@ -42,6 +42,7 @@ describe.skipIf(!out)("render", () => {
       Element.prototype.getBoundingClientRect = function () {
         return { ...rect.call(this), top: height - 40, bottom: height - 20, height: 20, width: 280, left: 0, right: 280, x: 0, y: height - 40, toJSON() {} };
       };
+      try {
       const r = renderSlot(app.threadLists[0]!, {
         activeThreadId: "thr_orch", activeProjectId: null, isCompactViewport: false, onNavigate() {}, searchQuery: process.env.WIZBAR_RENDER_SEARCH ?? "",
       }, {
@@ -61,7 +62,6 @@ describe.skipIf(!out)("render", () => {
         if (trigger) fireEvent.click(trigger);
         await act(async () => { await new Promise((done) => setTimeout(done, 300)); });
       }
-      Element.prototype.getBoundingClientRect = rect;
       const css = readFileSync(join(__dirname, "../../dist/app.css"), "utf8");
       const html = `<!doctype html><html class="dark"><head><meta charset="utf-8"><style>@layer base, properties, theme, utilities;</style><style>${hostVars}</style><style>${css}</style></head>
 <body><div class="host"><aside class="side"><div class="chrome"><div class="btn">+ New thread</div><div class="search">Search threads</div></div>
@@ -69,6 +69,9 @@ describe.skipIf(!out)("render", () => {
       mkdirSync(out!, { recursive: true });
       writeFileSync(join(out!, `${view}.html`), html);
       r.unmount();
+      } finally {
+        Element.prototype.getBoundingClientRect = rect;
+      }
     }, 30_000);
   }
 });

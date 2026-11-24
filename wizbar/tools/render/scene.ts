@@ -73,6 +73,8 @@ export function scene(agents = 24, now = Date.now()): Scene {
     const providerId = providers[i % providers.length]!;
     threads.push(row(now, id, reviewer ? `Review #${n + 50} at a1b2c3d` : `#${n}: ${ticket.title}`, {
       ...running(), providerId, parentThreadId: "thr_orch", createdAt: now - (90 - i) * MINUTE,
+      // Two in three agents run in the cloud (no environment or host on the row), the rest locally.
+      ...(i % 3 === 2 ? {} : { environment: null, host: null }),
     }));
     models[id] = providerId === "codex" ? { model: "gpt-6.2-sol", effort: "medium" } : { model: "claude-opus-5-5", effort: "medium" };
   }
