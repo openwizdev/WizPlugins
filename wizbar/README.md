@@ -132,7 +132,9 @@ are in the [v0.3 sidebar contract](contracts/sidebar-v3.v1.md) and the
   due now (needs you) when it has no open blockers, later when it has open
   blockers. A blocked ticket in any other state keeps that state. Only due-now tickets count in
   the rule and in "K needs you"; later tickets show as hollow rings and
-  `· N later`, and `wizbar specs` reports both.
+  `· N later`, and `wizbar specs` reports both. When WizBar selects a legacy v1
+  specs file, there is no separate later state. The producer folds those
+  tickets into needs you in its v1 output.
 - **Colours.** Done dots and the section rules use the host's success colour,
   or a neutral when the theme has none. "N done in the last hour" is the host's
   text colour. The warning colour marks needs you; a later ring is the warning
@@ -302,7 +304,10 @@ wizbar models <id>... [--raw] [--json]
 **Exit codes**, every command: `0` success; `1` any thread or the whole command
 failed; `2` usage error. The exception is `models`: a failed host read gives
 that thread a null model and effort with exit `0`, so check the returned
-fields, or the per-thread error status with `--raw`. A usage error with `--json` prints
+fields. With `--raw`, the per-thread error status comes from the default
+execution-options read. If that read returns null and the context fallback
+fails, `contextModel` is null and has no separate error status.
+A usage error with `--json` prints
 `{"error":{"code":"usage","message":"<usage>"}}`.
 
 **Per-ID commands** (`settle` to `unpin`) handle each ID on its own: one

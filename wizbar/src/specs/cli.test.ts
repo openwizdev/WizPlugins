@@ -87,6 +87,23 @@ afterEach(async () => {
 });
 
 describe("wizbar specs (section 8)", () => {
+  it("lists the sort choices in registered help and usage errors", async () => {
+    const cli = await setup();
+    const usage = "specs [--sort <needs-you|recent|closest|newest>] [--json]";
+    const specs = cli.host.harness.registrations.cli?.commands?.find(({ name }) => name === "specs");
+    expect(specs?.usage).toBe(usage);
+
+    const plain = await cli.run(["specs", "--sort", "bogus"]);
+    expect(plain.exitCode).toBe(2);
+    expect(plain.stderr).toContain(`wizbar ${usage}`);
+
+    const json = await cli.json(["specs", "--sort", "bogus"]);
+    expect(json).toEqual({
+      exitCode: 2,
+      body: { error: { code: "usage", message: expect.stringContaining(`wizbar ${usage}`) } },
+    });
+  });
+
   // catches: a CLI reader that drops the provider, the parent or hidden rows, or reads another path or host.
   it("prints the contract's rows as JSON, read from the bound factory's specs file", async () => {
     // A producer from before #162 wrote only specs.v1.json: WizBar tries specs.v2.json, then reads it (#164 R1).
