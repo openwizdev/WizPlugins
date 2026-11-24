@@ -98,7 +98,7 @@ describe("P1: one run writes a file WizBar reads as ready", () => {
   it("writes the hand-worked file for the recorded answers", async () => {
     const dir = await home();
     const github = fakeGitHub();
-    expect(await runOnce({ home: dir, repositories, request: github.request, now: () => NOW })).toEqual({ ok: true, calls: 15, specs: 10, unchanged: 0 });
+    expect(await runOnce({ home: dir, repositories, request: github.request, now: () => NOW })).toMatchObject({ ok: true, calls: 17, specs: 10, unchanged: 0 });
     const text = await readFile(outputV2(dir), "utf8");
     expect(JSON.parse(text)).toEqual(expectedFile);
     expect(readSpecsFile({ kind: "content", text }, NOW.getTime())).toEqual({ status: "ready", file: expectedFile });
@@ -110,7 +110,7 @@ describe("P1: one run writes a file WizBar reads as ready", () => {
   // catches (openwizdev/WizPlugins#195): a valid fraction cut off, or an impossible date that makes v2 malformed.
   it("adds each ticket's updated_at to v2 only, and writes v1 byte for byte as before", async () => {
     const dir = await home();
-    expect(await runOnce({ home: dir, repositories, request: fakeGitHub().request, now: () => NOW })).toEqual({ ok: true, calls: 15, specs: 10, unchanged: 0 });
+    expect(await runOnce({ home: dir, repositories, request: fakeGitHub().request, now: () => NOW })).toMatchObject({ ok: true, calls: 17, specs: 10, unchanged: 0 });
     expect(await readFile(output(dir), "utf8")).toBe(`${JSON.stringify(expectedV1File, null, 2)}\n`);
     const v2 = JSON.parse(await readFile(outputV2(dir), "utf8")) as typeof expectedFile;
     const times = Object.fromEntries(v2.specs[0]!.tickets.map((x) => [x.ticket, (x as { updatedAt?: string }).updatedAt ?? null]));
@@ -165,9 +165,9 @@ describe("P1: unchanged answers cost nothing", () => {
     const github = fakeGitHub();
     await runOnce({ home: dir, repositories, request: github.request, now: () => NOW });
     github.calls.length = 0;
-    expect(await runOnce({ home: dir, repositories, request: github.request, now: () => LATER })).toEqual({ ok: true, calls: 15, specs: 10, unchanged: 15 });
+    expect(await runOnce({ home: dir, repositories, request: github.request, now: () => LATER })).toMatchObject({ ok: true, calls: 17, specs: 10, unchanged: 15 });
     expect(github.calls.length).toBeLessThan(60);
-    expect(github.calls.every((call) => call.etag !== null && call.status === 304)).toBe(true);
+    expect(github.calls.filter((call) => !call.path.includes("/contents/")).every((call) => call.etag !== null && call.status === 304)).toBe(true);
     expect(JSON.parse(await readFile(outputV2(dir), "utf8"))).toEqual({ ...expectedFile, generatedAt: "2026-11-20T12:10:00Z" });
     expect(JSON.parse(await readFile(output(dir), "utf8"))).toEqual({ ...expectedV1File, generatedAt: "2026-11-20T12:10:00Z" });
   });
@@ -185,7 +185,7 @@ describe("P1 (#183): the last activity needs no extra request", () => {
     const cache = JSON.parse(await readFile(cacheOf(dir), "utf8")) as { version: number; pages: Record<string, { body: Record<string, unknown>[] }> };
     for (const page of Object.values(cache.pages)) for (const item of page.body) delete item.updated_at;
     await writeFile(cacheOf(dir), JSON.stringify({ ...cache, version: 4 }));
-    expect(await runOnce({ home: dir, repositories, request: github.request, now: () => LATER })).toEqual({ ok: true, calls: 15, specs: 10, unchanged: 0 });
+    expect(await runOnce({ home: dir, repositories, request: github.request, now: () => LATER })).toMatchObject({ ok: true, calls: 17, specs: 10, unchanged: 0 });
     expect(JSON.parse(await readFile(outputV2(dir), "utf8"))).toEqual({ ...expectedFile, generatedAt: "2026-11-20T12:10:00Z" });
   });
 });
@@ -199,7 +199,7 @@ describe("N1 (#162): the later state needs no extra request", () => {
     const cache = JSON.parse(await readFile(cacheOf(dir), "utf8")) as { version: number; pages: Record<string, { body: Record<string, unknown>[] }> };
     for (const page of Object.values(cache.pages)) for (const item of page.body) delete item.issue_dependencies_summary;
     await writeFile(cacheOf(dir), JSON.stringify({ ...cache, version: 3 }));
-    expect(await runOnce({ home: dir, repositories, request: github.request, now: () => LATER })).toEqual({ ok: true, calls: 15, specs: 10, unchanged: 0 });
+    expect(await runOnce({ home: dir, repositories, request: github.request, now: () => LATER })).toMatchObject({ ok: true, calls: 17, specs: 10, unchanged: 0 });
     expect(JSON.parse(await readFile(outputV2(dir), "utf8"))).toEqual({ ...expectedFile, generatedAt: "2026-11-20T12:10:00Z" });
   });
 });
@@ -216,7 +216,7 @@ describe("P1: all or nothing", () => {
     const result = await runOnce({ home: dir, repositories, request: fakeGitHub().request, now: () => LATER });
     expect(result.ok).toBe(false);
     expect({ v1: await readFile(output(dir), "utf8"), cache: await readFile(cacheOf(dir), "utf8") }).toEqual(before);
-    expect((await readdir(join(dir, ".openwiz"))).sort()).toEqual(["specs.v1.etags.json", "specs.v1.json", "specs.v2.json"]);
+    expect((await readdir(join(dir, ".openwiz"))).sort()).toEqual(["agents.v1.etags.json", "agents.v1.json", "specs.v1.etags.json", "specs.v1.json", "specs.v2.json"]);
   });
 
   // catches: a partial or mixed file (R7: a server error in the middle of a paginated list), a temp file left
@@ -276,7 +276,7 @@ describe("P1: the request budget", () => {
     // One spec fewer fits exactly: 59 requests.
     answers.set(`repos/${FLEET}/issues?state=open&per_page=100`, { body: specs.slice(0, 57) });
     expect(await runOnce({ home: dir, repositories: [FLEET], request: fakeGitHub(answers).request, now: () => NOW }))
-      .toEqual({ ok: true, calls: 59, specs: 57, unchanged: 0 });
+      .toMatchObject({ ok: true, calls: 59, specs: 57, unchanged: 0 });
   });
 });
 
@@ -287,7 +287,7 @@ describe("P1: an unbound repository leaves no trace", () => {
     const github = fakeGitHub();
     await runOnce({ home: dir, repositories, request: github.request, now: () => NOW });
     github.calls.length = 0;
-    expect(await runOnce({ home: dir, repositories: [TOOLS], request: github.request, now: () => LATER })).toEqual({ ok: true, calls: 4, specs: 2, unchanged: 4 });
+    expect(await runOnce({ home: dir, repositories: [TOOLS], request: github.request, now: () => LATER })).toMatchObject({ ok: true, calls: 5, specs: 2, unchanged: 4 });
     expect(github.calls.filter((c) => c.path.includes(FLEET))).toEqual([]);
     const file = JSON.parse(await readFile(output(dir), "utf8")) as typeof expectedFile;
     expect({ specs: file.specs.map((s) => s.spec), generatedAt: file.generatedAt }).toEqual({ specs: [`${TOOLS}#1070`, `${TOOLS}#1080`], generatedAt: "2026-11-20T12:10:00Z" });
@@ -310,6 +310,7 @@ describe("#153: --gh, a missing gh and the unchanged count", () => {
     await writeFile(gh, [
       "#!/bin/sh",
       `echo "$*" >> "${join(dir, "calls.log")}"`,
+      'case "$*" in *"/contents/docs/agents/fleet.md"*) printf \'HTTP/2.0 404 Not Found\\r\\n\\r\\n\'; exit 1;; esac',
       'case "$*" in *"If-None-Match: \\"e1\\""*) printf \'HTTP/2.0 304 Not Modified\\r\\nEtag: "e1"\\r\\n\\r\\n\'; exit 1;; esac',
       'printf \'HTTP/2.0 200 OK\\r\\nEtag: "e1"\\r\\n\\r\\n[]\'',
       "",
@@ -327,7 +328,7 @@ describe("#153: --gh, a missing gh and the unchanged count", () => {
     const gh = await fakeGh(dir);
     const result = await run(["--home", dir, "--repo", FLEET, "--repo", TOOLS, "--gh", gh], servicePath);
     expect(result).toMatchObject({ code: 0, stderr: "" });
-    expect((await readFile(join(dir, "calls.log"), "utf8")).trim().split("\n")).toHaveLength(4);
+    expect((await readFile(join(dir, "calls.log"), "utf8")).trim().split("\n")).toHaveLength(6);
   });
 
   // catches: the bare `spawn gh ENOENT` (the real PC's failure), which names neither the fix nor the option.
@@ -349,7 +350,7 @@ describe("#153: --gh, a missing gh and the unchanged count", () => {
     const dir = await home();
     const gh = await fakeGh(dir);
     const args = ["--home", dir, "--repo", FLEET, "--repo", TOOLS, "--gh", gh];
-    expect((await run(args, servicePath)).stdout).toBe(`wrote ${outputV2(dir)} and ${output(dir)}: 0 specs, 4 requests (0 unchanged)\n`);
-    expect((await run(args, servicePath)).stdout).toBe(`wrote ${outputV2(dir)} and ${output(dir)}: 0 specs, 4 requests (4 unchanged)\n`);
+    expect((await run(args, servicePath)).stdout).toBe(`wrote ${outputV2(dir)} and ${output(dir)}: 0 specs, 6 requests (0 unchanged) · wrote agents.v1.json: 0 live agents\n`);
+    expect((await run(args, servicePath)).stdout).toBe(`wrote ${outputV2(dir)} and ${output(dir)}: 0 specs, 6 requests (4 unchanged) · wrote agents.v1.json: 0 live agents\n`);
   });
 });
