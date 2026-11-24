@@ -390,12 +390,15 @@ describe("0.5 C: the rule, the spec rows and the open panel", () => {
     await screen.findByText("Sample palette");
     const line = rowOf("Sample palette").querySelector("[data-spec-line]")!;
     const notes = line.querySelector("[data-notes]") as HTMLElement;
-    expect([...notes.children].map((el) => el.textContent)).toEqual(["1 needs you", "· 1 later", "1 done · 1h"]);
+    expect([...notes.children].filter((el) => !el.classList.contains("sr-only")).map((el) => el.textContent)).toEqual(["1 needs you", "· 1 later", "1 done · 1h"]);
+    // The short done note is hidden from screen readers, which hear the full words instead.
+    expect(notes.querySelector("[data-done-last-hour]")!.getAttribute("aria-hidden")).toBe("true");
+    expect(notes.querySelector(".sr-only")!.textContent).toBe("1 done in the last hour");
     for (const rule of ["flex-wrap", "overflow-hidden", "min-w-0", "justify-end", "shrink-[999]"]) expect(notes.className).toContain(rule);
     expect(notes.className).toMatch(/\bh-\[/);
     expect(notes.className).not.toContain("shrink-0");
     expect(notes.style.minWidth).toBe("min-content");
-    for (const note of notes.children) expect(note.className).toContain("shrink-0");
+    for (const note of notes.children) if (!note.classList.contains("sr-only")) expect(note.className).toContain("shrink-0");
     const name = line.querySelector("[data-spec-name]") as HTMLElement;
     expect(name.className).toMatch(/\bmin-w-\[/);
     expect(name.className).toContain("basis-auto");
