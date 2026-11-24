@@ -244,7 +244,7 @@ function RunningThreadsList({ groups, labels, pluginId }: {
       <div style={{ position: "relative", containerType: "size", height: lineCount * ROW_HEIGHT, minHeight: 0 }}>
         <ul ref={viewport} aria-label="Threads" onScroll={readEdges} style={{
           ...list, position: "absolute", inset: 0, minHeight: 0, maxHeight: `round(down, 100cqh, ${ROW_HEIGHT}px)`, overflowY: "auto", overscrollBehaviorY: "contain",
-          scrollPaddingTop: sticky ? ROW_HEIGHT : 0,
+          scrollPaddingTop: (sticky ? 2 : 1) * ROW_HEIGHT, scrollPaddingBottom: ROW_HEIGHT,
         }}>
           {groups.map(({ key, name, threads }) => {
             const expanded = !folded?.has(key);
@@ -272,6 +272,7 @@ function RunningThreadsList({ groups, labels, pluginId }: {
                   </svg>
                   <span data-spec-name={key === null ? undefined : ""} style={oneLine}>{name}</span>{" "}<span>{count}</span>
                 </button>
+                {/* Moving to another group changes the parent list and remounts the row. */}
                 <ul id={contents} hidden={!expanded} style={list}>
                   {expanded && threads.map((thread) => {
                     const model = modelLabel(thread.model, thread.effort);
@@ -358,7 +359,7 @@ export function StatsPanel({ rows, stale = false }: { rows: readonly PluginSideb
         <>
           <div style={{ flexShrink: 0, fontSize: 12 }}>
             <p style={{ ...quiet, ...oneLine }}>{stats.states.awake} awake · {stats.states.starting} starting · {stats.states.asleep} asleep</p>
-            <p style={{ ...quiet, ...oneLine }} title={summary}>{summary}</p>
+            <p style={quiet}>{summary}</p>
           </div>
           {stats.harness.length > 0 ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 8, flexShrink: 0 }}>
