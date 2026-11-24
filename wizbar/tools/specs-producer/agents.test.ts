@@ -112,14 +112,50 @@ it("keeps the last whole agents file after a failed read and still writes specs"
   expect(JSON.parse(await readFile(specs, "utf8")).specs.length).toBeGreaterThan(0);
 });
 
-it("gives specs the budget first and skips agents when the scan uses the remaining requests", async () => {
-  const { answers, file, github, run } = await fixture();
-  const specs = Array.from({ length: 57 }, (_, i) => ({
-    number: 2000 + i, title: `Sample spec ${i}`, sub_issues_summary: { total: 1 },
-  }));
-  answers.set(`repos/${FLEET}/issues?state=open&per_page=100`, { body: specs });
-  for (const spec of specs) answers.set(`repos/${FLEET}/issues/${spec.number}/sub_issues?per_page=100`, { body: [] });
-  expect(await run(["sample-builder"])).toMatchObject({ ok: true, specs: 57, calls: 59, agents: { status: "kept", reason: "no requests left in the 59-request budget" } });
-  expect(github.calls).toHaveLength(59);
-  await expect(readFile(file)).rejects.toMatchObject({ code: "ENOENT" });
+function budgetAnswers(repositories: readonly string[], specCount: number) {
+  const answers = new Map<string, { body: unknown; next?: string }>();
+  for (const [index, repository] of repositories.entries()) {
+    const specs = index === 0 ? Array.from({ length: specCount }, (_, i) => ({
+      number: 2000 + i, title: `Sample spec ${i}`, sub_issues_summary: { total: 1 },
+    })) : [];
+    answers.set(`repos/${repository}/issues?state=open&per_page=100`, { body: specs });
+    answers.set(`repos/${repository}/pulls?state=open&per_page=100`, { body: [] });
+    for (const spec of specs) answers.set(`repos/${repository}/issues/${spec.number}/sub_issues?per_page=100`, { body: [] });
+    const path = comments.replace(FLEET, repository);
+    answers.set(path, { body: [], next: `${path}&page=2` });
+    answers.set(`${path}&page=2`, { body: [], next: `${path}&page=3` });
+    answers.set(`${path}&page=3`, { body: [
+      note(100 + index, { issue_url: `https://api.github.com/repos/${repository}/issues/902` }),
+    ] });
+  }
+  return answers;
+}
+
+it("writes all five repositories' agents and the run map after specs use all 59 requests", async () => {
+  const { home, file } = await fixture();
+  const repositories = [FLEET, "example/two", "example/three", "example/four", "example/five"];
+  const answers = budgetAnswers(repositories, 49);
+  const map = `repos/${FLEET}/issues/comments/42`;
+  answers.set(map, { body: { body: ["```json", JSON.stringify({ state: { repo: FLEET, threads: {} }, runs: {} }), "```"].join("\n") } });
+  const github = fakeGitHub(answers);
+
+  expect(await runOnce({ home, repositories, now, authors: ["sample-builder"], runMap: `${FLEET}#42`, request: github.request }))
+    .toMatchObject({ ok: true, specs: 49, calls: 75, agentsCalls: 16, agents: { status: "wrote", count: 5 } });
+  expect(github.calls.slice(0, 59).every(({ path }) => !path.includes("/issues/comments"))).toBe(true);
+  expect(github.calls.at(-1)?.path).toBe(map);
+  expect(JSON.parse(await readFile(file, "utf8"))).toMatchObject({ runMap: [], agents: repositories.map((repository) => ({ repository })) });
+});
+
+it("keeps the last agents snapshot and still writes specs when the notes need more than 20 requests", async () => {
+  const { home, file, run } = await fixture();
+  await run(["sample-builder"]);
+  const before = await readFile(file, "utf8");
+  const repositories = Array.from({ length: 7 }, (_, i) => `example/sample-${i}`);
+  const github = fakeGitHub(budgetAnswers(repositories, 0));
+
+  expect(await runOnce({ home, repositories, now, authors: ["sample-builder"], request: github.request }))
+    .toMatchObject({ ok: true, specs: 0, calls: 34, agentsCalls: 20, agents: { status: "kept", reason: "no requests left in the 20-request agents budget" } });
+  expect(github.calls).toHaveLength(34);
+  expect(await readFile(file, "utf8")).toBe(before);
+  expect(JSON.parse(await readFile(join(home, ".openwiz", "specs.v2.json"), "utf8")).specs).toEqual([]);
 });

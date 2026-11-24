@@ -30,6 +30,7 @@ const agents = [
   note(15, "done", "claude-opus-5-5", 2, { live: false }),
   note(12, "working", "Gemini 4 Neon Medium", 3),
   note(13, "asking", "GPT-6.2-Sol medium effort", 42, { agent: "reviewer", pr: `https://github.com/${repository}/pull/22` }),
+  note(14, "asking", "neon", 12),
   note(16, "working", "neon", 1),
   note(17, "working", "neon", 1),
 ];
@@ -61,16 +62,21 @@ it("renders the same Cloud agents as the CLI, including lapsed, finished and not
     },
   });
   const section = await screen.findByRole("region", { name: "Cloud agents" });
+  const lapsed = within(section).getByRole("button", { name: /lapsed.*on GitHub/ });
+  const asking = within(section).getByRole("button", { name: /asking.*on GitHub/ });
+  expect(lapsed.querySelector("[data-matrix]")?.getAttribute("data-matrix")).toBe("idle");
+  expect(asking.querySelector("[data-matrix]")?.getAttribute("data-matrix")).toBe("needs-you");
   const header = within(section).getByRole("button", { name: "Cloud agents 2" });
   const frame = section.closest("[data-wizbar-section]")!;
   expect(frame.previousElementSibling?.getAttribute("data-wizbar-section")).toBe("pinned");
   const observed = () => within(section).getAllByRole("button", { name: /on GitHub, opens in browser/ }).map((item) => item.textContent);
   expect(observed()).toEqual([
     "Builder · OpenWiz #12Neon · Medium · working · 3m",
-    "Reviewer · OpenWiz #22Sol 6.2 · Medium · lapsed · 42mPR #22",
+    "Builder · OpenWiz #14Neon · asking · 12m",
     "Builder · OpenWiz #15Opus 5.5 · done · 2m",
+    "Reviewer · OpenWiz #13Sol 6.2 · Medium · lapsed · 42mPR #22",
   ]);
-  fireEvent.click(within(section).getByRole("button", { name: /Reviewer · OpenWiz #22.*on GitHub, opens in browser/ }));
+  fireEvent.click(lapsed);
   expect(rendered.navigateCalls).toEqual([{ method: "openUrl", url: `https://github.com/${repository}/pull/22` }]);
   expect(within(section).queryByText("Reviewer · OpenWiz #24")).toBeNull();
   fireEvent.click(within(section).getByText("1 more in the run map with no recent note"));

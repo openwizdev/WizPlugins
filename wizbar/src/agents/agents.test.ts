@@ -6,7 +6,7 @@ import { rawRow } from "../specs/testing";
 import { createFakePluginHost } from "@get-bb/plugin-sdk/testing";
 import plugin from "../server";
 import { readAgentsFile } from "./read";
-import { unseenAgents } from "./match";
+import { unseenAgents, unseenSnapshot } from "./match";
 import type { GitHubAgent } from "./format";
 
 const repository = "example/sample-fleet";
@@ -73,6 +73,19 @@ it("keeps ambiguous numbers in separate repositories", () => {
   const another = { ...note, repository: "example/another", ticket: "example/another#902", commentId: 2 };
   expect(unseenAgents(parse(file([note, another])), null, [row("#902: Sample work")]))
     .toEqual({ status: "ready", count: 2, agents: [note, another] });
+});
+
+it("keeps a reviewer note without a PR out of the map's note-free rows for every pull on its ticket", () => {
+  const reviewer = { ...note, agent: "reviewer" as const };
+  const fileWithPulls = {
+    ...v4RealTitlesFile,
+    specs: v4RealTitlesFile.specs.map((spec) => ({
+      ...spec, tickets: spec.tickets.map((ticket) => ticket.ticket === reviewer.ticket ? { ...ticket, pulls: [950, 952] } : ticket),
+    })),
+  };
+  const runs = [950, 952, 999].map((number) => ({ role: "reviewer" as const, repository, number, threadId: null, run: null }));
+  const snapshot = unseenSnapshot({ status: "ready", agents: [reviewer], runMap: runs }, fileWithPulls, []);
+  expect(snapshot).toEqual({ agents: [reviewer], more: [runs[2]] });
 });
 
 it("serves the absolute bound agents file to RPC and includes its unseen claims in CLI stats", async () => {
