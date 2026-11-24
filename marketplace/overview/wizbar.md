@@ -4,17 +4,17 @@ WizBar replaces the thread list with sections you order by dragging a header (or
 
 ## Yours: nothing gets lost
 
-Yours keeps every top-level thread you started, read or not, until you settle, snooze, mute, archive or pin it. Spec agents and fleet runs stay out. A small picker sorts by newest, last activity, status, harness, model or effort, and filters by status and harness; a filter shows `Yours 4 of 19` with one click to clear. Search matches a thread's title and its first prompt, and takes `harness:`, `model:`, `effort:` and `status:` words.
+Yours keeps every top-level thread you started, read or not, until you settle, snooze, mute, archive or pin it. Spec agents, fleet wakes and fleet-loop runs for your bound repositories stay out; other loops' runs can appear, because the host does not mark them. A small picker sorts by newest, last activity, status, harness, model or effort, and filters by status and harness; a filter shows `Yours 4 of 19` with one click to clear. Search matches a thread's title and its first prompt, and takes `harness:`, `model:`, `effort:` and `status:` words.
 
 ## Cloud agents
 
-Agents that run in their own cloud sandbox, such as Antigravity, are not in the desktop's thread list. WizBar lists them from GitHub: each agent's status note on its ticket, and optionally a fleet's run map. Each row shows the role, repository and ticket, the model in plain words (`Neon · Medium`), its state and last activity, and opens the pull request. The running card counts them apart and says plainly when some cloud agents may be missing.
+Agents that run in their own cloud sandbox, such as Antigravity, are not in the desktop's thread list. WizBar lists them from GitHub: each agent's status note on its ticket, and optionally a fleet's run map. Each row shows the role, repository and ticket, the model in plain words (`Neon · Medium`), its state and last activity, and opens the pull request (or the ticket). The running card counts them apart and says plainly when some cloud agents may be missing.
 
 ## Specs
 
 One row per spec from your factory's specs file, what needs you first, with a picker for recently active, closest to done or newest. Each ticket is a dot: done, building, in review, needs you, later, held or not started; a ticket whose agent is working breathes slowly. Finished and idle specs fold into `Quiet N`. Open a spec to see its running builders and reviewers with model and effort.
 
-A small producer in `tools/specs-producer/` keeps the specs and agents files fresh from GitHub through your `gh` login. A legacy v1 specs file has no separate later state.
+A small producer in `tools/specs-producer/` keeps the specs and agents files fresh from GitHub through your `gh` login; run it on a timer (the README shows one every 10 minutes). A legacy v1 specs file has no separate later state.
 
 ## The running card
 

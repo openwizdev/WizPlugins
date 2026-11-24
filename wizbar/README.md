@@ -25,8 +25,7 @@ The image shows WizBar's real sidebar component and compiled styles in a
 headless browser, with synthetic data and a copy of the host's chrome around
 it, not an installed app. Everything below is proved by fixture tests in CI unless
 it says otherwise. 0.5.0 was installed from source and run on a real Cloudroom
-host for its live check; 0.6.0 and 0.7.0 have not had a live check yet (0.7.0's
-producer was run against real GitHub data). What is not
+host for its live check; 0.6.0 and 0.7.0 have not had a live check yet. What is not
 covered is under Known limits. The rules and sources
 are in the [v0.3 sidebar contract](contracts/sidebar-v3.v1.md) and the
 [v0.4 specs section contract](contracts/specs-section.v1.md).
@@ -49,8 +48,8 @@ are in the [v0.3 sidebar contract](contracts/sidebar-v3.v1.md) and the
   and `status:<working|needs-you|failed|unread|idle>`. Quote values with spaces,
   as in `harness:"Claude Code"`. Active, unpinned matches appear in Yours.
   Pinned, snoozed, muted and settled matches stay on their shelves.
-- **The running card shows every running thread.** The card shows awake, starting and asleep totals and scrolls through every running thread. Specs follow the sidebar's sort, with `Other` last. Click a group heading to fold or open it for the session. Untitled rows show a role and ticket when the fallback names one, or the harness name otherwise. The current heading stays visible as you scroll, and a fade shows when more rows are available. Run `npm run test:browser` from `wizbar/` to run the same Chromium regression as CI. Locally it uses Chrome or Chromium when available and skips with a message otherwise. Install Chromium with `npx playwright-core install chromium` or set `CHROMIUM_PATH` to select a browser. Set `WIZBAR_BROWSER_EVIDENCE=1` to save the four screenshots. The card lists live GitHub status notes for agents the sidebar cannot match. These rows show the note's harness and model and open its issue or pull request. The card reports their count separately as `N more on GitHub`. `wizbar stats --json` reports the same rows in `unseen`.
-- **Cloud agents.** The sidebar lists GitHub agents with no matching desktop thread. It starts after Pinned and can be moved or collapsed. Working and asking agents with live notes appear first and count in the header. Lapsed, done and stopped agents follow by most recent update. Names link to GitHub. `wizbar agents [--json]` lists the same rows. The host's desktop thread list leaves out agents that run in their own cloud sandbox (Antigravity, Cursor, opencode and other ACP agents), so WizBar reads them from GitHub: live `openwiz:status v1` notes, and optionally a fleet's run map (`--run-map`), whose thread ids tell which agents the desktop cannot see. Rows show the role, the repository and ticket, the model in plain words (for example `Neon · Medium`), the state and the last activity, and open the pull request. The card ends with a plain line that agents in their own cloud sandbox may be missing.
+- **The running card shows every running thread.** The card shows awake, starting and asleep totals and scrolls through every running thread. Specs follow the sidebar's sort, with `Other` last. Click a group heading to fold or open it for the session. Untitled rows show a role and ticket when the fallback names one, or the harness name otherwise. The current heading stays visible as you scroll, and a fade shows when more rows are available. The card lists live GitHub status notes for agents the sidebar cannot match. These rows show the note's harness and model and open its issue or pull request. The card reports their count separately as `N more on GitHub`. `wizbar stats --json` reports the same rows in `unseen`.
+- **Cloud agents.** The sidebar lists GitHub agents with no matching desktop thread. It starts after Pinned and can be moved or collapsed. Working and asking agents with live notes appear first and count in the header. Lapsed, done and stopped agents follow by most recent update. Names link to GitHub. `wizbar agents [--json]` lists the same rows. The host's desktop thread list leaves out agents that run in their own cloud sandbox (such as Antigravity), so WizBar reads them from GitHub: live `openwiz:status v1` notes, and optionally a fleet's run map (`--run-map`), whose thread ids tell which agents the desktop cannot see. Rows show the role, the repository and ticket, the model in plain words (for example `Neon · Medium`), the state and the last activity, and open the pull request, or the ticket when the note names none. The card ends with a plain line that agents in their own cloud sandbox may be missing.
 - **The producer** writes `.openwiz/agents.v1.json` beside the specs files, with its own 20-request budget after the specs scan. To fill Cloud agents, add a `--repo` for each product repository and, optionally, `--run-map 'owner/name#<comment id>'`.
 - **CLI.** New `wizbar threads` (search, sort and filters, `--all`) and `wizbar agents`; `wizbar section` takes `cloud` and `yours` (and still `unread` and `inbox`).
 - **Settings kept.** Every 0.6.0 setting reloads into 0.7.0 unchanged; a stored `unread` section reads as `yours`, and a stored order without `cloud` gets it after Pinned. New keys: `threadsSort` and `threadsFilter`.
@@ -263,6 +262,11 @@ room-cli plugin install .
 room-cli plugin list
 ```
 
+Developers: `npm run test:browser` runs the running card's Chromium regression,
+as CI does. It uses Chrome or Chromium when available (or `CHROMIUM_PATH`) and
+skips with a message otherwise; `WIZBAR_BROWSER_EVIDENCE=1` saves its
+screenshots.
+
 Record the current sidebar settings first. Select WizBar in
 **Settings → Appearance → Sidebar**, or use
 `room-cli settings ui set sidebar.threadListProvider "<wizbar-plugin-id>"`
@@ -427,10 +431,9 @@ item that is neither a command nor listed here.
   inconsistently on real hosts; a missing badge alone is not a WizBar regression.
 - 0.6.0 and 0.7.0 have not been installed on a real host: the breath, section
   drag, Yours on real threads, the running card's groups and the Cloud agents
-  section are proved by fixture and browser tests only. 0.7.0's producer was
-  run against real GitHub data and found the live cloud agents.
+  section are proved by fixture and browser tests only.
 - Cloud agents are only as fresh as the producer's last run (every 10
-  minutes) and only as complete as the agents' status notes and the run map.
+  minutes with the suggested timer) and only as complete as the agents' status notes and the run map.
 - Yours cannot tell another loop's run from a thread you started: the host
   does not mark loop runs.
 
