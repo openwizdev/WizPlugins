@@ -12,6 +12,7 @@ import {
   v4TimeZone, type StatsV4,
 } from "./fixtures/v4";
 import { cardBatch, cardPinNext, cardRowLabel, cardRowLabels, cardSummary, computeStatsV4, emptyCardBatch, formatStatsText } from "./stats";
+import { v6Now, v6SpecsFileText } from "./fixtures/v6";
 import { createSpecsCommands } from "./specs/cli";
 
 // R1 (#172): a live host feed. While set, the sidebar hook reads these rows and re-renders when they change,
@@ -64,6 +65,55 @@ describe("S4: the card's data is one computation (sections 7 and 8)", () => {
   it("writes the one summary line, Unknown only when non-zero", () => {
     expect(cardSummary(ready)).toBe("1 waiting on you · 7 cloud, 1 local, 1 unknown");
     expect(cardSummary({ ...ready, running: { ...ready.running, unknown: 0 } })).toBe("1 waiting on you · 7 cloud, 1 local");
+  });
+
+  it("groups in Specs order, starts open, and remembers a fold when the card closes", async () => {
+    render();
+    fireEvent.click(trigger());
+    const headers = () => within(card()!).getAllByRole("button", { expanded: true }).map((button) => button.textContent);
+    await waitFor(() => expect(headers()).toEqual(["Sample palette 4", "Sample finished 1", "Other 4"]));
+    expect(within(card()!).getByText("9 awake · 0 starting · 6 asleep")).toBeTruthy();
+
+    fireEvent.click(within(card()!).getByRole("button", { name: "Sample palette 4" }));
+    expect(card()!.querySelector('[data-thread="thr_v4_builder_a"]')).toBeNull();
+    fireEvent.keyDown(trigger(), { key: "Escape" });
+    fireEvent.click(trigger());
+    const folded = await within(card()!).findByRole("button", { name: "Sample palette 4", expanded: false });
+    fireEvent.click(folded);
+    expect(card()!.querySelector('[data-thread="thr_v4_builder_a"]')).toBeTruthy();
+  });
+
+  it.each([
+    ["needs-you", ["Sample echo 1", "Sample alpha 1", "Other 1"]],
+    ["newest", ["Sample alpha 1", "Sample echo 1", "Other 1"]],
+  ] as const)("uses the Specs section's %s sort for the groups", async (sort, expected) => {
+    vi.setSystemTime(v6Now);
+    const rows = ["702", "742", "999"].map((n) => {
+      const title = `Builder · SS${n}: Sample task`;
+      return { ...v4Threads[0]!, id: `sample-${n}`, title, displayTitle: title };
+    });
+    render(rows, sort, v6SpecsFileText);
+    fireEvent.click(trigger());
+    await waitFor(() => expect(within(card()!).getAllByRole("button", { expanded: true }).map((button) => button.textContent))
+      .toEqual(expected));
+  });
+
+  it("labels untitled rows with a role and number or harness and preserves raw JSON titles", async () => {
+    const cases = [
+      [null, "You are the BUILDER for example/sample#23. Please begin.", "Builder · #23"],
+      ["", "YOU ARE A FRESH REVIEWER FOR the sample change #45 at abc1234", "Reviewer · #45"],
+      [null, "Please review the sample.", "Codex thread"],
+      ["You are the builder for example/sample#99", null, "You are the builder for example/sample#99"],
+    ] as const;
+    const rows = cases.map(([title, titleFallback], i) => ({
+      ...v4Threads[0]!, id: `sample-${i}`, providerId: "codex", title, titleFallback, displayTitle: title || titleFallback!,
+    }));
+    const data = computeStatsV4(rows, null, null, v4Now, "UTC");
+    expect(data.threads?.map(({ title }) => title)).toEqual(rows.map(({ displayTitle }) => displayTitle));
+
+    render(rows);
+    fireEvent.click(trigger());
+    expect([...card()!.querySelectorAll("[data-title]")].map((node) => node.textContent)).toEqual(cases.map(([, , label]) => label));
   });
 
   // catches (0.5 E): a row that repeats the whole task, or drops the title of a thread with no role.
@@ -125,11 +175,11 @@ const { MODEL_REFRESH_MS } = await import("./StatsPanel");
 const binding = JSON.stringify([{ projectKey: "sample-factory", cloudroomProjectId: "prj_v4_atlas", repositories: ["example/sample-plans"],
   home: { hostId: "hst_v4_home", rootPath: "/synthetic/home" }, orchestratorThreadId: "thr_v4_orchestrator", statusWriterLogin: "sample-manager" }]);
 
-function render(threads: readonly PluginSidebarThread[] = v4Threads) {
+function render(threads: readonly PluginSidebarThread[] = v4Threads, specsSort = "needs-you", specsText = v4SpecsFileText) {
   return renderSlot({ component: FooterCounter }, {}, {
-    pluginId: "synthetic-wb4-3", settings: { wizdeckFactories: binding },
+    pluginId: "synthetic-wb4-3", settings: { wizdeckFactories: binding, specsSort },
     sidebarThreads: { status: "ready", threads: [...threads] },
-    rpc: { specsFile: () => ({ kind: "content", text: v4SpecsFileText }), cardModels: models(null, null, "none") } as never,
+    rpc: { specsFile: () => ({ kind: "content", text: specsText }), cardModels: models(null, null, "none") } as never,
   });
 }
 const counter = () => screen.getByRole("status", { name: /^\d+ running$/ });

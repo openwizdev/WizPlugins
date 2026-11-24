@@ -5,6 +5,6 @@ export default defineConfig({
     silent: "passed-only",
     name: "bb-plugin-wizbar",
     include: ["**/*.test.{ts,tsx}"],
-    exclude: ["node_modules/**"],
+    exclude: ["node_modules/**", ...(process.env.WIZBAR_BROWSER_TEST === "1" ? [] : ["browser/**"])],
   },
 });

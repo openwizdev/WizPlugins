@@ -52,6 +52,7 @@
     "bb-app": "0.37.0",
     "cron-parser": "^5.5.0",
     "jsdom": "^29.0.1",
+    "playwright-core": "^1.65.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
