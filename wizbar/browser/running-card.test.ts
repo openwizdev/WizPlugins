@@ -192,7 +192,8 @@ it.skipIf(!browserPath).each([600, 900])("shows all 100 threads in a %i px windo
 
     const rows = Array.from({ length: 100 }, (_, index) => `sample-${index + 1}`);
     const controls = rows.length + 3; // Three expanded group headings.
-    const forward = await tabThroughRows(page, list, "Tab", controls);
+    // Focus already sits on the first group heading (the harness legend is not a tab stop).
+    const forward = await tabThroughRows(page, list, "Tab", controls - 1);
     expect.soft(forward.visited).toEqual(rows);
     expect.soft(forward.obscured, "forward Tab keeps each row clear").toEqual([]);
     const backward = await tabThroughRows(page, list, "Shift+Tab", controls - 1);

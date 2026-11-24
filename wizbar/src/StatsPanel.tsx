@@ -389,7 +389,7 @@ export function StatsPanel({ rows, stale = false }: { rows: readonly PluginSideb
             </p>
           </div>
           {stats.harness.length > 0 ? (
-            <ul aria-label="Harness" tabIndex={0} className="rounded focus-visible:ring-1 focus-visible:ring-inset"
+            <ul aria-label="Harness" className="rounded"
               style={{ ...list, display: "flex", flexDirection: "row", flexWrap: "wrap", columnGap: 14, rowGap: 4, minWidth: 0, flexShrink: 0, fontSize: 12 }}>
               {stats.harness.map(({ providerId, count }) => (
                 <li key={providerId} data-harness={providerId} data-count={count}

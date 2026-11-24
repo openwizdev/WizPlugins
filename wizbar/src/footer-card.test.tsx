@@ -297,7 +297,8 @@ describe("S4: no bolt; N running with its hover card", () => {
     expect(entries.map((entry) => entry.textContent)).toEqual(["Codex 5", "Claude Code 3", "Harness C 1"]);
     expect(legend.style.flexWrap).toBe("wrap");
     expect(entries.map((entry) => entry.style.flexShrink)).toEqual(["0", "0", "0"]);
-    expect(legend.tabIndex).toBe(0);
+    // The legend wraps, so it is no longer a scroll target and not a tab stop.
+    expect(legend.hasAttribute("tabindex")).toBe(false);
   });
 
   it("shows waiting on you in the warning colour only when non-zero", () => {
@@ -423,19 +424,14 @@ describe("WB4-10: the running card stays reachable", () => {
 
   // catches (#1532): the card mounted before its trigger, so Tab from the trigger leaves the card
   // (and the blur closes it), or thread buttons that hide the focus ring.
-  it("Tab reaches the legend and then the first group with visible focus while the card stays open", () => {
+  it("Tab goes from the trigger to the first group with visible focus while the card stays open", () => {
     render();
     act(() => trigger().focus());
     expect(card()).toBeTruthy();
     const order = tabbables();
-    const legend = within(card()!).getByRole("list", { name: "Harness" });
     const first = within(card()!).getAllByRole("button")[0]!;
-    expect(order.slice(order.indexOf(trigger()) + 1, order.indexOf(trigger()) + 3)).toEqual([legend, first]);
-    fireEvent.blur(trigger(), { relatedTarget: legend });
-    act(() => legend.focus());
-    expect(card()).toBeTruthy();
-    expect(document.activeElement).toBe(legend);
-    fireEvent.blur(legend, { relatedTarget: first });
+    expect(order[order.indexOf(trigger()) + 1]).toBe(first);
+    fireEvent.blur(trigger(), { relatedTarget: first });
     act(() => first.focus());
     expect(card()).toBeTruthy();
     expect(document.activeElement).toBe(first);

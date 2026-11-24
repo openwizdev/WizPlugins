@@ -48,7 +48,8 @@ export type CloudAgents =
 const isRecentFinished = (agent: GitHubAgent, now: number) => {
   if (isActiveNote(agent.state)) return false;
   const age = now - Date.parse(agent.updatedAt);
-  return age >= 0 && age < agentLeaseMs;
+  // A finish time slightly ahead of this clock (up to a minute of skew) still counts as recent.
+  return age >= -60_000 && age < agentLeaseMs;
 };
 
 export function cloudAgents(read: AgentsRead, specs: SpecsFileV4 | null, rows: readonly AgentSidebarRow[] | null, now: number): CloudAgents {
