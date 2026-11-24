@@ -540,7 +540,7 @@ function YoursPicker({ sort, filter, harnesses, onSort, onFilter }: {
         trigger.current?.focus();
       }
     }}>
-      <button ref={trigger} type="button" aria-label="Sort and filter Yours" aria-expanded={open} aria-controls={panelId}
+      <button ref={trigger} type="button" aria-label="Sort and filter Yours" aria-expanded={open} aria-controls={open ? panelId : undefined}
         title={`Sort: ${sortLabels[sort]}`} onClick={() => setOpen(!open)}
         className="relative flex h-[18px] items-center gap-px rounded px-1 text-muted-foreground opacity-50 hover:bg-sidebar-accent/60 hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-sidebar-ring">
         <svg aria-hidden viewBox="0 0 12 12" className="size-3" fill="none" stroke="currentColor" strokeWidth={1.3} strokeLinecap="round">

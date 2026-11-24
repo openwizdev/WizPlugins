@@ -1749,7 +1749,10 @@ it("keeps Yours options across mounts and clears both filters in one click", asy
     const trigger = await screen.findByRole("button", { name: "Sort and filter Yours" });
     trigger.focus();
     expect(document.activeElement).toBe(trigger);
+    expect(trigger.hasAttribute("aria-controls")).toBe(false);
     fireEvent.click(trigger);
+    const panelId = trigger.getAttribute("aria-controls");
+    expect(panelId && document.getElementById(panelId)).toBeTruthy();
     return trigger;
   };
   const trigger = await open();
@@ -1772,6 +1775,7 @@ it("keeps Yours options across mounts and clears both filters in one click", asy
   sort().focus();
   fireEvent.keyDown(sort(), { key: "Escape" });
   expect(trigger.getAttribute("aria-expanded")).toBe("false");
+  expect(trigger.hasAttribute("aria-controls")).toBe(false);
   expect(document.activeElement).toBe(trigger);
   first.unmount();
 

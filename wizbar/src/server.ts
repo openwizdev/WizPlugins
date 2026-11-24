@@ -13,7 +13,7 @@ import { cardModelsNone } from "./card-meta";
 import { withModelLabel } from "./model-names";
 import { createLifecycleCommand, LifecycleError, type LifecycleOperation, type LifecycleSuccess, type PinOperations, type ThreadsOptions } from "./command";
 import { placePinned } from "./drag";
-import type { CardModelsResultV3, MovePositionV3 } from "./v3-types";
+import type { CardModelsResultV3, CardModelV3, MovePositionV3 } from "./v3-types";
 import { sortPinned, threadDisplayTitle } from "./inbox";
 import { matchesThreadFilters, modelItems, parseThreadSearch, searchThreadRows, sortThreadRows, threadListCandidates, threadRow, type ListThreadSource } from "./threads";
 import { readDeckFactories } from "./deck/data/binding";
@@ -805,14 +805,15 @@ export default function plugin(bb: BbPluginApi) {
     const search = parseThreadSearch(options.search);
     const { threads: candidates, sectionFor } = threadListCandidates(
       threads, readAll(), now, file, repositories, options.all, options.search !== "");
-    const selectors = { ...readThreadsFilter(settings.threadsFilter), ...options.filters };
+    const savedFilter = options.all ? {} : readThreadsFilter(settings.threadsFilter);
+    const selectors = { ...savedFilter, ...options.filters };
     if (selectors.status === "all") delete selectors.status;
     if (selectors.harness === "all") delete selectors.harness;
-    const batches: Promise<CardModelsResultV3>[] = [];
+    const served = new Map<string, CardModelV3>();
     for (let start = 0; start < candidates.length; start += 100) {
-      batches.push(models(candidates.slice(start, start + 100).map(({ id }) => id)));
+      const threadIds = candidates.slice(start, start + 100).map(({ id }) => id);
+      for (const [id, item] of modelItems(await models(threadIds))) served.set(id, item);
     }
-    const served = new Map((await Promise.all(batches)).flatMap((result) => [...modelItems(result)]));
     const rowFor = (thread: ListThreadSource) => threadRow(thread, sectionFor(thread), served.get(thread.id));
     const matched = searchThreadRows(candidates, search, rowFor).map(rowFor)
       .filter((row) => matchesThreadFilters(row, selectors));

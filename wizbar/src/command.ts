@@ -28,7 +28,8 @@ export class LifecycleError extends Error {
 type Execute = (operation: LifecycleOperation, threadId: string, until?: number, signal?: AbortSignal) => Promise<LifecycleSuccess>;
 const operations = ["settle", "unsettle", "snooze", "unsnooze", "mute", "unmute", "list"] as const;
 const threadsUsage = "threads [--search <text>] [--sort <newest|activity|status|harness|model|effort>] [--status <s>] [--harness <h>] [--model <m>] [--effort <e>] [--all] [--json]";
-const usage = "wizbar <settle|unsettle|snooze|unsnooze|mute|unmute|list|pin|unpin|move> <id>... [--until <absolute-time|hour|evening|tomorrow|next-week>] [--before <id>|--after <id>|--first|--last] [--json] | wizbar stats [--json] | wizbar children <id> [--json] | wizbar specs [--json] | wizbar spec <n> (--open | --close) [--json] | wizbar " + threadsUsage;
+const specsUsage = "specs [--sort <needs-you|recent|closest|newest>] [--json]";
+const usage = `wizbar <settle|unsettle|snooze|unsnooze|mute|unmute|list|pin|unpin|move> <id>... [--until <absolute-time|hour|evening|tomorrow|next-week>] [--before <id>|--after <id>|--first|--last] [--json] | wizbar stats [--json] | wizbar children <id> [--json] | wizbar ${specsUsage} | wizbar spec <n> (--open | --close) [--json] | wizbar ${threadsUsage}`;
 
 /** WZ21: the host's pins, through WizBar's server (sidebar-v3.v1.md section 7). */
 export interface PinOperations {
@@ -196,7 +197,7 @@ export function createLifecycleCommand(execute: Execute, readStats: ReadStats, p
       ...(threads ? [{ name: "threads", summary: "list and search active threads", usage: threadsUsage }] : []),
       ...(children ? [{ name: "children", summary: "list one thread's children", usage: "children <id> [--json]" }] : []),
       ...(specs ? [
-        { name: "specs", summary: "the running specs the Specs section shows", usage: "specs [--json]" },
+        { name: "specs", summary: "the running specs the Specs section shows", usage: specsUsage },
         { name: "spec", summary: "open or close one spec in the Specs section", usage: "spec <n> (--open | --close) [--json]" },
       ] : []),
     ],

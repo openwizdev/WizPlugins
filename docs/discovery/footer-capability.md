@@ -75,7 +75,7 @@ impossible. The outcome therefore remains **unclear**.
 Two sanitised observations recorded on #2 describe the owner's application:
 
 - [Footer appearance](https://github.com/openwizdev/wizplugins/issues/2#issuecomment-6766179261):
-  the owner saw a card-style row with text, a changing account-state number,
+  the owner saw a card-style row with text, an account-state number,
   a button and a progress bar, plus a lower row of icon buttons and compact
   controls. This shows that the footer region contains numbers and text;
   it does not identify which elements use plugin APIs.

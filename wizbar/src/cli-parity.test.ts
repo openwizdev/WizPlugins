@@ -376,11 +376,14 @@ describe("Yours threads CLI parity", () => {
     });
   });
 
-  it("lists active pins and children with --all and applies overrides without saving", async () => {
+  it("ignores saved filters with --all and applies explicit flags without saving", async () => {
     const { host, run } = server(threads, execution);
-    await host.harness.behavior.setSettings({ threadsSort: "status", threadsFilter: '{"status":"unread"}' });
+    await host.harness.behavior.setSettings({ threadsSort: "status", threadsFilter: '{"status":"unread","harness":"claude-code"}' });
     expect((await run(["threads", "--json"])).json.threads).toEqual([]);
-    const seen = await run(["threads", "--all", "--status", "all", "--sort", "model", "--json"]);
+    const unfiltered = await run(["threads", "--all", "--json"]);
+    expect(unfiltered.json.threads).toHaveLength(threads.length);
+    expect(unfiltered.json.threads[0]).toMatchObject({ id: "thr_sample_queued", status: "failed" });
+    const seen = await run(["threads", "--all", "--sort", "model", "--json"]);
     expect(seen.exitCode).toBe(0);
     expect(seen.json.threads).toHaveLength(threads.length);
     expect(seen.json.threads).toEqual(expect.arrayContaining([
@@ -394,6 +397,23 @@ describe("Yours threads CLI parity", () => {
       "thr_sample_child", "thr_sample_fleet", "thr_sample_pinned", "thr_sample_planning",
     ]);
     expect((await run(["threads", "--json"])).json.threads).toEqual([]);
+  });
+
+  it("finishes one batch of model reads before starting the next", async () => {
+    let inFlight = 0;
+    let peak = 0;
+    const rows = Array.from({ length: 101 }, (_, index) => ({ ...threads[0]!, id: `thr_sample_batch_${index}` }));
+    const { run } = server(rows, async () => {
+      peak = Math.max(peak, ++inFlight);
+      await Promise.resolve();
+      inFlight--;
+      return { model: "gpt-6.2-sol", reasoningLevel: "high" };
+    });
+    const result = await run(["threads", "--all", "--json"]);
+    expect(result.exitCode).toBe(0);
+    expect(result.json.threads).toHaveLength(101);
+    expect(result.json.threads.every(({ model }: { model: string }) => model === "gpt-6.2-sol")).toBe(true);
+    expect(peak).toBeLessThanOrEqual(100);
   });
 
   it.each([
