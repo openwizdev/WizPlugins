@@ -439,7 +439,9 @@ describe("WZ18 card metadata at the registered app boundary", () => {
     const firstProject = within(firstDetails).getByText("Orchard");
     const secondProject = within(secondDetails).getByText("Harbor");
     const linkChip = within(firstDetails).getByRole("link", { name: "#1042 → PR #1088" });
-    expect(firstProject.className.split(/\s+/)).toEqual(expect.arrayContaining(["min-w-0", "truncate", "text-muted-foreground"]));
+    expect(firstProject.className.split(/\s+/)).toEqual(expect.arrayContaining(["min-w-[4ch]", "truncate", "text-muted-foreground"]));
+    // The full name stays readable on hover when it truncates.
+    expect(firstProject.getAttribute("title")).toBe(firstProject.textContent);
     expect(firstProject.compareDocumentPosition(linkChip) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(Number(firstProject.style.flexShrink)).toBeGreaterThan(Number(linkChip.style.flexShrink || 1));
     expect(secondProject).toBeDefined();

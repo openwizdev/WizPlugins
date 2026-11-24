@@ -110,7 +110,7 @@ export function ChildrenPopover({
   return (
     <span
       ref={wrapper}
-      className="pointer-events-auto relative max-w-full"
+      className="pointer-events-auto relative max-w-full shrink-0"
       // Hover is a mouse or pen gesture. A touch tap opens through focus and
       // click; its pointer, and the compatibility mouse after it, then "leave",
       // which must not close what the tap opened. Tapping elsewhere blurs it.
@@ -149,7 +149,7 @@ export function ChildrenPopover({
           event.stopPropagation();
           show();
         }}
-        className="max-w-full rounded border border-border px-1 leading-4 [overflow-wrap:anywhere] hover:bg-accent hover:text-foreground"
+        className="max-w-full whitespace-nowrap rounded border border-border px-1 leading-4 hover:bg-accent hover:text-foreground"
       >
         {label}
       </button>

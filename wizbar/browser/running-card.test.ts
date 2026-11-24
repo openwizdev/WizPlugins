@@ -287,6 +287,8 @@ it.skipIf(!browserPath)("R2 keeps all thread card detail icons inside the card a
         groupWithinCard: groupRect.right <= card.right + 0.5,
         iconsWithinCard: icons.every((icon) => icon.right <= card.right + 0.5),
         iconCount: icons.length,
+        // Line 2 stays one line: no chip wraps (about 18 px tall at this size).
+        oneLine: groupRect.height <= 22,
       };
     });
     expect(bounds).toEqual({
@@ -294,6 +296,7 @@ it.skipIf(!browserPath)("R2 keeps all thread card detail icons inside the card a
       groupWithinCard: true,
       iconsWithinCard: true,
       iconCount: 2,
+      oneLine: true,
     });
   } finally {
     await page.close();

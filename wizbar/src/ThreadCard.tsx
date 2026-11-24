@@ -151,7 +151,8 @@ export function ThreadCard({
             {projectName ? (
               <span
                 data-project-name=""
-                className="min-w-0 truncate text-muted-foreground"
+                title={projectName}
+                className="min-w-[4ch] truncate text-muted-foreground"
                 style={{ flexShrink: 3 }}
               >
                 {projectName}
