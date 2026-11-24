@@ -48,7 +48,7 @@ it("distinguishes an empty snapshot from missing, expired, or malformed data", (
     .toEqual({ status: "ready", agents: [] });
 });
 
-it("matches active builders and reviewers by kind and ticket, deduplicating by oldest claim", () => {
+it("matches visible builders and reviewers by kind and ticket, deduplicating by oldest claim", () => {
   const reviewer = { ...note, agent: "reviewer" as const, pr: `https://github.com/${repository}/pull/950`, commentId: 2 };
   const other = { ...note, ticket: `${repository}#990`, commentId: 3 };
   const read = parse(file([note, { ...note, commentId: 10 }, reviewer, other]));
@@ -58,8 +58,15 @@ it("matches active builders and reviewers by kind and ticket, deduplicating by o
     .toEqual({ status: "ready", count: 1, agents: [note] });
   expect(unseenAgents(read, specs, [row("Builder · KN2: Sample work")], v4Now))
     .toEqual({ status: "ready", count: 2, agents: [reviewer, other] });
-  expect(unseenAgents(read, null, [row("#902: Sample work", { isHidden: true }), row("#902: Sample work", { hasPendingInteraction: true })], v4Now))
-    .toEqual({ status: "ready", count: 3, agents: [note, reviewer, other] });
+  expect(unseenAgents(read, null, [row("#902: Sample work", { hasPendingInteraction: true })], v4Now))
+    .toEqual({ status: "ready", count: 2, agents: [reviewer, other] });
+  expect(unseenAgents(read, specs, [row("Builder · KN2: Sample work", { runtimeStatus: "idle" })], v4Now))
+    .toEqual({ status: "ready", count: 2, agents: [reviewer, other] });
+  expect(unseenAgents(read, specs, [row("Review #950 at abcdef0", { hasPendingInteraction: true })], v4Now))
+    .toEqual({ status: "ready", count: 2, agents: [note, other] });
+  expect(unseenAgents(read, specs, [
+    row("#902: Sample work", { isHidden: true }), row("#990: Sample work", { isArchived: true }),
+  ], v4Now)).toEqual({ status: "ready", count: 3, agents: [note, reviewer, other] });
 });
 
 it("keeps ambiguous numbers in separate repositories", () => {
@@ -70,21 +77,21 @@ it("keeps ambiguous numbers in separate repositories", () => {
 
 it("serves the absolute bound agents file to RPC and includes its unseen claims in CLI stats", async () => {
   vi.setSystemTime(v4Now);
-  const json = JSON.stringify(file([note, { ...note, ticket: `${repository}#990`, commentId: 2 }]));
+  const json = JSON.stringify(file([{ ...note, state: "asking" }, { ...note, ticket: `${repository}#990`, commentId: 2 }]));
   const read = vi.fn(async ({ path }: { path: string }) => {
     const content = path.endsWith("/agents.v1.json") ? json : specsText;
     return { path, content, sha256: createHash("sha256").update(content).digest("hex"), contentEncoding: "utf8", sizeBytes: content.length };
   });
   const host = createFakePluginHost({ pluginId: "wizbar", sdk: {
     files: { read },
-    threads: { list: vi.fn(async () => [rawRow({ ...active, title: "#902: Sample work" })]) },
+    threads: { list: vi.fn(async () => [rawRow({ ...active, title: "#902: Sample work", hasPendingInteraction: true })]) },
   } as never });
   try {
     plugin(host.bb);
     await host.harness.behavior.setSettings({ wizdeckFactories: binding });
     expect(await host.harness.behavior.callRpc("agentsFile", {})).toEqual({ kind: "content", text: json });
     const stats = await host.harness.behavior.runCli(["stats", "--json"]);
-    expect(JSON.parse(stats.stdout!)).toMatchObject({ running: { total: 1 }, unseen: {
+    expect(JSON.parse(stats.stdout!)).toMatchObject({ running: { total: 0 }, waitingOnYou: 1, unseen: {
       status: "ready", count: 1, agents: [{ ticket: `${repository}#990` }],
     } });
     expect(read.mock.calls.filter(([arg]) => arg.path.endsWith("/agents.v1.json"))).toEqual([

@@ -51,6 +51,7 @@ async function fixture() {
     note(16, { body: body + "\nstep: Duplicate field" }),
     note(17, { body: body.replace("build-ticket@0.1.2", "build-ticket") }),
     note(18, { body: body.replace("Ran the fixture", "Checked " + "thr" + "_sample") }),
+    note(21, { updated_at: "2026-11-20T11:31:00Z", issue_url: `https://api.github.com/repos/${FLEET}/issues/990` }),
     note(19, { body: body.replace("Ran the fixture", "Ran the fixture\npreview: https://sample.invalid") }),
   ] });
   answers.set(`${comments}&page=2`, { next: `${comments}&page=3`, body: [
@@ -61,8 +62,8 @@ async function fixture() {
   ] });
   answers.set(`${comments}&page=3`, { next: `${comments}&page=4`, body: [] });
   const github = fakeGitHub(answers);
-  const run = (authors?: string[]) => {
-    const options = { home, repositories: [FLEET], request: github.request, now, authors };
+  const run = (authors?: string[], clock = now) => {
+    const options = { home, repositories: [FLEET], request: github.request, now: clock, authors };
     return runOnce(options);
   };
   return { home, answers, github, run, file: join(home, ".openwiz", "agents.v1.json") };
@@ -72,14 +73,18 @@ it("writes only live v1 claims by record authors, follows up to three pages and 
   const { file, github, run } = await fixture();
   expect((await run(["sample-builder", "sample-reviewer"])).ok).toBe(true);
   expect(JSON.parse(await readFile(file, "utf8"))).toEqual({
-    version: 1, generatedAt: now().toISOString().replace(".000", ""), agents: [builder, reviewer],
+    version: 1, generatedAt: now().toISOString().replace(".000", ""), agents: [builder, reviewer, { ...builder, ticket: `${FLEET}#990`, updatedAt: "2026-11-20T11:31:00Z", commentId: 21 }],
   });
   const paths = [comments, `${comments}&page=2`, `${comments}&page=3`];
   expect(github.calls.slice(-3).map((call) => call.path)).toEqual(paths);
   expect(github.calls.some((call) => call.path === fleet)).toBe(false);
   github.calls.length = 0;
-  await run(["sample-builder", "sample-reviewer"]);
+  const second = await run(["sample-builder", "sample-reviewer"], () => new Date("2026-11-20T12:04:15.250Z"));
   expect(github.calls.slice(-3).map(({ path, status }) => [path, status])).toEqual(paths.map((path) => [path, 304]));
+  expect(second).toMatchObject({ agents: { status: "wrote", truncated: 1 } });
+  expect(JSON.parse(await readFile(file, "utf8"))).toEqual({
+    version: 1, generatedAt: "2026-11-20T12:04:15Z", agents: [builder, reviewer],
+  });
 });
 
 it("reads the repository's GitHub identity table and marks absent authors unknown", async () => {
@@ -87,9 +92,9 @@ it("reads the repository's GitHub identity table and marks absent authors unknow
   const content = Buffer.from("## GitHub identity\n| Field | Value |\n| --- | --- |\n| Record authors | `Sample-Builder`, `sample-bot[bot]` |\n").toString("base64");
   answers.set(fleet, { body: { type: "file", encoding: "base64", content } });
   await run();
-  expect(JSON.parse(await readFile(file, "utf8")).agents).toEqual([builder, reviewer]);
+  expect(JSON.parse(await readFile(file, "utf8")).agents).toEqual([builder, reviewer, expect.objectContaining({ commentId: 21 })]);
   answers.delete(fleet);
-  await run();
+  expect(await run()).toMatchObject({ agents: { status: "wrote", unknownAuthors: 1, truncated: 0 } });
   expect(JSON.parse(await readFile(file, "utf8"))).toMatchObject({ authors: "unknown", agents: [] });
 });
 
@@ -112,7 +117,7 @@ it("gives specs the budget first and skips agents when the scan uses the remaini
   }));
   answers.set(`repos/${FLEET}/issues?state=open&per_page=100`, { body: specs });
   for (const spec of specs) answers.set(`repos/${FLEET}/issues/${spec.number}/sub_issues?per_page=100`, { body: [] });
-  expect(await run(["sample-builder"])).toMatchObject({ ok: true, specs: 57, calls: 59, agents: { status: "kept", reason: expect.stringContaining("59") } });
+  expect(await run(["sample-builder"])).toMatchObject({ ok: true, specs: 57, calls: 59, agents: { status: "kept", reason: "no requests left in the 59-request budget" } });
   expect(github.calls).toHaveLength(59);
   await expect(readFile(file)).rejects.toMatchObject({ code: "ENOENT" });
 });

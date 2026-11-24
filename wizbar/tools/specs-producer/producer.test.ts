@@ -350,7 +350,7 @@ describe("#153: --gh, a missing gh and the unchanged count", () => {
     const dir = await home();
     const gh = await fakeGh(dir);
     const args = ["--home", dir, "--repo", FLEET, "--repo", TOOLS, "--gh", gh];
-    expect((await run(args, servicePath)).stdout).toBe(`wrote ${outputV2(dir)} and ${output(dir)}: 0 specs, 6 requests (0 unchanged) · wrote agents.v1.json: 0 live agents\n`);
-    expect((await run(args, servicePath)).stdout).toBe(`wrote ${outputV2(dir)} and ${output(dir)}: 0 specs, 6 requests (4 unchanged) · wrote agents.v1.json: 0 live agents\n`);
+    expect((await run(args, servicePath)).stdout).toBe(`wrote ${outputV2(dir)} and ${output(dir)}: 0 specs, 6 requests (0 unchanged) · wrote agents.v1.json: 0 live agents · no record authors set for 2 repositories\n`);
+    expect((await run(args, servicePath)).stdout).toBe(`wrote ${outputV2(dir)} and ${output(dir)}: 0 specs, 6 requests (4 unchanged) · wrote agents.v1.json: 0 live agents · no record authors set for 2 repositories\n`);
   });
 });

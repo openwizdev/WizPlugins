@@ -20,12 +20,12 @@ const reviewer: GitHubAgent = {
 const matched: GitHubAgent = { ...builder, ticket: `${repository}#903`, commentId: 13 };
 const coverage = "Cloud agents in their own sandbox may be missing from this list.";
 
-function card(agents: readonly GitHubAgent[] | null, generatedAt = now) {
+function card(agents: readonly GitHubAgent[] | null, generatedAt = now, authors?: "unknown") {
   vi.setSystemTime(v4Now);
   const active = v4Threads.find((row) => row.runtimeStatus === "active" && !row.hasPendingInteraction)!;
   const rows = [{ ...active, parentThreadId: null, displayTitle: "#903: Sample the reader" }];
   const binding = JSON.stringify([{
-    projectKey: "sample-factory", cloudroomProjectId: "sample-project", repositories: [repository],
+    projectKey: "sample-factory", cloudroomProjectId: "sample-project", repositories: [repository, "example/sample-tool"],
     home: { hostId: "sample-host", rootPath: "/synthetic/home" },
     orchestratorThreadId: "sample-orchestrator", statusWriterLogin: "sample-manager",
   }]);
@@ -35,7 +35,7 @@ function card(agents: readonly GitHubAgent[] | null, generatedAt = now) {
       specsFile: () => ({ kind: "content", text: JSON.stringify(v4RealTitlesFile) }),
       cardModels: () => ({ source: "none", items: [] }),
       agentsFile: () => agents === null ? { kind: "missing" }
-        : { kind: "content", text: JSON.stringify({ version: 1, generatedAt, agents }) },
+        : { kind: "content", text: JSON.stringify({ version: 1, generatedAt, agents, authors }) },
     },
   });
 }
@@ -55,8 +55,8 @@ it("counts GitHub rows in the running groups and opens their destinations", asyn
   fireEvent.click(specHeader);
   expect(within(spec).queryByRole("button", { name: /Builder · #902/ })).toBeNull();
   fireEvent.click(specHeader);
-  fireEvent.click(within(spec).getByRole("button", { name: /Builder · #902.*Antigravity · Gemini 4 Neon Medium/ }));
-  fireEvent.click(within(other).getByRole("button", { name: /Reviewer · #990.*Cursor · Sample Model High/ }));
+  fireEvent.click(within(spec).getByRole("button", { name: /Builder · #902.*Antigravity · Gemini 4 Neon Medium.*on GitHub, opens in browser/ }));
+  fireEvent.click(within(other).getByRole("button", { name: /Reviewer · #990.*Cursor · Sample Model High.*on GitHub, opens in browser/ }));
   expect(rendered.navigateCalls).toEqual([
     { method: "openUrl", url: `https://github.com/${repository}/issues/902` },
     { method: "openUrl", url: reviewer.pr },
@@ -71,6 +71,18 @@ it("shows the coverage line for a ready empty file", async () => {
   card([]);
   expect(await screen.findByText(`${coverage} None seen on GitHub.`)).toBeDefined();
   expect(screen.queryByText(/more on GitHub/)).toBeNull();
+});
+
+it("names the repository on GitHub rows with a shared issue number across groups", async () => {
+  card([builder, { ...builder, repository: "example/sample-tool", ticket: "example/sample-tool#902", commentId: 15 }]);
+  expect(await screen.findByText("Builder · example/sample-fleet#902")).toBeDefined();
+  expect(await screen.findByText("Builder · example/sample-tool#902")).toBeDefined();
+});
+
+it("explains when record authors are missing", async () => {
+  card([], now, "unknown");
+  expect(await screen.findByText(`${coverage} GitHub record authors are not set for one or more bound repositories.`)).toBeDefined();
+  expect(screen.queryByText(/None seen on GitHub/)).toBeNull();
 });
 
 it.each([
