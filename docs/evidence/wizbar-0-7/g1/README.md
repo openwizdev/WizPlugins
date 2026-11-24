@@ -4,8 +4,9 @@
   GitHub fixture in `tools/specs-producer/agents.test.ts`. The run retained two
   live claims. A repeat run made conditional requests and received three
   unchanged comments pages.
-- [Running card](running-card.png) rendered in headless Chromium from the
-  plugin SDK card fixture in `src/agents/card.test.tsx`. A sidebar builder
-  counts as one running thread. A GitHub builder appears under Sample kernel,
-  and a GitHub reviewer appears under Other. The fixture also checks the two
-  browser destinations.
+- [Running card](running-card.png) rendered from the plugin SDK fixture in
+  headless Chromium. The Sample kernel header counts its running sidebar
+  thread and GitHub builder. The Other header counts its GitHub reviewer.
+  The card test checks folding and both GitHub destinations. A second
+  Chromium scene with 100 running threads and the same two GitHub rows
+  verified the fades, sticky header, scroll padding and the whole last row.
