@@ -250,7 +250,7 @@ describe("Muted machine markers at the registered app boundary", () => {
   }
 });
 
-// WZ18 (#40): the card's third line. Synthetic rows; expected text from the
+// WZ18 (#40): the card's second line. Synthetic rows; expected text from the
 // sidebar v3 contract's chip table, not from the code under test.
 describe("WZ18 card metadata at the registered app boundary", () => {
   const PR_URL = "https://github.com/example/sample-repo/pull/1088";
@@ -395,5 +395,23 @@ describe("WZ18 card metadata at the registered app boundary", () => {
     expect(face.textContent).not.toContain("room/1042-refine-command-palette-a1b2");
     const branch = screen.getByText("room/1042-refine-command-palette-a1b2");
     expect(branch.className.split(/\s+/)).toEqual(expect.arrayContaining(["hidden", "group-hover/card:block"]));
+  });
+
+  it("renders as two lines: title and status/age on line 1; children, model and machine icon on line 2", async () => {
+    const parent = thread({ environment: environment("git-worktree", "room/1042-refine-command-palette-a1b2") });
+    renderMeta([parent, child(1), child(2)], { cardModels: hostModels });
+    const row = card();
+    const container = row.firstElementChild!;
+    const lines = [...container.children].filter((el) => el.tagName === "DIV");
+    expect(lines).toHaveLength(2);
+    expect(within(lines[0] as HTMLElement).getByText("Review parser")).toBeDefined();
+    expect(within(lines[0] as HTMLElement).getByText("7m")).toBeDefined();
+    const details = within(row).getByRole("group", { name: "Thread details" });
+    expect(details).toBe(lines[1]);
+    const childrenChip = await within(details).findByText("2 children");
+    const model = await within(details).findByText("Opus 5.5 · Medium");
+    const machine = within(details).getByRole("img", { name: "Local" });
+    expect(childrenChip.compareDocumentPosition(model) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(model.compareDocumentPosition(machine) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });
