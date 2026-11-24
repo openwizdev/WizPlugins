@@ -108,10 +108,10 @@ describe("S3: a finished spec's agents name it on the card", () => {
 describe("running card states", () => {
   it.each([
     ["active", "awake", "asleep"],
-    ["pending", "awake", "starting"],
-    ["starting", "awake", "starting"],
-    ["provisioning", "awake", "starting"],
-    ["waiting-for-host", "awake", "starting"],
+    ["pending", "starting", "starting"],
+    ["starting", "starting", "starting"],
+    ["provisioning", "starting", "starting"],
+    ["waiting-for-host", "starting", "starting"],
     ["stopping", "awake", "asleep"],
     ["idle", "asleep", "asleep"],
     ["error", "asleep", "asleep"],
@@ -120,6 +120,7 @@ describe("running card states", () => {
       const row = { ...v4Threads[0]!, runtimeStatus, hasPendingInteraction, providerId: "codex" };
       expect(computeStatsV4([row, row], null, null, v4Now, "UTC")).toMatchObject({
         version: 2,
+        running: { total: Number(!hasPendingInteraction && runtimeStatus !== "idle" && runtimeStatus !== "error") },
         states: {
           awake: Number(expected === "awake"),
           starting: Number(expected === "starting"),

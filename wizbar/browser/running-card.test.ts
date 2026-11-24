@@ -45,6 +45,15 @@ function geometry(list: Locator) {
   });
 }
 
+async function expectFade(fade: Locator, list: Locator, edge: "top" | "bottom") {
+  const [overlay, viewport] = await Promise.all([fade.boundingBox(), list.boundingBox()]);
+  expect.soft(overlay?.height, `${edge} fade covers one row of text`).toBeGreaterThanOrEqual(24);
+  expect.soft(overlay?.width).toBe(viewport?.width);
+  const gradient = await fade.evaluate((node) => getComputedStyle(node).backgroundImage);
+  expect.soft(gradient).toContain(`linear-gradient(to ${edge},`);
+  expect.soft(gradient).toMatch(/(?:transparent|rgba\(0, 0, 0, 0\)).*rgb\(.*\) 85%/);
+}
+
 it.each([600, 900])("shows all 100 threads in a %i px window", async (height) => {
   const page = await browser.newPage({ viewport: { width: 350, height }, reducedMotion: "reduce" });
   try {
@@ -85,11 +94,20 @@ it.each([600, 900])("shows all 100 threads in a %i px window", async (height) =>
     expect.soft(await geometry(list), "top exposes the whole first row and clips no row").toMatchObject({
       atTop: true, atBottom: false, firstWhole: true, partialRows: 0,
     });
+    await expectFade(bottomFade, list, "bottom");
+    const summary = await card.locator("p").evaluateAll((lines) =>
+      lines.map((line) => ({ text: line.textContent, height: line.getBoundingClientRect().height })));
+    expect.soft(summary).toEqual([
+      { text: "100 awake · 0 starting · 0 asleep", height: 20 },
+      { text: "0 waiting on you · 0 cloud, 100 local", height: 20 },
+    ]);
     if (evidence) await page.screenshot({ path: resolve(evidence, `${height}-top.png`) });
     await list.hover();
     await page.mouse.wheel(0, 300);
     await expect.poll(async () => await topFade.isVisible()).toBe(true);
     expect(await bottomFade.isVisible()).toBe(true);
+    const heading = list.getByRole("button", { name: "Sample palette 60" });
+    expect.soft((await heading.boundingBox())?.y, "the current spec heading stays at the top").toBe((await list.boundingBox())?.y);
     await page.mouse.wheel(0, 10_000);
     await expect.poll(async () => (await geometry(list)).atBottom).toBe(true);
     expect.soft(await geometry(list), "bottom exposes the whole last row and clips no row").toMatchObject({
@@ -97,6 +115,7 @@ it.each([600, 900])("shows all 100 threads in a %i px window", async (height) =>
     });
     await expect.poll(async () => await bottomFade.isVisible()).toBe(false);
     expect(await topFade.isVisible()).toBe(true);
+    await expectFade(topFade, list, "top");
     if (evidence) await page.screenshot({ path: resolve(evidence, `${height}-bottom.png`) });
     await page.mouse.wheel(0, -10_000);
     await expect.poll(async () => (await geometry(list)).firstWhole).toBe(true);

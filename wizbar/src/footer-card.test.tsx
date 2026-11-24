@@ -73,9 +73,15 @@ describe("S4: the card's data is one computation (sections 7 and 8)", () => {
     fireEvent.click(trigger());
     const headers = () => within(card()!).getAllByRole("button", { expanded: true }).map((button) => button.textContent);
     await waitFor(() => expect(headers()).toEqual(["Sample palette 4", "Sample finished 1", "Other 4"]));
-    expect(within(card()!).getByText("9 awake · 0 starting · 6 asleep")).toBeTruthy();
+    expect(within(card()!).getByText("8 awake · 1 starting · 6 asleep")).toBeTruthy();
 
-    fireEvent.click(within(card()!).getByRole("button", { name: "Sample palette 4" }));
+    const header = within(card()!).getByRole("button", { name: "Sample palette 4" });
+    const controlled = document.getElementById(header.getAttribute("aria-controls")!);
+    expect.soft(controlled?.querySelectorAll("[data-thread]")).toHaveLength(4);
+    expect.soft(header.querySelector("[data-chevron]")?.getAttribute("data-chevron")).toBe("open");
+    fireEvent.click(header);
+    expect.soft(controlled?.hidden).toBe(true);
+    expect.soft(header.querySelector("[data-chevron]")?.getAttribute("data-chevron")).toBe("closed");
     expect(card()!.querySelector('[data-thread="thr_v4_builder_a"]')).toBeNull();
     fireEvent.keyDown(trigger(), { key: "Escape" });
     fireEvent.click(trigger());
@@ -103,6 +109,10 @@ describe("S4: the card's data is one computation (sections 7 and 8)", () => {
     const cases = [
       [null, "You are the BUILDER for example/sample#23. Please begin.", "Builder · #23"],
       ["", "YOU ARE A FRESH REVIEWER FOR the sample change #45 at abc1234", "Reviewer · #45"],
+      [null, "You are the builder for SamplePlugins#67.", "Builder · #67"],
+      ["", "You are the builder for #89.", "Builder · #89"],
+      [null, "You are a fresh reviewer for SamplePlugins#91.", "Reviewer · #91"],
+      [null, "You are a fresh reviewer for #92.", "Reviewer · #92"],
       [null, "Please review the sample.", "Codex thread"],
       ["You are the builder for example/sample#99", null, "You are the builder for example/sample#99"],
     ] as const;
@@ -115,6 +125,22 @@ describe("S4: the card's data is one computation (sections 7 and 8)", () => {
     render(rows);
     fireEvent.click(trigger());
     expect([...card()!.querySelectorAll("[data-title]")].map((node) => node.textContent)).toEqual(cases.map(([, , label]) => label));
+  });
+
+  it("places a running child under Other when its fleet parent is archived", async () => {
+    const fleet = v4RealTitleThreads.find(({ id }) => id === "thr_rt_fleet")!;
+    const child = v4RealTitleThreads.find(({ id }) => id === "thr_rt_helper")!;
+    const archived = { ...fleet, isArchived: true, archivedAt: v4Now };
+    const result = computeStatsV4([archived, child], v4RealTitlesFile, null, v4Now, "UTC");
+    expect(result.threads).toMatchObject([{ id: child.id, spec: null, shortName: null }]);
+    // A titled ticket can still match independently when that same specs file arrives.
+    const builder = v4RealTitleThreads.find(({ id }) => id === "thr_rt_builder")!;
+    render([archived, child, builder], "newest", JSON.stringify(v4RealTitlesFile));
+    fireEvent.click(trigger());
+    await within(card()!).findByRole("button", { name: "Sample kernel 1" });
+    const other = within(card()!).getByRole("button", { name: "Other 1" });
+    expect(document.getElementById(other.getAttribute("aria-controls")!)?.querySelector("[data-thread]")?.getAttribute("data-thread"))
+      .toBe(child.id);
   });
 
   // catches (0.5 E): a row that repeats the whole task, or drops the title of a thread with no role.
