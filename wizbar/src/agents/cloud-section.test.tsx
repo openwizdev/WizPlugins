@@ -72,9 +72,9 @@ it("renders the same Cloud agents as the CLI, folding older done, stopped and la
   const observed = () => within(section).getAllByRole("button", { name: /on GitHub, opens in browser/ }).map((item) => item.textContent);
   // Live agents + agents finished in the last 30 minutes are shown; older done, stopped and lapsed are folded.
   expect(observed()).toEqual([
-    "Builder · OpenWiz #12Neon · Medium · working · 3m",
-    "Builder · OpenWiz #14Neon · asking · 12m",
-    "Builder · OpenWiz #15Opus 5.5 · XHigh · done · 2m",
+    "Builder · OpenWiz #123mNeon · Medium",
+    "Builder · OpenWiz #1412mNeon",
+    "Builder · OpenWiz #152mOpus 5.5 · XHigh",
   ]);
   expect(within(section).queryByRole("button", { name: /lapsed.*on GitHub/ })).toBeNull();
   const earlierButton = within(section).getByRole("button", { name: "3 earlier", expanded: false });
@@ -83,12 +83,12 @@ it("renders the same Cloud agents as the CLI, folding older done, stopped and la
   const lapsed = within(section).getByRole("button", { name: /lapsed.*on GitHub/ });
   expect(lapsed.querySelector("[data-matrix]")?.getAttribute("data-matrix")).toBe("idle");
   expect(observed()).toEqual([
-    "Builder · OpenWiz #12Neon · Medium · working · 3m",
-    "Builder · OpenWiz #14Neon · asking · 12m",
-    "Builder · OpenWiz #15Opus 5.5 · XHigh · done · 2m",
-    "Builder · OpenWiz #18Neon · Medium · done · 35m",
-    "Reviewer · OpenWiz #13Sol 6.2 · Medium · lapsed · 42mPR #22",
-    "Builder · OpenWiz #19Sol 6.2 · Medium · stopped · 50m",
+    "Builder · OpenWiz #123mNeon · Medium",
+    "Builder · OpenWiz #1412mNeon",
+    "Builder · OpenWiz #152mOpus 5.5 · XHigh",
+    "Builder · OpenWiz #1835mNeon · Medium",
+    "Reviewer · OpenWiz #1342mSol 6.2 · MediumPR #22",
+    "Builder · OpenWiz #1950mSol 6.2 · Medium",
   ]);
   fireEvent.click(lapsed);
   expect(rendered.navigateCalls).toEqual([{ method: "openUrl", url: `https://github.com/${repository}/pull/22` }]);
@@ -111,8 +111,8 @@ it("renders the same Cloud agents as the CLI, folding older done, stopped and la
     expect(cli.exitCode).toBe(0);
     const result = JSON.parse(cli.stdout!);
     expect(result).toMatchObject({ status: "ready", active: 2, more: [{ label: "Reviewer · OpenWiz #24" }] });
-    const fmt = (items: { label: string; detail: string; pull: string | null }[]) =>
-      items.map((item) => item.label + item.detail + (item.pull ?? ""));
+    const fmt = (items: { label: string; age: string; model: string; pull: string | null }[]) =>
+      items.map((item) => item.label + item.age + item.model + (item.pull ?? ""));
     expect([...fmt(result.rows), ...fmt(result.earlier)]).toEqual(observed());
     expect(cli.stdout).not.toContain("sample-archived");
     const plain = (await host.harness.behavior.runCli(["agents"])).stdout;

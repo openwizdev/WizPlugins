@@ -35,6 +35,8 @@ export function cloudModel(value: string, harness?: string): string {
 
 export interface CloudRow {
   label: string;
+  model: string;
+  age: string;
   detail: string;
   matrix: MatrixStateV4;
   pull: string | null;
@@ -63,9 +65,13 @@ export function cloudAgents(read: AgentsRead, specs: SpecsFileV4 | null, rows: r
     const number = issueNumber(agent.ticket);
     const pr = agent.pr ? pullPattern.exec(agent.pr) : null;
     const state = isActiveNote(agent.state) && !isLive(agent) ? "lapsed" : agent.state;
+    const model = cloudModel(agent.model, agent.harness);
+    const age = relativeTimeLabel(Date.parse(agent.updatedAt), now);
     return {
       label: labelFor(agent.agent, agent.repository, number),
-      detail: `${cloudModel(agent.model, agent.harness)} · ${state} · ${relativeTimeLabel(Date.parse(agent.updatedAt), now)}`,
+      model,
+      age,
+      detail: `${model} · ${state} · ${age}`,
       matrix: state === "lapsed" ? "idle" : matrices[agent.state],
       pull: pr ? `PR #${pr[2]}` : null,
       url: agent.pr ?? `https://github.com/${agent.repository}/issues/${number}`,

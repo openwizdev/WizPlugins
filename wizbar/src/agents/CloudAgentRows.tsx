@@ -3,19 +3,28 @@ import { useBbNavigate } from "@get-bb/plugin-sdk/app";
 import { MatrixMark } from "../MatrixMark";
 import type { CloudAgents, CloudRow } from "./cloud";
 
-function CloudAgentRow({ row: { label, detail, matrix, pull, url } }: { row: CloudRow }) {
+function CloudAgentRow({ row: { label, model, age, detail, matrix, pull, url } }: { row: CloudRow }) {
   const navigate = useBbNavigate();
   return (
-    <li>
+    <li className="list-none">
       <button type="button" onClick={() => navigate.openUrl(url)}
         aria-label={`${label}, ${detail}${pull ? `, ${pull}` : ""}, on GitHub, opens in browser`}
-        className="flex w-full min-w-0 items-start gap-2 rounded-md px-2.5 py-1 text-left text-xs hover:bg-sidebar-accent/60 focus-visible:ring-1 focus-visible:ring-inset">
-        <span aria-hidden="true" className="mt-0.5 shrink-0"><MatrixMark state={matrix} /></span>
-        <span className="min-w-0 flex-1">
-          <span className="block truncate" title={label}>{label}</span>
-          <span className="block truncate text-muted-foreground" title={detail}>{detail}</span>
+        className="group/cloud block w-full min-w-0 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-sidebar-accent/60 focus-visible:ring-1 focus-visible:ring-inset">
+        <span className="flex h-5 items-center gap-1.5">
+          <span className="min-w-0 flex-1 truncate text-sm text-foreground" title={label}>{label}</span>
+          <span aria-hidden="true" className="flex shrink-0 items-center gap-1">
+            <MatrixMark state={matrix} />
+            <span className="min-w-6 text-right tabular-nums text-2xs text-muted-foreground">{age}</span>
+          </span>
         </span>
-        {pull ? <span className="shrink-0 text-muted-foreground">{pull}</span> : null}
+        <span className="mt-1 flex min-w-0 items-center gap-1.5 overflow-hidden text-2xs text-muted-foreground">
+          <span className="min-w-0 truncate" title={model}>{model}</span>
+          {pull ? (
+            <span className="shrink-0 underline decoration-muted-foreground/40 underline-offset-2 group-hover/cloud:text-foreground">
+              {pull}
+            </span>
+          ) : null}
+        </span>
       </button>
     </li>
   );
