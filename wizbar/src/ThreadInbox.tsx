@@ -284,7 +284,7 @@ export function ThreadInbox({
                     <ThreadCard
                       key={thread.id}
                       thread={thread}
-                      projectName={projectNameById.get(thread.projectId) ?? null}
+                      projectName={scope === ALL_PROJECTS ? (projectNameById.get(thread.projectId) ?? null) : null}
                       isActive={thread.id === activeThreadId}
                       canPark={lifecycle.canPark(thread)}
                       onNavigate={onNavigate}
@@ -318,7 +318,7 @@ export function ThreadInbox({
                     <ThreadCard
                       key={thread.id}
                       thread={thread}
-                      projectName={projectNameById.get(thread.projectId) ?? null}
+                      projectName={scope === ALL_PROJECTS ? (projectNameById.get(thread.projectId) ?? null) : null}
                       isActive={thread.id === activeThreadId}
                       canPark={lifecycle.canPark(thread)}
                       onNavigate={onNavigate}

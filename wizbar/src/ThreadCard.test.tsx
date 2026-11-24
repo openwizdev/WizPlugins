@@ -414,4 +414,55 @@ describe("WZ18 card metadata at the registered app boundary", () => {
     expect(childrenChip.compareDocumentPosition(model) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(model.compareDocumentPosition(machine) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
+
+  it("R1 shows the muted project name first on line 2 under All projects and hides it when scoped to one project", async () => {
+    const first = thread({
+      id: "thr_synfirst",
+      projectId: projects[0]!.id,
+      title: "Review parser",
+      displayTitle: "Review parser",
+      environment: environment("git-worktree", "room/1042-refine-command-palette-a1b2"),
+    });
+    const second = thread({
+      id: "thr_synsecond",
+      projectId: projects[1]!.id,
+      title: "Write guide",
+      displayTitle: "Write guide",
+      environment: environment("git-worktree", "room/1043-write-guide-c3d4"),
+    });
+    renderMeta([first, second], {
+      cardModels: hostModels,
+      pullRequests: { thr_synfirst: pull(1088) },
+    });
+    const firstDetails = within(card("Review parser")).getByRole("group", { name: "Thread details" });
+    const secondDetails = within(card("Write guide")).getByRole("group", { name: "Thread details" });
+    const firstProject = within(firstDetails).getByText("Orchard");
+    const secondProject = within(secondDetails).getByText("Harbor");
+    const linkChip = within(firstDetails).getByRole("link", { name: "#1042 → PR #1088" });
+    expect(firstProject.className.split(/\s+/)).toEqual(expect.arrayContaining(["min-w-0", "truncate", "text-muted-foreground"]));
+    expect(firstProject.compareDocumentPosition(linkChip) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(Number(firstProject.style.flexShrink)).toBeGreaterThan(Number(linkChip.style.flexShrink || 1));
+    expect(secondProject).toBeDefined();
+
+    fireEvent.keyDown(screen.getByLabelText(/Project scope/), { key: "Enter" });
+    fireEvent.click(screen.getByRole("option", { name: "Harbor" }));
+    const scopedDetails = within(card("Write guide")).getByRole("group", { name: "Thread details" });
+    expect(within(scopedDetails).queryByText("Harbor")).toBeNull();
+  });
+
+  it("R2 clips overflow on line 2 and allows the link chip to shrink", () => {
+    const sample = thread({
+      environment: environment("git-worktree", "room/1042-refine-command-palette-a1b2"),
+      activity: { workflows: 2, backgroundAgents: 1, backgroundCommands: 0, planMode: 0, goals: 0 },
+    });
+    renderMeta([sample, child(1)], {
+      cardModels: hostModels,
+      pullRequests: { thr_synsample: pull(1088) },
+    });
+    const details = within(card()).getByRole("group", { name: "Thread details" });
+    expect(details.className.split(/\s+/)).toContain("overflow-hidden");
+    const linkChip = within(details).getByRole("link", { name: "#1042 → PR #1088" });
+    expect(linkChip.className.split(/\s+/)).toEqual(expect.arrayContaining(["min-w-0", "truncate"]));
+    expect(linkChip.className.split(/\s+/)).not.toContain("shrink-0");
+  });
 });

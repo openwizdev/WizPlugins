@@ -226,3 +226,76 @@ it.skipIf(!browserPath)("shows all large machine totals without clipping or elli
     await page.close();
   }
 });
+
+it.skipIf(!browserPath)("R6 keeps three-digit footer counts on one line at 300 px and shortens as designed", async () => {
+  const page = await browser.newPage({ viewport: { width: 300, height: 600 } });
+  try {
+    await page.goto(`${url}?narrow-footer=1`);
+    const status = page.getByRole("status", { name: "125 running, 120 waiting on you, 105 on GitHub" });
+    await status.waitFor({ state: "visible" });
+    await expect.poll(async () => status.evaluate((node) => {
+      const text = node.querySelector('[aria-hidden="true"]') as HTMLElement;
+      return {
+        text: text.textContent,
+        oneLine: node.getBoundingClientRect().height <= 22,
+        fits: text.scrollWidth <= text.clientWidth,
+        hasGitHub: node.querySelector("[data-on-github]") !== null,
+      };
+    })).toEqual({
+      text: "125 running · 120 waiting on you",
+      oneLine: true,
+      fits: true,
+      hasGitHub: false,
+    });
+
+    await page.setViewportSize({ width: 210, height: 600 });
+    await expect.poll(async () => status.evaluate((node) => {
+      const text = node.querySelector('[aria-hidden="true"]') as HTMLElement;
+      return {
+        text: text.textContent,
+        oneLine: node.getBoundingClientRect().height <= 22,
+        fits: text.scrollWidth <= text.clientWidth,
+        hasGitHub: node.querySelector("[data-on-github]") !== null,
+      };
+    })).toEqual({
+      text: "125 running · 120 waiting",
+      oneLine: true,
+      fits: true,
+      hasGitHub: false,
+    });
+  } finally {
+    await page.close();
+  }
+});
+
+it.skipIf(!browserPath)("R2 keeps all thread card detail icons inside the card at 300 px", async () => {
+  const page = await browser.newPage({ viewport: { width: 300, height: 400 } });
+  try {
+    await page.goto(`${url}?dense-card=1`);
+    const details = page.getByRole("group", { name: "Thread details" });
+    await details.waitFor({ state: "visible" });
+    await page.getByText("Opus 5.5 · Medium").waitFor({ state: "visible" });
+    const bounds = await details.evaluate((group) => {
+      const card = group.closest("li")!.firstElementChild!.getBoundingClientRect();
+      const groupRect = group.getBoundingClientRect();
+      const icons = [...group.querySelectorAll('[role="img"]')].map((el) => ({
+        label: el.getAttribute("aria-label"),
+        right: el.getBoundingClientRect().right,
+      }));
+      return {
+        overflow: getComputedStyle(group).overflow,
+        groupWithinCard: groupRect.right <= card.right + 0.5,
+        iconsWithinCard: icons.every((icon) => icon.right <= card.right + 0.5),
+        iconCount: icons.length,
+      };
+    });
+    expect(bounds).toEqual({
+      overflow: "hidden",
+      groupWithinCard: true,
+      iconsWithinCard: true,
+      iconCount: 2,
+    });
+  } finally {
+    await page.close();
+  }
+});

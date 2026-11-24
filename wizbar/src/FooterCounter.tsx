@@ -59,6 +59,7 @@ export function useObservableRows(): { status: SidebarRowsStatus; rows: readonly
  * card is `StatsPanel`, the `wizbar stats` data for the same rows. */
 export function FooterCounter({ className }: { className?: string }) {
   const { status, rows } = useObservableRows();
+  const connection = useRealtimeConnectionState();
   const specsRead = useSpecsRead();
   const now = Date.now();
   const agents = useAgentsRead(now);
@@ -76,7 +77,7 @@ export function FooterCounter({ className }: { className?: string }) {
   const waitingOnYou = stats.status === "ready" ? stats.waitingOnYou : 0;
   const specs = specsRead ? readSpecsFile(specsRead, now) : null;
   const file = specs?.status === "ready" ? specs.file : null;
-  const cloud = cloudAgents(agents, file, cardRows, now);
+  const cloud = cloudAgents(agents, file, status === "ready" && connection === "connected" ? rows : null, now);
   const onGitHub = cloud.status === "ready" ? cloud.active : 0;
   return <FooterCounterArtwork className={className} source={source} waitingOnYou={waitingOnYou} onGitHub={onGitHub} card={(stale) => (
     <SpecsReadContext.Provider value={specsRead}>

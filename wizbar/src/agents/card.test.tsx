@@ -48,7 +48,7 @@ it("counts GitHub rows in the running groups and opens their destinations", asyn
   const groups = within(panel).getByRole("list", { name: "Threads" });
   const specHeader = await within(groups).findByRole("button", { name: "Sample kernel 2" });
   const otherHeader = within(groups).getByRole("button", { name: "Other 1" });
-  expect(panel.querySelector("[data-running-count]")?.textContent).toBe("1 running · 2 more on GitHub");
+  expect(panel.querySelector("[data-running-count]")?.textContent).toBe("1 running · 2 on GitHub");
   expect(panel.querySelector("[data-states]")?.textContent).toBe("1 awake · 0 starting · 0 asleep");
   const spec = document.getElementById(specHeader.getAttribute("aria-controls")!)!;
   const other = document.getElementById(otherHeader.getAttribute("aria-controls")!)!;
@@ -65,14 +65,14 @@ it("counts GitHub rows in the running groups and opens their destinations", asyn
   ]);
   expect(screen.queryByText(builder.step)).toBeNull();
   expect(screen.queryByText("Builder · #903")).toBeNull();
-  expect(screen.getByText(`${coverage} 2 seen on GitHub.`)).toBeDefined();
+  expect(screen.getByText(`${coverage} 2 on GitHub.`)).toBeDefined();
   expect(panel.querySelector("[data-machines]")?.textContent).toBe("0 cloud, 1 local");
 });
 
 it("shows the coverage line for a ready empty file", async () => {
   card([]);
-  expect(await screen.findByText(`${coverage} None seen on GitHub.`)).toBeDefined();
-  expect(screen.queryByText(/more on GitHub/)).toBeNull();
+  expect(await screen.findByText(`${coverage} None on GitHub.`)).toBeDefined();
+  expect(screen.queryByText(/· \d+ on GitHub/)).toBeNull();
 });
 
 it("names the repository on GitHub rows with a shared issue number across groups", async () => {
@@ -84,7 +84,7 @@ it("names the repository on GitHub rows with a shared issue number across groups
 it("explains when record authors are missing", async () => {
   card([], now, "unknown");
   expect(await screen.findByText(`${coverage} GitHub record authors are not set for one or more bound repositories.`)).toBeDefined();
-  expect(screen.queryByText(/None seen on GitHub/)).toBeNull();
+  expect(screen.queryByText(/None on GitHub/)).toBeNull();
 });
 
 it.each([
@@ -93,5 +93,5 @@ it.each([
 ] as const)("shows only the coverage line for unavailable data", async (agents, at) => {
   card(agents, at);
   expect(await screen.findByText(`${coverage} GitHub agent data is unavailable.`)).toBeDefined();
-  expect(screen.queryByText(/seen on GitHub\.|more on GitHub/)).toBeNull();
+  expect(screen.queryByText(/(?:None|\d+) on GitHub\.|· \d+ on GitHub/)).toBeNull();
 });

@@ -266,4 +266,35 @@ describe("footer summary: waiting on you and live GitHub agents", () => {
       clientWidth.mockRestore();
     }
   });
+
+  it("R4 reports no GitHub count while disconnected, matching the Cloud agents section", async () => {
+    const now = Date.now();
+    const stamp = new Date(now - 60_000).toISOString().replace(/\.\d{3}Z$/, "Z");
+    const repo = "example/sample-factory";
+    const binding = JSON.stringify([{
+      projectKey: "sample-factory", cloudroomProjectId: "prj_sample", repositories: [repo],
+      home: { hostId: "hst_sample", rootPath: "/synthetic/sample" },
+      orchestratorThreadId: "thr_orch", statusWriterLogin: "sample-writer",
+    }]);
+    const agents = [
+      { repository: repo, ticket: `${repo}#101`, commentId: 1, agent: "builder", harness: "Synthetic",
+        model: "Sample", state: "working", live: true, step: "Building", updatedAt: stamp, time: stamp },
+    ];
+    fakeTimers();
+    const rendered = renderSlot(line, {}, {
+      pluginId: "synthetic-footer-github-disconnect",
+      settings: { wizdeckFactories: binding },
+      sidebarThreads: { status: "ready", threads: v3Threads },
+      rpc: {
+        agentsFile: () => ({ kind: "content", text: JSON.stringify({ version: 1, generatedAt: stamp, agents }) }),
+      } as never,
+    });
+    await act(async () => { await Promise.resolve(); });
+    expect(screen.getByRole("status", { name: "4 running, 3 waiting on you, 1 on GitHub" })).toBeDefined();
+
+    await rendered.setRealtimeConnectionState("reconnecting");
+    outlastHold();
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(rendered.container.textContent).not.toContain("on GitHub");
+  });
 });

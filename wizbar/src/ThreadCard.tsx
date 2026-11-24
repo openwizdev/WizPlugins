@@ -22,10 +22,10 @@ import type { CardModelV3 } from "./v3-types";
 
 /**
  * One thread as a two-line card: title with status/age at the right, then
- * quiet details (PR/issue link, child count, activity, model/effort, harness
- * logo, machine icon); the branch shows on hover only. The card is the whole
- * point of this sidebar — status lives in the row instead of in its position,
- * which is what lets the list stay still.
+ * quiet details (project name in All projects, PR/issue link, child count,
+ * activity, model/effort, harness logo, machine icon); the branch shows on
+ * hover only. The card is the whole point of this sidebar — status lives in
+ * the row instead of in its position, which is what lets the list stay still.
  *
  * The row is a positioned container with a full-bleed anchor UNDER the
  * controls, the way bb's own thread row does it: a `<button>` inside an `<a>`
@@ -33,6 +33,7 @@ import type { CardModelV3 } from "./v3-types";
  */
 export function ThreadCard({
   thread,
+  projectName,
   isActive,
   canPark,
   onNavigate,
@@ -145,8 +146,17 @@ export function ThreadCard({
           <div
             role="group"
             aria-label="Thread details"
-            className="pointer-events-none relative mt-1 flex min-w-0 items-center gap-1 text-2xs text-muted-foreground"
+            className="pointer-events-none relative mt-1 flex min-w-0 items-center gap-1 overflow-hidden text-2xs text-muted-foreground"
           >
+            {projectName ? (
+              <span
+                data-project-name=""
+                className="min-w-0 truncate text-muted-foreground"
+                style={{ flexShrink: 3 }}
+              >
+                {projectName}
+              </span>
+            ) : null}
             {meta.link && pullRequest ? (
               <a
                 href={meta.link.pullRequest!.url}
@@ -154,9 +164,10 @@ export function ThreadCard({
                 rel="noreferrer"
                 onClick={(event) => event.stopPropagation()}
                 title={pullRequest.title}
+                style={{ flexShrink: 2 }}
                 className={cn(
                   CHIP_CLASS,
-                  "pointer-events-auto shrink-0 hover:underline",
+                  "pointer-events-auto hover:underline",
                   pullRequest.state === "merged"
                     ? "text-[color:var(--pr-merged)]"
                     : pullRequest.attention === "checks_failed" ||
@@ -240,10 +251,10 @@ export function useCardModel(threadId: string, revision: number | string = ""): 
   return served?.threadId === threadId ? served.item : null;
 }
 
-const CHIP_CLASS = "max-w-full shrink-0 rounded border border-border px-1 leading-4 [overflow-wrap:anywhere]";
+const CHIP_CLASS = "max-w-full min-w-0 truncate rounded border border-border px-1 leading-4";
 
 function Chip({ children }: { children: string }) {
-  return <span className={CHIP_CLASS}>{children}</span>;
+  return <span className={CHIP_CLASS} style={{ flexShrink: 2 }}>{children}</span>;
 }
 
 function ParkButton({
