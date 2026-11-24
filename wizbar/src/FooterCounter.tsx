@@ -227,7 +227,10 @@ export function FooterCounterArtwork({ source, className, card, waitingOnYou = 0
             position: "absolute", left: -CARD_MARGIN, right: -CARD_MARGIN, bottom: 0, height: CARD_GAP + CARD_RADIUS,
             background: cardBridge, pointerEvents: "none", zIndex: 0,
           }} />
-          {card(stale)}
+          {/* Any card content, positioned or not, stacks above the bridge. */}
+          <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+            {card(stale)}
+          </div>
         </div>
       ) : null}
     </div>

@@ -356,17 +356,21 @@ function SpecRow({ row, threads, now, activeThreadId, breath, onNavigate, onTogg
   const notes = row.needsYou > 0 || row.yoursLater > 0 || row.doneLastHour > 0 ? (
     <span data-notes="" className="flex h-[18px] min-w-0 shrink-[999] flex-wrap justify-end gap-x-2 overflow-hidden text-xs leading-[18px]"
       style={row.needsYou > 0 ? { minWidth: "min-content" } : undefined}>
-      {row.needsYou > 0 ? <span data-needs-you="" className="shrink-0" style={{ color: tokens.warning }}>{row.needsYou} needs you</span> : null}
+      {row.needsYou > 0 ? <span data-needs-you="" className="shrink-0 whitespace-nowrap" style={{ color: tokens.warning }}>{row.needsYou} needs you</span> : null}
       {/* #162: tickets the owner gets once their blockers close, quiet beside the due-now count. */}
       {row.yoursLater > 0 ? (
-        <span data-yours-later="" className="shrink-0 text-muted-foreground">
+        <span data-yours-later="" className="shrink-0 whitespace-nowrap text-muted-foreground">
           {row.needsYou > 0 ? `· ${row.yoursLater} later` : `${row.yoursLater} later`}
         </span>
       ) : null}
       {row.doneLastHour > 0 ? (
-        <span data-done-last-hour="" title={`${row.doneLastHour} done in the last hour`} className="shrink-0" style={{ color: tokens.doneNote }}>
-          {row.doneLastHour} done · 1h
-        </span>
+        <>
+          {/* The short form is for the eye; screen readers get the full words. */}
+          <span data-done-last-hour="" aria-hidden title={`${row.doneLastHour} done in the last hour`} className="shrink-0 whitespace-nowrap" style={{ color: tokens.doneNote }}>
+            {row.doneLastHour} done · 1h
+          </span>
+          <span className="sr-only">{row.doneLastHour} done in the last hour</span>
+        </>
       ) : null}
     </span>
   ) : null;

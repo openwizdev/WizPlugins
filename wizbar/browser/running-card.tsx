@@ -1,6 +1,7 @@
 import { renderSlot } from "@get-bb/plugin-sdk/testing/app";
 import { FooterCounter } from "../src/FooterCounter";
 import { ThreadCard } from "../src/ThreadCard";
+import { SpecsSection } from "../src/specs/SpecsSection";
 import { v4SpecsFile, v4Threads } from "../src/fixtures/v4";
 
 const [hostStyles] = Object.values(import.meta.glob(
@@ -30,8 +31,33 @@ const params = new URLSearchParams(location.search);
 const largeSummary = params.has("large-summary");
 const narrowFooter = params.has("narrow-footer");
 const denseCard = params.has("dense-card");
+const narrowSpec = params.get("narrow-spec");
 
-if (denseCard) {
+if (narrowSpec) {
+  // One spec row short of space: a long name, a ticket due now and one done in the last hour.
+  const base = v4SpecsFile.specs[0]!;
+  const [first, second] = [base.tickets[0]!, base.tickets[1] ?? base.tickets[0]!];
+  const file = {
+    ...v4SpecsFile, generatedAt: new Date(now - 60_000).toISOString().replace(/\.\d{3}Z$/, "Z"),
+    specs: [{
+      ...base, shortName: "A long sample spec name for narrow rows",
+      tickets: [
+        { ...first, state: "needs-you" as const, closedAt: null },
+        { ...second, ticket: `${base.spec.split("#")[0]}#${Number(second.ticket.split("#")[1]) + 1000}` as typeof second.ticket,
+          state: "done" as const, closedAt: new Date(now - 10 * 60_000).toISOString().replace(/\.\d{3}Z$/, "Z") },
+      ],
+    }],
+  };
+  renderSlot({ component: () => (
+    <aside style={{ width: `${Number(narrowSpec)}px` }} className="flex min-h-0 flex-col bg-sidebar text-foreground">
+      <SpecsSection threads={[]} now={now} activeThreadId={null} onNavigate={() => {}}
+        collapsed={false} onToggleCollapsed={() => {}} collapseFailed={false} />
+    </aside>
+  ) }, {}, {
+    pluginId: "narrow-spec-browser", settings: { wizdeckFactories: binding },
+    rpc: { specsFile: () => ({ kind: "content", text: JSON.stringify(file) }) } as never,
+  });
+} else if (denseCard) {
   const parent = {
     ...v4Threads[0]!,
     id: "dense-parent",
