@@ -190,20 +190,80 @@ describe("V3: the list-bottom line counts the one running rule", () => {
   const base = v3Threads.find(({ id }) => id === "thr_v3_pinned_idle")!;
   it("shows the stats panel's running total for the fixture rows", () => {
     renderSlot(line, {}, { sidebarThreads: { status: "ready", threads: v3Threads } });
-    expect(screen.getByRole("status", { name: "4 running" }).textContent).toBe("4 running");
+    expect(screen.getByRole("status", { name: "4 running, 3 waiting on you" }).textContent).toBe("4 running · 3 waiting on you");
   });
   it.each([
     ["busy but waiting on you", { hasPendingInteraction: true, indicator: "waiting-for-input" as const,
-      activity: { ...base.activity, backgroundCommands: 1 } }, "0"],
-    ["an attention indicator over an idle runtime", { indicator: "runtime" as const }, "0"],
-    ["runtime work behind no indicator", { status: "active" as const, runtimeStatus: "active" as const }, "1"],
-  ])("counts %s by runtime work, not the indicator", (_, overrides, expected) => {
+      activity: { ...base.activity, backgroundCommands: 1 } }, "0 running, 1 waiting on you", "0 running · 1 waiting on you"],
+    ["an attention indicator over an idle runtime", { indicator: "runtime" as const }, "0 running", "0 running"],
+    ["runtime work behind no indicator", { status: "active" as const, runtimeStatus: "active" as const }, "1 running", "1 running"],
+  ])("counts %s by runtime work, not the indicator", (_, overrides, expectedLabel, expectedText) => {
     renderSlot(line, {}, { sidebarThreads: { status: "ready", threads: [{ ...base, ...overrides }] } });
-    expect(screen.getByRole("status", { name: `${expected} running` }).textContent).toBe(`${expected} running`);
+    expect(screen.getByRole("status", { name: expectedLabel }).textContent).toBe(expectedText);
   });
   it("hides the number when a row's runtime status is unrecognised", () => {
     const rendered = renderSlot(line, {}, { sidebarThreads: { status: "ready",
       threads: [...v3Threads, { ...base, id: "thr_v3_future", runtimeStatus: "host-reconnecting" as never }] } });
     expect(rendered.container.innerHTML).toBe("");
+  });
+});
+
+describe("footer summary: waiting on you and live GitHub agents", () => {
+  it("shows waiting on you in warning colour and live GitHub agents in muted text when non-zero", async () => {
+    const now = Date.now();
+    const stamp = new Date(now - 60_000).toISOString().replace(/\.\d{3}Z$/, "Z");
+    const repo = "example/sample-factory";
+    const binding = JSON.stringify([{
+      projectKey: "sample-factory", cloudroomProjectId: "prj_sample", repositories: [repo],
+      home: { hostId: "hst_sample", rootPath: "/synthetic/sample" },
+      orchestratorThreadId: "thr_orch", statusWriterLogin: "sample-writer",
+    }]);
+    const agents = [
+      { repository: repo, ticket: `${repo}#101`, commentId: 1, agent: "builder", harness: "Synthetic",
+        model: "Sample", state: "working", live: true, step: "Building", updatedAt: stamp, time: stamp },
+      { repository: repo, ticket: `${repo}#102`, commentId: 2, agent: "reviewer", harness: "Synthetic",
+        model: "Sample", state: "working", live: true, step: "Reviewing", updatedAt: stamp, time: stamp },
+      { repository: repo, ticket: `${repo}#103`, commentId: 3, agent: "builder", harness: "Synthetic",
+        model: "Sample", state: "done", live: false, step: "Done", updatedAt: stamp, time: stamp },
+    ];
+    renderSlot(line, {}, {
+      pluginId: "synthetic-footer-github",
+      settings: { wizdeckFactories: binding },
+      sidebarThreads: { status: "ready", threads: v3Threads },
+      rpc: {
+        agentsFile: () => ({ kind: "content", text: JSON.stringify({ version: 1, generatedAt: stamp, agents }) }),
+      } as never,
+    });
+    const status = await screen.findByRole("status", { name: "4 running, 3 waiting on you, 2 on GitHub" });
+    expect(status.textContent).toBe("4 running · 3 waiting on you · 2 on GitHub");
+    const waiting = status.querySelector("[data-waiting-on-you]") as HTMLElement;
+    const github = status.querySelector("[data-on-github]") as HTMLElement;
+    expect(waiting.style.color).toContain("--warning");
+    expect(github.style.color).toContain("--muted-foreground");
+  });
+
+  it("drops the GitHub part first, then shortens waiting on you to waiting when narrow", () => {
+    const scrollWidth = vi.spyOn(HTMLElement.prototype, "scrollWidth", "get").mockImplementation(function (this: HTMLElement) {
+      const text = this.textContent ?? "";
+      return text.includes("on GitHub") ? 290 : text.includes("waiting on you") ? 240 : 180;
+    });
+    const clientWidth = vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(250);
+    try {
+      const rendered = renderSlot(candidate, { source: positiveSource, waitingOnYou: 1, onGitHub: 3 });
+      const status = screen.getByRole("status", { name: "5 running, 1 waiting on you, 3 on GitHub" });
+      expect(status.textContent).toBe("5 running · 1 waiting on you");
+      expect(status.querySelector("[data-on-github]")).toBeNull();
+      expect(status.querySelector("[data-waiting-on-you]")?.textContent).toBe("1 waiting on you");
+
+      clientWidth.mockReturnValue(200);
+      rendered.rerender(<FooterCounterArtwork source={positiveSource} waitingOnYou={2} onGitHub={3} />);
+      const narrowed = screen.getByRole("status", { name: "5 running, 2 waiting on you, 3 on GitHub" });
+      expect(narrowed.textContent).toBe("5 running · 2 waiting");
+      expect(narrowed.querySelector("[data-on-github]")).toBeNull();
+      expect(narrowed.querySelector("[data-waiting-on-you]")?.textContent).toBe("2 waiting");
+    } finally {
+      scrollWidth.mockRestore();
+      clientWidth.mockRestore();
+    }
   });
 });

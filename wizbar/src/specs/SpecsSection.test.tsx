@@ -676,7 +676,7 @@ describe("S1: the Specs section collapses", () => {
     const before = (a: Element, b: Element) => (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
     const lastCard = screen.getAllByRole("link").filter((link) => !region.contains(link)).at(-1)!;
     expect(before(lastCard, region)).toBe(true);
-    expect(before(region, screen.getByRole("status", { name: /^\d+ running$/ }))).toBe(true);
+    expect(before(region, screen.getByRole("status", { name: /^\d+ running\b/ }))).toBe(true);
   });
 });
 

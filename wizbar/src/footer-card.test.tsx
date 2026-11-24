@@ -209,7 +209,7 @@ function render(threads: readonly PluginSidebarThread[] = v4Threads, specsSort =
     rpc: { specsFile: () => ({ kind: "content", text: specsText }), cardModels: models(null, null, "none") } as never,
   });
 }
-const counter = () => screen.getByRole("status", { name: /^\d+ running$/ });
+const counter = () => screen.getByRole("status", { name: /^\d+ running\b/ });
 const trigger = () => within(counter()).getByRole("button");
 const card = () => screen.queryByRole("region", { name: "Running threads" });
 
@@ -226,10 +226,10 @@ describe("S4: no bolt; N running with its hover card", () => {
   // catches: subagents counted, or the matrix mark missing or in the wrong state.
   it("counts threads only, with a matrix mark", () => {
     render();
-    expect(counter().getAttribute("aria-label")).toBe("9 running");
-    expect(counter().textContent).toBe("9 running");
+    expect(counter().getAttribute("aria-label")).toBe("9 running, 1 waiting on you");
+    expect(counter().textContent).toBe("9 running · 1 waiting on you");
     // catches (#118 R1): a screen reader hears only the mark ("Working") on the focusable trigger, not the count.
-    expect(within(counter()).getByRole("button", { name: "9 running" })).toBe(trigger());
+    expect(within(counter()).getByRole("button", { name: "9 running, 1 waiting on you" })).toBe(trigger());
     expect(counter().querySelector("[data-matrix]")?.getAttribute("data-matrix")).toBe("working");
     cleanup();
     render([]);
@@ -564,11 +564,11 @@ describe("R1 (#172): the open card updates in place, with no flashing", () => {
     const count = counter();
     await push(snapshot(["thr_v4_code_a"]));
     expect(counter()).toBe(count);
-    expect(count.getAttribute("aria-label")).toBe("8 running");
+    expect(count.getAttribute("aria-label")).toBe("8 running, 1 waiting on you");
     expect(rowNode("thr_v4_code_a")?.getAttribute("data-leaving")).toBe("true");
     await tick(1000);
     await push(snapshot(["thr_v4_code_a", "thr_v4_stray"]));
-    expect(count.getAttribute("aria-label")).toBe("7 running");
+    expect(count.getAttribute("aria-label")).toBe("7 running, 1 waiting on you");
     await tick(1900);
     expect([rowNode("thr_v4_code_a"), rowNode("thr_v4_stray")].every((el) => el?.getAttribute("data-leaving") === "true")).toBe(true);
     await tick(100);
@@ -763,12 +763,12 @@ describe("R1 (#172): the open card updates in place, with no flashing", () => {
     await tick(100);
     expect(card()).toBe(section);
     expect(count.getAttribute("data-stale")).toBe("true");
-    expect(count.getAttribute("aria-label")).toBe("9 running, last known");
+    expect(count.getAttribute("aria-label")).toBe("9 running, 1 waiting on you, last known");
     fireEvent.keyDown(within(count).getByRole("button"), { key: "Escape" });
     expect(screen.queryByRole("status")).toBeNull();
     await act(() => rendered.setRealtimeConnectionState("connected"));
     await push(snapshot(["thr_v4_code_a"]));
-    expect(counter().getAttribute("aria-label")).toBe("8 running");
+    expect(counter().getAttribute("aria-label")).toBe("8 running, 1 waiting on you");
     expect(counter().hasAttribute("data-stale")).toBe(false);
   });
 });

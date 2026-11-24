@@ -207,7 +207,7 @@ it.skipIf(!browserPath)("shows all large machine totals without clipping or elli
   const page = await browser.newPage({ viewport: { width: 350, height: 600 } });
   try {
     await page.goto(`${url}?large-summary=1`);
-    await page.getByRole("button", { name: "360 running" }).hover();
+    await page.getByRole("button", { name: "360 running, 120 waiting on you" }).hover();
     const card = page.getByRole("region", { name: "Running threads" });
     const waiting = card.getByText("120 waiting on you");
     const machines = card.getByText("120 cloud, 120 local, 120 unknown");
