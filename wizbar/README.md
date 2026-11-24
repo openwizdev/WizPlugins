@@ -89,6 +89,10 @@ are in the [v0.3 sidebar contract](contracts/sidebar-v3.v1.md) and the
   and threads that left are removed together at most once every 3 seconds.
   Through a brief gap, `N running` keeps its last count; after 5 seconds it is
   marked last known while the card is open, and hidden once it is closed.
+  The card lists live GitHub status notes with no matching running sidebar
+  thread. These rows show the note's harness and model and open its issue or
+  pull request. The card reports their count separately as `N more on GitHub`.
+  `wizbar stats --json` reports the same rows in `unseen`.
 - **The producer** adds each ticket's last activity (`updatedAt`, from the
   issue's `updated_at` in the answer it already reads, no added requests) to
   `specs.v2.json` only; `specs.v1.json` is unchanged. WizBar 0.5.0 does not
@@ -135,8 +139,12 @@ are in the [v0.3 sidebar contract](contracts/sidebar-v3.v1.md) and the
   v2 on a tie; when neither is ready, it shows "Specs unavailable". So the
   producer and WizBar can be upgraded in either order. `--gh`
   names the `gh` to run (default: `gh` on `PATH`). Each run is one complete
-  scan, all or nothing: any failed read, or a scan needing more than 59
-  requests, writes nothing and keeps the last files. Unchanged pages cost
+  specs scan, all or nothing. After writing both specs files, it uses the
+  remaining requests from the run's 59-request budget to write
+  `.openwiz/agents.v1.json`. Repeat `--author <login>` to set record authors
+  or use each repository's `Record authors` row in `docs/agents/fleet.md`.
+  A failed agents read or exhausted budget keeps the last agents file.
+  The [agents file contract](contracts/agents.v1.md) describes the format. Unchanged pages cost
   nothing against GitHub's rate limit, by ETag, and the run line reports how
   many requests came back 304 unchanged. Run it every 10 minutes as a systemd user timer; how to run
   it once, install the timer, remove it, and how many specs fit in 59 requests
@@ -381,7 +389,10 @@ item that is neither a command nor listed here.
 
 - A finish time and an issue field are not exposed by the host yet; WizBar
   omits or discloses them.
-- Subagents are not counted; threads the sidebar does not see may be missing.
+- The desktop sidebar can omit cloud agents running in their own sandboxes.
+  WizBar shows the ones with a live status note from a known GitHub record
+  author. Agents without a qualifying note may be missing. Subagents do not
+  count toward the running thread total.
 - Cloud rows carry no branch or pull request in observed host data.
 - The real pinned order, footer placement, the hover card's real look and
   rollback to T3 Sidebar are unverified until #9. PR badges have appeared

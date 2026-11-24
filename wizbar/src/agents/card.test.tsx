@@ -7,7 +7,7 @@ import { v4Now, v4RealTitlesFile, v4Threads } from "../fixtures/v4";
 import type { GitHubAgent } from "./format";
 
 const repository = "example/sample-fleet";
-const now = new Date(v4Now).toISOString();
+const now = new Date(v4Now).toISOString().replace(".000Z", "Z");
 const builder: GitHubAgent = {
   repository, ticket: `${repository}#902`, agent: "builder", state: "working",
   harness: "Antigravity", model: "Gemini 4 Neon Medium", step: "Ran the fixture",
@@ -20,7 +20,7 @@ const reviewer: GitHubAgent = {
 const matched: GitHubAgent = { ...builder, ticket: `${repository}#903`, commentId: 13 };
 const coverage = "Cloud agents in their own sandbox may be missing from this list.";
 
-function card(agents: GitHubAgent[] | null, generatedAt = now) {
+function card(agents: readonly GitHubAgent[] | null, generatedAt = now) {
   vi.setSystemTime(v4Now);
   const active = v4Threads.find((row) => row.runtimeStatus === "active" && !row.hasPendingInteraction)!;
   const rows = [{ ...active, parentThreadId: null, displayTitle: "#903: Sample the reader" }];

@@ -21,15 +21,27 @@ With one repository under 100 open issues and pull requests, and specs of up to 
 | `pulls` | The open pull requests in the ticket's own repository whose body closes it, when that repository is bound |
 | `updatedAt` | v2 only (#183): the ticket's `updated_at` from the same sub-issues answer, its last activity, with no extra request, kept exactly as GitHub sent it (a fraction of a second included); left out when the answer has none or it is not a real UTC date and time, so the rest of the file still reads (#195). `specs.v1.json` never carries it |
 
+## GitHub agents
+
+After the specs scan, the producer uses the remaining request budget to write
+`.openwiz/agents.v1.json`. It reads at most three pages of recently updated
+issue comments per repository and caches their ETags separately in
+`.openwiz/agents.v1.etags.json`. Repeat `--author <login>` to set record
+authors for the run. Without these flags, each repository supplies its record
+authors in the GitHub identity table in `docs/agents/fleet.md`. A repository
+without a record author contributes no notes. A failed agents read or
+exhausted budget keeps the last agents file. See the
+[agents file contract](../../contracts/agents.v1.md).
+
 ## Run it once
 
 Use the factory home and repositories of your WizDeck factory binding (the `wizdeckFactories` setting):
 
 ```sh
-node wizbar/tools/specs-producer/producer.ts --home /path/to/factory-home --repo owner/name [--repo owner/other] [--gh /path/to/gh]
+node wizbar/tools/specs-producer/producer.ts --home /path/to/factory-home --repo owner/name [--repo owner/other] [--gh /path/to/gh] [--author login ...]
 ```
 
-It prints `wrote …/.openwiz/specs.v2.json and …/.openwiz/specs.v1.json: N specs, M requests (K unchanged)`, for example `25 specs, 31 requests (29 unchanged)`. `K` is how many of the `M` requests GitHub answered 304 unchanged: they count toward the 59-request budget, but not toward GitHub's rate limit. `--gh` is the `gh` to run, by default `gh` on `PATH`; a missing `gh` fails, keeps the last file and names `--gh` and `PATH`. WizBar calls a file older than 30 minutes stale, so run it on a timer.
+It prints `wrote …/.openwiz/specs.v2.json and …/.openwiz/specs.v1.json: N specs, M requests (K unchanged)`, for example `25 specs, 31 requests (29 unchanged)`. `K` is how many of the `M` requests GitHub answered 304 unchanged. The run line also reports the agents scan result. These requests count toward the 59-request budget, but not toward GitHub's rate limit. `--gh` is the `gh` to run, by default `gh` on `PATH`; a missing `gh` fails, keeps the last file and names `--gh` and `PATH`. WizBar calls a file older than 30 minutes stale, so run it on a timer.
 
 ## Run it every 10 minutes (systemd user timer)
 

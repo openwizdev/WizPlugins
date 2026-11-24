@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "generatedAt": "2026-11-20T12:00:00Z",
+  "agents": [
+    {
+      "repository": "example/sample-fleet",
+      "ticket": "example/sample-fleet#902",
+      "agent": "builder",
+      "state": "working",
+      "harness": "Antigravity",
+      "model": "Gemini 4 Neon Medium",
+      "step": "Ran the fixture",
+      "time": "2026-11-20T11:55:00Z",
+      "updatedAt": "2026-11-20T11:55:00Z",
+      "commentId": 10
+    },
+    {
+      "repository": "example/sample-fleet",
+      "ticket": "example/sample-fleet#903",
+      "agent": "reviewer",
+      "state": "asking",
+      "harness": "Antigravity",
+      "model": "Gemini 4 Neon Medium",
+      "step": "Ran the fixture",
+      "time": "2026-11-20T11:55:00Z",
+      "pr": "https://github.com/example/sample-fleet/pull/951",
+      "updatedAt": "2026-11-20T11:55:00Z",
+      "commentId": 20
+    }
+  ]
+}

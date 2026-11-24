@@ -9,6 +9,8 @@ import {
   useRpc,
   type PluginSidebarThread,
 } from "@get-bb/plugin-sdk/app";
+import { UnseenAgentGroups, UnseenDisclosure, UnseenSummary } from "./agents/UnseenAgents";
+import { useAgentsRead } from "./agents/use-agents";
 import { modelLabel } from "./card-meta";
 import { harnessName } from "./model-names";
 import { MatrixMark } from "./MatrixMark";
@@ -190,7 +192,8 @@ export function StatsPanel({ rows, stale = false }: { rows: readonly PluginSideb
   const now = Date.now();
   const specs = read ? readSpecsFile(read, now) : null;
   const file = specs?.status === "ready" ? specs.file : null;
-  const stats = computeStatsV4(rows, file, models, now, Intl.DateTimeFormat().resolvedOptions().timeZone);
+  const agents = useAgentsRead(now);
+  const stats = computeStatsV4(rows, file, models, now, Intl.DateTimeFormat().resolvedOptions().timeZone, agents);
   const resolved = cardRowLabels(rows ?? [], file, now);
   const threads = useCardThreads(stats.threads);
   const previousLabels = useRef(new Map<string, string>());
@@ -207,6 +210,7 @@ export function StatsPanel({ rows, stale = false }: { rows: readonly PluginSideb
     }}>
       {stats.status !== "ready" ? <p style={quiet}>Stats unavailable</p> : (
         <>
+          <UnseenSummary running={stats.running.total} unseen={stats.unseen} />
           <p style={{ ...quiet, flexShrink: 0 }}>{cardSummary(stats)}{stale ? " · last known" : ""}</p>
           {stats.harness.length > 0 ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 8, flexShrink: 0 }}>
@@ -246,9 +250,11 @@ export function StatsPanel({ rows, stale = false }: { rows: readonly PluginSideb
                 </li>
               );
             })}
+            <UnseenAgentGroups unseen={stats.unseen} specs={file} />
           </ul>
         </>
       )}
+      <UnseenDisclosure unseen={stats.unseen} />
     </section>
   );
 }

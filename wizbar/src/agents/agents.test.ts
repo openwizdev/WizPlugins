@@ -16,10 +16,11 @@ const binding = JSON.stringify([{
   home: { hostId: "sample-host", rootPath: "/synthetic/home" },
   orchestratorThreadId: "sample-orchestrator", statusWriterLogin: "sample-manager",
 }]);
+const stamp = (at: number) => new Date(at).toISOString().replace(".000Z", "Z");
 const note: GitHubAgent = {
   repository, ticket: `${repository}#902`, agent: "builder", state: "working",
   harness: "Antigravity", model: "Gemini 4 Neon Medium", step: "Ran the fixture",
-  time: new Date(v4Now).toISOString(), updatedAt: new Date(v4Now).toISOString(), commentId: 1,
+  time: stamp(v4Now), updatedAt: stamp(v4Now), commentId: 1,
 };
 const file = (agents: GitHubAgent[] = [note], now = v4Now) => ({ version: 1, generatedAt: new Date(now).toISOString(), agents });
 const content = (value: unknown) => ({ kind: "content" as const, text: JSON.stringify(value) });
@@ -43,7 +44,7 @@ it("distinguishes an empty snapshot from missing, expired, or malformed data", (
     { ...file(), agents: [{ ...note, step: "Tested " + "thr" + "_example" }] },
     { ...file(), agents: [{ ...note, ticket: "example/another#902" }] },
   ]) expect(readAgentsFile(content(value), v4Now)).toEqual({ status: "unavailable" });
-  expect(parse(file([{ ...note, updatedAt: new Date(v4Now - 30 * 60_000).toISOString() }])))
+  expect(parse(file([{ ...note, updatedAt: stamp(v4Now - 30 * 60_000) }])))
     .toEqual({ status: "ready", agents: [] });
 });
 

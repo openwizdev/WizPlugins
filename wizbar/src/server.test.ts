@@ -386,7 +386,7 @@ describe("wizbar stats", () => {
   // numbers at version 2, plus the harness split and the running threads in
   // `createdAt` order. No factory is bound here, so no thread names a spec.
   const thread = (id: string, title: string) => ({ id, title, providerId: "synthetic-provider", matrix: "working", spec: null, shortName: null, model: null, effort: null });
-  const v3StatsV4 = { ...v3Stats, version: 2, harness: [{ providerId: "synthetic-provider", count: 4 }], threads: [
+  const v3StatsV4 = { ...v3Stats, version: 2, unseen: { status: "unavailable", count: null, agents: [] }, harness: [{ providerId: "synthetic-provider", count: 4 }], threads: [
     thread("thr_v3_child_local", "Sample measure cache hits"), thread("thr_v3_parent_many", "Sample refine command palette"),
     thread("thr_v3_child_working", "Sample audit shortcuts"), thread("thr_v3_starting", "Sample update color tokens"),
   ] };
@@ -412,6 +412,7 @@ describe("wizbar stats", () => {
       "\"thr_v3_parent_many\": working Sample refine command palette",
       "\"thr_v3_child_working\": working Sample audit shortcuts",
       "\"thr_v3_starting\": working Sample update color tokens",
+      "Cloud agents in their own sandbox may be missing from this list.",
     ].join("\n") + "\n");
   });
 
@@ -435,7 +436,7 @@ describe("wizbar stats", () => {
     expect(JSON.parse(json.stdout!)).toEqual({ error: { code: "state_unavailable", message: "Thread state is unavailable." } });
     const text = await host.run(["stats"]);
     expect(text.exitCode).toBe(1);
-    expect(text.stdout).toBe("ERROR state_unavailable: Thread state is unavailable.\n");
+    expect(text.stdout).toBe("ERROR state_unavailable: Thread state is unavailable.\nCloud agents in their own sandbox may be missing from this list.\n");
   });
 
   it.each([["stats", "thr_v3_parent_many"], ["stats", "--json", "--json"], ["stats", "--until", "hour"], ["stats", "--", "x"]])(

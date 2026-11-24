@@ -50,12 +50,13 @@ const props = { dismiss() {} };
 afterEach(() => { cleanup(); fixtureFeed.current = null; settingsFeed.current = null; vi.useRealTimers(); });
 
 const lines = () => [...(screen.queryByRole("region", { name: "Running threads" })?.querySelectorAll("p") ?? [])].map((p) => p.textContent);
+const agentCoverage = "Cloud agents in their own sandbox may be missing from this list.";
 const fixtureLine = "3 waiting on you · 1 cloud, 2 local, 1 unknown";
 
 describe("V3: footer stats panel", () => {
   it("shows the contract's numbers and coverage disclosures for the fixture", () => {
     const rendered = renderSlot(panel, props, { sidebarThreads: { status: "ready", threads: v3Threads } });
-    expect(lines()).toEqual([fixtureLine]);
+    expect(lines()).toEqual([fixtureLine, agentCoverage]);
     expect(rendered.sdkCalls).toEqual([]);
     expect(rendered.rpcCalls.map(({ method }) => method)).toEqual(["cardModels"]);
     expect(rendered.navigateCalls).toEqual([]);
@@ -68,7 +69,7 @@ describe("V3: footer stats panel", () => {
     ["an unrecognised runtime status", { status: "ready" as const, threads: unknownRuntime as PluginSidebarThread[] }],
   ])("shows a plain unavailable state, never a number, for %s", (_, sidebarThreads) => {
     renderSlot(panel, props, { sidebarThreads });
-    expect(lines()).toEqual(["Stats unavailable"]);
+    expect(lines()).toEqual(["Stats unavailable", agentCoverage]);
   });
 
   it("drops its numbers when the realtime connection is lost", async () => {

@@ -7,6 +7,7 @@ export type AgentsRead = { status: "ready"; agents: GitHubAgent[] } | { status: 
 const unavailable: AgentsRead = { status: "unavailable" };
 const plain = (max: number) => z.string().refine((value) => publicText(value, max));
 const utc = z.iso.datetime();
+const utcSeconds = z.iso.datetime({ precision: 0 });
 const agentSchema = z.object({
   repository: plain(300).refine((value) => repositoryPattern.test(value)),
   ticket: z.string(),
@@ -15,9 +16,9 @@ const agentSchema = z.object({
   harness: plain(60),
   model: plain(60),
   step: plain(300),
-  time: utc,
+  time: utcSeconds,
   pr: plain(300).refine((value) => pullPattern.test(value)).optional(),
-  updatedAt: utc,
+  updatedAt: utcSeconds,
   commentId: z.int().positive(),
 }).strict().refine(({ repository, ticket }) => {
   const number = ticket.slice(repository.length + 1);
