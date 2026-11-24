@@ -90,6 +90,17 @@ Pinned, snoozed, muted and settled matches stay on their shelves.
   and threads that left are removed together at most once every 3 seconds.
   Through a brief gap, `N running` keeps its last count; after 5 seconds it is
   marked last known while the card is open, and hidden once it is closed.
+  The card shows awake, starting and asleep totals and scrolls through every
+  running thread. Specs follow the sidebar's sort, with `Other` last. Click a
+  group heading to fold or open it for the session. Untitled rows show a role
+  and ticket when the fallback names one, or the harness name otherwise.
+  The current heading stays visible as you scroll, and a fade shows
+  when more rows are available. Run `npm run test:browser` from `wizbar/`
+  to run the same Chromium regression as CI. Locally it uses Chrome or
+  Chromium when available and skips with a message otherwise. Install
+  Chromium with `npx playwright-core install chromium` or set
+  `CHROMIUM_PATH` to select a browser. Set `WIZBAR_BROWSER_EVIDENCE=1`
+  to save the four screenshots.
 - **The producer** adds each ticket's last activity (`updatedAt`, from the
   issue's `updated_at` in the answer it already reads, no added requests) to
   `specs.v2.json` only; `specs.v1.json` is unchanged. WizBar 0.5.0 does not

@@ -12,7 +12,9 @@ import {
   v4TimeZone, type StatsV4,
 } from "./fixtures/v4";
 import { cardBatch, cardPinNext, cardRowLabel, cardRowLabels, cardSummary, computeStatsV4, emptyCardBatch, formatStatsText } from "./stats";
+import { v6Now, v6SpecsFileText } from "./fixtures/v6";
 import { createSpecsCommands } from "./specs/cli";
+import { specRows } from "./specs/rows";
 
 // R1 (#172): a live host feed. While set, the sidebar hook reads these rows and re-renders when they change,
 // as the host does on every realtime update; unset, the harness's fixed rows stand.
@@ -66,6 +68,81 @@ describe("S4: the card's data is one computation (sections 7 and 8)", () => {
     expect(cardSummary({ ...ready, running: { ...ready.running, unknown: 0 } })).toBe("1 waiting on you · 7 cloud, 1 local");
   });
 
+  it("groups in Specs order, starts open, and remembers a fold when the card closes", async () => {
+    render();
+    fireEvent.click(trigger());
+    const headers = () => within(card()!).getAllByRole("button", { expanded: true }).map((button) => button.textContent);
+    await waitFor(() => expect(headers()).toEqual(["Sample palette 4", "Sample finished 1", "Other 4"]));
+    expect(within(card()!).getByText("8 awake · 1 starting · 6 asleep")).toBeTruthy();
+
+    const header = within(card()!).getByRole("button", { name: "Sample palette 4" });
+    const controlled = document.getElementById(header.getAttribute("aria-controls")!);
+    expect.soft(controlled?.querySelectorAll("[data-thread]")).toHaveLength(4);
+    expect.soft(header.querySelector("[data-chevron]")?.getAttribute("data-chevron")).toBe("open");
+    fireEvent.click(header);
+    expect.soft(controlled?.hidden).toBe(true);
+    expect.soft(header.querySelector("[data-chevron]")?.getAttribute("data-chevron")).toBe("closed");
+    expect(card()!.querySelector('[data-thread="thr_v4_builder_a"]')).toBeNull();
+    fireEvent.keyDown(trigger(), { key: "Escape" });
+    fireEvent.click(trigger());
+    const folded = await within(card()!).findByRole("button", { name: "Sample palette 4", expanded: false });
+    fireEvent.click(folded);
+    expect(card()!.querySelector('[data-thread="thr_v4_builder_a"]')).toBeTruthy();
+  });
+
+  it.each([
+    ["needs-you", ["Sample echo 1", "Sample alpha 1", "Other 1"]],
+    ["newest", ["Sample alpha 1", "Sample echo 1", "Other 1"]],
+  ] as const)("uses the Specs section's %s sort for the groups", async (sort, expected) => {
+    vi.setSystemTime(v6Now);
+    const rows = ["702", "742", "999"].map((n) => {
+      const title = `Builder · SS${n}: Sample task`;
+      return { ...v4Threads[0]!, id: `sample-${n}`, title, displayTitle: title };
+    });
+    render(rows, sort, v6SpecsFileText);
+    fireEvent.click(trigger());
+    await waitFor(() => expect(within(card()!).getAllByRole("button", { expanded: true }).map((button) => button.textContent))
+      .toEqual(expected));
+  });
+
+  it("labels untitled rows with a role and number or harness and preserves raw JSON titles", async () => {
+    const cases = [
+      [null, "You are the BUILDER for example/sample#23. Please begin.", "Builder · #23"],
+      ["", "YOU ARE A FRESH REVIEWER FOR the sample change #45 at abc1234", "Reviewer · #45"],
+      [null, "You are the builder for SamplePlugins#67.", "Builder · #67"],
+      ["", "You are the builder for #89.", "Builder · #89"],
+      [null, "You are a fresh reviewer for SamplePlugins#91.", "Reviewer · #91"],
+      [null, "You are a fresh reviewer for #92.", "Reviewer · #92"],
+      [null, "Please review the sample.", "Codex thread"],
+      ["You are the builder for example/sample#99", null, "You are the builder for example/sample#99"],
+    ] as const;
+    const rows = cases.map(([title, titleFallback], i) => ({
+      ...v4Threads[0]!, id: `sample-${i}`, providerId: "codex", title, titleFallback, displayTitle: title || titleFallback!,
+    }));
+    const data = computeStatsV4(rows, null, null, v4Now, "UTC");
+    expect(data.threads?.map(({ title }) => title)).toEqual(rows.map(({ displayTitle }) => displayTitle));
+
+    render(rows);
+    fireEvent.click(trigger());
+    expect([...card()!.querySelectorAll("[data-title]")].map((node) => node.textContent)).toEqual(cases.map(([, , label]) => label));
+  });
+
+  it("places a running child under Other when its fleet parent is archived", async () => {
+    const fleet = v4RealTitleThreads.find(({ id }) => id === "thr_rt_fleet")!;
+    const child = v4RealTitleThreads.find(({ id }) => id === "thr_rt_helper")!;
+    const archived = { ...fleet, isArchived: true, archivedAt: v4Now };
+    const result = computeStatsV4([archived, child], v4RealTitlesFile, null, v4Now, "UTC");
+    expect(result.threads).toMatchObject([{ id: child.id, spec: null, shortName: null }]);
+    // A titled ticket can still match independently when that same specs file arrives.
+    const builder = v4RealTitleThreads.find(({ id }) => id === "thr_rt_builder")!;
+    render([archived, child, builder], "newest", JSON.stringify(v4RealTitlesFile));
+    fireEvent.click(trigger());
+    await within(card()!).findByRole("button", { name: "Sample kernel 1" });
+    const other = within(card()!).getByRole("button", { name: "Other 1" });
+    expect(document.getElementById(other.getAttribute("aria-controls")!)?.querySelector("[data-thread]")?.getAttribute("data-thread"))
+      .toBe(child.id);
+  });
+
   // catches (0.5 E): a row that repeats the whole task, or drops the title of a thread with no role.
   it("labels a row by role and code, or by the full title when there is no role", () => {
     expect(cardRowLabel("Builder · SP-2: Sample add keyboard paths")).toBe("Builder · SP-2");
@@ -86,7 +163,7 @@ describe("S4: the card's data is one computation (sections 7 and 8)", () => {
 
   // catches (#118 R2): real `#N:` and `Review #P at` titles shown raw on the card instead of role and ticket code.
   it("labels real titles by role and their ticket's code", () => {
-    const labels = cardRowLabels(v4RealTitleThreads, v4RealTitlesFile, v4Now);
+    const labels = cardRowLabels(v4RealTitleThreads, specRows(v4RealTitlesFile, v4RealTitleThreads, [], v4Now).specs);
     expect(Object.fromEntries(v4RealTitleThreads.map((t) => [t.id, labels.get(t.id)]))).toEqual({
       thr_rt_fleet: "Fleet #900: Sample kernel",
       thr_rt_builder: "Builder · KN2",
@@ -101,7 +178,7 @@ describe("S4: the card's data is one computation (sections 7 and 8)", () => {
       thr_rt_lost_child: "#5: Sample nothing",
     });
     // With no ready specs file, only the title's own form can give a code.
-    const bare = cardRowLabels(v4RealTitleThreads, null, v4Now);
+    const bare = cardRowLabels(v4RealTitleThreads, []);
     expect([bare.get("thr_rt_builder"), bare.get("thr_rt_no_hyphen")]).toEqual(["#902: Sample the driver", "Builder · AP11"]);
   });
 
@@ -125,11 +202,11 @@ const { MODEL_REFRESH_MS } = await import("./StatsPanel");
 const binding = JSON.stringify([{ projectKey: "sample-factory", cloudroomProjectId: "prj_v4_atlas", repositories: ["example/sample-plans"],
   home: { hostId: "hst_v4_home", rootPath: "/synthetic/home" }, orchestratorThreadId: "thr_v4_orchestrator", statusWriterLogin: "sample-manager" }]);
 
-function render(threads: readonly PluginSidebarThread[] = v4Threads) {
+function render(threads: readonly PluginSidebarThread[] = v4Threads, specsSort = "needs-you", specsText = v4SpecsFileText) {
   return renderSlot({ component: FooterCounter }, {}, {
-    pluginId: "synthetic-wb4-3", settings: { wizdeckFactories: binding },
+    pluginId: "synthetic-wb4-3", settings: { wizdeckFactories: binding, specsSort },
     sidebarThreads: { status: "ready", threads: [...threads] },
-    rpc: { specsFile: () => ({ kind: "content", text: v4SpecsFileText }), cardModels: models(null, null, "none") } as never,
+    rpc: { specsFile: () => ({ kind: "content", text: specsText }), cardModels: models(null, null, "none") } as never,
   });
 }
 const counter = () => screen.getByRole("status", { name: /^\d+ running$/ });
@@ -167,23 +244,25 @@ describe("S4: no bolt; N running with its hover card", () => {
     expect(within(region).getByText(cardSummary(ready))).toBeTruthy();
     expect([...region.querySelectorAll("[data-harness]")].map((el) => [el.getAttribute("data-harness"), el.getAttribute("data-count")]))
       .toEqual(ready.harness.map((h) => [h.providerId, String(h.count)]));
-    await waitFor(() => expect(region.querySelectorAll("[data-spec-name]").length).toBe(5));
+    await waitFor(() => expect(region.querySelectorAll("[data-spec-name]").length).toBe(2));
     const rows = [...region.querySelectorAll("[data-thread]")].map((el) => ({
       id: el.getAttribute("data-thread"), matrix: el.querySelector("[data-matrix]")?.getAttribute("data-matrix"),
-      title: el.querySelector("[data-title]")?.textContent, shortName: el.querySelector("[data-spec-name]")?.textContent ?? null,
+      title: el.querySelector("[data-title]")?.textContent, shortName: el.getAttribute("data-thread-spec") ?? null,
     }));
     expect(rows.map(({ title, ...row }) => row)).toEqual(
-      ready.threads.map((t) => ({ id: t.id, matrix: t.matrix, shortName: t.shortName })),
+      ["Sample palette", "Sample finished", null].flatMap((name) => ready.threads
+        .filter((t) => t.shortName === name)
+        .map((t) => ({ id: t.id, matrix: t.matrix, shortName: t.shortName }))),
     );
     expect(rows.map(({ title }) => title)).toEqual([
-      "Sample palette fleet",
       "Builder · SP-2",
-      "Builder · SH-1",
-      "Reviewer · SF-2",
-      "Builder · ZZ-1",
       "Reviewer · SP-3",
       "Builder · SC-1",
       "Builder · SP-4",
+      "Reviewer · SF-2",
+      "Sample palette fleet",
+      "Builder · SH-1",
+      "Builder · ZZ-1",
       "Sample tidy imports",
     ]);
   });
@@ -244,10 +323,10 @@ describe("S4: no bolt; N running with its hover card", () => {
     });
     fireEvent.pointerEnter(counter().parentElement!);
     const row = (id: string) => card()!.querySelector(`[data-thread=${id}]`)!;
-    await waitFor(() => expect(row("thr_rt_builder").querySelector("[data-spec-name]")?.textContent).toBe("Sample kernel"));
+    await waitFor(() => expect(row("thr_rt_builder").getAttribute("data-thread-spec")).toBe("Sample kernel"));
     expect(row("thr_rt_builder").querySelector("[data-title]")?.textContent).toBe("Builder · KN2");
     expect(row("thr_rt_reviewer").querySelector("[data-title]")?.textContent).toBe("Reviewer · KN3");
-    expect(row("thr_rt_helper").querySelector("[data-spec-name]")?.textContent).toBe("Sample kernel");
+    expect(row("thr_rt_helper").getAttribute("data-thread-spec")).toBe("Sample kernel");
   });
 
   // catches (0.5 E): model · effort dropped from a one-line row, or put on a second line.
@@ -337,7 +416,7 @@ describe("WB4-10: the running card stays reachable", () => {
 
   // catches (#1532): the card mounted before its trigger, so Tab from the trigger leaves the card
   // (and the blur closes it), or thread buttons that hide the focus ring.
-  it("Tab reaches the legend and then the first thread with visible focus while the card stays open", () => {
+  it("Tab reaches the legend and then the first group with visible focus while the card stays open", () => {
     render();
     act(() => trigger().focus());
     expect(card()).toBeTruthy();
@@ -444,6 +523,18 @@ describe("R1 (#172): the open card updates in place, with no flashing", () => {
       for (const [id, node] of rows0) expect(rowNode(id), `row ${id} at ${second}s`).toBe(node);
       await tick(1000);
     }
+  });
+
+  it("keeps keyboard focus on a row updated within the same spec", async () => {
+    await pinned();
+    const id = "thr_v4_code_a";
+    const button = rowNode(id)!.querySelector("button")!;
+    act(() => button.focus());
+    const title = "Builder · SP-3: Sample revised task";
+    await push(snapshot().map((row) => row.id === id ? { ...row, title, displayTitle: title } : row));
+    expect(button.textContent).toContain("Builder · SP-3");
+    expect(rowNode(id)?.getAttribute("data-thread-spec")).toBe("Sample palette");
+    expect(document.activeElement).toBe(button);
   });
 
   it("keeps a departing row's resolved title until the faded row is removed", async () => {
