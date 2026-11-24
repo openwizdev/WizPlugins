@@ -6,7 +6,7 @@ import type { ChildrenResultV3, MovePositionV3, MoveResultV3, PinResultV3 } from
 import type { StatsV4 } from "./fixtures/v4";
 import type { SpecsCommands } from "./specs/cli";
 
-import { threadSorts, threadStatuses, type ThreadSort } from "./settings";
+import { composerFooterModes, threadSorts, threadStatuses, type ComposerFooterMode, type ThreadSort } from "./settings";
 import type { ThreadRow, ThreadSelectors } from "./threads";
 
 export type LifecycleOperation = "settle" | "unsettle" | "snooze" | "unsnooze" | "mute" | "unmute" | "list";
@@ -29,7 +29,8 @@ type Execute = (operation: LifecycleOperation, threadId: string, until?: number,
 const operations = ["settle", "unsettle", "snooze", "unsnooze", "mute", "unmute", "list"] as const;
 const threadsUsage = "threads [--search <text>] [--sort <newest|activity|status|harness|model|effort>] [--status <s>] [--harness <h>] [--model <m>] [--effort <e>] [--all] [--json]";
 const specsUsage = "specs [--sort <needs-you|recent|closest|newest>] [--json]";
-const usage = `wizbar <settle|unsettle|snooze|unsnooze|mute|unmute|list|pin|unpin|move> <id>... [--until <absolute-time|hour|evening|tomorrow|next-week>] [--before <id>|--after <id>|--first|--last] [--json] | wizbar stats [--json] | wizbar children <id> [--json] | wizbar ${specsUsage} | wizbar spec <n> (--open | --close) [--json] | wizbar ${threadsUsage}`;
+const footerUsage = "footer <show|pinned|all> [--json]";
+const usage = `wizbar <settle|unsettle|snooze|unsnooze|mute|unmute|list|pin|unpin|move> <id>... [--until <absolute-time|hour|evening|tomorrow|next-week>] [--before <id>|--after <id>|--first|--last] [--json] | wizbar stats [--json] | wizbar children <id> [--json] | wizbar ${specsUsage} | wizbar spec <n> (--open | --close) [--json] | wizbar ${threadsUsage} | wizbar ${footerUsage}`;
 
 /** WZ21: the host's pins, through WizBar's server (sidebar-v3.v1.md section 7). */
 export interface PinOperations {
@@ -182,7 +183,43 @@ async function runThreads(options: ThreadsOptions, json: boolean, read: ReadThre
   }
 }
 
-export function createLifecycleCommand(execute: Execute, readStats: ReadStats, pins?: PinOperations, children?: ReadChildren, specs?: SpecsCommands, threads?: ReadThreads): PluginCliRegistration {
+export type SaveComposerFooter = (mode: ComposerFooterMode, signal?: AbortSignal) => Promise<ComposerFooterMode>;
+
+async function runFooter(
+  argv: readonly string[],
+  json: boolean,
+  save: SaveComposerFooter,
+  signal?: AbortSignal,
+): Promise<PluginCliResult | null> {
+  const args: string[] = [];
+  let positional = false;
+  let jsonSeen = false;
+  for (const arg of argv.slice(1)) {
+    if (positional) args.push(arg);
+    else if (arg === "--") positional = true;
+    else if (arg === "--json") {
+      if (jsonSeen) return null;
+      jsonSeen = true;
+    } else if (arg.startsWith("--")) return null;
+    else args.push(arg);
+  }
+  if (args.length !== 1 || !(composerFooterModes as readonly string[]).includes(args[0]!)) return null;
+  try {
+    const composerFooter = await save(args[0]! as ComposerFooterMode, signal);
+    return {
+      exitCode: 0,
+      stdout: (json ? JSON.stringify({ composerFooter }) : `composerFooter: ${composerFooter}`) + "\n",
+    };
+  } catch {
+    const error = { code: "settings_failed", message: "The settings write failed." };
+    return {
+      exitCode: 1,
+      ...(json ? { stdout: JSON.stringify({ error }) + "\n" } : { stderr: `${error.message}\n` }),
+    };
+  }
+}
+
+export function createLifecycleCommand(execute: Execute, readStats: ReadStats, pins?: PinOperations, children?: ReadChildren, specs?: SpecsCommands, threads?: ReadThreads, footer?: SaveComposerFooter): PluginCliRegistration {
   return {
     name: "wizbar",
     summary: "List or change WizBar thread shelves.",
@@ -195,6 +232,7 @@ export function createLifecycleCommand(execute: Execute, readStats: ReadStats, p
         { name: "move", summary: "move one pinned thread", usage: "move <id> (--before <id> | --after <id> | --first | --last) [--json]" },
       ] : []),
       ...(threads ? [{ name: "threads", summary: "list and search active threads", usage: threadsUsage }] : []),
+      ...(footer ? [{ name: "footer", summary: "show or hide the bar under the thread composer", usage: footerUsage }] : []),
       ...(children ? [{ name: "children", summary: "list one thread's children", usage: "children <id> [--json]" }] : []),
       ...(specs ? [
         { name: "specs", summary: "the running specs the Specs section shows", usage: specsUsage },
@@ -223,6 +261,7 @@ export function createLifecycleCommand(execute: Execute, readStats: ReadStats, p
         const options = parseThreadsOptions(argv.slice(1));
         return options ? runThreads(options, json, threads, ctx.signal) : failUsage();
       }
+      if (footer && operation === "footer") return await runFooter(argv, json, footer, ctx.signal) ?? failUsage();
       if (children && operation === "children") return await runChildren(argv, json, children, ctx.signal) ?? failUsage();
       if (specs && (operation === "specs" || operation === "spec")) return await specs.run(argv, json, ctx.signal) ?? failUsage();
       if (pins && pinOperations.includes(operation as never)) {

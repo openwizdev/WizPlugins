@@ -183,3 +183,47 @@ describe("C0: specsSort reads one of four sorts", () => {
     expect(readSpecsSort(raw)).toBe(sort);
   });
 });
+
+describe("F1: composerFooter reads one of three modes and reloads cleanly", () => {
+  it.each([
+    ["show", "show"],
+    ["pinned", "pinned"],
+    ["all", "all"],
+    [undefined, "show"],
+    ["unknown", "show"],
+    [true, "show"],
+    [42, "show"],
+  ] as const)("reads %j as %s", async (raw, expected) => {
+    const { readComposerFooter } = await import("./settings");
+    expect(readComposerFooter(raw)).toBe(expected);
+  });
+
+  it("reloads 0.6 and 0.7 settings unchanged with composerFooter starting at show and persisting writes", async () => {
+    let read: () => Promise<Record<string, unknown>> = async () => ({});
+    const factory = (bb: BbPluginApi) => {
+      const definition = vi.spyOn(bb.settings, "define");
+      plugin(bb);
+      const handles = definition.mock.results.map((result) => result.value as { get(): Promise<Record<string, unknown>> });
+      read = async () => Object.assign({}, ...await Promise.all(handles.map((handle) => handle.get())));
+    };
+    const stored07 = {
+      ...v6Store050,
+      specsSort: "recent",
+      sectionsOrder: '["pinned","cloud","specs","yours"]',
+      threadsSort: "activity",
+      threadsFilter: '{"status":"idle"}',
+    };
+    let host = createFakePluginHost({ pluginId: "wizbar" });
+    hosts.push(host);
+    factory(host.bb);
+    await host.harness.behavior.setSettings(stored07);
+    host = await host.harness.lifecycle.reload(factory);
+    hosts.push(host);
+    expect(await read()).toEqual({ ...stored07, composerFooter: "show" });
+
+    await host.harness.behavior.setSettings({ composerFooter: "pinned" });
+    host = await host.harness.lifecycle.reload(factory);
+    hosts.push(host);
+    expect(await read()).toEqual({ ...stored07, composerFooter: "pinned" });
+  });
+});

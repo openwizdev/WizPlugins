@@ -401,6 +401,8 @@ them, `{"models":[{"threadId","model","effort","modelLabel"}]}`, `modelLabel`
 only when there is a model. With `--raw`
 each item adds the host's raw answer and any context fallback model.
 
+**`footer <show|pinned|all>`** saves the **Composer footer** setting (`composerFooter`, default `show`), matching the select in WizBar's settings page ("Show", "Hide on pinned threads", "Hide everywhere"). It hides the bar under the thread composer by matching the host's `data-follow-up-composer-footer` attribute from a WizBar content script; if that attribute disappears, nothing breaks and the bar shows again. With `--json` it prints `{"composerFooter":"pinned"}`.
+
 The values above are examples. The full JSON shapes and error codes are in
 [section 7 of the v0.3 contract](contracts/sidebar-v3.v1.md#7-cli) and
 [section 8 of the v0.4 contract](contracts/specs-section.v1.md#8-cli). Live dispatch,

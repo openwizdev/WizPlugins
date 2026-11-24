@@ -73,6 +73,20 @@ export const threadsSettingDescriptors = {
   },
 } satisfies PluginSettingDescriptors;
 
+export const composerFooterModes = ["show", "pinned", "all"] as const;
+export type ComposerFooterMode = (typeof composerFooterModes)[number];
+
+export const composerFooterSettingDescriptors = {
+  composerFooter: {
+    type: "string", label: "Composer footer", default: "show",
+    description: "Hide the bar under the thread composer: show, pinned or all.",
+  },
+} satisfies PluginSettingDescriptors;
+
+export function readComposerFooter(raw: unknown): ComposerFooterMode {
+  return (composerFooterModes as readonly unknown[]).includes(raw) ? raw as ComposerFooterMode : "show";
+}
+
 export const threadSorts = ["newest", "activity", "status", "harness", "model", "effort"] as const;
 export type ThreadSort = (typeof threadSorts)[number];
 export const threadStatuses = ["needs-you", "failed", "working", "unread", "idle"] as const;

@@ -444,6 +444,14 @@ describe("composer footer CLI parity", () => {
     const show = await run(["footer", "show", "--json"]);
     expect(show).toEqual({ exitCode: 0, json: { composerFooter: "show" } });
 
+    const saved = await run(["footer", "pinned", "--json"]);
+    expect(saved).toEqual({ exitCode: 0, json: { composerFooter: "pinned" } });
+    const reloaded = await host.harness.lifecycle.reload((bb) => { plugin(bb); });
+    hosts.push(reloaded);
+    const afterReload = await reloaded.harness.behavior.runCli(["footer", "all", "--json"]);
+    expect(afterReload.exitCode).toBe(0);
+    expect(JSON.parse(afterReload.stdout!)).toEqual({ composerFooter: "all" });
+
     const invalid = await run(["footer", "sometimes", "--json"]);
     expect(invalid.exitCode).toBe(2);
     expect(invalid.json.error.code).toBe("usage");

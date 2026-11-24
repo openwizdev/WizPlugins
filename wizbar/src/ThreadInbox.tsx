@@ -24,7 +24,8 @@ import { cloudAgents } from "./agents/cloud";
 import { useAgentsRead } from "./agents/use-agents";
 import { FooterCounter } from "./FooterCounter";
 import { MachineIcon } from "./MachineIcon";
-import { useFeatureSourceStatus } from "./SettingsPage";
+import { useComposerFooterMode, useFeatureSourceStatus } from "./SettingsPage";
+import { shouldHideComposerFooter, syncComposerFooterAttribute } from "./composer-footer";
 import { SlimRow } from "./SlimRow";
 import { useLifecycle } from "./useLifecycle";
 import { SpecsReadContext, SpecsSection, useSpecsRead } from "./specs/SpecsSection";
@@ -79,6 +80,15 @@ export function ThreadInbox({
 }: PluginThreadListProps) {
   const { status, threads, projects } = useSidebarThreads();
   useFeatureSourceStatus("icons", status === "ready" ? "unverified" : "unavailable");
+  const composerFooter = useComposerFooterMode();
+  const activeThread = useMemo(
+    () => (activeThreadId ? threads.find((thread) => thread.id === activeThreadId) ?? null : null),
+    [activeThreadId, threads],
+  );
+  useEffect(() => {
+    syncComposerFooterAttribute(shouldHideComposerFooter(composerFooter, activeThread));
+  }, [composerFooter, activeThread]);
+  useEffect(() => () => syncComposerFooterAttribute(false), []);
   const actions = useSidebarThreadActions();
   const lifecycle = useLifecycle(threads);
   const [scope, setScope] = useState<string>(ALL_PROJECTS);

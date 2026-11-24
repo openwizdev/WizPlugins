@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
+import { createElement, useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";
-import { cleanup, waitFor } from "@testing-library/react";
+import { act, cleanup, waitFor } from "@testing-library/react";
 import { loadPluginApp, renderSlot } from "@get-bb/plugin-sdk/testing/app";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import { v3Threads } from "./fixtures/v3";
@@ -113,5 +114,38 @@ describe("composer footer attribute in ThreadInbox", () => {
     });
     rendered.unmount();
     expect(document.documentElement.hasAttribute(HIDE_ATTR)).toBe(false);
+  });
+
+  it("updates the attribute when switching between pinned and unpinned active threads", async () => {
+    const ThreadList = app.threadLists[0]!.component;
+    let setActive!: (id: string | null) => void;
+    function Harness() {
+      const [activeThreadId, setActiveThreadId] = useState<string | null>(pinnedThread.id);
+      setActive = setActiveThreadId;
+      return createElement(ThreadList, {
+        activeThreadId,
+        activeProjectId: null,
+        isCompactViewport: false,
+        onNavigate() {},
+        searchQuery: "",
+      });
+    }
+    renderSlot({ component: Harness }, {}, {
+      pluginId: `synthetic-composer-footer-${++fixtureNumber}`,
+      settings: { composerFooter: "pinned" },
+      sidebarThreads: { status: "ready", threads: [pinnedThread, unpinnedThread], projects: [] },
+      rpc: { listLifecycle: () => ({ rows: [] }), cardModels: () => ({ source: "none", items: [] }) },
+    });
+    await waitFor(() => {
+      expect(document.documentElement.hasAttribute(HIDE_ATTR)).toBe(true);
+    });
+    act(() => { setActive(unpinnedThread.id); });
+    await waitFor(() => {
+      expect(document.documentElement.hasAttribute(HIDE_ATTR)).toBe(false);
+    });
+    act(() => { setActive(pinnedThread.id); });
+    await waitFor(() => {
+      expect(document.documentElement.hasAttribute(HIDE_ATTR)).toBe(true);
+    });
   });
 });
