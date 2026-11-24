@@ -104,3 +104,42 @@ describe("S3: a finished spec's agents name it on the card", () => {
     expect(reviewerC(file)).toMatchObject({ spec: null, shortName: null });
   });
 });
+
+describe("running card states", () => {
+  it.each([
+    ["active", "awake", "asleep"],
+    ["pending", "starting", "starting"],
+    ["starting", "starting", "starting"],
+    ["provisioning", "starting", "starting"],
+    ["waiting-for-host", "starting", "starting"],
+    ["stopping", "awake", "asleep"],
+    ["idle", "asleep", "asleep"],
+    ["error", "asleep", "asleep"],
+  ] as const)("classifies %s with and without pending interaction", (runtimeStatus, ordinary, waiting) => {
+    for (const [hasPendingInteraction, expected] of [[false, ordinary], [true, waiting]] as const) {
+      const row = { ...v4Threads[0]!, runtimeStatus, hasPendingInteraction, providerId: "codex" };
+      expect(computeStatsV4([row, row], null, null, v4Now, "UTC")).toMatchObject({
+        version: 2,
+        running: { total: Number(!hasPendingInteraction && runtimeStatus !== "idle" && runtimeStatus !== "error") },
+        states: {
+          awake: Number(expected === "awake"),
+          starting: Number(expected === "starting"),
+          asleep: Number(expected === "asleep"),
+          needsYou: Number(hasPendingInteraction),
+          awakeByHarness: expected === "awake" ? [{ providerId: "codex", count: 1 }] : [],
+        },
+      });
+    }
+  });
+
+  it("uses the running rule for idle background work and skips archived rows", () => {
+    const busy = v4Threads[1]!;
+    const row = { ...busy, runtimeStatus: "idle" as const };
+    const archived = { ...busy, id: "sample-archived", isArchived: true };
+    expect(computeStatsV4([row, archived], null, null, v4Now, "UTC")).toMatchObject({
+      running: { total: 1 },
+      states: { awake: 1, asleep: 0, starting: 0, needsYou: 0, awakeByHarness: [{ providerId: "harness-a", count: 1 }] },
+    });
+    expect(computeStatsV4(null, null, null, v4Now, "UTC")).toMatchObject({ status: "unavailable", states: null });
+  });
+});

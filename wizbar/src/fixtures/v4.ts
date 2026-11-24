@@ -141,10 +141,11 @@ export interface FooterThreadV4 {
   model: string | null;
   effort: EffortV3 | null;
 }
-/** `wizbar stats --json` from 0.4, and the hover card's data: 0.3's `StatsV3` at version 2, plus `harness` and `threads`. */
+/** `wizbar stats --json` from 0.4, and the hover card's data: 0.3's `StatsV3` at version 2, plus `harness`, `threads` and `states`. */
 export type StatsV4 = { version: 2; window: StatsWindowV3; coverage: StatsCoverageV3; unseen?: UnseenAgents } & (
-  | { status: "ready"; running: RunningSplitV3; waitingOnYou: number; finishedToday: FinishedTodayV3; harness: HarnessCountV4[]; threads: FooterThreadV4[] }
-  | { status: "unavailable"; running: null; waitingOnYou: null; finishedToday: null; harness: null; threads: null }
+  | { status: "ready"; running: RunningSplitV3; waitingOnYou: number; finishedToday: FinishedTodayV3; harness: HarnessCountV4[]; threads: FooterThreadV4[];
+      states: { awake: number; starting: number; asleep: number; needsYou: number; awakeByHarness: HarnessCountV4[] } }
+  | { status: "unavailable"; running: null; waitingOnYou: null; finishedToday: null; harness: null; threads: null; states: null }
 );
 
 /** Section 4: the open-state setting. */
@@ -594,6 +595,7 @@ export const v4Stats: StatsV4 = {
   window: { timeZone: "UTC", start: Date.parse("2026-11-19T00:00:00Z"), end: Date.parse("2026-11-20T00:00:00Z") },
   coverage: { scope: "observable-sidebar", subagents: "not-counted", unseen: "possible" },
   harness: [{ providerId: "harness-a", count: 6 }, { providerId: "harness-b", count: 3 }],
+  states: { awake: 8, starting: 1, asleep: 6, needsYou: 1, awakeByHarness: [{ providerId: "harness-a", count: 5 }, { providerId: "harness-b", count: 3 }] },
   // createdAt ascending. reviewer_c matches the finished spec, quiet from 0.6, so it shows that spec (S3, #202).
   threads: [
     footer("thr_v4_fleet_a", "working", "harness-b", null),
@@ -657,6 +659,7 @@ export const v4FleetIdStats: StatsV4 = {
   ...(v4Stats as Extract<StatsV4, { status: "ready" }>),
   running: { total: 11, topLevel: 4, children: 7, cloud: 9, local: 1, unknown: 1 },
   harness: [{ providerId: "harness-a", count: 8 }, { providerId: "harness-b", count: 3 }],
+  states: { awake: 10, starting: 1, asleep: 6, needsYou: 1, awakeByHarness: [{ providerId: "harness-a", count: 7 }, { providerId: "harness-b", count: 3 }] },
   threads: [
     // createdAt ascending: both new rows come just before untitled (10 minutes old).
     ...(v4Stats as Extract<StatsV4, { status: "ready" }>).threads.slice(0, -1),

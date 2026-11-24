@@ -51,7 +51,7 @@ afterEach(() => { cleanup(); fixtureFeed.current = null; settingsFeed.current = 
 
 const lines = () => [...(screen.queryByRole("region", { name: "Running threads" })?.querySelectorAll("p") ?? [])].map((p) => p.textContent);
 const agentCoverage = "Cloud agents in their own sandbox may be missing from this list.";
-const fixtureLine = "3 waiting on you · 1 cloud, 2 local, 1 unknown";
+const fixtureLine = "3 awake · 1 starting · 8 asleep";
 
 describe("V3: footer stats panel", () => {
   it("shows the fixture summary and labels only rows with a served model", async () => {
@@ -67,7 +67,7 @@ describe("V3: footer stats panel", () => {
         }),
       } as never,
     });
-    expect(lines()).toEqual([fixtureLine, agentCoverage]);
+    expect(lines()).toEqual([fixtureLine, "3 waiting on you · 1 cloud, 2 local, 1 unknown", agentCoverage]);
     expect(await screen.findByRole("button", { name: /Sample refine command palette.*Opus 5\.5 · High/ })).toBeDefined();
     expect(screen.getByRole("button", { name: /Sample audit shortcuts$/ })).toBeDefined();
     expect(rendered.sdkCalls).toEqual([]);
@@ -142,7 +142,7 @@ describe("V3: footer stats panel", () => {
 
   // R3: duplicates are compared on the running rule's facts, never the indicator.
   it.each([
-    ["agree on runtime work but differ only in indicator", "none", "active", "0 waiting on you · 0 cloud, 1 local", "1 running"],
+    ["agree on runtime work but differ only in indicator", "none", "active", "1 awake · 0 starting · 0 asleep", "1 running"],
     ["genuinely conflict on runtime work", "runtime", "idle", "Stats unavailable", null],
   ])("counts duplicate rows that %s by the running rule", (_, indicator, runtimeStatus, panelLine, lineName) => {
     const row = { ...v3Threads.find(({ id }) => id === "thr_v3_pinned_idle")!, status: "active" as const, runtimeStatus: "active" as const, indicator: "runtime" as const };

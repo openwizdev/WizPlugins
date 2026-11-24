@@ -2,11 +2,12 @@
 // (specs-section.v1.md section 7). It shows exactly `wizbar stats --json`
 // for the same rows: `computeStatsV4` over the sidebar rows, the specs file
 // and the served model source. Colours are host theme variables only.
-import { useEffect, useReducer, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useId, useLayoutEffect, useReducer, useRef, useState, useSyncExternalStore } from "react";
 import {
   experimental_usePluginId,
   experimental_useSidebarThreadActions as useSidebarThreadActions,
   useRpc,
+  useSettings,
   type PluginSidebarThread,
 } from "@get-bb/plugin-sdk/app";
 import { UnseenAgentGroups, UnseenDisclosure, UnseenSummary } from "./agents/UnseenAgents";
@@ -16,11 +17,13 @@ import { harnessName } from "./model-names";
 import { MatrixMark } from "./MatrixMark";
 import { ProviderGlyph } from "./ProviderGlyph";
 import { cardBatch, cardRowLabels, cardSummary, computeStatsV4, emptyCardBatch, isRunning, type CardThread } from "./stats";
+import { readSpecsSort } from "./settings";
+import { specRows } from "./specs/rows";
 import { readSpecsFile } from "./specs/read";
 import { useSpecsRead } from "./specs/SpecsSection";
 import { tokens } from "./specs/theme";
 import type { t3sidebarRpcContract } from "./server";
-import type { FooterThreadV4 } from "./fixtures/v4";
+import type { FooterThreadV4, SpecKeyV4 } from "./fixtures/v4";
 import type { CardModelsResultV3, CardModelV3 } from "./v3-types";
 
 /** How often one thread's model and effort may be read again (owner steer on #175). */
@@ -187,15 +190,137 @@ const segmentColour = (providerId: string, index: number): string => providerId 
   ? `var(--foreground, ${tokens.mutedText})`
   : `color-mix(in oklab, ${tokens.mutedText} ${index % 2 === 0 ? 55 : 35}%, var(--card, #222222))`;
 
+const ROW_HEIGHT = 24;
+const collapsedGroups = new Map<string, ReadonlySet<SpecKeyV4 | null>>();
+const cardBackground = "var(--card, #222222)";
+const rowButton = {
+  appearance: "none", margin: 0, border: 0, color: "inherit", font: "inherit", textAlign: "left",
+  boxSizing: "border-box", width: "100%", height: ROW_HEIGHT, display: "flex", alignItems: "center",
+  gap: 6, minWidth: 0, padding: "0 4px", borderRadius: 4, cursor: "pointer",
+} as const;
+const rowClass = "bg-transparent hover:bg-sidebar-accent/60 focus-visible:ring-1 focus-visible:ring-inset";
+
+interface ThreadGroup {
+  key: SpecKeyV4 | null;
+  name: string;
+  threads: CardThread[];
+}
+
+function RunningThreadsList({ groups, labels, pluginId }: {
+  groups: readonly ThreadGroup[];
+  labels: ReadonlyMap<string, string>;
+  pluginId: string;
+}) {
+  const actions = useSidebarThreadActions();
+  const groupId = useId();
+  const [, refresh] = useReducer((n: number) => n + 1, 0);
+  const folded = collapsedGroups.get(pluginId);
+  const lineCount = groups.reduce((count, group) => count + 1 + (folded?.has(group.key) ? 0 : group.threads.length), 0);
+  const viewport = useRef<HTMLUListElement>(null);
+  const [edges, setEdges] = useState({ top: false, bottom: false, height: 0 });
+
+  const sticky = edges.height >= 2 * ROW_HEIGHT;
+
+  function readEdges() {
+    const node = viewport.current;
+    if (!node) return;
+    const { scrollTop, clientHeight, scrollHeight } = node;
+    const top = scrollTop > 1;
+    const bottom = scrollHeight - clientHeight - scrollTop > 1;
+    setEdges((previous) => previous.top === top && previous.bottom === bottom && previous.height === clientHeight
+      ? previous : { top, bottom, height: clientHeight });
+  }
+
+  useLayoutEffect(() => {
+    readEdges();
+    if (typeof ResizeObserver === "undefined" || !viewport.current) return;
+    const observer = new ResizeObserver(readEdges);
+    observer.observe(viewport.current);
+    return () => observer.disconnect();
+  }, [lineCount]);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", minHeight: 0, margin: "0 -4px", paddingTop: 8, borderTop: `1px solid ${tokens.border}` }}>
+      {/* Both headers and rows fill one line. Round the scrollport down to a
+          whole number of lines so the opposite edge is aligned at either end. */}
+      <div style={{ position: "relative", containerType: "size", height: lineCount * ROW_HEIGHT, minHeight: 0 }}>
+        <ul ref={viewport} aria-label="Threads" onScroll={readEdges} style={{
+          ...list, position: "absolute", inset: 0, minHeight: 0, maxHeight: `round(down, 100cqh, ${ROW_HEIGHT}px)`, overflowY: "auto", overscrollBehaviorY: "contain",
+          scrollPaddingTop: (sticky ? 2 : 1) * ROW_HEIGHT, scrollPaddingBottom: ROW_HEIGHT,
+        }}>
+          {groups.map(({ key, name, threads }) => {
+            const expanded = !folded?.has(key);
+            const count = threads.filter((thread) => !thread.leaving).length;
+            const heading = `${groupId}-${key ?? "other"}`;
+            const contents = `${heading}-threads`;
+            return (
+              <li key={heading}>
+                <button id={heading} type="button" aria-expanded={expanded} aria-controls={contents} className={rowClass}
+                  style={{
+                    ...rowButton, color: tokens.mutedText, backgroundColor: cardBackground,
+                    position: sticky ? "sticky" : "relative", top: 0, zIndex: 2,
+                  }}
+                  onClick={() => {
+                    const next = new Set(collapsedGroups.get(pluginId));
+                    if (next.has(key)) next.delete(key);
+                    else next.add(key);
+                    collapsedGroups.set(pluginId, next);
+                    refresh();
+                  }}>
+                  <svg aria-hidden="true" data-chevron={expanded ? "open" : "closed"}
+                    width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth={1.6}
+                    style={{ flexShrink: 0, transform: expanded ? "rotate(90deg)" : undefined }}>
+                    <path d="M3.5 1.5 7 5l-3.5 3.5" />
+                  </svg>
+                  <span data-spec-name={key === null ? undefined : ""} style={oneLine}>{name}</span>{" "}<span>{count}</span>
+                </button>
+                {/* Moving to another group changes the parent list and remounts the row. */}
+                <ul id={contents} hidden={!expanded} style={list}>
+                  {expanded && threads.map((thread) => {
+                    const model = modelLabel(thread.model, thread.effort);
+                    return (
+                      <li key={`thread-${thread.id}`} data-thread={thread.id} data-thread-spec={thread.shortName ?? undefined}
+                        data-leaving={thread.leaving ? "true" : undefined}
+                        style={{ opacity: thread.leaving ? 0.45 : 1, transition: "opacity 300ms" }}>
+                        <button type="button" className={rowClass} style={rowButton} aria-describedby={heading}
+                          onClick={(event) => actions.open(thread.id, { split: event.metaKey || event.ctrlKey })}>
+                          <MatrixMark state={thread.matrix} />
+                          <span data-title="" style={{ ...oneLine, minWidth: 0, flexShrink: 1 }}>{labels.get(thread.id)}</span>
+                          {model ? <span data-model="" style={{ marginLeft: "auto", paddingLeft: 8, flexShrink: 0, whiteSpace: "nowrap", color: tokens.mutedText }}>{model}</span> : null}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </li>
+            );
+          })}
+        </ul>
+        {(["top", "bottom"] as const).map((edge) => {
+          // Keep the active heading legible and fade the text just under it.
+          const top = edge === "top" ? (sticky ? ROW_HEIGHT : 0) : edges.height - ROW_HEIGHT;
+          return edges[edge] && (
+            <div key={edge} data-scroll-fade={edge} aria-hidden="true" style={{
+              position: "absolute", pointerEvents: "none", left: 0, right: 0, height: ROW_HEIGHT,
+              top, zIndex: 1, background: `linear-gradient(to ${edge}, transparent, ${cardBackground} 85%)`,
+            }} />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 /**
- * The round-5 card (section 7): the summary line, the harness split as one bar
- * and one line of names, a rule, then one line per running thread. It fills
- * the sidebar width; the hit area around it is inset 8 px.
+ * The running card (section 7) shows the summary, harness split and a
+ * scrollable list of running threads grouped by spec.
  */
 export function StatsPanel({ rows, stale = false }: { rows: readonly PluginSidebarThread[] | null; stale?: boolean }) {
-  const actions = useSidebarThreadActions();
+  const pluginId = experimental_usePluginId();
+  const sort = readSpecsSort(useSettings().values?.specsSort);
   const read = useSpecsRead();
-  const running = rows?.filter(isRunning) ?? [];
+  const active = rows?.filter((row) => !row.isArchived) ?? [];
+  const running = active.filter(isRunning);
   const models = useModels(running.map((row) => row.id), running.map((row) => row.updatedAt).join());
   const now = Date.now();
   const specs = read ? readSpecsFile(read, now) : null;
@@ -203,23 +328,43 @@ export function StatsPanel({ rows, stale = false }: { rows: readonly PluginSideb
   const agents = useAgentsRead(now);
   const stats = computeStatsV4(rows, file, models, now, Intl.DateTimeFormat().resolvedOptions().timeZone, agents);
   const resolved = cardRowLabels(rows ?? [], file, now);
+  const sortedSpecs = file ? specRows(file, active, [], now, null, sort).specs : [];
+  const resolved = cardRowLabels(active, sortedSpecs);
   const threads = useCardThreads(stats.threads);
   const previousLabels = useRef(new Map<string, string>());
   const labels = new Map(threads?.map((thread) => [
     thread.id,
-    (thread.leaving ? previousLabels.current.get(thread.id) : resolved.get(thread.id)) ?? thread.title,
+    (thread.leaving ? previousLabels.current.get(thread.id) : resolved.get(thread.id)) ?? `${harnessName(thread.providerId)} thread`,
   ]));
   if (threads !== null) previousLabels.current = labels;
+  const bySpec = new Map<SpecKeyV4 | null, ThreadGroup>();
+  for (const { spec, shortName } of sortedSpecs) bySpec.set(spec, { key: spec, name: shortName, threads: [] });
+  const other: ThreadGroup = { key: null, name: "Other", threads: [] };
+  for (const thread of threads ?? []) {
+    if (thread.spec === null) other.threads.push(thread);
+    else {
+      let group = bySpec.get(thread.spec);
+      if (!group) {
+        group = { key: thread.spec, name: thread.shortName ?? thread.spec, threads: [] };
+        bySpec.set(thread.spec, group);
+      }
+      group.threads.push(thread);
+    }
+  }
+  const groups = [...bySpec.values(), other].filter((group) => group.threads.length > 0);
+  const summary = stats.status === "ready" ? `${cardSummary(stats)}${stale ? " · last known" : ""}` : "";
   return (
     <section aria-label="Running threads" data-stale={stale ? "true" : undefined} style={{
       display: "flex", flexDirection: "column", gap: 10, minHeight: 0, boxSizing: "border-box",
       width: "100%", padding: "10px 12px", borderRadius: 10, fontSize: 13, lineHeight: "20px",
-      fontVariantNumeric: "tabular-nums", background: "var(--card, #222222)", color: "var(--foreground)", border: `1px solid ${tokens.border}`,
+      fontVariantNumeric: "tabular-nums", background: cardBackground, color: "var(--foreground)", border: `1px solid ${tokens.border}`,
     }}>
       {stats.status !== "ready" ? <p style={quiet}>Stats unavailable</p> : (
         <>
-          <UnseenSummary running={stats.running.total} unseen={stats.unseen} />
-          <p style={{ ...quiet, flexShrink: 0 }}>{cardSummary(stats)}{stale ? " · last known" : ""}</p>
+          <div style={{ flexShrink: 0, fontSize: 12 }}>
+            <p style={{ ...quiet, ...oneLine }}>{stats.states.awake} awake · {stats.states.starting} starting · {stats.states.asleep} asleep</p>
+            <p style={quiet}>{summary}</p>
+          </div>
           {stats.harness.length > 0 ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 8, flexShrink: 0 }}>
               <div data-harness-bar="" aria-hidden="true" style={{ display: "flex", gap: 3, height: 4 }}>
@@ -239,27 +384,9 @@ export function StatsPanel({ rows, stale = false }: { rows: readonly PluginSideb
               </ul>
             </div>
           ) : null}
-          <ul aria-label="Threads" style={{ ...list, display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: 2, flexShrink: 1, minHeight: 0, overflowY: "auto", alignContent: "start", borderTop: `1px solid ${tokens.border}`, paddingTop: 8, margin: "0 -4px" }}>
-            {(threads ?? []).map((thread) => {
-              const model = modelLabel(thread.model, thread.effort);
-              return (
-                <li key={thread.id} data-thread={thread.id} data-leaving={thread.leaving ? "true" : undefined}
-                  style={{ opacity: thread.leaving ? 0.45 : 1, transition: "opacity 300ms" }}>
-                  <button type="button" className="bg-transparent hover:bg-sidebar-accent/60 focus-visible:ring-1 focus-visible:ring-inset"
-                    style={{ appearance: "none", margin: 0, border: 0, color: "inherit", font: "inherit", textAlign: "left", boxSizing: "border-box", width: "100%", display: "flex", alignItems: "center", gap: 6, minWidth: 0, padding: "0 4px", borderRadius: 4, cursor: "pointer" }}
-                    onClick={(event) => actions.open(thread.id, { split: event.metaKey || event.ctrlKey })}>
-                    <MatrixMark state={thread.matrix} />
-                    <span style={{ ...oneLine, minWidth: 0, flexShrink: 1 }}>
-                      <span data-title="">{labels.get(thread.id) ?? thread.title}</span>
-                      {thread.shortName ? <span style={{ color: tokens.mutedText, opacity: 0.6 }}> · <span data-spec-name="">{thread.shortName}</span></span> : null}
-                    </span>
-                    {model ? <span data-model="" style={{ marginLeft: "auto", paddingLeft: 8, flexShrink: 0, whiteSpace: "nowrap", color: tokens.mutedText }}>{model}</span> : null}
-                  </button>
-                </li>
-              );
-            })}
-            <UnseenAgentGroups unseen={stats.unseen} specs={file} />
-          </ul>
+          {groups.length > 0 ? <RunningThreadsList groups={groups} labels={labels} pluginId={pluginId} /> : null}
+          <UnseenSummary running={stats.running.total} unseen={stats.unseen} />
+          <ul style={list}><UnseenAgentGroups unseen={stats.unseen} specs={file} /></ul>
         </>
       )}
       <UnseenDisclosure unseen={stats.unseen} />

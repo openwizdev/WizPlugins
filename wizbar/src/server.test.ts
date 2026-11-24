@@ -386,10 +386,15 @@ describe("wizbar stats", () => {
   // numbers at version 2, plus the harness split and the running threads in
   // `createdAt` order. No factory is bound here, so no thread names a spec.
   const thread = (id: string, title: string) => ({ id, title, providerId: "synthetic-provider", matrix: "working", spec: null, shortName: null, model: null, effort: null });
-  const v3StatsV4 = { ...v3Stats, version: 2, unseen: { status: "unavailable", count: null, agents: [] }, harness: [{ providerId: "synthetic-provider", count: 4 }], threads: [
-    thread("thr_v3_child_local", "Sample measure cache hits"), thread("thr_v3_parent_many", "Sample refine command palette"),
-    thread("thr_v3_child_working", "Sample audit shortcuts"), thread("thr_v3_starting", "Sample update color tokens"),
-  ] };
+  const harness = [{ providerId: "synthetic-provider", count: 4 }];
+  const v3StatsV4 = {
+    ...v3Stats, version: 2, harness, unseen: { status: "unavailable", count: null, agents: [] },
+    states: { awake: 3, starting: 1, asleep: 8, needsYou: 3, awakeByHarness: [{ providerId: "synthetic-provider", count: 3 }] },
+    threads: [
+      thread("thr_v3_child_local", "Sample measure cache hits"), thread("thr_v3_parent_many", "Sample refine command palette"),
+      thread("thr_v3_child_working", "Sample audit shortcuts"), thread("thr_v3_starting", "Sample update color tokens"),
+    ],
+  };
 
   it("prints the card's data for the same fixture rows as JSON", async () => {
     const host = statsHost(v3Threads.map(raw));
