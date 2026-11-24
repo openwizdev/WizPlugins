@@ -21,9 +21,11 @@ import type { t3sidebarRpcContract } from "./server";
 import type { CardModelV3 } from "./v3-types";
 
 /**
- * One thread as a three-line card: project and status, title, then model,
- * issue/PR link, child count and activity; the branch shows on hover only. The card is the whole point of this sidebar — status lives in the
- * row instead of in its position, which is what lets the list stay still.
+ * One thread as a two-line card: title with status/age at the right, then
+ * quiet details (project name in All projects, PR/issue link, child count,
+ * activity, model/effort, harness logo, machine icon); the branch shows on
+ * hover only. The card is the whole point of this sidebar — status lives in
+ * the row instead of in its position, which is what lets the list stay still.
  *
  * The row is a positioned container with a full-bleed anchor UNDER the
  * controls, the way bb's own thread row does it: a `<button>` inside an `<a>`
@@ -73,7 +75,7 @@ export function ThreadCard({
       <li className="list-none">
         <div
           className={cn(
-            "group/card relative rounded-md px-2.5 pb-[9px] pt-2.5 transition-colors",
+            "group/card relative rounded-md px-2.5 py-2 transition-colors",
             isActive ? "bg-sidebar-accent" : "hover:bg-sidebar-accent/60",
             // A thread open in another pane gets a weaker tint than the active
             // row, so the two states stay distinguishable.
@@ -103,14 +105,21 @@ export function ThreadCard({
             className="absolute inset-0 cursor-pointer rounded-md"
           />
           <div className="pointer-events-none relative flex h-5 items-center gap-1.5">
-            <span className="min-w-0 flex-1 truncate text-[11.5px] font-medium text-muted-foreground">
-              {projectName ?? " "}
+            <span
+              className={cn(
+                // Weight alone carries unread. Fading the title — or the whole
+                // card — makes a thread at rest read as disabled, and at rest is
+                // what most of the list is most of the time.
+                "min-w-0 flex-1 truncate text-sm text-foreground",
+                thread.isUnread && "font-medium",
+              )}
+            >
+              {threadDisplayTitle(thread)}
             </span>
-            <MachineIcon environment={thread.environment} host={thread.host} runtimeStatus={thread.runtimeStatus} />
             {/* Status at rest, park actions on hover. Only the status yields,
-                so the project name never shifts. */}
+                so the title never shifts. */}
             {canPark ? (
-              <span className="pointer-events-auto hidden items-center gap-0.5 group-hover/card:flex">
+              <span className="pointer-events-auto hidden shrink-0 items-center gap-0.5 group-hover/card:flex">
                 <ParkButton
                   label="Snooze until tomorrow"
                   icon="Clock"
@@ -135,21 +144,20 @@ export function ThreadCard({
             </span>
           </div>
           <div
-            className={cn(
-              // Weight alone carries unread. Fading the title — or the whole
-              // card — makes a thread at rest read as disabled, and at rest is
-              // what most of the list is most of the time.
-              "pointer-events-none relative mt-0.5 truncate text-sm text-foreground",
-              thread.isUnread && "font-medium",
-            )}
-          >
-            {threadDisplayTitle(thread)}
-          </div>
-          <div
             role="group"
             aria-label="Thread details"
-            className="pointer-events-none relative mt-1 flex min-w-0 flex-wrap items-center gap-1 text-2xs text-muted-foreground"
+            className="pointer-events-none relative mt-1 flex min-w-0 items-center gap-1 overflow-hidden text-2xs text-muted-foreground"
           >
+            {projectName ? (
+              <span
+                data-project-name=""
+                title={projectName}
+                className="min-w-[4ch] truncate text-muted-foreground"
+                style={{ flexShrink: 3 }}
+              >
+                {projectName}
+              </span>
+            ) : null}
             {meta.link && pullRequest ? (
               <a
                 href={meta.link.pullRequest!.url}
@@ -157,6 +165,7 @@ export function ThreadCard({
                 rel="noreferrer"
                 onClick={(event) => event.stopPropagation()}
                 title={pullRequest.title}
+                style={{ flexShrink: 2 }}
                 className={cn(
                   CHIP_CLASS,
                   "pointer-events-auto hover:underline",
@@ -193,9 +202,10 @@ export function ThreadCard({
             <span className="ml-auto" />
             {/* WB4-2: model and effort beside the harness logo, omitted when missing;
                 round 5 A draws them as quiet text, not a chip. */}
-            {model ? <span className="truncate text-muted-foreground">{model}</span> : null}
+            {model ? <span className="min-w-0 truncate text-muted-foreground">{model}</span> : null}
             {/* Always drawn, so the line has a fixed right edge. */}
             <span data-provider={thread.providerId} className="contents"><ProviderGlyph providerId={thread.providerId} /></span>
+            <MachineIcon environment={thread.environment} host={thread.host} runtimeStatus={thread.runtimeStatus} />
           </div>
           {location ? (
             // Overlays rather than adds a line, so hovering never moves the list.
@@ -242,10 +252,10 @@ export function useCardModel(threadId: string, revision: number | string = ""): 
   return served?.threadId === threadId ? served.item : null;
 }
 
-const CHIP_CLASS = "max-w-full rounded border border-border px-1 leading-4 [overflow-wrap:anywhere]";
+const CHIP_CLASS = "max-w-full min-w-0 truncate rounded border border-border px-1 leading-4";
 
 function Chip({ children }: { children: string }) {
-  return <span className={CHIP_CLASS}>{children}</span>;
+  return <span className={CHIP_CLASS} style={{ flexShrink: 2 }}>{children}</span>;
 }
 
 function ParkButton({

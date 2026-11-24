@@ -250,7 +250,7 @@ describe("Muted machine markers at the registered app boundary", () => {
   }
 });
 
-// WZ18 (#40): the card's third line. Synthetic rows; expected text from the
+// WZ18 (#40): the card's second line. Synthetic rows; expected text from the
 // sidebar v3 contract's chip table, not from the code under test.
 describe("WZ18 card metadata at the registered app boundary", () => {
   const PR_URL = "https://github.com/example/sample-repo/pull/1088";
@@ -395,5 +395,76 @@ describe("WZ18 card metadata at the registered app boundary", () => {
     expect(face.textContent).not.toContain("room/1042-refine-command-palette-a1b2");
     const branch = screen.getByText("room/1042-refine-command-palette-a1b2");
     expect(branch.className.split(/\s+/)).toEqual(expect.arrayContaining(["hidden", "group-hover/card:block"]));
+  });
+
+  it("renders as two lines: title and status/age on line 1; children, model and machine icon on line 2", async () => {
+    const parent = thread({ environment: environment("git-worktree", "room/1042-refine-command-palette-a1b2") });
+    renderMeta([parent, child(1), child(2)], { cardModels: hostModels });
+    const row = card();
+    const container = row.firstElementChild!;
+    const lines = [...container.children].filter((el) => el.tagName === "DIV");
+    expect(lines).toHaveLength(2);
+    expect(within(lines[0] as HTMLElement).getByText("Review parser")).toBeDefined();
+    expect(within(lines[0] as HTMLElement).getByText("7m")).toBeDefined();
+    const details = within(row).getByRole("group", { name: "Thread details" });
+    expect(details).toBe(lines[1]);
+    const childrenChip = await within(details).findByText("2 children");
+    const model = await within(details).findByText("Opus 5.5 · Medium");
+    const machine = within(details).getByRole("img", { name: "Local" });
+    expect(childrenChip.compareDocumentPosition(model) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(model.compareDocumentPosition(machine) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("R1 shows the muted project name first on line 2 under All projects and hides it when scoped to one project", async () => {
+    const first = thread({
+      id: "thr_synfirst",
+      projectId: projects[0]!.id,
+      title: "Review parser",
+      displayTitle: "Review parser",
+      environment: environment("git-worktree", "room/1042-refine-command-palette-a1b2"),
+    });
+    const second = thread({
+      id: "thr_synsecond",
+      projectId: projects[1]!.id,
+      title: "Write guide",
+      displayTitle: "Write guide",
+      environment: environment("git-worktree", "room/1043-write-guide-c3d4"),
+    });
+    renderMeta([first, second], {
+      cardModels: hostModels,
+      pullRequests: { thr_synfirst: pull(1088) },
+    });
+    const firstDetails = within(card("Review parser")).getByRole("group", { name: "Thread details" });
+    const secondDetails = within(card("Write guide")).getByRole("group", { name: "Thread details" });
+    const firstProject = within(firstDetails).getByText("Orchard");
+    const secondProject = within(secondDetails).getByText("Harbor");
+    const linkChip = within(firstDetails).getByRole("link", { name: "#1042 → PR #1088" });
+    expect(firstProject.className.split(/\s+/)).toEqual(expect.arrayContaining(["min-w-[4ch]", "truncate", "text-muted-foreground"]));
+    // The full name stays readable on hover when it truncates.
+    expect(firstProject.getAttribute("title")).toBe(firstProject.textContent);
+    expect(firstProject.compareDocumentPosition(linkChip) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(Number(firstProject.style.flexShrink)).toBeGreaterThan(Number(linkChip.style.flexShrink || 1));
+    expect(secondProject).toBeDefined();
+
+    fireEvent.keyDown(screen.getByLabelText(/Project scope/), { key: "Enter" });
+    fireEvent.click(screen.getByRole("option", { name: "Harbor" }));
+    const scopedDetails = within(card("Write guide")).getByRole("group", { name: "Thread details" });
+    expect(within(scopedDetails).queryByText("Harbor")).toBeNull();
+  });
+
+  it("R2 clips overflow on line 2 and allows the link chip to shrink", () => {
+    const sample = thread({
+      environment: environment("git-worktree", "room/1042-refine-command-palette-a1b2"),
+      activity: { workflows: 2, backgroundAgents: 1, backgroundCommands: 0, planMode: 0, goals: 0 },
+    });
+    renderMeta([sample, child(1)], {
+      cardModels: hostModels,
+      pullRequests: { thr_synsample: pull(1088) },
+    });
+    const details = within(card()).getByRole("group", { name: "Thread details" });
+    expect(details.className.split(/\s+/)).toContain("overflow-hidden");
+    const linkChip = within(details).getByRole("link", { name: "#1042 → PR #1088" });
+    expect(linkChip.className.split(/\s+/)).toEqual(expect.arrayContaining(["min-w-0", "truncate"]));
+    expect(linkChip.className.split(/\s+/)).not.toContain("shrink-0");
   });
 });

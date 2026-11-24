@@ -111,7 +111,7 @@ it("serves the absolute bound agents file to RPC and includes its unseen claims 
       [expect.objectContaining({ path: expect.stringMatching(/^\/.+\/\.openwiz\/agents\.v1\.json$/) })],
     ]);
     expect((await host.harness.behavior.runCli(["stats"])).stdout).toContain(
-      "Cloud agents in their own sandbox may be missing from this list. 1 seen on GitHub.",
+      "Cloud agents in their own sandbox may be missing from this list. 1 on GitHub.",
     );
   } finally {
     await host.harness.lifecycle.dispose();

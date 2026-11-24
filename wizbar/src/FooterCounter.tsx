@@ -1,11 +1,15 @@
 import { useEffect, useLayoutEffect, useReducer, useRef, useState, type ReactNode } from "react";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk";
+import { cloudAgents } from "./agents/cloud";
+import { useAgentsRead } from "./agents/use-agents";
 import { countRunning, type ObservableRunningSource, type RunningCount, type RunningCountSource } from "./running-count";
-import { cardPinNext, isRunning, readSidebarRows, type SidebarRowsStatus } from "./stats";
+import { cardPinNext, computeStats, isRunning, readSidebarRows, type SidebarRowsStatus } from "./stats";
 import type { CardEventV4, CardStateV4 } from "./fixtures/v4";
 import { MatrixMark } from "./MatrixMark";
 import { StatsPanel } from "./StatsPanel";
+import { readSpecsFile } from "./specs/read";
 import { SpecsReadContext, useSpecsRead } from "./specs/SpecsSection";
+import { tokens } from "./specs/theme";
 import { experimental_usePluginId, experimental_useSidebarThreads, useRealtimeConnectionState } from "@get-bb/plugin-sdk/app";
 import { useFeatureSourceStatus, useWizBarSettings } from "./SettingsPage";
 
@@ -55,7 +59,10 @@ export function useObservableRows(): { status: SidebarRowsStatus; rows: readonly
  * card is `StatsPanel`, the `wizbar stats` data for the same rows. */
 export function FooterCounter({ className }: { className?: string }) {
   const { status, rows } = useObservableRows();
+  const connection = useRealtimeConnectionState();
   const specsRead = useSpecsRead();
+  const now = Date.now();
+  const agents = useAgentsRead(now);
   const base = { version: 1, scope: "observable-sidebar", subagents: { status: "unproven", count: null } } as const;
   const source: ObservableRunningSource = rows && status === "ready"
     ? { ...base, status, threads: rows.filter((t) => !t.isArchived).map((t) => ({ id: t.id, projectId: t.projectId, parentThreadId: t.parentThreadId, isWorking: isRunning(t) })) }
@@ -65,7 +72,14 @@ export function FooterCounter({ className }: { className?: string }) {
   const held = useRef<readonly PluginSidebarThread[] | null>(null);
   if (rows && status === "ready") held.current = rows;
   const cardRows = rows ?? held.current;
-  return <FooterCounterArtwork className={className} source={source} card={(stale) => (
+  const activeRows = cardRows?.filter((t) => !t.isArchived) ?? null;
+  const stats = computeStats(activeRows, now, "UTC");
+  const waitingOnYou = stats.status === "ready" ? stats.waitingOnYou : 0;
+  const specs = specsRead ? readSpecsFile(specsRead, now) : null;
+  const file = specs?.status === "ready" ? specs.file : null;
+  const cloud = cloudAgents(agents, file, status === "ready" && connection === "connected" ? rows : null, now);
+  const onGitHub = cloud.status === "ready" ? cloud.active : 0;
+  return <FooterCounterArtwork className={className} source={source} waitingOnYou={waitingOnYou} onGitHub={onGitHub} card={(stale) => (
     <SpecsReadContext.Provider value={specsRead}>
       <StatsPanel rows={cardRows} stale={stale} />
     </SpecsReadContext.Provider>
@@ -80,25 +94,33 @@ const CARD_MARGIN = 8;
 
 /**
  * "N running" (specs-section.v1.md section 7): threads only, with a matrix
- * mark and the visible word. The card fills the sidebar, inset 8 px. Hover or focus opens the card; a click (Enter or Space) pins it and
- * another unpins it; Escape closes it. Synthetic inputs are not host proof.
+ * mark and the visible word, plus waiting-on-you and live GitHub agent counts
+ * when non-zero (dropping GitHub first, then shortening to "N waiting" to fit
+ * one line). The card fills the sidebar, inset 8 px. Hover or focus opens the
+ * card; a click (Enter or Space) pins it and another unpins it; Escape closes
+ * it. Synthetic inputs are not host proof.
  * R1 (#172): a gap in the source keeps the last known count, and an open card, in place: unmarked for
  * `FOOTER_HOLD_MS`, then marked last known while the card stays open, and hidden once it is closed.
  */
-export function FooterCounterArtwork({ source, className, card }: {
+export function FooterCounterArtwork({ source, className, card, waitingOnYou = 0, onGitHub = 0 }: {
   source: RunningCountSource | null;
   className?: string;
   card?: (stale: boolean) => ReactNode;
+  waitingOnYou?: number;
+  onGitHub?: number;
 }) {
   const { footerCountEnabled } = useWizBarSettings();
   const live = countRunning(source);
-  const last = useRef<RunningCount | null>(null);
+  const last = useRef<{ count: RunningCount; waitingOnYou: number; onGitHub: number } | null>(null);
   const gapSince = useRef<number | null>(null);
   if (live) {
-    last.current = live;
+    last.current = { count: live, waitingOnYou, onGitHub };
     gapSince.current = null;
   } else if (gapSince.current === null && last.current) gapSince.current = Date.now();
-  const count = live ?? (gapSince.current === null ? null : last.current);
+  const current = live ? { count: live, waitingOnYou, onGitHub } : (gapSince.current === null ? null : last.current);
+  const count = current?.count ?? null;
+  const waiting = current?.waitingOnYou ?? 0;
+  const github = current?.onGitHub ?? 0;
   const stale = live === null && gapSince.current !== null && Date.now() - gapSince.current >= FOOTER_HOLD_MS;
   const [, wake] = useReducer((n: number) => n + 1, 0);
   const staleAt = live === null && !stale ? gapSince.current : null;
@@ -108,14 +130,19 @@ export function FooterCounterArtwork({ source, className, card }: {
     return () => clearTimeout(timer);
   }, [staleAt]);
   const [state, setState] = useState<CardStateV4>("closed");
-  const send = (event: CardEventV4) => setState((current) => cardPinNext(current, event));
+  const send = (event: CardEventV4) => setState((currentState) => cardPinNext(currentState, event));
   const cardOpen = state !== "closed" && card !== undefined;
   const shown = footerCountEnabled && count !== null && (!stale || cardOpen);
   useEffect(() => {
     if (!shown) setState("closed");
   }, [shown]);
   const wrapper = useRef<HTMLDivElement>(null);
+  const textRef = useRef<HTMLSpanElement>(null);
   const [room, setRoom] = useState<number | null>(null);
+  const [width, setWidth] = useState(0);
+  const [fit, setFit] = useState<{ key: string; tier: 0 | 1 | 2 }>({ key: "", tier: 0 });
+  const fitKey = `${count?.total ?? ""}:${waiting}:${github}:${width}`;
+  const tier: 0 | 1 | 2 = fit.key === fitKey ? fit.tier : 0;
   const open = cardOpen && shown;
   // The card may use the space above the trigger, less a margin, and its list scrolls.
   useLayoutEffect(() => {
@@ -125,19 +152,42 @@ export function FooterCounterArtwork({ source, className, card }: {
     window.addEventListener("resize", measure);
     return () => window.removeEventListener("resize", measure);
   }, [open]);
+  useLayoutEffect(() => {
+    const node = wrapper.current;
+    if (!shown || !node || typeof ResizeObserver === "undefined") return;
+    const measure = () => setWidth(Math.round(node.clientWidth));
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [shown]);
+  useLayoutEffect(() => {
+    const el = textRef.current;
+    if (!shown || !el || el.clientWidth <= 0 || el.scrollWidth <= el.clientWidth) return;
+    const next: 0 | 1 | 2 | null =
+      tier === 0 ? (github > 0 ? 1 : waiting > 0 ? 2 : null)
+      : tier === 1 && waiting > 0 ? 2
+      : null;
+    if (next !== null) setFit({ key: fitKey, tier: next });
+  }, [shown, fitKey, tier, github, waiting]);
   if (!shown || count === null) return null;
-  const label = `${count.total} running${stale ? ", last known" : ""}`;
+  const label = [
+    `${count.total} running`,
+    ...(waiting > 0 ? [`${waiting} waiting on you`] : []),
+    ...(github > 0 ? [`${github} on GitHub`] : []),
+    ...(stale ? ["last known"] : []),
+  ].join(", ");
   return (
     <div ref={wrapper} className={className} style={{ position: "relative" }}
       onPointerEnter={() => send("enter")} onPointerLeave={() => send("leave")} onFocus={() => send("focus")}
       onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) send("blur"); }}
       onKeyDown={(event) => { if (event.key === "Escape") send("escape"); }}>
       <span role="status" aria-label={label} aria-live="polite" data-stale={stale ? "true" : undefined} style={{
-        display: "inline-flex", fontSize: 12, fontVariantNumeric: "tabular-nums", lineHeight: "20px",
-        color: count.total === 0 || stale ? "var(--muted-foreground, #b7b7b7)" : "var(--foreground)",
+        display: "inline-flex", maxWidth: "100%", minWidth: 0, fontSize: 12, fontVariantNumeric: "tabular-nums", lineHeight: "20px",
+        color: count.total === 0 || stale ? tokens.mutedText : tokens.text,
       }}>
         <span role="button" tabIndex={0} aria-label={label} aria-pressed={state === "pinned"} aria-expanded={open}
-          style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer" }}
+          style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", maxWidth: "100%", minWidth: 0 }}
           onClick={() => send("click")}
           onKeyDown={(event) => {
             if (event.key !== "Enter" && event.key !== " ") return;
@@ -145,7 +195,22 @@ export function FooterCounterArtwork({ source, className, card }: {
             send("click");
           }}>
           <MatrixMark state={count.total > 0 ? "working" : "idle"} />
-          <span aria-hidden="true">{count.total} running</span>
+          <span ref={textRef} aria-hidden="true" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>
+            <span>{count.total} running</span>
+            {waiting > 0 ? (
+              <>
+                <span style={{ color: tokens.mutedText }}>{" · "}</span>
+                <span data-waiting-on-you="" style={{ color: stale ? tokens.mutedText : tokens.warning }}>
+                  {waiting} {tier >= 2 ? "waiting" : "waiting on you"}
+                </span>
+              </>
+            ) : null}
+            {github > 0 && tier === 0 ? (
+              <span data-on-github="" style={{ color: tokens.mutedText }}>
+                {" · "}{github} on GitHub
+              </span>
+            ) : null}
+          </span>
         </span>
       </span>
       {/* After the trigger, so Tab moves into the card. The padding bridges the gap to the

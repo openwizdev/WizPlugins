@@ -265,7 +265,7 @@ describe("V5: children and stats JSON equal the UI for the same fixtures", () =>
       rpc: { listLifecycle: () => ({ rows: [] }), specsFile: () => served, cardModels: (input: unknown) =>
         host.harness.behavior.callRpc("cardModels", input) },
     });
-    fireEvent.pointerEnter(screen.getByRole("status", { name: /^\d+ running$/ }).parentElement!);
+    fireEvent.pointerEnter(screen.getByRole("status", { name: /^\d+ running\b/ }).parentElement!);
     const card = screen.getByRole("region", { name: "Running threads" });
     await waitFor(() => expect(card.querySelectorAll("[data-spec-name]").length).toBe(2));
     expect({
