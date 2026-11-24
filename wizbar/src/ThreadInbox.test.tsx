@@ -1700,3 +1700,29 @@ describe("E2: Unread", () => {
     expect(updates.at(-1)).toEqual({ pluginId: "wizbar", values: { sectionsCollapsed: "[\"unread\"]" } });
   });
 });
+
+describe("Yours and host search", () => {
+  it("keeps a read top-level thread in Yours", async () => {
+    render([thread({ id: "thr_sample_read", title: "Sample planning", isUnread: false })]);
+    const yours = await screen.findByRole("region", { name: "Yours" });
+    expect(within(yours).getByText("Sample planning")).toBeTruthy();
+  });
+
+  it.each([
+    "sample purpose", "harness:codex", "model:sol", "effort:high", "status:idle",
+    "SAMPLE PURPOSE harness:codex model:gpt-6.2-sol effort:high status:idle",
+  ])("matches a child by %s", async (searchQuery) => {
+    const parent = thread({ id: "thr_sample_parent", title: "Parent", providerId: "claude-code" });
+    const child = thread({ id: "thr_sample_search", parentThreadId: parent.id, title: "Child",
+      titleFallback: "Sample purpose", isUnread: false });
+    renderSlot(inbox, { ...listProps, searchQuery }, {
+      sidebarThreads: { status: "ready", threads: [parent, child] },
+      rpc: {
+        listLifecycle: () => ({ rows: [] }),
+        cardModels: () => ({ source: "host", items: [{ threadId: child.id, model: "gpt-6.2-sol", effort: "high" }] }),
+      },
+    });
+    expect(await screen.findByText("Child")).toBeTruthy();
+    expect(screen.queryByText("Parent")).toBeNull();
+  });
+});
