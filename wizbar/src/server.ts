@@ -6,7 +6,7 @@
 // understands. Here, uninstalling the plugin removes its state with it.
 import { defineRpcContract, type BbPluginApi, type PluginCliRegistration } from "@get-bb/plugin-sdk";
 import { z } from "zod";
-import { readThreadsFilter, readThreadsSort, sectionsSettingDescriptors, specsSettingDescriptors, threadsSettingDescriptors, wizbarSettingDescriptors } from "./settings";
+import { composerFooterSettingDescriptors, readComposerFooter, readThreadsFilter, readThreadsSort, sectionsSettingDescriptors, specsSettingDescriptors, threadsSettingDescriptors, wizbarSettingDescriptors } from "./settings";
 import { withSectionCommand } from "./sections";
 import { canMute, canPark, hasRuntimeWork, resolveShelf, type ThreadActivitySignals } from "./lifecycle";
 import { cardModelsNone } from "./card-meta";
@@ -799,6 +799,7 @@ export default function plugin(bb: BbPluginApi) {
   // S1 (#169): `wizbar section`, beside the commands it wraps.
   const sections = bb.settings.define(sectionsSettingDescriptors);
   const threadsSettings = bb.settings.define(threadsSettingDescriptors);
+  const composerFooterSettings = bb.settings.define(composerFooterSettingDescriptors);
   const readThreads = async (options: ThreadsOptions, signal?: AbortSignal) => {
     const [threads, settings, factories, specAnswer] = await Promise.all([
       readThreadList(bb, signal), threadsSettings.get(), deckReaders.settings.get(), specs.specsFile(), startupReconciliation,
@@ -845,7 +846,8 @@ export default function plugin(bb: BbPluginApi) {
     const stats = computeStatsV4(rows, file, running.length ? await models(running) : null,
       now, Intl.DateTimeFormat().resolvedOptions().timeZone, agents);
     return stats.threads ? { ...stats, threads: stats.threads.map(withModelLabel) } : stats;
-  }, pins, (threadId, signal) => readChildren(bb, threadId, signal), withSpecsModelLabels(specs), readThreads);
+  }, pins, (threadId, signal) => readChildren(bb, threadId, signal), withSpecsModelLabels(specs), readThreads,
+    async (mode) => readComposerFooter((await composerFooterSettings.experimental_set({ composerFooter: mode })).composerFooter));
   bb.cli.register(withAgentsCommand(withSectionCommand(withModelsCommand(lifecycleCli, hostOptions(bb), hostContext(bb)), sections), readCloudAgents));
 
   bb.events.on("interaction.pending", ({ thread }) => breakMute(thread.id));

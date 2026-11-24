@@ -25,7 +25,7 @@ it("reloads every 0.6 setting and writes canonical section keys only when edited
   const reload = await host.harness.lifecycle.reload(factory);
   try {
     const values = await read();
-    expect(values).toEqual({ ...stored, threadsSort: "newest", threadsFilter: "{}" });
+    expect(values).toEqual({ ...stored, threadsSort: "newest", threadsFilter: "{}", composerFooter: "show" });
     expect(readCollapsedSections(values.sectionsCollapsed)).toEqual(["yours", "specs"]);
     expect(readSectionsOrder(values.sectionsOrder)).toEqual(["yours", "pinned", "cloud", "specs"]);
     expect((await reload.harness.behavior.runCli(["section", "specs", "--expand"])).exitCode).toBe(0);

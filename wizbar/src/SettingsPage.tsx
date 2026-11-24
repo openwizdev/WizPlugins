@@ -2,9 +2,9 @@ import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
 import { experimental_usePluginId, useSdk, useSettings } from "@get-bb/plugin-sdk/app";
 import manifest from "../package.json";
 import {
-  getSourceStatuses, readWizBarSettings, reportFeatureSourceStatus,
-  subscribeSourceStatuses, wizbarSettingDescriptors,
-  type Feature, type SettingValues, type SourceStatus, type WizBarSettings,
+  composerFooterSettingDescriptors, getSourceStatuses, readComposerFooter, readWizBarSettings,
+  reportFeatureSourceStatus, subscribeSourceStatuses, wizbarSettingDescriptors,
+  type ComposerFooterMode, type Feature, type SettingValues, type SourceStatus, type WizBarSettings,
 } from "./settings";
 
 interface SettingsAcknowledgement {
@@ -67,6 +67,10 @@ export function useWizBarSettings(): WizBarSettings {
   return readWizBarSettings(useSettingsSnapshot().values);
 }
 
+export function useComposerFooterMode(): ComposerFooterMode {
+  return readComposerFooter(useSettingsSnapshot().values?.composerFooter);
+}
+
 /** Source adapters publish even while their feature is hidden. */
 export function useFeatureSourceStatus(feature: Feature, status: SourceStatus) {
   const pluginId = experimental_usePluginId();
@@ -77,6 +81,7 @@ export function SettingsPage() {
   const { pluginId, host, store, values, saveState, saving } = useSettingsSnapshot();
   const sdk = useSdk();
   const settings = readWizBarSettings(values);
+  const composerFooter = readComposerFooter(values?.composerFooter);
   const latestHost = useRef(host.values);
   latestHost.current = host.values;
   const message = { idle: "", saving: "Saving…", saved: "Saved", error: "Could not save. Try again." }[saveState];
@@ -85,12 +90,12 @@ export function SettingsPage() {
   const statuses = useSyncExternalStore(subscribe, () => getSourceStatuses(pluginId));
   const unavailable = host.isLoading || host.values === undefined;
 
-  async function save(key: keyof WizBarSettings) {
+  async function savePatch(patch: Record<string, string | number | boolean | null>) {
     if (unavailable || store.snapshot.saveState === "saving") return;
     const baseline = host.values;
     publishSettings(store, { baseline, values, saveState: "saving" });
     try {
-      const result = await sdk.plugins.updateSettings({ pluginId, values: { [key]: !settings[key] } });
+      const result = await sdk.plugins.updateSettings({ pluginId, values: patch });
       publishSettings(store, {
         baseline,
         values: latestHost.current === baseline ? result.values : undefined,
@@ -99,6 +104,10 @@ export function SettingsPage() {
     } catch {
       publishSettings(store, { baseline, values, saveState: "error" });
     }
+  }
+
+  function save(key: keyof WizBarSettings) {
+    return savePatch({ [key]: !settings[key] });
   }
 
   const sourceRows = [
@@ -129,6 +138,35 @@ export function SettingsPage() {
             </label>
           );
         })}
+        <label style={{ display: "grid", gap: 6 }}>
+          <strong style={{ fontWeight: 600 }}>{composerFooterSettingDescriptors.composerFooter.label}</strong>
+          <span style={{ color: "var(--muted-foreground)" }}>
+            Hide the bar under the thread composer so a thread reads calmer.
+          </span>
+          <select
+            aria-label={composerFooterSettingDescriptors.composerFooter.label}
+            value={composerFooter}
+            disabled={saving || unavailable}
+            onChange={(event) => { void savePatch({ composerFooter: event.target.value as ComposerFooterMode }); }}
+            style={{
+              width: "fit-content",
+              minWidth: 220,
+              padding: "4px 8px",
+              borderRadius: 6,
+              border: "1px solid var(--border)",
+              background: "var(--background)",
+              color: "var(--foreground)",
+              font: "inherit",
+            }}
+          >
+            <option value="show">Show</option>
+            <option value="pinned">Hide on pinned threads</option>
+            <option value="all">Hide everywhere</option>
+          </select>
+          <span style={{ color: "var(--muted-foreground)", fontSize: 12, lineHeight: "16px" }}>
+            Relies on the host&apos;s data-follow-up-composer-footer attribute; if it disappears, the bar shows again.
+          </span>
+        </label>
       </div>
       <div style={{ borderTop: "1px solid var(--border)", marginTop: 20, paddingTop: 20 }}>
         <h3 style={{ fontSize: 14, fontWeight: 600, margin: "0 0 12px" }}>Data sources</h3>
