@@ -1573,7 +1573,7 @@ describe("E2: Yours", () => {
     vi.setSystemTime(v4Now);
     const specsFile = vi.fn(() => ({ kind: "content", text: v4SpecsFileText }));
     await act(async () => { renderYours({ specsFile }); });
-    fireEvent.click(screen.getByRole("button", { name: /^\d+ running$/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^\d+ running\b/ }));
     await act(async () => {});
     expect(within(screen.getByRole("region", { name: "Running threads" })).getByText("Sample cache")).toBeDefined();
     expect(within(screen.getByRole("region", { name: "Specs" })).getByText("Sample cache")).toBeDefined();

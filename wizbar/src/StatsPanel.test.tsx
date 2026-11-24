@@ -103,21 +103,21 @@ describe("V3: footer stats panel", () => {
     const View = ({ open }: { open: boolean }) => createElement("div", null,
       createElement(FooterCounter), open ? createElement(Panel, props) : null);
     const rendered = renderSlot({ component: View }, { open: false }, { pluginId: "synthetic-wz20-gap" });
-    expect(screen.getByRole("status", { name: "4 running" })).toBeDefined();
+    expect(screen.getByRole("status", { name: "4 running, 3 waiting on you" })).toBeDefined();
     await rendered.setRealtimeConnectionState("reconnecting");
     await rendered.setRealtimeConnectionState("connected");
     // R1 (#172): the line holds its last count through a brief gap, then drops it.
-    expect(screen.getByRole("status", { name: "4 running" })).toBeDefined();
+    expect(screen.getByRole("status", { name: "4 running, 3 waiting on you" })).toBeDefined();
     act(() => { vi.advanceTimersByTime(FOOTER_HOLD_MS); });
     rendered.rerender(createElement(View, { open: true }));
-    expect(screen.queryByRole("status", { name: /running$/ })).toBeNull();
+    expect(screen.queryByRole("status", { name: /running\b/ })).toBeNull();
     expect(lines()[0]).toBe("Stats unavailable");
     // The same retained data in new arrays and new row objects (any consumer's
     // own projection) still does not clear the gap.
     fixtureFeed.current = { status: "ready", threads: fresh() };
     rendered.rerender(createElement(View, { open: true }));
     expect(lines()[0]).toBe("Stats unavailable");
-    expect(screen.queryByRole("status", { name: /running$/ })).toBeNull();
+    expect(screen.queryByRole("status", { name: /running\b/ })).toBeNull();
     // Closed and reopened: a newly mounted panel's projection cannot clear it.
     rendered.rerender(createElement(View, { open: false }));
     rendered.rerender(createElement(View, { open: true }));
@@ -126,7 +126,7 @@ describe("V3: footer stats panel", () => {
     rendered.rerender(createElement(View, { open: true }));
     expect(lines()[0]).toBe(fixtureCount);
     expect(lines()[1]).toBe(fixtureLine);
-    expect(screen.getByRole("status", { name: "4 running" })).toBeDefined();
+    expect(screen.getByRole("status", { name: "4 running, 3 waiting on you" })).toBeDefined();
   });
 
   // R2: the waiting flag decides running versus waiting, so a malformed one
