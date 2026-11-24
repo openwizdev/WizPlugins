@@ -202,21 +202,20 @@ it.skipIf(!browserPath).each([600, 900])("shows all 100 threads in a %i px windo
   }
 }, 30_000);
 
-
-it.skipIf(!browserPath)("wraps large machine totals without hiding the unknown count", async () => {
+it.skipIf(!browserPath)("shows all large machine totals without clipping or ellipsis", async () => {
   const page = await browser.newPage({ viewport: { width: 350, height: 600 } });
   try {
     await page.goto(`${url}?large-summary=1`);
     await page.getByRole("button", { name: "360 running" }).hover();
     const card = page.getByRole("region", { name: "Running threads" });
     const summary = card.getByText("120 waiting on you · 120 cloud, 120 local, 120 unknown");
-    const bounds = await summary.evaluate((line) => ({
-      height: line.getBoundingClientRect().height,
-      lineHeight: parseFloat(getComputedStyle(line).lineHeight),
-      fits: line.scrollWidth <= line.clientWidth,
+    await summary.waitFor({ state: "visible" });
+    const layout = await summary.evaluate((line) => ({
+      fitsWidth: line.scrollWidth <= line.clientWidth,
+      fitsHeight: line.scrollHeight <= line.clientHeight,
+      textOverflow: getComputedStyle(line).textOverflow,
     }));
-    expect.soft(bounds.height).toBeGreaterThan(bounds.lineHeight);
-    expect(bounds.fits).toBe(true);
+    expect(layout).toEqual({ fitsWidth: true, fitsHeight: true, textOverflow: "clip" });
   } finally {
     await page.close();
   }
