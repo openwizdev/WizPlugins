@@ -20,6 +20,7 @@ export function withAgentsCommand(cli: PluginCliRegistration, read: (signal?: Ab
       if (json) return { exitCode: 0, stdout: JSON.stringify(result) + "\n" };
       if (result.status === "unavailable") return { exitCode: 0, stdout: "GitHub agent data is unavailable.\n" };
       const lines = result.rows.map(({ label, detail, pull }) => `${label} · ${detail}${pull ? ` · ${pull}` : ""}`);
+      if (result.earlier.length) lines.push(`${result.earlier.length} earlier`, ...result.earlier.map(({ label, detail, pull }) => `${label} · ${detail}${pull ? ` · ${pull}` : ""}`));
       if (result.more.length) lines.push(`${result.more.length} more in the run map with no recent note`, ...result.more.map(({ label }) => label));
       return { exitCode: 0, stdout: (lines.length ? lines.join("\n") : "No cloud agents.") + "\n" };
     },

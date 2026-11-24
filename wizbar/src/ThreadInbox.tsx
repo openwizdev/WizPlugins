@@ -295,7 +295,7 @@ export function ThreadInbox({
                   ])}
                   {drag.markerAtEnd() ? <DropMarker /> : null}
                 </Shelf>
-              ) : null) : key === "cloud" ? (cloud.status === "ready" && (cloud.rows.length > 0 || cloud.more.length > 0) ? (
+              ) : null) : key === "cloud" ? (cloud.status === "ready" && (cloud.rows.length > 0 || cloud.earlier.length > 0 || cloud.more.length > 0) ? (
                 <Shelf label="Cloud agents" count={cloud.active} showCount searching={false} collapsed={sections.collapsed.has("cloud")}
                   onToggle={() => sections.toggle("cloud")} saveFailed={sections.failed === "cloud"}>
                   <CloudAgentRows result={cloud} />

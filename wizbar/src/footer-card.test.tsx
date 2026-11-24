@@ -271,25 +271,31 @@ describe("S4: no bolt; N running with its hover card", () => {
     ]);
   });
 
-  it("shows each harness logo and its count on one line without a split bar", () => {
+  it("shows each harness name beside its logo and count on one line without a split bar", () => {
     render();
     fireEvent.pointerEnter(counter().parentElement!);
     expect(card()!.querySelector("[data-harness-bar]")).toBeNull();
     const counts = [...card()!.querySelectorAll("[data-harness]")].map((el) => [
       el.getAttribute("data-harness"), el.textContent, el.querySelector('[role="img"]')?.getAttribute("aria-label"),
     ]);
-    expect(counts).toEqual([["harness-a", "6", "harness-a"], ["harness-b", "3", "harness-b"]]);
+    expect(counts).toEqual([
+      ["harness-a", "Harness A 6", "harness-a"],
+      ["harness-b", "Harness B 3", "harness-b"],
+    ]);
     expect(card()!.querySelector("[data-harness]")!.parentElement!.style.flexDirection).not.toBe("column");
   });
 
-  it("keeps three harness counts in one keyboard-scrollable row", () => {
-    render(v4Threads.map((row) => row.id === "thr_v4_untitled" ? { ...row, providerId: "harness-c" } : row));
+  it("shows Codex and Claude Code names beside their logos and counts, wrapping if needed", () => {
+    render(v4Threads.map((row) => ({
+      ...row,
+      providerId: row.id === "thr_v4_untitled" ? "harness-c"
+        : row.providerId === "harness-a" ? "codex" : "claude-code",
+    })));
     fireEvent.pointerEnter(counter().parentElement!);
     const legend = within(card()!).getByRole("list", { name: "Harness" });
     const entries = within(legend).getAllByRole("listitem");
-    expect(entries.map((entry) => entry.textContent)).toEqual(["5", "3", "1"]);
-    expect(legend.style.flexWrap).toBe("nowrap");
-    expect(legend.style.overflowX).toBe("auto");
+    expect(entries.map((entry) => entry.textContent)).toEqual(["Codex 5", "Claude Code 3", "Harness C 1"]);
+    expect(legend.style.flexWrap).toBe("wrap");
     expect(entries.map((entry) => entry.style.flexShrink)).toEqual(["0", "0", "0"]);
     expect(legend.tabIndex).toBe(0);
   });

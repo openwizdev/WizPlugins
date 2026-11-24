@@ -2,7 +2,7 @@ import type { MatrixStateV4, SpecsFileV4 } from "../fixtures/v4";
 import { effortName } from "../model-names";
 import type { EffortV3 } from "../v3-types";
 import { relativeTimeLabel } from "../relative-time";
-import { isActiveNote, pullPattern, type GitHubAgent } from "./format";
+import { agentLeaseMs, isActiveNote, pullPattern, type GitHubAgent } from "./format";
 import { issueNumber, unseenSnapshot, type AgentSidebarRow } from "./match";
 import type { AgentsRead } from "./read";
 
@@ -13,11 +13,11 @@ const isLive = (agent: GitHubAgent) => agent.live ?? isActiveNote(agent.state);
 const labelFor = (role: keyof typeof roles, repository: string, number: string | number) =>
   `${roles[role]} · ${repository.slice(repository.indexOf("/") + 1)} #${number}`;
 
-const modelWords = (value: string) => value.toLowerCase().replace(/[-_\s]+/g, " ").trim();
+const modelWords = (value: string) => value.toLowerCase().replace(/[-_,\s]+/g, " ").trim();
 
 function knownCloudModel(words: string): string | null {
-  return /^(?:gemini\s+[\d.]+\s+)?neon(?:\s|$)/.test(words) ? "Neon"
-    : /^(?:gpt\s+)?6\.2\s+sol(?:\s|$)|^sol\s+6\.2(?:\s|$)/.test(words) ? "Sol 6.2"
+  return /^(?:gemini\s+(?:[\d.]+\s+)?)?neon(?:\s|$)/.test(words) ? "Neon"
+    : /^(?:gpt\s+)?6\.2\s+sol(?:\s|$)|^sol\s+6\.2(?:\s|$)|^gpt\s+6\.2(?:\s+(?:low|medium|high|xhigh|max|ultra)(?:\s+effort)?|\s*$)/.test(words) ? "Sol 6.2"
     : /^(?:claude\s+)?opus\s+5[. ]5(?:\s|$)/.test(words) ? "Opus 5.5" : null;
 }
 
@@ -42,8 +42,14 @@ export interface CloudRow {
 }
 
 export type CloudAgents =
-  | { status: "ready"; active: number; rows: CloudRow[]; more: { label: string }[] }
+  | { status: "ready"; active: number; rows: CloudRow[]; earlier: CloudRow[]; more: { label: string }[] }
   | { status: "unavailable" };
+
+const isRecentFinished = (agent: GitHubAgent, now: number) => {
+  if (isActiveNote(agent.state)) return false;
+  const age = now - Date.parse(agent.updatedAt);
+  return age >= 0 && age < agentLeaseMs;
+};
 
 export function cloudAgents(read: AgentsRead, specs: SpecsFileV4 | null, rows: readonly AgentSidebarRow[] | null, now: number): CloudAgents {
   const snapshot = unseenSnapshot(read, specs, rows);
@@ -64,9 +70,15 @@ export function cloudAgents(read: AgentsRead, specs: SpecsFileV4 | null, rows: r
       url: agent.pr ?? `https://github.com/${agent.repository}/issues/${number}`,
     };
   };
+  const visible: CloudRow[] = [];
+  const earlier: CloudRow[] = [];
+  for (const agent of ordered) {
+    (isLive(agent) || isRecentFinished(agent, now) ? visible : earlier).push(format(agent));
+  }
   return {
     status: "ready", active: ordered.filter(isLive).length,
-    rows: ordered.map(format),
+    rows: visible,
+    earlier,
     more: snapshot.more.map(({ role, repository, number }) => ({ label: labelFor(role, repository, number) })),
   };
 }
