@@ -283,8 +283,8 @@ function QuietGroup({ count, open, onToggle }: { count: number; open: boolean; o
             <path d="M3.5 1.5 7 5l-3.5 3.5" />
           </svg>
         </span>
-        <span className="text-[13px] text-muted-foreground">Quiet</span>
-        <span className="text-[13px] tabular-nums text-muted-foreground/60">{count}</span>
+        <span className="text-sm font-normal text-muted-foreground">Quiet</span>
+        <span className="text-sm font-normal tabular-nums text-muted-foreground/60">{count}</span>
       </button>
     </li>
   );
@@ -348,13 +348,13 @@ function SpecRow({ row, threads, now, activeThreadId, breath, onNavigate, onTogg
   // A1 (#186): nothing running and nothing due now mutes the name, in place; host text colours only.
   const muted = nameMuted(row);
   const name = (
-    <span data-spec-name="" data-muted={muted ? "" : undefined} className="min-w-[6rem] flex-1 truncate text-[13px]"
+    <span data-spec-name="" data-muted={muted ? "" : undefined} className="min-w-[6rem] flex-1 truncate text-sm font-normal"
       style={{ color: muted ? tokens.mutedText : tokens.text }}>{row.shortName}</span>
   );
   // One clipped, wrapping line in priority order (#164 R2): when space is short the last note wraps out of
   // sight first, so done in the last hour goes, then later, and needs you stays longest.
   const notes = row.needsYou > 0 || row.yoursLater > 0 || row.doneLastHour > 0 ? (
-    <span data-notes="" className="flex h-[18px] min-w-0 flex-wrap justify-end gap-x-2 overflow-hidden text-[11.5px] leading-[18px]">
+    <span data-notes="" className="flex h-[18px] min-w-0 flex-wrap justify-end gap-x-2 overflow-hidden text-xs leading-[18px]">
       {row.needsYou > 0 ? <span data-needs-you="" className="shrink-0" style={{ color: tokens.warning }}>{row.needsYou} needs you</span> : null}
       {/* #162: tickets the owner gets once their blockers close, quiet beside the due-now count. */}
       {row.yoursLater > 0 ? (
@@ -372,16 +372,25 @@ function SpecRow({ row, threads, now, activeThreadId, breath, onNavigate, onTogg
       onFocus={() => setFocusWithin(true)}
       onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setFocusWithin(false); }}>
       <div className="rounded-lg px-2.5 py-[5px] hover:bg-sidebar-accent/60">
-        <div data-spec-line="" className="flex items-center gap-2">
-          {canOpen ? (
-            <button type="button" aria-expanded={open} aria-label={`${open ? "Close" : "Open"} ${row.shortName}`}
-              onClick={onToggle} className="flex min-w-0 flex-1 items-center gap-2 text-left">
-              {lead}
-              {name}
-              {notes}
-            </button>
-          ) : <>{lead}{name}{notes}</>}
-          <span className={cn(TRAILING_GLYPH_BOX_CLASS, "w-auto min-w-8 justify-end")}>
+        <div data-spec-line="" className="flex items-start gap-2">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-[5px]">
+            {canOpen ? (
+              <button type="button" aria-expanded={open} aria-label={`${open ? "Close" : "Open"} ${row.shortName}`}
+                onClick={onToggle} className="flex min-h-[18px] min-w-0 max-w-full flex-auto items-center gap-2 text-left">
+                {lead}
+                {name}
+                {notes}
+              </button>
+            ) : (
+              <span className="flex min-h-[18px] min-w-0 max-w-full flex-auto items-center gap-2">
+                {lead}
+                {name}
+                {notes}
+              </span>
+            )}
+            <Dots row={row} breath={breath} />
+          </div>
+          <span className={cn(TRAILING_GLYPH_BOX_CLASS, "h-[18px] w-auto min-w-8 justify-end")}>
             {/* Always in the tab order, so a row with no chevron can still reach GitHub; shown on hover or focus. */}
             <button type="button" aria-label={`Open ${row.shortName} on GitHub`}
               className={cn("text-muted-foreground hover:text-foreground", !revealed && "sr-only")}
@@ -391,7 +400,6 @@ function SpecRow({ row, threads, now, activeThreadId, breath, onNavigate, onTogg
             {revealed ? null : <span data-done-total="" className="tabular-nums text-muted-foreground">{row.done}/{row.total}</span>}
           </span>
         </div>
-        <Dots row={row} breath={breath} />
       </div>
       {open ? (
         <ul aria-label={`${row.shortName} agents`} className="flex flex-col gap-px">
@@ -428,7 +436,7 @@ function Dots({ row, breath }: { row: SpecRowV4; breath: BreathMode }) {
   for (const dot of row.dots) counts.set(dot.state, (counts.get(dot.state) ?? 0) + 1);
   const label = `${row.total} tickets: ${[...counts].map(([state, count]) => `${count} ${dotWords[state]}`).join(", ")}`;
   return (
-    <span role="img" aria-label={label} className="mt-[5px] flex flex-wrap gap-[3px]">
+    <span role="img" aria-label={label} className="flex max-w-full flex-wrap items-center gap-[3px]">
       {row.dots.map((dot) => (
         <Dot key={dot.ticket} state={dot.state} breathing={dotBreathes(dot, row.agents)} breath={breath} />
       ))}

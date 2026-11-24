@@ -287,10 +287,19 @@ describe("0.5 C: the rule, the spec rows and the open panel", () => {
     const name = line.querySelector("[data-spec-name]")!;
     expect(name.contains(line.querySelector("[data-needs-you]"))).toBe(false);
     expect(name.className).toContain("flex-1");
+    expect(name.className).toContain("text-sm");
+    expect(name.className).toContain("font-normal");
     expect((line.querySelector("[data-needs-you]") as HTMLElement).style.color).toBe(tokens.warning);
     expect((line.querySelector("[data-done-last-hour]") as HTMLElement).style.color).toBe(tokens.doneNote);
-    // The dots sit on the line below, outside the name line.
-    expect(line.querySelector("[data-dot-state]")).toBeNull();
+    // The dots sit in a wrapping flex group right of the name and notes, before done/total,
+    // staying inline when they fit and wrapping below otherwise; outside the toggle button.
+    const dots = line.querySelector('[role="img"]') as HTMLElement;
+    expect(dots).toBeTruthy();
+    expect(dots.parentElement!.className).toContain("flex-wrap");
+    expect(within(rowOf("Sample palette")).getByRole("button", { name: "Open Sample palette" }).contains(dots)).toBe(false);
+    const doneTotal = line.querySelector("[data-done-total]")!;
+    expect(name.compareDocumentPosition(dots) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(dots.compareDocumentPosition(doneTotal) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(rowOf("Sample palette").querySelectorAll("[data-dot-state]").length).toBe(10);
   });
 
