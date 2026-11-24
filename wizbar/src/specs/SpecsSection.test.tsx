@@ -57,11 +57,11 @@ describe("S1: the section shows one row per running spec", () => {
       ["example/sample-plans#501", "example/sample-tools#77"]);
     const palette = rowOf("Sample palette");
     expect(within(palette).getByText("1 needs you")).toBeTruthy();
-    expect(within(palette).getByText("1 done in the last hour")).toBeTruthy();
+    expect(within(palette).getByText("1 done · 1h")).toBeTruthy();
     expect(within(palette).getByText("4/10")).toBeTruthy();
     const cache = rowOf("Sample cache");
     expect(within(cache).getByText("0/3")).toBeTruthy();
-    expect(within(cache).queryByText(/done in the last hour/)).toBeNull();
+    expect(within(cache).queryByText(/done · 1h/)).toBeNull();
     for (const row of v4SpecRows.specs) {
       const dots = [...rowOf(row.shortName).querySelectorAll("[data-dot-state]")].map((d) => d.getAttribute("data-dot-state"));
       expect(dots).toEqual(row.dots.map((d) => d.state));
@@ -277,18 +277,22 @@ describe("0.5 C: the rule, the spec rows and the open panel", () => {
   });
 
   // catches: the notes left inline after the name instead of on the right, before done/total.
-  it("puts the name on the left and K needs you, N done in the last hour, then done/total on the right", async () => {
+  it("puts the name on the left and K needs you, N done · 1h, then done/total on the right", async () => {
     render();
     await screen.findByText("Sample palette");
     const line = rowOf("Sample palette").querySelector("[data-spec-line]")!;
     const order = [...line.querySelectorAll("[data-spec-name], [data-needs-you], [data-done-last-hour], [data-done-total]")]
       .map((el) => el.textContent);
-    expect(order).toEqual(["Sample palette", "1 needs you", "1 done in the last hour", "4/10"]);
+    expect(order).toEqual(["Sample palette", "1 needs you", "1 done · 1h", "4/10"]);
     const name = line.querySelector("[data-spec-name]")!;
     expect(name.contains(line.querySelector("[data-needs-you]"))).toBe(false);
     expect(name.className).toContain("flex-1");
+    expect(name.className).toContain("text-sm");
+    expect(name.className).toContain("font-medium");
     expect((line.querySelector("[data-needs-you]") as HTMLElement).style.color).toBe(tokens.warning);
-    expect((line.querySelector("[data-done-last-hour]") as HTMLElement).style.color).toBe(tokens.doneNote);
+    const doneNote = line.querySelector("[data-done-last-hour]") as HTMLElement;
+    expect(doneNote.style.color).toBe(tokens.doneNote);
+    expect(doneNote.getAttribute("title")).toBe("1 done in the last hour");
     // The dots sit on the line below, outside the name line.
     expect(line.querySelector("[data-dot-state]")).toBeNull();
     expect(rowOf("Sample palette").querySelectorAll("[data-dot-state]").length).toBe(10);
@@ -362,7 +366,7 @@ describe("0.5 C: the rule, the spec rows and the open panel", () => {
     const palette = rowOf("Sample palette");
     const line = palette.querySelector("[data-spec-line]")!;
     expect([...line.querySelectorAll("[data-spec-name], [data-needs-you], [data-yours-later], [data-done-last-hour], [data-done-total]")]
-      .map((el) => el.textContent)).toEqual(["Sample palette", "1 needs you", "· 1 later", "1 done in the last hour", "4/11"]);
+      .map((el) => el.textContent)).toEqual(["Sample palette", "1 needs you", "· 1 later", "1 done · 1h", "4/11"]);
     const later = line.querySelector("[data-yours-later]") as HTMLElement;
     expect(later.className).toContain("text-muted-foreground");
     expect(later.style.color).toBe("");
@@ -381,18 +385,23 @@ describe("0.5 C: the rule, the spec rows and the open panel", () => {
   // so this pins the layout rules; the 320 px harness render on #164 shows them in Chromium. The notes sit in one
   // clipped, wrapping line in priority order, so the lowest note (the last) wraps out of sight first; the name keeps
   // a minimum width; done/total never shrinks and sits outside the notes.
-  it("keeps the name and done/total, and drops notes lowest first: needs you, then later, then done in the last hour", async () => {
+  it("keeps the name and done/total, and drops notes lowest first: needs you, then later, then done · 1h", async () => {
     render({ read: () => ({ kind: "content", text: v4SpecsFileV2Text }) });
     await screen.findByText("Sample palette");
     const line = rowOf("Sample palette").querySelector("[data-spec-line]")!;
     const notes = line.querySelector("[data-notes]") as HTMLElement;
-    expect([...notes.children].map((el) => el.textContent)).toEqual(["1 needs you", "· 1 later", "1 done in the last hour"]);
-    for (const rule of ["flex-wrap", "overflow-hidden", "min-w-0", "justify-end"]) expect(notes.className).toContain(rule);
+    expect([...notes.children].filter((el) => !el.classList.contains("sr-only")).map((el) => el.textContent)).toEqual(["1 needs you", "· 1 later", "1 done · 1h"]);
+    // The short done note is hidden from screen readers, which hear the full words instead.
+    expect(notes.querySelector("[data-done-last-hour]")!.getAttribute("aria-hidden")).toBe("true");
+    expect(notes.querySelector(".sr-only")!.textContent).toBe("1 done in the last hour");
+    for (const rule of ["flex-wrap", "overflow-hidden", "min-w-0", "justify-end", "shrink-[999]"]) expect(notes.className).toContain(rule);
     expect(notes.className).toMatch(/\bh-\[/);
     expect(notes.className).not.toContain("shrink-0");
-    for (const note of notes.children) expect(note.className).toContain("shrink-0");
+    expect(notes.style.minWidth).toBe("min-content");
+    for (const note of notes.children) if (!note.classList.contains("sr-only")) expect(note.className).toContain("shrink-0");
     const name = line.querySelector("[data-spec-name]") as HTMLElement;
     expect(name.className).toMatch(/\bmin-w-\[/);
+    expect(name.className).toContain("basis-auto");
     expect(name.className).toContain("truncate");
     const total = line.querySelector("[data-done-total]")!.parentElement as HTMLElement;
     expect(notes.contains(total)).toBe(false);
@@ -481,7 +490,7 @@ describe("parity: wizbar specs --json is what the section shows", () => {
       rule: `Specs ${main.length} · ${cli.needsYou} tickets need you (${cli.needsYouSpecs} specs)`,
       specs: main.map((s: typeof v4SpecRows.specs[number]) => ({
         spec: s.spec, shortName: s.shortName, doneTotal: `${s.done}/${s.total}`,
-        doneLastHour: s.doneLastHour > 0 ? `${s.doneLastHour} done in the last hour` : null,
+        doneLastHour: s.doneLastHour > 0 ? `${s.doneLastHour} done · 1h` : null,
         needsYou: s.needsYou > 0 ? `${s.needsYou} needs you` : null,
         open: s.open, dots: s.dots.map((d) => d.state), agents: s.open ? s.agents.map((a) => a.threadId) : [],
       })),
@@ -955,6 +964,9 @@ describe("S2: the Quiet group", () => {
     const header = group(region);
     expect(header.textContent).toBe("Quiet2");
     expect(header.getAttribute("aria-expanded")).toBe("false");
+    const quietLabel = within(header).getByText("Quiet");
+    expect(quietLabel.className).toContain("text-sm");
+    expect(quietLabel.className).toContain("font-medium");
     // The group's header follows every main row.
     const last = region.querySelector(`[data-spec="${v6QuietSplit.main.at(-1)}"]`)!;
     expect(last.compareDocumentPosition(header) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();

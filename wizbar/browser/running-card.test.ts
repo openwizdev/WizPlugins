@@ -302,3 +302,26 @@ it.skipIf(!browserPath)("R2 keeps all thread card detail icons inside the card a
     await page.close();
   }
 });
+
+it.skipIf(!browserPath).each([200, 240, 280, 320])("keeps 'N needs you' whole on a %i px spec row", async (width) => {
+  const page = await browser.newPage({ viewport: { width: 360, height: 300 } });
+  try {
+    await page.goto(`${url}?narrow-spec=${width}`);
+    const needs = page.locator("[data-needs-you]");
+    await needs.waitFor({ state: "visible" });
+    const fit = await needs.evaluate((note) => {
+      const box = note.getBoundingClientRect();
+      const clip = note.closest("[data-notes]")!.getBoundingClientRect();
+      return {
+        text: note.textContent,
+        whole: note.scrollWidth <= note.clientWidth + 0.5,
+        inside: box.left >= clip.left - 0.5 && box.right <= clip.right + 0.5 && box.top >= clip.top - 0.5 && box.bottom <= clip.bottom + 0.5,
+      };
+    });
+    expect(fit).toEqual({ text: "1 needs you", whole: true, inside: true });
+    // Screen readers hear the full words for the short done note.
+    expect(await page.locator("[data-spec] .sr-only").first().textContent()).toBe("1 done in the last hour");
+  } finally {
+    await page.close();
+  }
+});
