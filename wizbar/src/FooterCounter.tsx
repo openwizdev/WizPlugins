@@ -91,6 +91,8 @@ export const FOOTER_HOLD_MS = 5_000;
 
 const CARD_GAP = 6;
 const CARD_MARGIN = 8;
+const CARD_RADIUS = 8;
+const cardBridge = "var(--sidebar, #161616)";
 
 /**
  * "N running" (specs-section.v1.md section 7): threads only, with a matrix
@@ -214,12 +216,17 @@ export function FooterCounterArtwork({ source, className, card, waitingOnYou = 0
         </span>
       </span>
       {/* After the trigger, so Tab moves into the card. The padding bridges the gap to the
-          trigger, one hit area, so pointing into the card never leaves the wrapper. */}
+          trigger, one hit area, so pointing into the card never leaves the wrapper, and the
+          opaque bridge masks the sidebar row behind that gap. */}
       {open ? (
         <div style={{
-          position: "absolute", bottom: "100%", left: 8, right: 8, zIndex: 50, paddingBottom: CARD_GAP, boxSizing: "border-box",
+          position: "absolute", bottom: "100%", left: CARD_MARGIN, right: CARD_MARGIN, zIndex: 50, paddingBottom: CARD_GAP, boxSizing: "border-box",
           display: "flex", flexDirection: "column", maxHeight: room === null ? `calc(100vh - ${CARD_MARGIN}px)` : `${room}px`,
         }}>
+          <div aria-hidden="true" data-card-bridge="" style={{
+            position: "absolute", left: -CARD_MARGIN, right: -CARD_MARGIN, bottom: 0, height: CARD_GAP + CARD_RADIUS,
+            background: cardBridge, pointerEvents: "none", zIndex: 0,
+          }} />
           {card(stale)}
         </div>
       ) : null}

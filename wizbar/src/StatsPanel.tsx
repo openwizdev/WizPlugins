@@ -188,6 +188,7 @@ const oneLine = { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "now
 const ROW_HEIGHT = 24;
 const collapsedGroups = new Map<string, ReadonlySet<SpecKeyV4 | null>>();
 const cardBackground = "var(--card, #222222)";
+const cardShadow = "0 4px 16px color-mix(in oklab, var(--background, #0f0f0f) 70%, transparent), 0 1px 3px color-mix(in oklab, var(--background, #0f0f0f) 50%, transparent)";
 const rowButton = {
   appearance: "none", margin: 0, border: 0, color: "inherit", font: "inherit", textAlign: "left",
   boxSizing: "border-box", width: "100%", height: ROW_HEIGHT, display: "flex", alignItems: "center",
@@ -367,9 +368,10 @@ export function StatsPanel({ rows, stale = false }: { rows: readonly PluginSideb
     : "";
   return (
     <section aria-label="Running threads" data-stale={stale ? "true" : undefined} style={{
-      display: "flex", flexDirection: "column", gap: 10, minHeight: 0, boxSizing: "border-box",
-      width: "100%", padding: "10px 12px", borderRadius: 10, fontSize: 13, lineHeight: "20px",
-      fontVariantNumeric: "tabular-nums", background: cardBackground, color: "var(--foreground)", border: `1px solid ${tokens.border}`,
+      position: "relative", zIndex: 1, display: "flex", flexDirection: "column", gap: 10, minHeight: 0, boxSizing: "border-box",
+      width: "100%", padding: "10px 12px", borderRadius: 8, fontSize: 13, lineHeight: "20px",
+      fontVariantNumeric: "tabular-nums", background: cardBackground, color: "var(--foreground)",
+      border: `1px solid ${tokens.border}`, boxShadow: cardShadow,
     }}>
       {stats.status !== "ready" ? <p style={quiet}>Stats unavailable</p> : (
         <>
