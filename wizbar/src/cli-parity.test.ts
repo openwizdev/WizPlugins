@@ -143,7 +143,7 @@ describe("V5: every UI action has a wizbar command with --json", () => {
     const names = cli.commands.map((c) => c.name);
     // #156: `models` is a read-only diagnostic of the model source, no UI action of its own.
     // S1 (#169): `section` collapses a sidebar section, the agent-first route to a header click.
-    expect(names.sort()).toEqual([...wizbarOperationsV4, "agents", "models", "section", "threads"].sort());
+    expect(names.sort()).toEqual([...wizbarOperationsV4, "agents", "footer", "models", "section", "threads"].sort());
     expect(names).toEqual(expect.arrayContaining(Object.values(uiActions)));
     for (const command of cli.commands) expect(command.usage, command.name).toMatch(/\[--json\]$/);
   });
@@ -428,5 +428,36 @@ describe("Yours threads CLI parity", () => {
     const result = await run(["threads", ...flags, "--json"]);
     expect(result.exitCode).toBe(2);
     expect(result.json.error.code).toBe("usage");
+  });
+});
+
+describe("composer footer CLI parity", () => {
+  it("saves composerFooter via wizbar footer <show|pinned|all> in text and JSON and rejects invalid modes", async () => {
+    const { host, run } = server();
+    const pinned = await run(["footer", "pinned", "--json"]);
+    expect(pinned).toEqual({ exitCode: 0, json: { composerFooter: "pinned" } });
+
+    const allText = await host.harness.behavior.runCli(["footer", "all"]);
+    expect(allText.exitCode).toBe(0);
+    expect(allText.stdout.trim()).toBe("composerFooter: all");
+
+    const show = await run(["footer", "show", "--json"]);
+    expect(show).toEqual({ exitCode: 0, json: { composerFooter: "show" } });
+
+    const saved = await run(["footer", "pinned", "--json"]);
+    expect(saved).toEqual({ exitCode: 0, json: { composerFooter: "pinned" } });
+    const reloaded = await host.harness.lifecycle.reload((bb) => { plugin(bb); });
+    hosts.push(reloaded);
+    const afterReload = await reloaded.harness.behavior.runCli(["footer", "all", "--json"]);
+    expect(afterReload.exitCode).toBe(0);
+    expect(JSON.parse(afterReload.stdout!)).toEqual({ composerFooter: "all" });
+
+    const invalid = await run(["footer", "sometimes", "--json"]);
+    expect(invalid.exitCode).toBe(2);
+    expect(invalid.json.error.code).toBe("usage");
+
+    const missing = await run(["footer", "--json"]);
+    expect(missing.exitCode).toBe(2);
+    expect(missing.json.error.code).toBe("usage");
   });
 });

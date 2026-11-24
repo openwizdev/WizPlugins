@@ -11,8 +11,13 @@ import { SubagentsChip } from "./src/SubagentsChip";
 import { SettingsPage } from "./src/SettingsPage";
 import { WizDeckNewThreadPanel, WizDeckPanel } from "./src/deck/home/Panel";
 import { WIZDECK_ACTION_ID } from "./src/deck/selection/selection";
+import { mountComposerFooterStylesheet } from "./src/composer-footer";
 
 export default definePluginApp((app) => {
+  app.contentScripts.register({
+    id: "composer-footer",
+    mount: () => mountComposerFooterStylesheet(),
+  });
   app.slots.settingsSection({ id: "wizbar-settings", component: SettingsPage });
   // WB4-3 (#1437): no footer item, so no bolt. "N running" at the list's
   // bottom carries the stats as its hover card.

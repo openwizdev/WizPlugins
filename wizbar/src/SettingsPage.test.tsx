@@ -29,7 +29,9 @@ function mount(options: {
   }) => {
     if (target !== pluginId) throw new Error("Wrong plugin settings boundary");
     for (const [key, value] of Object.entries(values)) {
-      if (!["footerCountEnabled", "machineIconsEnabled"].includes(key) || typeof value !== "boolean") {
+      const validSwitch = ["footerCountEnabled", "machineIconsEnabled"].includes(key) && typeof value === "boolean";
+      const validFooter = key === "composerFooter" && typeof value === "string" && ["show", "pinned", "all"].includes(value);
+      if (!validSwitch && !validFooter) {
         throw new Error("Invalid synthetic setting");
       }
     }
@@ -310,5 +312,27 @@ describe("header-chip switches", () => {
     fireEvent.click(childrenSwitch);
     await waitFor(() => expect(shown()).toEqual({ parent: false, children: false }));
     expect(updateSettings).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe("composer footer select", () => {
+  it("defaults to show, offers the three plain labels, saves changes and explains the host attribute", async () => {
+    const first = mount();
+    const select = screen.getByRole("combobox", { name: "Composer footer" }) as HTMLSelectElement;
+    expect(select.value).toBe("show");
+    expect([...select.options].map((option) => [option.value, option.textContent])).toEqual([
+      ["show", "Show"],
+      ["pinned", "Hide on pinned threads"],
+      ["all", "Hide everywhere"],
+    ]);
+    expect(screen.getByText(/data-follow-up-composer-footer/)).toBeDefined();
+
+    fireEvent.change(select, { target: { value: "pinned" } });
+    await waitFor(() => expect(select.value).toBe("pinned"));
+    expect(first.getStored()).toMatchObject({ composerFooter: "pinned" });
+
+    fireEvent.change(select, { target: { value: "all" } });
+    await waitFor(() => expect(select.value).toBe("all"));
+    expect(first.getStored()).toMatchObject({ composerFooter: "all" });
   });
 });

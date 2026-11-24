@@ -55,6 +55,7 @@ describe("V: a 0.5.0 store reloads into 0.6.0", () => {
       sectionsOrder: "[\"pinned\",\"cloud\",\"specs\",\"yours\"]",
       threadsSort: "newest",
       threadsFilter: "{}",
+      composerFooter: "show",
     });
     expect(readSpecsSort(values.specsSort)).toBe("needs-you");
     expect(readSectionsOrder(values.sectionsOrder)).toEqual(["pinned", "cloud", "specs", "yours"]);

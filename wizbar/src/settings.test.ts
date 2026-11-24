@@ -30,9 +30,10 @@ describe("N1: actual WizBar settings declarations and persistent reload", () => 
     const { host } = setup();
     const descriptors = host.harness.inspection.registrations.settingsDescriptors;
     expect(Object.keys(descriptors).sort()).toEqual([
-      "childrenChipEnabled", "footerCountEnabled", "machineIconsEnabled", "parentChipEnabled", "sectionsCollapsed",
+      "childrenChipEnabled", "composerFooter", "footerCountEnabled", "machineIconsEnabled", "parentChipEnabled", "sectionsCollapsed",
       "sectionsOrder", "specsOpen", "specsSort", "threadsFilter", "threadsSort", "wizdeckFactories", "wizdeckGithubToken",
     ]);
+    expect(descriptors.composerFooter).toMatchObject({ type: "string", default: "show" });
     expect(descriptors.specsSort).toMatchObject({ type: "string", default: "needs-you" });
     expect(descriptors.sectionsOrder).toMatchObject({ type: "string", default: "[\"pinned\",\"cloud\",\"specs\",\"yours\"]" });
     expect(descriptors.threadsSort).toMatchObject({ type: "string", default: "newest" });
@@ -116,11 +117,11 @@ describe("N1: actual WizBar settings declarations and persistent reload", () => 
     await host.harness.behavior.setSettings({ ...v6Store050 });
     host = await host.harness.lifecycle.reload(factory);
     hosts.push(host);
-    expect(await read()).toEqual({ ...v6Store050, specsSort: "needs-you", sectionsOrder: '["pinned","cloud","specs","yours"]', threadsSort: "newest", threadsFilter: "{}" });
+    expect(await read()).toEqual({ ...v6Store050, composerFooter: "show", specsSort: "needs-you", sectionsOrder: '["pinned","cloud","specs","yours"]', threadsSort: "newest", threadsFilter: "{}" });
     await host.harness.behavior.setSettings({ specsSort: "closest", sectionsOrder: "[\"unread\",\"pinned\",\"specs\"]" });
     host = await host.harness.lifecycle.reload(factory);
     hosts.push(host);
-    expect(await read()).toEqual({ ...v6Store050, threadsSort: "newest", threadsFilter: "{}", specsSort: "closest", sectionsOrder: "[\"unread\",\"pinned\",\"specs\"]" });
+    expect(await read()).toEqual({ ...v6Store050, composerFooter: "show", threadsSort: "newest", threadsFilter: "{}", specsSort: "closest", sectionsOrder: "[\"unread\",\"pinned\",\"specs\"]" });
   });
 
   it("rejects wrong types and unknown keys without changing saved settings", async () => {
@@ -180,5 +181,49 @@ describe("C0: specsSort reads one of four sorts", () => {
   it.each(v6SpecsSortCases.map((c) => [c.raw, c.sort] as const))("reads %j as %s", async (raw, sort) => {
     const { readSpecsSort } = await import("./settings");
     expect(readSpecsSort(raw)).toBe(sort);
+  });
+});
+
+describe("F1: composerFooter reads one of three modes and reloads cleanly", () => {
+  it.each([
+    ["show", "show"],
+    ["pinned", "pinned"],
+    ["all", "all"],
+    [undefined, "show"],
+    ["unknown", "show"],
+    [true, "show"],
+    [42, "show"],
+  ] as const)("reads %j as %s", async (raw, expected) => {
+    const { readComposerFooter } = await import("./settings");
+    expect(readComposerFooter(raw)).toBe(expected);
+  });
+
+  it("reloads 0.6 and 0.7 settings unchanged with composerFooter starting at show and persisting writes", async () => {
+    let read: () => Promise<Record<string, unknown>> = async () => ({});
+    const factory = (bb: BbPluginApi) => {
+      const definition = vi.spyOn(bb.settings, "define");
+      plugin(bb);
+      const handles = definition.mock.results.map((result) => result.value as { get(): Promise<Record<string, unknown>> });
+      read = async () => Object.assign({}, ...await Promise.all(handles.map((handle) => handle.get())));
+    };
+    const stored07 = {
+      ...v6Store050,
+      specsSort: "recent",
+      sectionsOrder: '["pinned","cloud","specs","yours"]',
+      threadsSort: "activity",
+      threadsFilter: '{"status":"idle"}',
+    };
+    let host = createFakePluginHost({ pluginId: "wizbar" });
+    hosts.push(host);
+    factory(host.bb);
+    await host.harness.behavior.setSettings(stored07);
+    host = await host.harness.lifecycle.reload(factory);
+    hosts.push(host);
+    expect(await read()).toEqual({ ...stored07, composerFooter: "show" });
+
+    await host.harness.behavior.setSettings({ composerFooter: "pinned" });
+    host = await host.harness.lifecycle.reload(factory);
+    hosts.push(host);
+    expect(await read()).toEqual({ ...stored07, composerFooter: "pinned" });
   });
 });
