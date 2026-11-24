@@ -18,7 +18,9 @@ import { execFile } from "node:child_process";
 import { link, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+// @ts-expect-error Node runs this producer directly and requires the source extension.
 import { agentLeaseMs, agentsRelativePath, type GitHubAgent } from "../../src/agents/format.ts";
+// @ts-expect-error Node runs this producer directly and requires the source extension.
 import { liveAgents, loginPattern, slimComment, slimFleet } from "./agents.ts";
 
 export interface GitHubResponse { status: number; etag: string | null; next: string | null; body: unknown }

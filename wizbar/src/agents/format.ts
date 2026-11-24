@@ -3,7 +3,7 @@ export const agentLeaseMs = 30 * 60_000;
 export const agentKinds = ["builder", "reviewer", "fleet"] as const;
 export const liveStates = ["working", "asking"] as const;
 
-export const repositoryPattern = /^(?![^/]*\.\.(?:\/|$))[A-Za-z0-9][A-Za-z0-9-]*\/(?!\.{1,2}$)[A-Za-z0-9._-]+$/;
+export const repositoryPattern = /^[A-Za-z0-9][A-Za-z0-9-]*\/(?!\.{1,2}$)[A-Za-z0-9._-]+$/;
 export const pullPattern = /^https:\/\/github\.com\/([A-Za-z0-9][A-Za-z0-9-]*\/(?!\.{1,2}\/)[A-Za-z0-9._-]+)\/pull\/([1-9][0-9]*)$/;
 
 // The public field restrictions from the agent status contract v1.

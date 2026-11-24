@@ -7,6 +7,7 @@
 import { createHash } from "node:crypto";
 import { defineRpcContract, type BbPluginApi } from "@get-bb/plugin-sdk";
 import { z } from "zod";
+import { agentsRelativePath } from "../agents/format";
 import { runtimeStatusesV3 } from "../children";
 import type { SpecsFileReadV4 } from "../fixtures/v4";
 import type { CardModelsResultV3 } from "../v3-types";
@@ -21,9 +22,10 @@ const readOutput = z.union([
   z.object({ kind: z.enum(["no-binding", "missing", "unreadable"]) }).strict(),
   z.object({ kind: z.literal("content"), text: z.string() }).strict(),
 ]);
-/** The Specs section's one RPC: the specs file read, before parsing. */
+/** Bound factory file reads, before parsing. */
 export const specsRpcContract = defineRpcContract({
   specsFile: { input: z.object({}).strict(), output: readOutput },
+  agentsFile: { input: z.object({}).strict(), output: readOutput },
 });
 
 interface Handles {
@@ -117,8 +119,13 @@ async function readRows(bb: BbPluginApi, signal?: AbortSignal): Promise<SpecsThr
   }
 }
 
-export function registerSpecs(bb: BbPluginApi, handles: Handles): SpecsCommands & { specsFile(): Promise<SpecsFileReadV4> } {
-  let cached: { key: string; at: number; read: Promise<SpecsFileReadV4> } | null = null;
+export function registerSpecs(bb: BbPluginApi, handles: Handles): SpecsCommands & {
+  specsFile(): Promise<SpecsFileReadV4>;
+  agentsFile(): Promise<SpecsFileReadV4>;
+} {
+  type Cached = { key: string; at: number; read: Promise<SpecsFileReadV4> };
+  let cached: Cached | null = null;
+  let cachedAgents: Cached | null = null;
 
   /** The bound factory's specs file, shared by every reader for 60 seconds. */
   const specsFile = async (): Promise<SpecsFileReadV4> => {
@@ -140,7 +147,25 @@ export function registerSpecs(bb: BbPluginApi, handles: Handles): SpecsCommands 
     return cached.read;
   };
 
-  bb.rpc.register(specsRpcContract, { specsFile: () => specsFile() });
+  const agentsFile = async (): Promise<SpecsFileReadV4> => {
+    let factories: unknown;
+    try {
+      factories = (await handles.factories.get()).wizdeckFactories;
+    } catch {
+      return { kind: "unreadable" };
+    }
+    const home = boundHome(factories);
+    if (home === null) return { kind: "no-binding" };
+    const { hostId, rootPath } = home;
+    const key = JSON.stringify([hostId, rootPath]);
+    const now = Date.now();
+    if (!cachedAgents || cachedAgents.key !== key || now - cachedAgents.at >= REFRESH_MS || now < cachedAgents.at) {
+      cachedAgents = { key, at: now, read: readOnce(bb.sdk.files.read, hostId, rootPath, agentsRelativePath) };
+    }
+    return cachedAgents.read;
+  };
+
+  bb.rpc.register(specsRpcContract, { specsFile, agentsFile });
 
   const commands = createSpecsCommands({
     specsFile,
@@ -153,5 +178,5 @@ export function registerSpecs(bb: BbPluginApi, handles: Handles): SpecsCommands 
     writeOpenSetting: async (value) => (await handles.settings.experimental_set({ specsOpen: value })).specsOpen,
   });
   // WB4-3 (#1437): `wizbar stats` reads the same cached file.
-  return { ...commands, specsFile };
+  return { ...commands, specsFile, agentsFile };
 }

@@ -16,6 +16,7 @@ import { placePinned } from "./drag";
 import type { CardModelsResultV3, MovePositionV3 } from "./v3-types";
 import { sortPinned } from "./inbox";
 import { computeStatsV4, isRunning, runtimeDisplayStatuses, type StatsRow, type StatsV4Row } from "./stats";
+import { readAgentsFile } from "./agents/read";
 import { readSpecsFile } from "./specs/read";
 import { childrenList, runtimeStatusesV3, type ChildrenRow } from "./children";
 import { registerDeckReaders } from "./deck/data/server";
@@ -212,6 +213,7 @@ const statsRowSchema = z.object({
   title: z.string().nullable().optional(),
   titleFallback: z.string().nullable().optional(),
   providerId: z.string(),
+  visibility: z.enum(["visible", "hidden"]).optional(),
   createdAt: z.number().finite(),
   updatedAt: z.number().finite(),
   status: z.string(),
@@ -225,6 +227,7 @@ const statsRowSchema = z.object({
   environmentHostId: z.string().nullable(),
 }).transform((raw): StatsV4Row => ({
   id: raw.id, parentThreadId: raw.parentThreadId, hasPendingInteraction: raw.hasPendingInteraction,
+  isHidden: raw.visibility === "hidden",
   displayTitle: raw.title || raw.titleFallback || raw.id, providerId: raw.providerId,
   createdAt: raw.createdAt, updatedAt: raw.updatedAt, status: raw.status as StatsV4Row["status"], queuedWork: raw.queuedWork,
   runtimeStatus: raw.runtime.displayStatus,
@@ -742,10 +745,11 @@ export default function plugin(bb: BbPluginApi) {
   bb.cli.register(withSectionCommand(withModelsCommand(createLifecycleCommand(perform, async (signal) => {
     const rows = await readStatsRows(bb, signal);
     const now = Date.now();
-    const read = readSpecsFile(await specs.specsFile(), now);
+    const [specsRead, agentsRead] = await Promise.all([specs.specsFile(), specs.agentsFile()]);
+    const read = readSpecsFile(specsRead, now);
     const running = rows?.filter(isRunning).map((row) => row.id) ?? [];
     const stats = computeStatsV4(rows, read.status === "ready" ? read.file : null, running.length ? await models(running) : null,
-      now, Intl.DateTimeFormat().resolvedOptions().timeZone);
+      now, Intl.DateTimeFormat().resolvedOptions().timeZone, readAgentsFile(agentsRead, now));
     return stats.threads ? { ...stats, threads: stats.threads.map(withModelLabel) } : stats;
   }, pins,
     (threadId, signal) => readChildren(bb, threadId, signal), withSpecsModelLabels(specs)), hostOptions(bb), hostContext(bb)), sections));

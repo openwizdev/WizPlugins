@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { afterEach, expect, it, vi } from "vitest";
-import { v4Now, v4SpecsFileText, v4Threads } from "../fixtures/v4";
+import { v4Now, v4RealTitlesFile, v4Threads } from "../fixtures/v4";
 import { readSpecsFile } from "../specs/read";
 import { rawRow } from "../specs/testing";
 import { createFakePluginHost } from "@get-bb/plugin-sdk/testing";
@@ -9,7 +9,8 @@ import { readAgentsFile } from "./read";
 import { unseenAgents } from "./match";
 import type { GitHubAgent } from "./format";
 
-const repository = "example/sample-plans";
+const repository = "example/sample-fleet";
+const specsText = JSON.stringify(v4RealTitlesFile);
 const binding = JSON.stringify([{
   projectKey: "sample-factory", cloudroomProjectId: "sample-project", repositories: [repository],
   home: { hostId: "sample-host", rootPath: "/synthetic/home" },
@@ -23,10 +24,10 @@ const note: GitHubAgent = {
 const file = (agents: GitHubAgent[] = [note], now = v4Now) => ({ version: 1, generatedAt: new Date(now).toISOString(), agents });
 const content = (value: unknown) => ({ kind: "content" as const, text: JSON.stringify(value) });
 const parse = (value = file(), now = v4Now) => readAgentsFile(content(value), now);
-const specsRead = readSpecsFile({ kind: "content", text: v4SpecsFileText }, v4Now);
+const specsRead = readSpecsFile({ kind: "content", text: specsText }, v4Now);
 const specs = specsRead.status === "ready" ? specsRead.file : null;
 const active = v4Threads.find((row) => row.runtimeStatus === "active" && !row.hasPendingInteraction)!;
-const row = (displayTitle: string, patch: Partial<typeof active> = {}) => ({ ...active, displayTitle, ...patch });
+const row = (displayTitle: string, patch: Partial<typeof active> = {}) => ({ ...active, id: displayTitle, displayTitle, ...patch });
 
 afterEach(() => vi.useRealTimers());
 
@@ -54,7 +55,9 @@ it("matches active builders and reviewers by kind and ticket, deduplicating by o
     .toEqual({ status: "ready", count: 2, agents: [reviewer, other] });
   expect(unseenAgents(read, specs, [row("Review #950 at abcdef0"), row("#990: Sample work")], v4Now))
     .toEqual({ status: "ready", count: 1, agents: [note] });
-  expect(unseenAgents(read, null, [row("#902: Sample work", { hasPendingInteraction: true })], v4Now))
+  expect(unseenAgents(read, specs, [row("Builder · KN2: Sample work")], v4Now))
+    .toEqual({ status: "ready", count: 2, agents: [reviewer, other] });
+  expect(unseenAgents(read, null, [row("#902: Sample work", { isHidden: true }), row("#902: Sample work", { hasPendingInteraction: true })], v4Now))
     .toEqual({ status: "ready", count: 3, agents: [note, reviewer, other] });
 });
 
@@ -68,7 +71,7 @@ it("serves the absolute bound agents file to RPC and includes its unseen claims 
   vi.setSystemTime(v4Now);
   const json = JSON.stringify(file([note, { ...note, ticket: `${repository}#990`, commentId: 2 }]));
   const read = vi.fn(async ({ path }: { path: string }) => {
-    const content = path.endsWith("/agents.v1.json") ? json : v4SpecsFileText;
+    const content = path.endsWith("/agents.v1.json") ? json : specsText;
     return { path, content, sha256: createHash("sha256").update(content).digest("hex"), contentEncoding: "utf8", sizeBytes: content.length };
   });
   const host = createFakePluginHost({ pluginId: "wizbar", sdk: {

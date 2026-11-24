@@ -1,3 +1,4 @@
+// @ts-expect-error Node runs this producer directly and requires the source extension.
 import { agentKinds, agentLeaseMs, liveStates, publicText, pullPattern, repositoryPattern, type GitHubAgent } from "../../src/agents/format.ts";
 
 const login = "[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*(?:\\[bot\\])?";
@@ -85,7 +86,7 @@ export function liveAgents(
   comments: Record<string, unknown>[], repository: string, authors: ReadonlySet<string>, now: Date,
 ): GitHubAgent[] {
   const claims = new Map<string, GitHubAgent>();
-  for (const comment of comments as (GitHubAgent & { author: string })[]) {
+  for (const comment of comments as (Record<string, unknown> & GitHubAgent & { author: string })[]) {
     const { author, ...agent } = comment;
     const age = now.getTime() - Date.parse(agent.updatedAt);
     if (!authors.has(author) || agent.repository.toLowerCase() !== repository.toLowerCase()
