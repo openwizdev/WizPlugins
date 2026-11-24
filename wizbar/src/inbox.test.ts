@@ -10,7 +10,7 @@ import {
   sortByCreatedAtDescending,
   sortPinned,
   threadDisplayTitle,
-  unreadThreads,
+  yoursThreads,
   visibleInboxThreads,
 } from "./inbox";
 import { v3PinnedOrder, v3Threads } from "./fixtures/v3";
@@ -250,18 +250,20 @@ describe("sortPinned", () => {
 });
 
 // E2 (#188): Unread (sidebar-v3.v1.md section 10). Every row is synthetic.
-describe("unreadThreads", () => {
+describe("yoursThreads", () => {
   const working = { status: "active", runtimeStatus: "active" } as const;
   // catches: an Unread that keeps every thread (the 0.5 Inbox), drops an attention marker that is not
   // `isUnread`, lists a spec's running agent twice, or lets a fleet thread in.
   it.each([
-    ["a read thread", {}, false],
+    ["a read root thread", {}, true],
+    ["a read orphan", { parentThreadId: "thr_missing" }, false],
+    ["an unread orphan", { parentThreadId: "thr_missing", isUnread: true }, true],
     ["an unread thread", { isUnread: true }, true],
     ["a thread waiting on you", { hasPendingInteraction: true, indicator: "waiting-for-input" }, true],
     ["a failed unread thread", { indicator: "unread-error" }, true],
     ["a finished unread thread", { indicator: "unread-success" }, true],
     ["a queued message that failed to send", { indicator: "queued-failed", queuedWork: "failed" }, true],
-    ["a working read thread", { ...working, indicator: "runtime" }, false],
+    ["a working read thread", { ...working, indicator: "runtime" }, true],
     ["an unread spec agent, running", { ...working, isUnread: true, displayTitle: "Builder · SC-1: Sample borrowed code" }, false],
     ["an unread spec agent, finished", { isUnread: true, displayTitle: "Builder · SC-1: Sample borrowed code" }, true],
     ["an unread thread matching no spec, running", { ...working, isUnread: true, displayTitle: "Builder · ZZ-9: Sample stray" }, true],
@@ -270,7 +272,7 @@ describe("unreadThreads", () => {
     ["a title only mentioning a fleet", { isUnread: true, displayTitle: "Sample notes on Fleet #77: later" }, true],
   ] as const)("%s", (_name, changes, shown) => {
     const row = thread({ id: "thr_x", ...(changes as Partial<PluginSidebarThread>) });
-    expect(unreadThreads([row], v4SpecsFile, [row]).map((t) => t.id)).toEqual(shown ? ["thr_x"] : []);
+    expect(yoursThreads([row], v4SpecsFile, [row]).map((t) => t.id)).toEqual(shown ? ["thr_x"] : []);
   });
 
   // catches: a fleet loop run let into Unread because it is unread, a loop of a repository outside the
@@ -291,7 +293,7 @@ describe("unreadThreads", () => {
     const row = thread({ id: "thr_x", title, displayTitle: title, isUnread: true });
     expect(row.originKind).toBeNull();
     expect(row.originPluginId).toBeNull();
-    expect(unreadThreads([row], v4SpecsFile, [row], ["example/sample-plans", "example/sample-tools"]).map((t) => t.id))
+    expect(yoursThreads([row], v4SpecsFile, [row], ["example/sample-plans", "example/sample-tools"]).map((t) => t.id))
       .toEqual(shown ? ["thr_x"] : []);
   });
 
@@ -300,7 +302,7 @@ describe("unreadThreads", () => {
   it("keeps out a running unread child of a spec's fleet thread", () => {
     const child = thread({ id: "thr_child", status: "active", runtimeStatus: "active", isUnread: true,
       parentThreadId: "thr_v4_fleet_a", displayTitle: "Builder · SC-1: Sample borrowed code" });
-    expect(unreadThreads([child], v4SpecsFile, [child])).toEqual([]);
+    expect(yoursThreads([child], v4SpecsFile, [child])).toEqual([]);
   });
 
   // #211 R1: catches a read parent kept out of Unread although a child hidden under it (in the parent's chip)
@@ -314,9 +316,9 @@ describe("unreadThreads", () => {
     ["an unread fleet loop run", { isUnread: true, displayTitle: "launch-fleet wakes example/sample-plans" }, "thr_parent", false],
     ["an unread child of another parent", { isUnread: true }, "thr_other", false],
   ] as const)("a read parent with %s hidden under it", (_name, changes, parentThreadId, shown) => {
-    const parent = thread({ id: "thr_parent", displayTitle: "Sample quiet parent" });
+    const parent = thread({ id: "thr_parent", parentThreadId: "thr_missing", displayTitle: "Sample quiet parent" });
     const child = thread({ id: "thr_child", displayTitle: "Sample child", parentThreadId, ...(changes as Partial<PluginSidebarThread>) });
-    expect(unreadThreads([parent], v4SpecsFile, [parent, child], ["example/sample-plans"], [child]).map((t) => t.id))
+    expect(yoursThreads([parent], v4SpecsFile, [parent, child], ["example/sample-plans"], [child]).map((t) => t.id))
       .toEqual(shown ? ["thr_parent"] : []);
   });
 
@@ -324,7 +326,7 @@ describe("unreadThreads", () => {
   it("keeps a fleet wake out even when a child under it is unread", () => {
     const parent = thread({ id: "thr_parent", displayTitle: "Fleet #77: Sample cache" });
     const child = thread({ id: "thr_child", displayTitle: "Sample child", parentThreadId: "thr_parent", isUnread: true });
-    expect(unreadThreads([parent], v4SpecsFile, [parent, child], [], [child])).toEqual([]);
+    expect(yoursThreads([parent], v4SpecsFile, [parent, child], [], [child])).toEqual([]);
   });
 
   // catches: an unreadable specs file that hides everything, or one that drops the order it was given.
@@ -334,6 +336,6 @@ describe("unreadThreads", () => {
       thread({ id: "a", isUnread: true }),
       thread({ id: "c" }),
     ];
-    expect(unreadThreads(rows, null, rows).map((t) => t.id)).toEqual(["b", "a"]);
+    expect(yoursThreads(rows, null, rows).map((t) => t.id)).toEqual(["b", "a", "c"]);
   });
 });

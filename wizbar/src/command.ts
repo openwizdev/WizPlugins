@@ -6,6 +6,9 @@ import type { ChildrenResultV3, MovePositionV3, MoveResultV3, PinResultV3 } from
 import type { StatsV4 } from "./fixtures/v4";
 import type { SpecsCommands } from "./specs/cli";
 
+import { threadSorts, threadStatuses, type ThreadSort } from "./settings";
+import type { ThreadRow, ThreadSelectors } from "./threads";
+
 export type LifecycleOperation = "settle" | "unsettle" | "snooze" | "unsnooze" | "mute" | "unmute" | "list";
 export interface LifecycleSuccess {
   threadId: string;
@@ -24,7 +27,9 @@ export class LifecycleError extends Error {
 
 type Execute = (operation: LifecycleOperation, threadId: string, until?: number, signal?: AbortSignal) => Promise<LifecycleSuccess>;
 const operations = ["settle", "unsettle", "snooze", "unsnooze", "mute", "unmute", "list"] as const;
-const usage = "wizbar <settle|unsettle|snooze|unsnooze|mute|unmute|list|pin|unpin|move> <id>... [--until <absolute-time|hour|evening|tomorrow|next-week>] [--before <id>|--after <id>|--first|--last] [--json] | wizbar stats [--json] | wizbar children <id> [--json] | wizbar specs [--json] | wizbar spec <n> (--open | --close) [--json]";
+const threadsUsage = "threads [--search <text>] [--sort <newest|activity|status|harness|model|effort>] [--status <s>] [--harness <h>] [--model <m>] [--effort <e>] [--all] [--json]";
+const specsUsage = "specs [--sort <needs-you|recent|closest|newest>] [--json]";
+const usage = `wizbar <settle|unsettle|snooze|unsnooze|mute|unmute|list|pin|unpin|move> <id>... [--until <absolute-time|hour|evening|tomorrow|next-week>] [--before <id>|--after <id>|--first|--last] [--json] | wizbar stats [--json] | wizbar children <id> [--json] | wizbar ${specsUsage} | wizbar spec <n> (--open | --close) [--json] | wizbar ${threadsUsage}`;
 
 /** WZ21: the host's pins, through WizBar's server (sidebar-v3.v1.md section 7). */
 export interface PinOperations {
@@ -124,7 +129,60 @@ function wakeTime(value: string, now: number): number {
 /** WZ20 (#41), WB4-3 (#1437): reads every row and computes the card's stats; an unavailable read gives `status: "unavailable"`. */
 type ReadStats = (signal?: AbortSignal) => Promise<StatsV4>;
 
-export function createLifecycleCommand(execute: Execute, readStats: ReadStats, pins?: PinOperations, children?: ReadChildren, specs?: SpecsCommands): PluginCliRegistration {
+export type ThreadsOptions = {
+  search: string;
+  sort?: ThreadSort;
+  filters: ThreadSelectors;
+  all: boolean;
+};
+type ReadThreads = (options: ThreadsOptions, signal?: AbortSignal) => Promise<ThreadRow[]>;
+
+function parseThreadsOptions(args: readonly string[]): ThreadsOptions | null {
+  const options: ThreadsOptions = { search: "", filters: {}, all: false };
+  const seen = new Set<string>();
+  for (let i = 0; i < args.length; i++) {
+    const flag = args[i]!;
+    if (seen.has(flag)) return null;
+    seen.add(flag);
+    if (flag === "--json") continue;
+    if (flag === "--all") { options.all = true; continue; }
+    const value = args[++i]?.trim();
+    if (value === undefined || value.startsWith("--") || (!value && flag !== "--search")) return null;
+    switch (flag) {
+      case "--search": options.search = value; break;
+      case "--sort":
+        if (!(threadSorts as readonly string[]).includes(value)) return null;
+        options.sort = value as ThreadSort;
+        break;
+      case "--status":
+        if (value !== "all" && !(threadStatuses as readonly string[]).includes(value)) return null;
+        options.filters.status = value;
+        break;
+      case "--harness": options.filters.harness = value; break;
+      case "--model": options.filters.model = value; break;
+      case "--effort":
+        if (!["none", "low", "medium", "high", "xhigh", "max", "ultra", "ultracode"].includes(value)) return null;
+        options.filters.effort = value;
+        break;
+      default: return null;
+    }
+  }
+  return options;
+}
+
+async function runThreads(options: ThreadsOptions, json: boolean, read: ReadThreads, signal?: AbortSignal): Promise<PluginCliResult> {
+  try {
+    const rows = await read(options, signal);
+    const text = rows.length ? rows.map((row) =>
+      `${JSON.stringify(row.id)}: ${row.status} ${row.title.replace(/[\r\n]+/g, " ")}`).join("\n") : "no threads";
+    return { exitCode: 0, stdout: (json ? JSON.stringify({ threads: rows }) : text) + "\n" };
+  } catch {
+    const error = { code: "state_unavailable", message: "Thread state is unavailable." };
+    return { exitCode: 1, ...(json ? { stdout: JSON.stringify({ error }) + "\n" } : { stderr: error.message + "\n" }) };
+  }
+}
+
+export function createLifecycleCommand(execute: Execute, readStats: ReadStats, pins?: PinOperations, children?: ReadChildren, specs?: SpecsCommands, threads?: ReadThreads): PluginCliRegistration {
   return {
     name: "wizbar",
     summary: "List or change WizBar thread shelves.",
@@ -136,9 +194,10 @@ export function createLifecycleCommand(execute: Execute, readStats: ReadStats, p
         { name: "unpin", summary: "unpin one or many threads", usage: "unpin <id>... [--json]" },
         { name: "move", summary: "move one pinned thread", usage: "move <id> (--before <id> | --after <id> | --first | --last) [--json]" },
       ] : []),
+      ...(threads ? [{ name: "threads", summary: "list and search active threads", usage: threadsUsage }] : []),
       ...(children ? [{ name: "children", summary: "list one thread's children", usage: "children <id> [--json]" }] : []),
       ...(specs ? [
-        { name: "specs", summary: "the running specs the Specs section shows", usage: "specs [--json]" },
+        { name: "specs", summary: "the running specs the Specs section shows", usage: specsUsage },
         { name: "spec", summary: "open or close one spec in the Specs section", usage: "spec <n> (--open | --close) [--json]" },
       ] : []),
     ],
@@ -159,6 +218,10 @@ export function createLifecycleCommand(execute: Execute, readStats: ReadStats, p
           return { exitCode: 1, stdout: (json ? JSON.stringify({ error }) : formatStatsText(stats)) + "\n" };
         }
         return { exitCode: 0, stdout: (json ? JSON.stringify(stats) : formatStatsText(stats)) + "\n" };
+      }
+      if (threads && operation === "threads") {
+        const options = parseThreadsOptions(argv.slice(1));
+        return options ? runThreads(options, json, threads, ctx.signal) : failUsage();
       }
       if (children && operation === "children") return await runChildren(argv, json, children, ctx.signal) ?? failUsage();
       if (specs && (operation === "specs" || operation === "spec")) return await specs.run(argv, json, ctx.signal) ?? failUsage();

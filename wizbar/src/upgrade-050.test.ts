@@ -1,10 +1,4 @@
-// V (#189), Q5: the 0.5.0 → 0.6.0 upgrade. A plugin store exactly as 0.5.0 left it
-// (all eight keys away from their defaults, src/fixtures/v6.ts) reloads into the
-// real 0.6.0 backend with every value kept; the two 0.6 keys read at their defaults;
-// a stored 0.5 `inbox` collapse reads, and stays, as the Unread section's.
-// catches: a release that renames, retypes or re-defaults a 0.5.0 key (its value is
-// lost or refused on reload), a 0.5 Inbox collapse that opens again as Unread, or a
-// package still at 0.5.0 (the settings page's version and the ^0.6.0 range disagree).
+// Reload the complete 0.5.0 store and verify the section alias reaches Yours.
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createFakePluginHost, type FakePluginHost } from "@get-bb/plugin-sdk/testing";
 import type { BbPluginApi } from "@get-bb/plugin-sdk";
@@ -27,7 +21,7 @@ describe("V: a 0.5.0 store reloads into 0.6.0", () => {
     expect(lock.packages[""].version).toBe("0.6.0");
   });
 
-  it("keeps all eight 0.5.0 values, defaults the 0.6 keys and reads the inbox collapse as unread", async () => {
+  it("keeps all eight 0.5.0 values and reads the inbox collapse as Yours", async () => {
     // The 0.5.0 store, written out by hand: every key, none at its default.
     expect(Object.keys(v6Store050).sort()).toEqual([
       "childrenChipEnabled", "footerCountEnabled", "machineIconsEnabled", "parentChipEnabled",
@@ -58,18 +52,20 @@ describe("V: a 0.5.0 store reloads into 0.6.0", () => {
       wizdeckFactories: "[]",
       wizdeckGithubToken: "synthetic-token-not-real",
       specsSort: "needs-you",
-      sectionsOrder: "[\"pinned\",\"specs\",\"unread\"]",
+      sectionsOrder: "[\"pinned\",\"specs\",\"yours\"]",
+      threadsSort: "newest",
+      threadsFilter: "{}",
     });
     expect(readSpecsSort(values.specsSort)).toBe("needs-you");
-    expect(readSectionsOrder(values.sectionsOrder)).toEqual(["pinned", "specs", "unread"]);
-    expect(readCollapsedSections(values.sectionsCollapsed)).toEqual(["unread", "specs"]);
+    expect(readSectionsOrder(values.sectionsOrder)).toEqual(["pinned", "specs", "yours"]);
+    expect(readCollapsedSections(values.sectionsCollapsed)).toEqual(["yours", "specs"]);
 
-    // Expanding Specs from the CLI rewrites the list in 0.6 terms: Unread stays collapsed.
+    // Expanding Specs rewrites the old alias and keeps Yours collapsed.
     const expanded = await host.harness.behavior.runCli(["section", "specs", "--expand", "--json"]);
     expect(expanded.exitCode).toBe(0);
     expect(JSON.parse(expanded.stdout!)).toEqual({ section: "specs", collapsed: false });
     host = await host.harness.lifecycle.reload(factory);
     hosts.push(host);
-    expect((await read()).sectionsCollapsed).toBe("[\"unread\"]");
+    expect((await read()).sectionsCollapsed).toBe("[\"yours\"]");
   });
 });
