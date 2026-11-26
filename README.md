@@ -34,6 +34,6 @@ WizBar starts from [Sawyer Hood’s T3 Sidebar](https://github.com/SawyerHood/sa
 Source path: `plugins/t3sidebar`; version tag: `t3sidebar/v0.1.0` (a different
 commit from the copied snapshot above). WizBar changes follow that initial copy.
 
-The root `LICENSE` keeps Sawyer Hood’s upstream MIT permission text and copyright, and names OpenWiz contributors in that same header. `wizbar/LICENSE` retains Michael Yong’s plugin MIT notice exactly.
+New OpenWiz contributions are licensed under the Apache License, Version 2.0 (`LICENSE`). Parts derived from those upstream projects remain under the MIT License. Sawyer Hood’s original notice, copyright line and permission text, is in `THIRD_PARTY_LICENSES/LICENSE-MIT-sawyer-hood`. Michael Yong’s original plugin notice stays in `wizbar/LICENSE` and is also kept in `THIRD_PARTY_LICENSES/LICENSE-MIT-michael-yong`. See `NOTICE`.
 
 See the [public privacy and attribution audit](docs/verification/public-audit.md).
