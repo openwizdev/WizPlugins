@@ -3,7 +3,11 @@
 // sections 7 and 8). No bolt; "N running" counts threads only, with a matrix
 // mark; its hover card shows exactly the `wizbar stats --json` data for the
 // same rows and pins on click. Every row is synthetic (src/fixtures/v4.ts).
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { accessSync, constants, readdirSync } from "node:fs";
+import { delimiter, join } from "node:path";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { chromium, type Browser, type Locator, type Page } from "playwright-core";
+import { createServer, type InlineConfig, type Plugin, type ViteDevServer } from "vite";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { loadPluginApp, renderSlot } from "@get-bb/plugin-sdk/testing/app";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
@@ -767,4 +771,244 @@ describe("R1 (#172): the open card updates in place, with no flashing", () => {
     expect(counter().getAttribute("aria-label")).toBe("8 running, 1 waiting on you");
     expect(counter().hasAttribute("data-stale")).toBe(false);
   });
+});
+
+const reachabilityRoot = [process.cwd(), join(process.cwd(), "wizbar")].find((dir) => {
+  try {
+    accessSync(join(dir, "src/FooterCounter.tsx"));
+    return true;
+  } catch {
+    return false;
+  }
+});
+if (!reachabilityRoot) throw new Error("WizBar root not found");
+const reachabilityThreads = 50;
+const reachabilityViewport = { width: 350, height: 480 };
+
+function reachabilityBrowser(): string {
+  const fromPlaywright = (() => {
+    try {
+      return [chromium.executablePath()];
+    } catch {
+      return [];
+    }
+  })();
+  const candidates = process.env.CHROMIUM_PATH ? [process.env.CHROMIUM_PATH] : [
+    ...fromPlaywright,
+    ...(process.env.PATH ?? "").split(delimiter).flatMap((dir) =>
+      ["google-chrome", "google-chrome-stable", "chromium", "chromium-browser"].map((name) => join(dir, name))),
+  ];
+  const found = candidates.find((path) => {
+    try {
+      accessSync(path, constants.X_OK);
+      return true;
+    } catch {
+      return false;
+    }
+  });
+  if (!found) throw new Error("No Chromium or Chrome found. Set CHROMIUM_PATH.");
+  return found;
+}
+
+function reachabilityEntry(stylesheet: string): string {
+  return `
+import hostStyles from ${JSON.stringify(stylesheet)};
+import { createElement } from "react";
+import { renderSlot } from "@get-bb/plugin-sdk/testing/app";
+import { FooterCounter } from "./src/FooterCounter";
+import { v4SpecsFile, v4Threads } from "./src/fixtures/v4";
+
+const link = document.createElement("link");
+link.rel = "stylesheet";
+link.href = hostStyles;
+document.head.append(link);
+await new Promise((resolve, reject) => {
+  link.onload = () => resolve(undefined);
+  link.onerror = () => reject(new Error("host stylesheet failed"));
+});
+
+const now = Date.now();
+const base = v4Threads[0];
+const threads = Array.from({ length: ${reachabilityThreads} }, (_, index) => {
+  const title = "Sample thread " + (index + 1);
+  return {
+    ...base,
+    id: "sample-" + (index + 1),
+    title,
+    displayTitle: title,
+    runtimeStatus: "active",
+    status: "active",
+    hasPendingInteraction: false,
+    providerId: "codex",
+    parentThreadId: null,
+    createdAt: now - ${reachabilityThreads} + index,
+    updatedAt: now,
+  };
+});
+const specs = { ...v4SpecsFile, generatedAt: new Date(now).toISOString(), specs: [] };
+const binding = JSON.stringify([{
+  projectKey: "sample-factory",
+  cloudroomProjectId: "sample-project",
+  repositories: ["example/sample-plans"],
+  home: { hostId: "sample-host", rootPath: "/synthetic/sample" },
+  orchestratorThreadId: "sample-orchestrator",
+  statusWriterLogin: "sample-user",
+}]);
+
+renderSlot({
+  component: () => createElement(
+    "aside",
+    { className: "flex h-screen min-h-0 flex-col bg-sidebar text-foreground" },
+    createElement("div", { className: "min-h-0 flex-1" }),
+    createElement(FooterCounter, { className: "shrink-0 border-t border-sidebar-border px-3 py-1" }),
+  ),
+}, {}, {
+  pluginId: "running-card-reachability",
+  sidebarThreads: { status: "ready", threads },
+  settings: { wizdeckFactories: binding, specsSort: "newest" },
+  rpc: {
+    specsFile: () => ({ kind: "content", text: JSON.stringify(specs) }),
+    cardModels: () => ({ source: "none", items: [] }),
+  },
+});
+`;
+}
+
+function reachabilityPlugin(entry: string): Plugin {
+  const virtual = "virtual:running-card-reachability";
+  const resolved = `\0${virtual}`;
+  return {
+    name: "running-card-reachability",
+    resolveId(id) {
+      if (id === virtual || id === `/${virtual}`) return resolved;
+    },
+    load(id) {
+      if (id === resolved) return entry;
+    },
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        if (req.url?.split("?")[0] !== "/running-card-reachability.html") {
+          next();
+          return;
+        }
+        res.setHeader("content-type", "text/html; charset=utf-8");
+        res.end(`<!doctype html><html lang="en" class="dark"><meta charset="utf-8"><title>Running card reachability</title><body style="margin:0"><script type="module" src="/${virtual}"></script></body></html>`);
+      });
+    },
+  };
+}
+
+describe("B39: the running card stays reachable in a browser", () => {
+  let server: ViteDevServer;
+  let browser: Browser;
+  let url: string;
+
+  beforeAll(async () => {
+    const assets = join(reachabilityRoot, "node_modules/bb-app/app/dist/assets");
+    const css = readdirSync(assets).find((name) => /^index-.*\.css$/.test(name));
+    if (!css) throw new Error("host stylesheet missing");
+    const inline: InlineConfig = {
+      configFile: false,
+      root: reachabilityRoot,
+      logLevel: "error",
+      plugins: [reachabilityPlugin(reachabilityEntry(`/node_modules/bb-app/app/dist/assets/${css}?url`))],
+      server: { host: "127.0.0.1", port: 0 },
+    };
+    server = await createServer(inline);
+    await server.listen();
+    const local = server.resolvedUrls?.local[0];
+    if (!local) throw new Error("browser regression server has no local url");
+    url = new URL("/running-card-reachability.html", local).href;
+    browser = await chromium.launch({
+      executablePath: reachabilityBrowser(),
+      args: ["--no-sandbox", "--disable-dev-shm-usage"],
+    });
+  }, 30_000);
+
+  afterAll(async () => {
+    await browser?.close();
+    await server?.close();
+  });
+
+  beforeEach(() => {
+    vi.useRealTimers();
+  });
+
+  async function openPage(): Promise<Page> {
+    const page = await browser.newPage({ viewport: reachabilityViewport, reducedMotion: "reduce" });
+    await page.goto(url);
+    await page.getByRole("button", { name: "50 running" }).waitFor();
+    return page;
+  }
+
+  async function rowEnds(list: Locator, edge: "start" | "end") {
+    return list.evaluate((node, which) => {
+      node.scrollTop = which === "start" ? 0 : node.scrollHeight;
+      const rows = [...node.querySelectorAll("[data-thread]")];
+      const first = rows[0];
+      const last = rows.at(-1);
+      const target = which === "start" ? first : last;
+      const rect = target?.getBoundingClientRect();
+      const port = node.getBoundingClientRect();
+      const panel = node.closest('[aria-label="Running threads"]')?.getBoundingClientRect();
+      const whole = (box: DOMRect | undefined, item: DOMRect | undefined) => Boolean(
+        box && item && item.top >= box.top - 0.5 && item.bottom <= box.bottom + 0.5
+          && item.left >= box.left - 0.5 && item.right <= box.right + 0.5,
+      );
+      const inView = (item: DOMRect | undefined) => Boolean(
+        item && item.height > 0 && item.top >= -0.5 && item.bottom <= window.innerHeight + 0.5,
+      );
+      return {
+        count: rows.length,
+        id: target?.getAttribute("data-thread") ?? "",
+        overflow: node.scrollHeight > node.clientHeight + 1,
+        inList: whole(port, rect),
+        inViewport: inView(rect),
+        otherInList: whole(port, which === "start" ? last?.getBoundingClientRect() : first?.getBoundingClientRect()),
+        cardInside: Boolean(panel && panel.top >= -0.5 && panel.bottom <= window.innerHeight + 0.5 && panel.height > 0),
+      };
+    }, edge);
+  }
+
+  it("moves the pointer across the old gap, tabs to a computed focus ring, and scrolls the first and last of 50 threads", async () => {
+    const page = await openPage();
+    try {
+      const trigger = page.getByRole("button", { name: "50 running" });
+      const card = page.getByRole("region", { name: "Running threads" });
+      await trigger.hover();
+      await card.waitFor();
+      const start = await trigger.boundingBox();
+      const panel = await card.boundingBox();
+      expect(start && panel && panel.y + panel.height <= start.y + 0.5).toBe(true);
+      await page.mouse.move(start!.x + start!.width / 2, panel!.y + panel!.height - 2, { steps: 24 });
+      expect(await card.isVisible(), "pointer can cross the gap").toBe(true);
+      await page.mouse.move(2, panel!.y + panel!.height / 2);
+      expect(await card.isVisible(), "leaving the card closes the unpinned card").toBe(false);
+
+      await page.keyboard.press("Tab");
+      expect(await trigger.evaluate((node) => node === document.activeElement)).toBe(true);
+      await page.keyboard.press("Tab");
+      const focus = await card.evaluate((node) => {
+        const focused = document.activeElement;
+        if (!(focused instanceof HTMLElement)) return { inCard: false, visible: false };
+        const style = getComputedStyle(focused);
+        return {
+          inCard: node.contains(focused) && focused.matches(":focus-visible"),
+          visible: (style.outlineStyle !== "none" && Number.parseFloat(style.outlineWidth) > 0)
+            || (style.boxShadow !== "none" && style.boxShadow.includes("1px")),
+        };
+      });
+      expect(focus).toEqual({ inCard: true, visible: true });
+      expect(await card.isVisible()).toBe(true);
+
+      const list = card.locator('[aria-label="Threads"]');
+      const top = await rowEnds(list, "start");
+      const bottom = await rowEnds(list, "end");
+      expect(top).toMatchObject({ count: 50, overflow: true, inList: true, inViewport: true, otherInList: false, cardInside: true });
+      expect(bottom).toMatchObject({ count: 50, overflow: true, inList: true, inViewport: true, otherInList: false, cardInside: true });
+      expect(top.id).not.toBe(bottom.id);
+    } finally {
+      await page.close();
+    }
+  }, 30_000);
 });
