@@ -1,0 +1,21 @@
+OpenWiz WizPlugins
+Copyright 2026 OpenWiz contributors
+
+New OpenWiz contributions in this repository are licensed under the
+Apache License, Version 2.0. The terms are in the root LICENSE file.
+
+Parts of this repository are derived from upstream projects and remain
+under the MIT License. The full MIT notices, copyright line and
+permission text, are kept:
+
+- Sawyer Hood, T3 Sidebar (Copyright (c) 2026 Sawyer Hood).
+  THIRD_PARTY_LICENSES/LICENSE-MIT-sawyer-hood
+  This is the notice that previously stood at the repository root.
+
+- Michael Yong (Copyright (c) 2026 Michael Yong), from the T3 Sidebar
+  plugin. The notice stays in the plugin subtree at wizbar/LICENSE and
+  is also kept at THIRD_PARTY_LICENSES/LICENSE-MIT-michael-yong.
+
+Those MIT terms continue to apply to the portions derived from those
+upstream works. This NOTICE is informational and does not change the
+Apache License terms for new OpenWiz contributions.
