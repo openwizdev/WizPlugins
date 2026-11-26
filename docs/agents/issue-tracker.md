@@ -18,7 +18,7 @@ A ticket is ready when it has the `ready-for-agent` label and every ticket block
 
 ## Repositories
 
-- **Development tracker:** `openwizdev/WizPlugins` (final name; private until the orchestrator verifies the migration and makes it public).
+- **Development tracker:** `openwizdev/WizPlugins` (public).
 - **Private records:** `jparker2006/ClosedWiz` (private): the spec, grills, exact replies and orchestration state.
 
 ## Private records and approval forms

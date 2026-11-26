@@ -6,7 +6,7 @@ import type { PluginSidebarThreadsState } from "@get-bb/plugin-sdk";
 import { loadPluginApp, renderSlot } from "@get-bb/plugin-sdk/testing/app";
 import { getSourceStatuses } from "./settings";
 import { readRunningSource } from "./running-source";
-import { positiveSource, positiveThreads as indicatorThreads } from "../../docs/evidence/wz5/fixtures";
+import { positiveSource, positiveThreads as indicatorThreads } from "./fixtures/wz5";
 import { v3Threads } from "./fixtures/v3";
 
 // WZ20 (#41): the line counts the one running rule (runtime work, not waiting
