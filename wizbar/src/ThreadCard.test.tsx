@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { loadPluginApp, renderSlot } from "@get-bb/plugin-sdk/testing/app";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import type { StoredLifecycleRow } from "./server";
@@ -387,6 +387,32 @@ describe("WZ18 card metadata at the registered app boundary", () => {
     expect(reveals()).toEqual([]);
     fireEvent.mouseEnter(link.closest("li")!.firstElementChild!);
     expect(reveals()).toEqual(["group-hover/card:block", "group-focus-within/card:block"]);
+  });
+
+  it("dismisses the hovered location with Escape while another card has focus", () => {
+    renderMeta([
+      thread({ environment: environment("git-worktree", "feature/sample") }),
+      thread({ id: "thr_synother", title: "Read notes", displayTitle: "Read notes" }),
+    ]);
+    const link = screen.getByRole("link", { name: "Review parser" });
+    const other = screen.getByRole("link", { name: "Read notes" });
+    const location = document.getElementById(link.getAttribute("aria-describedby")!)!;
+    const revealedOnHover = () => location.classList.contains("group-hover/card:block");
+
+    act(() => other.focus());
+    fireEvent.mouseEnter(link.parentElement!);
+    expect(revealedOnHover()).toBe(true);
+    expect(fireEvent.keyDown(other, { key: "Escape" })).toBe(true);
+    expect(revealedOnHover()).toBe(false);
+    expect(document.activeElement).toBe(other);
+    expect(location.textContent).toBe("feature/sample");
+
+    fireEvent.mouseLeave(link.parentElement!);
+    fireEvent.mouseEnter(link.parentElement!);
+    expect(revealedOnHover()).toBe(true);
+    fireEvent.mouseLeave(link.parentElement!);
+    fireEvent.keyDown(other, { key: "Escape" });
+    expect(revealedOnHover()).toBe(true);
   });
 
   it("shows the branch only on hover, never on the card face", () => {
