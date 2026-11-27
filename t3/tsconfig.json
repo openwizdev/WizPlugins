@@ -9,7 +9,8 @@
     "noEmit": true,
     "skipLibCheck": true,
     "types": ["node"],
-    "typeRoots": ["../wizbar/node_modules/@types"]
+    "typeRoots": ["../wizbar/node_modules/@types"],
+    "paths": { "playwright-core": ["../wizbar/node_modules/playwright-core/index.d.ts"] }
   },
   "include": ["**/*.ts"]
 }

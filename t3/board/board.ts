@@ -217,15 +217,19 @@ export interface SpecRow {
   needsYou: number; yoursLater: number; dots: Dot[]; agents: AgentRow[]; activityAt: number | null; quiet: boolean; muted: boolean;
 }
 export interface ThreadRow { title: string; look: ThreadLook; model: string; updatedAt: number }
+/** One harness or model and how many running agents use it. */
+export interface Tally { name: string; count: number }
 
 export interface Board {
   now: number;
   specs: { status: "ready"; generatedAt: number; rule: string; needsYou: number; rows: SpecRow[] } | { status: "unavailable"; reason: string };
-  t3: { status: "off" } | { status: "ready"; pinned: ThreadRow[]; needsYou: ThreadRow[] } | { status: "unavailable"; reason: string };
+  t3: { status: "off" } | { status: "ready"; pinned: ThreadRow[]; needsYou: ThreadRow[]; running: ThreadRow[] } | { status: "unavailable"; reason: string };
   /** Live GitHub agents whose ticket is in no spec. */
   otherAgents: AgentRow[];
   /** Working now: T3 threads running, plus live GitHub notes not already shown by a T3 thread. Null when neither source reads. */
   running: number | null;
+  /** The same running agents by harness and by model, most first. Null when `running` is. */
+  usage: { harnesses: Tally[]; models: Tally[] } | null;
   agents: { status: "ready" } | { status: "unavailable"; reason: string };
 }
 
@@ -260,6 +264,25 @@ export function specsRule(rows: readonly SpecRow[]): string {
   return `Specs ${main} · ${tickets} ${tickets === 1 ? "ticket needs" : "tickets need"} you (${specs} ${specs === 1 ? "spec" : "specs"})`;
 }
 
+/** Counts names case-blind ("Codex" and "codex" are one), keeping the first capitalised spelling. */
+function tallier() {
+  const counts = new Map<string, Tally>();
+  return {
+    add(name: string) {
+      const key = name.trim().toLowerCase() || "unknown";
+      const seen = counts.get(key);
+      if (!seen) counts.set(key, { name: name.trim() || "unknown", count: 1 });
+      else {
+        seen.count += 1;
+        if (seen.name === seen.name.toLowerCase() && name.trim() !== name.trim().toLowerCase()) seen.name = name.trim();
+      }
+    },
+    list: (capitalise: boolean) => [...counts.values()]
+      .map((t) => (capitalise ? { ...t, name: t.name[0]!.toUpperCase() + t.name.slice(1) } : t))
+      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name)),
+  };
+}
+
 export function buildBoard(input: {
   specs: Read<SpecsFile>; agents: Read<AgentsFile>; t3: Read<T3Thread[]> | "off"; now: number;
 }): Board {
@@ -272,14 +295,22 @@ export function buildBoard(input: {
   const agentsBySpec = new Map<string, AgentRow[]>();
   const add = (spec: string, row: AgentRow) => agentsBySpec.set(spec, [...(agentsBySpec.get(spec) ?? []), row]);
   const shownByT3 = new Set<string>();
+  const onSpec = new Set<string>();
+  const harnesses = tallier();
+  const models = tallier();
   let running = 0;
 
   for (const thread of threads) {
     const look = threadLook(thread);
-    if (look === "running") running += 1;
+    if (look === "running") {
+      running += 1;
+      harnesses.add(thread.providerInstanceId);
+      models.add(thread.model);
+    }
     if (!file || thread.settled || look === "idle") continue;
     const found = specOfThread(file, thread, byId);
     if (!found) continue;
+    onSpec.add(thread.threadId);
     const ref = titleRef(thread.title);
     const role = ref.kind === "code" || ref.kind === "issue" || ref.kind === "pull" ? ref.role : "Builder";
     const state: AgentState = look === "running" ? (role === "Reviewer" ? "reviewing" : "working") : look;
@@ -297,7 +328,11 @@ export function buildBoard(input: {
     const found = file ? specOfNote(file, note) : null;
     const role = roleWord(note.agent);
     if (found?.ticket && shownByT3.has(`${role}|${found.ticket.ticket}`)) continue;
-    if (note.state === "working") running += 1;
+    if (note.state === "working") {
+      running += 1;
+      harnesses.add(note.harness);
+      models.add(note.model);
+    }
     const row: AgentRow = {
       where: "github", role, label: agentLabel(role, found?.ticket ?? null, `${role} · ${note.ticket}`), ticket: found?.ticket?.ticket ?? null,
       state: note.state === "asking" ? "needs-you" : role === "Reviewer" ? "reviewing" : "working",
@@ -358,6 +393,8 @@ export function buildBoard(input: {
       // WizBar's Unread, as close as T3's thread list allows: unpinned threads waiting on you or failed.
       needsYou: open.filter((t) => !t.pinned && !t.snoozed && titleRef(t.title).kind !== "fleet")
         .map(threadRow).filter((r) => r.look === "needs-you" || r.look === "failed").sort(newest),
+      // Running threads that aren't a spec's agent: a fleet's own thread, or any other work in T3.
+      running: open.filter((t) => !onSpec.has(t.threadId) && threadLook(t) === "running").map(threadRow).sort(newest),
     };
   }
 
@@ -365,8 +402,24 @@ export function buildBoard(input: {
   return {
     now, specs, t3, otherAgents: otherAgents.sort((a, b) => b.updatedAt - a.updatedAt),
     running: anySource ? running : null,
+    usage: anySource ? { harnesses: harnesses.list(true), models: models.list(false) } : null,
     agents: input.agents.status === "ready" ? { status: "ready" } : { status: "unavailable", reason: input.agents.reason },
   };
+}
+
+/** One scan's GitHub requests in the producer's last run: used of its budget, and how many answered "unchanged". */
+export interface Scan { used: number; budget: number; unchanged: number }
+export interface Requests { specs: Scan; agents: Scan; at: number }
+
+/** The producer's run line, `… 5 of 59 specs requests (2 unchanged) · 3 of 20 agents requests (0 unchanged) …`; null if it doesn't say. */
+export function readRequests(line: string, at: number): Requests | null {
+  const scan = (pattern: RegExp): Scan | null => {
+    const m = pattern.exec(line);
+    return m ? { used: Number(m[1]), budget: Number(m[2]), unchanged: Number(m[3]) } : null;
+  };
+  const specs = scan(/\b(\d+) of (\d+) specs requests \((\d+) unchanged\)/);
+  const agents = scan(/\b(\d+) of (\d+) agents requests \((\d+) unchanged\)/);
+  return specs && agents && specs.budget > 0 && agents.budget > 0 ? { specs, agents, at } : null;
 }
 
 /** How long a GitHub note counts as live; shown in the page's footer. */

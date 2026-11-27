@@ -63,10 +63,12 @@ test("serves the board from the producer's files and T3's threads, on loopback o
   const producerLog = join(folder(), "producer.log");
   const t3Log = join(folder(), "t3.log");
   const { port } = await start(
-    ["--home", home, "--repo", "example/site", "--author", "example-bot", "--producer", fakeProducer, "--t3", fakeT3, "--t3-project", "/work/site"],
+    ["--home", home, "--repo", "example/site", "--author", "example-bot", "--producer", fakeProducer, "--t3", fakeT3, "--t3-project", "/work/site",
+      "--pin", "Slack=https://example.slack.com/"],
     { FAKE_PRODUCER_LOG: producerLog, FAKE_T3_LOG: t3Log },
   );
-  const json = await until(() => get(port, "/board.json"), (r) => r.status === 200 && JSON.parse(r.body).t3.status === "ready" && JSON.parse(r.body).specs.status === "ready");
+  const json = await until(() => get(port, "/board.json"), (r) => r.status === 200 && JSON.parse(r.body).t3.status === "ready" && JSON.parse(r.body).specs.status === "ready"
+    && JSON.parse(r.body).producer !== null);
   const board = JSON.parse(json.body);
   assert.equal(board.specs.rule, "Specs 2 · 1 ticket needs you (1 spec)");
   assert.equal(board.running, 4);
@@ -84,9 +86,16 @@ test("serves the board from the producer's files and T3's threads, on loopback o
   assert.match(page.body, /The reader/);
   assert.match(page.body, /Fleet #20: Search/);
 
+  assert.match(page.body, /<body data-view="now"><div class="shell"><nav class="rail" aria-label="Board views">/);
+  assert.match(page.body, /<a class="tab pin" href="https:\/\/example\.slack\.com\/" target="_blank" rel="noopener noreferrer">/);
+  assert.match(page.body, /GitHub requests · last run now/, "the producer's run line gives the Usage view its requests");
+  assert.match(page.body, /<span class="bar-figure">5 of 59<\/span>/);
+
   const fragment = await get(port, "/board");
   assert.match(fragment.body, /^<header>/);
   assert.doesNotMatch(fragment.body, /<script/);
+  assert.doesNotMatch(fragment.body, /<nav/, "the rail stays put while the board refreshes");
+  assert.match(fragment.body, /<i hidden data-badges data-now="4" data-agents="4"><\/i>$/);
 
   assert.equal((await get(port, "/", { host: "evil.example" })).status, 403, "a page elsewhere can't read it through a renamed host");
   assert.equal((await get(port, "/", { host: `127.0.0.1:${port}` })).status, 200);
@@ -101,6 +110,7 @@ test("without T3 or a producer it still serves the files, and says what is missi
   assert.match(page.body, /Specs unavailable: no file yet/);
   assert.match(page.body, /T3 threads off/);
   assert.match(page.body, /running unknown/);
+  assert.match(page.body, /Not counted here: this board only reads the files/);
 });
 
 test("a failing t3 shows as unavailable with its own words, never as zero threads", async () => {
@@ -160,4 +170,9 @@ test("flags: --home is required, values are checked, producer flags pass through
   assert.deepEqual(o.producerArgs, ["--gh", "/opt/gh", "--run-map", "example/site#5"]);
   assert.deepEqual(o.t3Projects, ["a", "b"]);
   assert.equal(o.port, 4317);
+  assert.deepEqual(o.pins, []);
+  assert.deepEqual(parseArgs(["--home", "/x", "--pin", "Slack=https://example.slack.com/", "--pin", "Terminal=http://localhost:7681"]).pins,
+    [{ label: "Slack", url: "https://example.slack.com/" }, { label: "Terminal", url: "http://localhost:7681/" }]);
+  assert.throws(() => parseArgs(["--home", "/x", "--pin", "X=javascript:alert(1)"]), /http or https/);
+  assert.throws(() => parseArgs(["--home", "/x", "--pin"]), /--pin needs a value/);
 });

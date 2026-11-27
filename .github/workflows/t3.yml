@@ -39,3 +39,6 @@ jobs:
       - name: Test
         working-directory: t3
         run: npm test
+        env:
+          # The rail's browser test runs in the runner's Chrome; on CI a missing browser fails, never skips.
+          T3_REQUIRE_BROWSER: "1"

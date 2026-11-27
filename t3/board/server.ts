@@ -10,23 +10,24 @@ import { readFile } from "node:fs/promises";
 import { createServer, type Server } from "node:http";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { buildBoard, pickSpecs, readAgents, readT3, type Board, type FileRead, type Read, type T3Thread } from "./board.ts";
-import { renderBoard, renderPage } from "./render.ts";
+import { buildBoard, pickSpecs, readAgents, readRequests, readT3, type Board, type FileRead, type Read, type Requests, type T3Thread } from "./board.ts";
+import { parsePin, type Pin } from "./rail.ts";
+import { renderBoard, renderPage, type RequestsView } from "./render.ts";
 
 export interface Options {
   home: string; port: number; repos: string[]; every: number; producer: string; producerArgs: string[];
-  t3: string; t3Projects: string[]; t3Every: number; refresh: number; once: "html" | "json" | null;
+  t3: string; t3Projects: string[]; t3Every: number; refresh: number; once: "html" | "json" | null; pins: Pin[];
 }
 
 const usage = `usage: node t3/board/server.ts --home <factory home> [--repo owner/name ...] [--every <minutes>]
   [--gh <path>] [--author <login> ...] [--run-map 'owner/name#<comment id>']
   [--t3-project <path or id> ...] [--t3 <path to t3>] [--t3-every <seconds>]
-  [--port <n>] [--refresh <seconds>] [--once | --json]`;
+  [--pin 'Label=https://…' ...] [--port <n>] [--refresh <seconds>] [--once | --json]`;
 
 export function parseArgs(argv: readonly string[]): Options {
   const o: Options = {
     home: "", port: 4317, repos: [], every: 10, producer: fileURLToPath(new URL("../../wizbar/tools/specs-producer/producer.ts", import.meta.url)),
-    producerArgs: [], t3: "t3", t3Projects: [], t3Every: 60, refresh: 15, once: null,
+    producerArgs: [], t3: "t3", t3Projects: [], t3Every: 60, refresh: 15, once: null, pins: [],
   };
   const number = (flag: string, value: string | undefined, min: number) => {
     const n = Number(value);
@@ -49,6 +50,7 @@ export function parseArgs(argv: readonly string[]): Options {
       case "--t3": o.t3 = value(); break;
       case "--t3-project": o.t3Projects.push(value()); break;
       case "--t3-every": o.t3Every = number(flag, argv[++i], 10); break;
+      case "--pin": o.pins.push(parsePin(value())); break;
       case "--port": o.port = number(flag, argv[++i], 0); break;
       case "--refresh": o.refresh = number(flag, argv[++i], 0); break;
       case "--once": o.once = "html"; break;
@@ -86,6 +88,8 @@ export class BoardState {
   private producing = false;
   private readingT3 = false;
   lastProducer: { ok: boolean; line: string; at: number } | null = null;
+  /** The GitHub requests of the last producer run that worked and said them. */
+  lastRequests: Requests | null = null;
 
   constructor(options: Options) {
     this.options = options;
@@ -120,6 +124,8 @@ export class BoardState {
       const args = [this.options.producer, "--home", this.options.home, ...this.options.repos.flatMap((r) => ["--repo", r]), ...this.options.producerArgs];
       const result = await run(process.execPath, args, 5 * 60_000);
       this.lastProducer = { ok: result.ok, line: oneLine(result.ok ? result.stdout : result.stderr || result.stdout), at: Date.now() };
+      // The full output: the page's one line is cut at 200 characters, and the home's path comes twice before the counts.
+      if (result.ok) this.lastRequests = readRequests(result.stdout, this.lastProducer.at);
       process.stderr.write(`producer: ${this.lastProducer.ok ? "" : "failed: "}${this.lastProducer.line}\n`);
     } finally {
       this.producing = false;
@@ -129,6 +135,14 @@ export class BoardState {
   /** The last producer run's failure, for the page; null when it worked or never ran. */
   note(): string | null {
     return this.lastProducer && !this.lastProducer.ok ? `The specs producer failed: ${this.lastProducer.line}` : null;
+  }
+
+  /** The producer's GitHub requests, for the Usage view. */
+  requests(): RequestsView {
+    if (this.options.repos.length === 0) return { status: "off" };
+    if (this.lastRequests) return { status: "ready", value: this.lastRequests };
+    if (!this.lastProducer) return { status: "none", reason: "The specs producer hasn't finished a run yet." };
+    return { status: "none", reason: this.lastProducer.ok ? "The producer's last run didn't say how many requests it used." : "No producer run has worked yet." };
   }
 
   async board(now = Date.now()): Promise<Board> {
@@ -166,9 +180,10 @@ export function serve(state: BoardState): Server {
       if (path === "/") {
         const nonce = randomBytes(16).toString("base64");
         const csp = `default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}'; connect-src 'self'; base-uri 'none'; form-action 'none'`;
-        return send(200, "text/html", renderPage(await state.board(), { refreshSeconds: state.options.refresh, nonce, note: state.note() }), { "content-security-policy": csp });
+        const page = renderPage(await state.board(), { refreshSeconds: state.options.refresh, nonce, note: state.note(), pins: state.options.pins, requests: state.requests() });
+        return send(200, "text/html", page, { "content-security-policy": csp });
       }
-      if (path === "/board") return send(200, "text/html", renderBoard(await state.board(), state.note()));
+      if (path === "/board") return send(200, "text/html", renderBoard(await state.board(), { note: state.note(), requests: state.requests() }));
       if (path === "/board.json") return send(200, "application/json", `${JSON.stringify({ ...(await state.board()), producer: state.lastProducer }, null, 2)}\n`);
       return send(404, "text/plain", "Not found.\n");
     } catch {
@@ -201,7 +216,8 @@ async function main(): Promise<void> {
     await state.produce();
     await state.refreshT3();
     const board = await state.board();
-    process.stdout.write(options.once === "json" ? `${JSON.stringify(board, null, 2)}\n` : renderPage(board, { refreshSeconds: 0, note: state.note() }));
+    process.stdout.write(options.once === "json" ? `${JSON.stringify(board, null, 2)}\n`
+      : renderPage(board, { refreshSeconds: 0, note: state.note(), pins: options.pins, requests: state.requests() }));
     return;
   }
   const server = serve(state);

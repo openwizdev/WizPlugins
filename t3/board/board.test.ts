@@ -1,7 +1,7 @@
 // node --test t3/  (Node 24, no packages)
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { buildBoard, pickSpecs, readAgents, readSpecs, readT3, specsRule, threadLook, titleRef, type FileRead, type T3Thread } from "./board.ts";
+import { buildBoard, pickSpecs, readAgents, readRequests, readSpecs, readT3, specsRule, threadLook, titleRef, type FileRead, type T3Thread } from "./board.ts";
 import { esc, renderBoard, renderPage } from "./render.ts";
 import { syntheticAgents, syntheticSpecs, syntheticThreads } from "./fixtures/synthetic.ts";
 
@@ -182,4 +182,34 @@ test("the page shows WizBar's words: dots with labels, needs you, later, done in
   assert.match(html, /On GitHub 1/);
   assert.match(html, /4 running/);
   assert.match(html, /class="dot building breath"/);
+});
+
+test("usage counts the same running agents as the header, by harness and model, one name per harness", () => {
+  const b = board();
+  assert.equal(b.running, 4);
+  assert.deepEqual(b.usage, {
+    harnesses: [{ name: "Codex", count: 3 }, { name: "Claude", count: 1 }],
+    models: [{ name: "gpt-6.1-sol", count: 3 }, { name: "claude-opus-5-5", count: 1 }],
+  }, "T3's `codex` and the notes' `Codex` are one harness");
+  const total = (list: { count: number }[]) => list.reduce((n, t) => n + t.count, 0);
+  assert.equal(total(b.usage!.harnesses), b.running);
+  assert.equal(total(b.usage!.models), b.running);
+  const unnamed = [{ ...syntheticThreads(now)[1]!, providerInstanceId: "", model: "", parentThreadId: null }];
+  assert.deepEqual(board({ threads: unnamed, agents: { ...syntheticAgents(now), agents: [] } }).usage!.harnesses, [{ name: "Unknown", count: 1 }]);
+  const none = buildBoard({ specs: pickSpecs(missing, missing, now), agents: readAgents(missing, now), t3: "off", now });
+  assert.equal(none.usage, null, "no source read: unknown, not empty");
+});
+
+test("T3's running threads that aren't a spec's agent are kept for the Agents view", () => {
+  const b = board();
+  assert.equal(b.t3.status, "ready");
+  if (b.t3.status !== "ready") return;
+  assert.deepEqual(b.t3.running.map((t) => t.title), ["Fleet #20: Search"], "#22 is Search's agent; the fleet's own thread is not");
+});
+
+test("the producer's run line gives each scan's requests; a line without them gives none", () => {
+  const line = "wrote /h/.openwiz/specs.v2.json and /h/.openwiz/specs.v1.json: 49 specs, 59 of 59 specs requests (29 unchanged) · 20 of 20 agents requests (12 unchanged) · wrote agents.v1.json: 5 live agents";
+  assert.deepEqual(readRequests(line, now), { specs: { used: 59, budget: 59, unchanged: 29 }, agents: { used: 20, budget: 20, unchanged: 12 }, at: now });
+  assert.equal(readRequests("kept the last file: the scan needs more than 59 requests (59 requests)", now), null);
+  assert.equal(readRequests("49 specs, 5 of 59 specs requests (0 unchanged)", now), null, "both scans or nothing");
 });

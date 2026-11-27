@@ -2,11 +2,11 @@
 
 **Status: prototype, in a draft pull request.** It works with T3 Code as it ships today. It was checked live on T3 0.1.13 in its web client on Linux, not yet in the desktop app.
 
-WizBar's fleet board inside [T3 Code](https://github.com/pingdotgg/t3code). It shows Pinned, Specs (one row per spec, each ticket a dot: done, building, in review, needs you) and Needs you, in T3's built-in browser panel. A small local server makes the page from the same files WizBar reads. Nothing in T3 changes.
+WizBar's fleet board inside [T3 Code](https://github.com/pingdotgg/t3code). It shows Pinned, Specs (one row per spec, each ticket a dot: done, building, in review, needs you) and Needs you, in T3's built-in browser panel. A vertical tab rail on the page's left edge switches between its views (Now, Specs, Agents, Usage) and holds links you pin, such as Slack or a terminal. A small local server makes the page from the same files WizBar reads. Nothing in T3 changes.
 
 <img alt="The WizBar board in T3 Code's browser panel, with made-up data" src="wizbar-in-t3.png" width="400">
 
-(The picture is T3 Code's own browser panel showing this board, with made-up specs, notes and threads.)
+(The picture is T3 Code's own browser panel showing this board, with made-up specs, notes and threads, from before the vertical rail. The rail is in [`docs/evidence/t3-rail`](../docs/evidence/t3-rail/README.md).)
 
 ## The design note
 
@@ -50,6 +50,7 @@ You need Node 24, and WizPlugins cloned on the machine T3 runs on. The specs pro
 
 - Name: `WizBar`
 - Command: `node /path/to/WizPlugins/t3/board/server.ts --home /path/to/factory-home --repo owner/name --t3-project .`
+  Add `--pin 'Slack=https://your-team.slack.com/'` or `--pin 'Terminal=http://localhost:7681/'` for each link you want on the rail.
 - Preview URL: `http://localhost:4317`
 - Turn on **Open preview automatically when this action runs**.
 
@@ -63,7 +64,7 @@ Run the action: the board opens in the browser panel. On the very first run, T3 
 
 ```sh
 node t3/board/fixtures/synthetic.ts /tmp/wizbar-demo
-node t3/board/server.ts --home /tmp/wizbar-demo --t3 t3/board/fixtures/fake-t3.mjs --t3-project demo
+node t3/board/server.ts --home /tmp/wizbar-demo --t3 t3/board/fixtures/fake-t3.mjs --t3-project demo --pin 'Slack=https://example.slack.com/'
 ```
 
 ### Flags
@@ -73,11 +74,27 @@ node t3/board/server.ts --home /tmp/wizbar-demo --t3 t3/board/fixtures/fake-t3.m
 | `--home <dir>` | Required. The factory home: the board reads `.openwiz/specs.v2.json`, `specs.v1.json` and `agents.v1.json` under it. |
 | `--repo owner/name` | Repeatable. With at least one, the board runs WizBar's specs producer now and every `--every` minutes (default 10), never two at once. Without it, the board only reads the files, for example when a systemd timer already runs the producer. `--gh`, `--author` and `--run-map` pass through to the producer. |
 | `--t3-project <path or id>` | Repeatable. Reads that T3 project's threads with `t3 thread list --project <p> --json` every `--t3-every` seconds (default 60). Without it, the T3 sections are off. `--t3 <path>` names the `t3` command (default `t3` on `PATH`). |
+| `--pin 'Label=URL'` | Repeatable. Adds a link to the rail, below the views, for example Slack or a terminal in the browser. The label is at most 24 characters; the link must be `http` or `https` with no login in it. It opens in a new tab. |
 | `--port <n>` | Default 4317. The board listens on 127.0.0.1 only. |
 | `--refresh <seconds>` | How often the open page refreshes itself (default 15). |
 | `--once`, `--json` | Print one still page, or the board as JSON, and exit. |
 
 ## What it shows
+
+**The rail.** A column of tabs on the page's left edge, in T3's quiet dark style: Now, Specs, Agents, Usage, then a thin line and the links you pinned with `--pin` (each shows its first letter). T3's own panel tabs (Terminal, Browser and the rest) stay where T3 draws them; a page can't move them. This rail is the board's own.
+
+- From 420 px wide, each tab shows its icon and its name. Under 420 px it shows icons only: hover, keyboard focus or a long press shows the name beside the icon, and a long press doesn't open the tab. Now carries the number of things waiting on you (a dot when narrow), and Agents the number running.
+- One view shows at a time. The open view is kept in the address (`#view-specs`) and for the session, and stays open while the board refreshes. The rail isn't redrawn on a refresh, so it keeps keyboard focus.
+- The still page (`--once`) has no script: it shows every view one after another, and the tabs jump to them.
+
+**The views:**
+
+- **Now**: what waits on you. Pinned, Needs you, GitHub agents asking you something (from their notes), and the specs with a ticket that needs you. When the specs file can't be read, it says so here too.
+- **Specs**: the whole Specs section, below.
+- **Agents**: every live agent, by the spec it works on, then On GitHub, then other running T3 threads (such as a fleet's own thread).
+- **Usage**: the running agents by harness and by model (a bar is the share of all running), and the GitHub requests of the specs producer's last run against each scan's cap (59 for specs, 20 for agents), with a warning in words near a cap. Tokens and cost aren't shown: T3's thread list and the GitHub notes don't include them. Without `--repo`, the board doesn't run the producer and says it can't count its requests.
+
+**The sections:**
 
 - **Pinned**: T3 threads you pinned, not settled.
 - **Specs**: WizBar's Specs section ([specs-section.v1](../wizbar/contracts/specs-section.v1.md)): `Specs N · M tickets need you (K specs)`, one row per spec with a ticket, needs you first, then unfinished, then finished, newest activity first. Each row has "K needs you", "N later", "N done · 1h", done/total and a link to the spec. Each ticket is a dot in WizBar's order and colours: done, done in the last hour, building, in review, needs you, later, held, not started. Finished specs, and specs with nothing moving for 3 days, fold into **Quiet**. A spec with running agents opens to list them. A ticket's dot breathes while a working builder names it, never while it is in review or done, and not under reduced motion.
@@ -96,13 +113,13 @@ A missing, broken or stale file (older than 30 minutes) shows **Specs unavailabl
 
 - It only reads. It never writes to GitHub or to T3, and it holds no login. The producer uses your `gh`, and the T3 read uses your `t3`. Each `t3 thread list` call is T3's own short-lived client session, opened and revoked by the `t3` command. You may see it briefly under Settings → Sharing & access.
 - It listens on 127.0.0.1 and answers only requests addressed to `localhost`, `127.0.0.1` or `[::1]`. So another web page can't read it by pointing a name at this machine. GET only.
-- Every value is escaped. Links leave the page only for `https://github.com/`. The page runs one inline script, allowed by a per-response nonce in its Content-Security-Policy, and makes no outside requests.
+- Every value is escaped. Links leave the page only for `https://github.com/`, plus the links you pin yourself with `--pin`: `http` or `https` only (never `javascript:`, `data:` or `file:`), with no login in the address, opened in a new tab with no opener or referrer. The page runs one inline script, allowed by a per-response nonce in its Content-Security-Policy, and makes no outside requests.
 
 ## What was checked
 
 All of this ran on Linux with Node 24.22.1:
 
-- **Tests:** `cd t3 && npm test` runs 20 tests on synthetic data: file rules, dots, sort and Quiet, note and title matching, T3 sections, escaping, and the real server process with a fake `t3` and a fake producer. `npm run typecheck` uses WizBar's locked TypeScript (`cd wizbar && npm ci` first). The `T3` workflow runs both on every pull request.
+- **Tests:** `cd t3 && npm test` runs the tests on synthetic data: file rules, dots, sort and Quiet, note and title matching, T3 sections, the rail, its views and pins, escaping, and the real server process with a fake `t3` and a fake producer. `board/rail.browser.test.ts` drives the real page in Chrome at 1440, 420, 419 and 390 px: labels beside the icons, icons only below 420 px with the name on hover, focus and a long press, nothing spilling sideways, and the open view kept through a refresh and a reload. It uses WizBar's locked `playwright-core` and an installed Chrome or Chromium (`CHROMIUM_PATH` to choose one); without them it is skipped, except on CI (`T3_REQUIRE_BROWSER=1`). `npm run typecheck` uses WizBar's locked TypeScript (`cd wizbar && npm ci` first). The `T3` workflow runs both on every pull request.
 - **The real producer, unchanged:** the board ran WizBar's specs producer against the public `openwizdev/WizPlugins`, through `--repo`. It read the files the producer wrote: 3 specs, all finished or idle, so all in Quiet.
 - **Live against T3 0.1.13** (`npx t3`, a throwaway data folder, a synthetic project):
   - `t3 thread list --json` printed the list items the board reads (`threadId`, `title`, `status`, `settled`, `snoozed`, `pinned`, `model`, `providerInstanceId`, `parentThreadId`, `updatedAt`). The board read them as ready.
@@ -119,3 +136,5 @@ All of this ran on Linux with Node 24.22.1:
 - No settle, snooze, mute or pin buttons. Those stay in T3 (or `wizbar` in Cloudroom).
 - Model names show as T3 and the notes give them (`gpt-6.1-sol`), not WizBar's friendly labels.
 - The first run of the action can race the board's start; press Reload once.
+- The rail can't change T3's own tab strip, which T3 draws across the top of the panel.
+- A pinned link opens in a new tab. What T3's browser panel does with a new tab was not checked; most sites, Slack among them, refuse to be shown inside another page, so the board doesn't try.
