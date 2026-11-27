@@ -1,6 +1,10 @@
 # WizBar next-iteration host discovery (WZ10)
 
-Status: contract/report prepared for independent review on #24 under [approved plan revision 8](https://github.com/openwizdev/wizplugins/issues/1#issuecomment-6780025774).
+This report records the #24 discovery, not the current footer implementation.
+On main, the running count is in WizBar's thread list and uses the observable
+sidebar rows.
+
+Status at hand-back: contract/report prepared for independent review on #24 under [approved plan revision 8](https://github.com/openwizdev/wizplugins/issues/1#issuecomment-6780025774).
 
 ## Proof plan, before the contract
 
@@ -19,7 +23,8 @@ Plausible regression: a consumer mistakes an unavailable source for zero or a nu
 
 ## Reproducible documentation proof
 
-From the repository root after `cd wizbar && npm ci`, run:
+Install with `(cd wizbar && npm ci)` from the repository root, then run
+this from the root:
 
 ```sh
 python3 - <<'PY'

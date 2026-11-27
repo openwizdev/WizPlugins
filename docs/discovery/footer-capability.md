@@ -4,7 +4,9 @@
 demonstrated. **No agent-run live look was done.** Public SDK declarations and
 the owner observations below do not prove live rendering.
 
-Report date: 2026-11-10. Scope:
+Report date: 2026-11-10. This report is about the host-managed footer row.
+The running count on main is in WizBar's own thread list, not that host slot.
+Scope:
 [WZ1 (#2)](https://github.com/openwizdev/wizplugins/issues/2), under
 [plan #1, revision 7](https://github.com/openwizdev/wizplugins/issues/1).
 

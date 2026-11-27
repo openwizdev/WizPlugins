@@ -1,8 +1,9 @@
 # WizBar
 
 WizBar is an agent-first Cloudroom sidebar plugin for fleets of agent threads,
-version 0.7.0. It keeps T3 Sidebar's cards on Pinned, Yours, Snoozed, Muted
-and Settled shelves. Pinned follows the host's order. Snoozed displays the
+version 0.7.0 in the package on `main`. This README describes `main`,
+including the sidebar polish added after the 0.7.0 release. It keeps T3 Sidebar's
+cards on Pinned, Yours, Snoozed, Muted and Settled shelves. Pinned follows the host's order. Snoozed displays the
 soonest wake first. Yours, Muted and Settled start in newest-first order.
 v0.3 added richer cards, children on hover, a live running count, drag to pin,
 and a `wizbar` CLI with JSON for the sidebar's thread actions. v0.4 added a
@@ -14,42 +15,42 @@ later, and lets you collapse Pinned, Inbox and Specs. v0.6 sorts the specs by
 what needs you, folds finished and idle specs into Quiet, shows which specs are
 moving, turns the Inbox into Unread, lets you reorder the sections, makes
 Settled one link at the bottom, and keeps the running card steady. v0.7 keeps
-every thread you started in Yours until you settle it, adds search, sort and
-filters, lists every running thread in the card, and shows cloud agents the
-desktop cannot see in a Cloud agents section. The project lives in
+eligible active threads in Yours whether read or unread, adds search, sort and
+filters, lists the running threads the sidebar can see, and shows GitHub
+status notes for other agents in a Cloud agents section. The project lives in
 [openwizdev/WizPlugins](https://github.com/openwizdev/WizPlugins).
 
 <img alt="WizBar rendered with synthetic example rows" src="../docs/images/wizbar.png" width="300">
 
-The image shows WizBar's real sidebar component and compiled styles in a
-headless browser, with synthetic data and a copy of the host's chrome around
-it, not an installed app. Everything below is proved by fixture tests in CI unless
-it says otherwise. 0.5.0 was installed from source and run on a real Cloudroom
-host for its live check; 0.6.0 and 0.7.0 have not had a live check yet. What is not
-covered is under Known limits. The rules and sources
-are in the [v0.3 sidebar contract](contracts/sidebar-v3.v1.md) and the
+The image shows an earlier render of WizBar's real sidebar component and
+compiled styles in a headless browser, with synthetic data and a copy of the
+host's chrome around it, not an installed app. CI checks the plugin with fixture tests and a
+Chromium regression; neither is a live check. 0.5.0 was installed from source
+and run on a real Cloudroom host; no live check is recorded here for 0.6.0 or
+0.7.0. See Known limits for what is not covered. The rules and sources are in the [v0.3 sidebar contract](contracts/sidebar-v3.v1.md) and the
 [v0.4 specs section contract](contracts/specs-section.v1.md).
 
-## What v0.7 changes
+## What v0.7 changes on main
 
 - **Yours: nothing gets lost.** Yours keeps active, unpinned top-level threads in the chosen project whether
   they are read or unread. It also shows eligible threads with something new in
-  themselves or a hidden child. Spec agents, fleet wakes and fleet loop runs are
-  excluded from the ordinary list. The section remembers
-  where you put it and whether it is collapsed. Saved `unread` and `inbox` keys
+  themselves or a hidden child. The ordinary list leaves out threads matched to
+  a spec, fleet wakes and recognised `launch-fleet` loop titles. Search can
+  still find them. The section remembers its order and whether it is collapsed. Saved `unread` and `inbox` keys
   both carry over as `yours`.
 
   Use the picker on the Yours rule (shown on hover or focus) to sort by Newest, Last activity, Status,
   Harness, Model or Effort. Status and harness filters are saved with your sort.
   When they hide rows, the rule shows how many remain and offers Clear filters.
 
-  The host search matches the thread title or first prompt, including children.
+  WizBar uses the host search box to match the title or first prompt, including children.
   Combine free text with `harness:<id or name>`, `model:<text>`, `effort:<level>`
   and `status:<working|needs-you|failed|unread|idle>`. Quote values with spaces,
-  as in `harness:"Claude Code"`. Active, unpinned matches appear in Yours.
+  as in `harness:"Claude Code"`. Active, unpinned matches appear in Yours
+  if they also pass its saved filters.
   Pinned, snoozed, muted and settled matches stay on their shelves.
-- **The running card shows every running thread.** The card opens with one live running count, awake, starting and asleep totals, and each harness's name beside its logo and count, then scrolls through every running thread with a quiet right-aligned model column. Specs follow the sidebar's sort, with `Other` last. Click a group heading to fold or open it for the session. Untitled rows show a role and ticket when the fallback names one, or the harness name otherwise. The current heading stays visible as you scroll, and a fade shows when more rows are available. The card lists live GitHub status notes for agents the sidebar cannot match. These rows show the note's harness and model and open its issue or pull request. The card reports their count separately as `N on GitHub`. `wizbar stats --json` reports the same rows in `unseen`.
-- **Cloud agents.** The sidebar lists GitHub agents with no matching desktop thread. It starts after Pinned and can be moved or collapsed. Working and asking agents with live notes appear first and count in the header. Agents that finished in the last 30 minutes follow by most recent update; older done, stopped and lapsed agents fold into one quiet `N earlier` line that opens in place. Names link to GitHub. `wizbar agents [--json]` lists the same rows; its JSON puts recent agents in `rows` and the folded older ones in `earlier`. The host's desktop thread list leaves out agents that run in their own cloud sandbox (such as Antigravity), so WizBar reads them from GitHub: live `openwiz:status v1` notes, and optionally a fleet's run map (`--run-map`), whose thread ids tell which agents the desktop cannot see. Rows show the role, the repository and ticket, the model in plain words (for example `Neon · Medium` or `Sol 6.2 · Medium`), the state and the last activity, and open the pull request, or the ticket when the note names none. The card ends with a plain line that agents in their own cloud sandbox may be missing.
+- **The running card shows the running threads the sidebar can see.** The card opens with one live running count, awake, starting and asleep totals, and each harness's name beside its logo and count, then scrolls through those threads with a quiet right-aligned model column. Specs follow the sidebar's sort, with `Other` last. Click a group heading to fold or open it for the session. Untitled rows show a role and ticket when the fallback names one, or the harness name otherwise. The current heading stays visible as you scroll, and a fade shows when more rows are available. The card lists live GitHub status notes for agents the sidebar cannot match. These rows show the note's harness and model and open its issue or pull request. The card reports their count separately as `N on GitHub`. `wizbar stats --json` reports the same rows in `unseen`.
+- **Cloud agents.** The sidebar lists GitHub agents with no matching desktop thread. It starts after Pinned and can be moved or collapsed. Working and asking agents with live notes appear first and count in the header. Done or stopped agents updated in the last 30 minutes follow by most recent update; older done or stopped agents and lapsed agents fold into one quiet `N earlier` line that opens in place. Names link to GitHub. `wizbar agents [--json]` lists the same rows; its JSON puts recent agents in `rows` and the folded older ones in `earlier`. The host's desktop thread list leaves out agents that run in their own cloud sandbox (such as Antigravity), so WizBar reads them from GitHub: live `openwiz:status v1` notes, and optionally a fleet's run map (`--run-map`), whose thread ids tell which agents the desktop cannot see. Rows show the role, the repository and ticket, the model in plain words (for example `Neon · Medium` or `Sol 6.2 · Medium`), the state and the last activity, and open the pull request, or the ticket when the note names none. The card ends with a plain line that agents in their own cloud sandbox may be missing.
 - **The producer** writes `.openwiz/agents.v1.json` beside the specs files, with its own 20-request budget after the specs scan. To fill Cloud agents, add a `--repo` for each product repository and, optionally, `--run-map 'owner/name#<comment id>'`.
 - **A calmer thread view.** A new setting, Composer footer, hides the bar under
   the thread composer on pinned threads or everywhere (`wizbar footer`). The host
@@ -61,7 +62,8 @@ are in the [v0.3 sidebar contract](contracts/sidebar-v3.v1.md) and the
 
 ## What v0.6 changes
 
-- **Sections you order.** The default order is Pinned, Specs and Yours.
+- **Sections you order.** In 0.6 the default order was Pinned, Specs and Unread (now Yours).
+  From 0.7, Cloud agents is added after Pinned.
   Drag a section by the faint grip on the left of its header, or focus its
   header and press Alt+Up or Alt+Down. The order is saved in `sectionsOrder`.
   Snoozed and Muted stay below the sections.
@@ -70,16 +72,17 @@ are in the [v0.3 sidebar contract](contracts/sidebar-v3.v1.md) and the
 - **Specs sort by what needs you.** Default order: specs with a ticket due
   now first, then the other unfinished specs, then finished ones, each group
   most recently active first. A small picker at the right of the Specs rule
-  offers Needs you first, Recently active, Closest to done (highest done
+  appears on hover or focus and offers Needs you first, Recently active, Closest to done (highest done
   share, then fewest tickets left) and Newest (the specs file's order, within
   the main list and within Quiet: the producer lists each bound repository's specs newest first, one repository
   after another in the bound order, so across repositories an older spec can
   come before a newer one). The choice is saved in `specsSort`. A spec's activity is the
   newest of its tickets' last activity, their close times and its running
   agents' updates; a spec with none of these sorts last.
-- **Quiet.** A spec with nothing due now that is finished, or has had no
-  activity for more than 3 days, folds into one collapsed `Quiet N` group at
-  the bottom of the Specs section, in the same order; open it like a spec, and
+- **Quiet.** A spec with nothing due now folds into Quiet if it is finished or
+  its last recorded activity was more than 3 days ago. Those specs go into
+  one collapsed `Quiet N` group at the bottom of the Specs section, in the
+  same order; open it like a spec, and
   its open state is remembered. `Specs N` counts the specs outside Quiet. A
   finished spec is no longer hidden: it is a quiet row, the running card names
   it, and `wizbar spec` accepts it like any other spec. A spec shows open only
@@ -123,7 +126,9 @@ are in the [v0.3 sidebar contract](contracts/sidebar-v3.v1.md) and the
   full sentence does not fit; it counts only tickets due now. Then one row per
   running spec from the bound factory's specs file. A row leads with a chevron
   when the spec has running agents, then its name; on the right, "K needs you",
-  `· N later` and "N done in the last hour", then done/total. One dot per ticket
+  `· N later` and `N done · 1h` (read as "N done in the last hour"), then
+  done/total. At narrow widths the recent-done note gives way first, then the
+  later note. One dot per ticket
   sits on the line below: done, done in the last hour (a brighter done dot),
   building (a ring, breathing from 0.6 while its agent is working), review (a
   ring), needs you (solid warning), later (a hollow ring), held (a grey ring),
@@ -137,9 +142,9 @@ are in the [v0.3 sidebar contract](contracts/sidebar-v3.v1.md) and the
   `· N later`, and `wizbar specs` reports both. When WizBar selects a legacy v1
   specs file, there is no separate later state. The producer folds those
   tickets into needs you in its v1 output.
-- **Colours.** Done dots and the section rules use the host's success colour,
-  or a neutral when the theme has none. "N done in the last hour" is the host's
-  text colour. The warning colour marks needs you; a later ring is the warning
+- **Colours.** Done dots use the host's success colour, or a neutral when the
+  theme has none. Section rules use the neutral border colour. The done note
+  uses the host's text colour. The warning colour marks needs you; a later ring is the warning
   hue at partial strength, never solid.
 - **The specs producer.** Nothing in Cloudroom writes the specs file, so
   WizBar ships a small producer (`tools/specs-producer/`) that writes it from
@@ -157,7 +162,9 @@ are in the [v0.3 sidebar contract](contracts/sidebar-v3.v1.md) and the
   Pass `--repo` for each product repository and optionally
   `--run-map 'owner/name#comment-id'` for a GitHub run map. The producer uses
   its existing `gh` login. A private run map needs the `repo` scope.
-  A failed agents read or exhausted budget keeps the last agents file.
+  A failed author or notes read, including a notes scan that runs out of
+  requests, keeps the last agents file. If only the optional run map fails,
+  the producer still writes the notes.
   The [agents file contract](contracts/agents.v1.md) describes the format. Unchanged pages cost
   nothing against GitHub's rate limit, by ETag, and the run line reports how
   many requests came back 304 unchanged. Run it every 10 minutes as a systemd user timer; how to run
@@ -165,8 +172,9 @@ are in the [v0.3 sidebar contract](contracts/sidebar-v3.v1.md) and the
   are in the [specs producer README](tools/specs-producer/README.md).
 - **Host file reads.** WizBar reads the specs files and the factory's files
   from the host by absolute path: the bound factory's root joined with the
-  file's relative path.
-- **Collapsible sections.** Click the Pinned, Yours or Specs
+  file's relative path. Specs and Cloud agents need exactly one factory in
+  the plugin's **WizDeck factories** setting (`wizdeckFactories`).
+- **Collapsible sections.** Click the Pinned, Cloud agents, Specs or Yours
   header to collapse or expand it; every section starts expanded. The state is
   saved in the plugin setting `sectionsCollapsed`, so it is remembered. While a
   search is active, Pinned and Yours show their matches even when collapsed,
@@ -193,14 +201,15 @@ are in the [v0.3 sidebar contract](contracts/sidebar-v3.v1.md) and the
   centre only.
   No mark uses the accent colour. Reduced motion shows the still pattern.
   Thread cards show no mark.
-- **Shelves.** Pinned, Yours, Snoozed and Muted use the same done-colour
-  rule as Specs. A parked shelf reads `Snoozed 4` with no chevron; a click
+- **Shelves.** Pinned, Cloud agents, Yours, Snoozed and Muted use the same
+  neutral rule as Specs. A parked shelf reads `Snoozed 4` with no chevron; a click
   still opens it. A running card shows its age (`now`) in the corner.
 - **Footer.** No bolt: a matrix mark and `6 running`, counting threads, never
-  subagents. Hover or focus it for a raised card across the sidebar: how many
-  threads are waiting on you, the cloud and local split, a bar split by harness
-  with each harness's name and count, then the running threads, one line each with its
-  mark, role and code, its spec (from 0.6 a finished spec too), and model · effort. A click (or Enter or
+  subagents. On main the line also shows nonzero waiting and GitHub counts
+  when there is room. Hover or focus it for a raised card above the footer:
+  named harness counts rather than a bar, a waiting line only when needed,
+  and running threads grouped by spec with their marks and model · effort.
+  The Cloud and Local split sits at the bottom. A click (or Enter or
   Space) pins the card open and another unpins it; Escape closes it; clicking a
   thread in the card opens it.
 - **GitHub** is a quiet hover mark that opens the spec issue or the agent's
@@ -218,12 +227,12 @@ The matrix status idea is credited to Conductor's workspace status matrix
 
 ## What v0.3 added
 
-- **Cards.** The third line shows the issue or pull request as a link and a
-  child count, hidden at zero. The pull request comes from the host's sidebar
-  state. With no host issue field, the issue number is parsed from a
-  `room/<N>-…` branch name and shown only when it parses. The branch shows on
-  hover only. Model and effort are omitted until the host exposes them; nothing
-  is shown in their place. Cloud rows currently carry no branch or pull request
+- **Cards.** On main the card has two lines: title, status and age, then the
+  details, including a child count when nonzero. A pull request from the host
+  is a link. With no host issue field, WizBar shows the issue number as text
+  when it can parse it from a `room/<N>-…` branch. The branch (or machine name
+  with no branch) shows on hover or keyboard focus. Model and effort appear
+  when known, as described above. Cloud rows currently carry no branch or pull request
   in the observed host data, so they show no link.
 - **Children.** Hover or focus the child count to list the children with
   status, title and age, in spawn order; click one to open it, or open the
@@ -234,26 +243,27 @@ The matrix status idea is credited to Conductor's workspace status matrix
   bolt and stats panel became v0.4's hover card above.)
 - **Drag to pin.** Drag a card into Pinned to pin it, out to unpin it, or
   inside Pinned to reorder it; Alt+Up and Alt+Down do the same from the
-  keyboard. WizBar uses the host's own pins and pinned order. Unread (0.5:
-  the Inbox) stays newest first.
+  keyboard. WizBar uses the host's own pins and pinned order. Yours
+  defaults to newest first; use its picker to change that.
 - **Settings.** Switches for the list-bottom count, Cloud/Local row icons and
   the two header chips.
 
 ## Install
 
-**From the BB Marketplace:** 0.7.0 is the release being prepared. The
-marketplace serves it once both hold: the `wizbar/v0.7.0` release tag exists,
-and the registry's WizBar entry has the range `^0.7.0` (this repository's
-[marketplace entry](../marketplace/wizbar.json) has it). Until then the listing
-serves 0.6.0.
+**From the [BB Marketplace](https://getbb.app/marketplace/wizbar):**
+[0.7.0](https://github.com/openwizdev/WizPlugins/releases/tag/wizbar/v0.7.0)
+is the latest release. The listing uses the `^0.7.0` range, as does this
+repository's [marketplace entry](../marketplace/wizbar.json).
 
 **From source.** These steps were run for 0.5.0 on a real Cloudroom host for
 its live check: build, install, reload, and an upgrade from 0.3.0 that kept
-WizBar's settings; they have not been run for 0.6.0 or 0.7.0 on a real host
-yet. The 0.6.0 to 0.7.0 settings reload is proved by a fixture test
+WizBar's settings. No live check is recorded here for 0.6.0 or 0.7.0. The
+steps below use `main`; add `--branch wizbar/v0.7.0` to `git clone` to build
+the released version instead.
+The 0.6.0 to 0.7.0 settings reload is proved by a fixture test
 ([`src/upgrade-060.test.ts`](src/upgrade-060.test.ts)). `room-cli plugin build .` builds the plugin into `dist/`.
-To fill the Specs section, also set up the
-[specs producer](tools/specs-producer/README.md). The
+To fill the Specs section, set one factory in **WizDeck factories** and run the
+[specs producer](tools/specs-producer/README.md) for that factory. The
 desktop CLI's help supplies these preparation commands. Read the
 [install and rollback kit](https://github.com/openwizdev/WizPlugins/issues/9#issuecomment-6768833446)
 and current desktop help before running them.
@@ -269,8 +279,9 @@ room-cli plugin list
 
 Developers: `npm run test:browser` runs the running card's Chromium regression,
 as CI does. It uses Chrome or Chromium when available (or `CHROMIUM_PATH`) and
-skips with a message otherwise; `WIZBAR_BROWSER_EVIDENCE=1` saves its
-screenshots.
+skips with a message otherwise unless `WIZBAR_REQUIRE_BROWSER=1` is set
+(as in CI). `WIZBAR_BROWSER_EVIDENCE=1` saves screenshots under
+`docs/evidence/wizbar-0-7/r1/`.
 
 Record the current sidebar settings first. Select WizBar in
 **Settings → Appearance → Sidebar**, or use
@@ -287,14 +298,15 @@ cover these sidebar actions: settle, unsettle, snooze, unsnooze, mute,
 unmute, pin, unpin and move a thread; list a thread's shelf and its children;
 read the running card (`stats`) and the specs (`specs`, in any sort with
 `--sort`, without saving it); open or close one spec (`spec`); and collapse or
-expand Pinned, Specs or Yours (`section`, with `unread` and `inbox` as aliases). There is
+expand Pinned, Cloud agents, Specs or Yours (`section`, with `unread` and
+`inbox` as aliases for Yours). There is
 no command for the Specs sort picker, the section order, the Quiet group, or
 opening the Snoozed, Muted and Settled shelves. Every command takes `--json`;
-the [parity test](src/cli-parity.test.ts) checks that every WizBar operation
-has a command and `--json`, and that `children` and
-`stats` JSON equal what the hover list and the running line's hover card show
-for the same threads. The row menu's host-owned items are excluded by name (below). Use `--`
-to end options before literal IDs.
+the [parity test](src/cli-parity.test.ts) checks the thread-action commands
+and each registered command's `--json` flag. It also compares `children`
+and `stats` JSON with the hover list and running card on the same fixtures.
+The row menu's host-owned items are excluded by name (below). For shelf, pin, move and children commands, use `--` to end options
+before literal IDs.
 
 ```text
 wizbar settle <id>... [--json]
@@ -310,6 +322,7 @@ wizbar move <id> (--before <id> | --after <id> | --first | --last) [--json]
 wizbar children <id> [--json]
 wizbar stats [--json]
 wizbar agents [--json]
+wizbar footer <show|pinned|all> [--json]
 wizbar specs [--sort <needs-you|recent|closest|newest>] [--json]
 wizbar spec <n> (--open | --close) [--json]
 wizbar section <pinned|cloud|specs|yours> (--collapse | --expand) [--json]
@@ -317,22 +330,27 @@ wizbar models <id>... [--raw] [--json]
 wizbar threads [--search <text>] [--sort <newest|activity|status|harness|model|effort>] [--status <s>] [--harness <h>] [--model <m>] [--effort <e>] [--all] [--json]
 ```
 
-`wizbar threads` lists Yours across the host's project scope using the saved
-sort and filter. Flags override those choices for the invocation. Use
+`wizbar threads` lists Yours across projects using the saved sort and
+filter, not the sidebar's project picker. With `--search`, it considers
+active, unpinned matches even if they would normally be hidden from Yours.
+Flags override the saved sort and filters for the invocation. Use
 `--status all` or `--harness all` to clear a saved filter for that run.
-`--all` includes every active thread in scope, including children, and ignores
-the saved Yours filter. It still applies explicit `--status`, `--harness`,
-`--model` and `--effort` filters and uses the saved sort unless overridden.
+`--all` includes pinned threads and children on the active shelf, leaves out
+parked and archived threads, and ignores the saved Yours filter. It still
+applies explicit `--status`, `--harness`, `--model` and `--effort` filters and
+uses the saved sort unless overridden.
 JSON includes the row's IDs, title, section, status, harness, model, effort,
 timestamps and unread state. Invalid arguments exit 2.
 
 
 **Exit codes**, every command: `0` success; `1` any thread or the whole command
-failed; `2` usage error. The exception is `models`: a failed host read gives
+failed; `2` usage error. For `models`, a failed host read gives
 that thread a null model and effort with exit `0`, so check the returned
 fields. With `--raw`, the per-thread error status comes from the default
 execution-options read. If that read returns null and the context fallback
 fails, `contextModel` is null and has no separate error status.
+`agents` also exits `0` when its read returns `{"status":"unavailable"}`;
+check the status before treating it as a list.
 A usage error with `--json` prints
 `{"error":{"code":"usage","message":"<usage>"}}`.
 
@@ -344,16 +362,17 @@ failure never hides the others, and gives exit 1.
   failed ID is `{"threadId","ok":false,"error":{"code","message"}}`. `list`
   reports the resolved shelf and snooze wake time.
 - Only `snooze` takes `--until`: a future ISO timestamp with a timezone, or a
-  sidebar preset `hour`, `evening`, `tomorrow` or `next-week`.
+  sidebar preset `hour`, `evening`, `tomorrow` or `next-week`. `evening`
+  is available only when the evening wake time is more than an hour away.
 - `mute` is the running-thread exception for keeper-selected fleet work: it
   needs a running, unpinned thread with no pending input or failure. A
   question, failure or stopped work with newer unread attention returns the
   thread to the active list, where Yours applies its usual rules;
   `unmute` undoes it. See the
   [mute contract](contracts/mute.v1.md).
-- `pin` and `unpin` print `{"results":[{"threadId","ok":true,"pinned":true}]}`.
-  Pinning a pinned thread, or unpinning an unpinned one, succeeds and changes
-  nothing.
+- `pin` and `unpin` print `{"results":[{"threadId","ok":true,"pinned":true}]}` for a pin,
+  or `"pinned":false` for an unpin. Pinning a pinned thread, or unpinning an
+  unpinned one, succeeds and changes nothing.
 
 **`move`** takes one pinned thread and one position and prints
 `{"results":[{"threadId","ok":true,"pinned":true,"pinnedOrder":[…]}]}`, the
@@ -370,11 +389,13 @@ Status is the first of `waiting`, `failed`, `working`, `unread`, `idle` that
 holds. An unknown ID prints `{"error":{"code":"unknown_id",…}}` with exit 1.
 
 **`stats`** prints the hover card's data: 0.3's numbers at `version: 2`, plus
-the harness split and every running thread with its matrix state, visible spec
-and model and effort (null when the host gives none):
+the harness split, awake/starting/asleep counts, and each observed running
+thread with its matrix state, visible spec, model and effort (null when the
+host gives none). `unseen` reports unmatched GitHub agents separately. For
+example, with one running child, one waiting thread and no agents file:
 
 ```json
-{"version":2,"status":"ready","running":{"total":2,"topLevel":0,"children":2,"cloud":2,"local":0,"unknown":0},"waitingOnYou":1,"finishedToday":{"source":"none","count":null},"window":{"timeZone":"UTC","start":1795046400000,"end":1795132800000},"coverage":{"scope":"observable-sidebar","subagents":"not-counted","unseen":"possible"},"harness":[{"providerId":"sample-harness","count":2}],"threads":[{"id":"thr_v4_example","title":"Builder · SP-2: Example work","providerId":"sample-harness","matrix":"working","spec":"example/sample-plans#501","shortName":"Example spec","model":null,"effort":null}]}
+{"version":2,"status":"ready","running":{"total":1,"topLevel":0,"children":1,"cloud":1,"local":0,"unknown":0},"waitingOnYou":1,"finishedToday":{"source":"none","count":null},"window":{"timeZone":"UTC","start":1795046400000,"end":1795132800000},"coverage":{"scope":"observable-sidebar","subagents":"not-counted","unseen":"possible"},"harness":[{"providerId":"sample-harness","count":1}],"threads":[{"id":"thr_v4_example","title":"Builder · SP-2: Example work","providerId":"sample-harness","matrix":"working","spec":"example/sample-plans#501","shortName":"Example spec","model":null,"effort":null}],"states":{"awake":1,"starting":0,"asleep":1,"needsYou":1,"awakeByHarness":[{"providerId":"sample-harness","count":1}]},"unseen":{"status":"unavailable","count":null,"agents":[]}}
 ```
 
 `window` is today in the server's time zone. A thread names a spec only when
@@ -402,10 +423,11 @@ each item adds the host's raw answer and any context fallback model.
 
 **`footer <show|pinned|all>`** saves the **Composer footer** setting (`composerFooter`, default `show`), matching the select in WizBar's settings page ("Show", "Hide on pinned threads", "Hide everywhere"). It hides the bar under the thread composer by matching the host's `data-follow-up-composer-footer` attribute from a WizBar content script; if that attribute disappears, nothing breaks and the bar shows again. With `--json` it prints `{"composerFooter":"pinned"}`.
 
-The values above are examples. The full JSON shapes and error codes are in
+The values above are examples. The original JSON shapes and error codes are in
 [section 7 of the v0.3 contract](contracts/sidebar-v3.v1.md#7-cli) and
-[section 8 of the v0.4 contract](contracts/specs-section.v1.md#8-cli). Live dispatch,
-and the CLI matching the hover card on a real host, await #9.
+[section 8 of the v0.4 contract](contracts/specs-section.v1.md#8-cli). The [v0.3 live check](https://github.com/openwizdev/WizPlugins/issues/9#issuecomment-6843809613)
+covered the CLI and running count on the PC. It does not prove the current card
+and commands on a real host.
 
 ### Host-owned row-menu items
 
@@ -433,10 +455,10 @@ item that is neither a command nor listed here.
   repositories. Subagents do not
   count toward the running thread total.
 - Cloud rows carry no branch or pull request in observed host data.
-- The real pinned order, footer placement, the hover card's real look and
-  rollback to T3 Sidebar are unverified until #9. PR badges have appeared
-  inconsistently on real hosts; a missing badge alone is not a WizBar regression.
-- 0.6.0 and 0.7.0 have not been installed on a real host: the breath, section
+- The v0.3 live check covered pins and its running line. The current footer
+  and card layout and rollback to T3 Sidebar are not verified by that check.
+  PR badges have appeared inconsistently on real hosts; a missing badge alone is not a WizBar regression.
+- No live check is recorded here for 0.6.0 or 0.7.0: the breath, section
   drag, Yours on real threads, the running card's groups and the Cloud agents
   section are proved by fixture and browser tests only.
 - Cloud agents are only as fresh as the producer's last run (every 10
