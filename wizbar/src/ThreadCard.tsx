@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import {
   useRpc,
   experimental_useSidebarThreads as useSidebarThreads,
@@ -69,11 +69,31 @@ export function ThreadCard({
   // Escape hides the overlay (it can cover the next card) without moving focus;
   // the next focus or hover shows it again. The description stays either way.
   const [locationDismissed, setLocationDismissed] = useState(false);
+  const locationCard = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const card = locationCard.current;
+    if (!location || !card) return;
+
+    const dismiss = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setLocationDismissed(true);
+    };
+    const listen = () => card.ownerDocument.addEventListener("keydown", dismiss);
+    const unlisten = () => card.ownerDocument.removeEventListener("keydown", dismiss);
+    card.addEventListener("mouseenter", listen);
+    card.addEventListener("mouseleave", unlisten);
+    if (card.matches(":hover")) listen();
+    return () => {
+      card.removeEventListener("mouseenter", listen);
+      card.removeEventListener("mouseleave", unlisten);
+      unlisten();
+    };
+  }, [location]);
 
   return (
     <RowContextMenu thread={thread}>
       <li className="list-none">
         <div
+          ref={locationCard}
           className={cn(
             "group/card relative rounded-md px-2.5 py-2 transition-colors",
             isActive ? "bg-sidebar-accent" : "hover:bg-sidebar-accent/60",

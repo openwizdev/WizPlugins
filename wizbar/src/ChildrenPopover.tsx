@@ -65,6 +65,7 @@ export function ChildrenPopover({
   const trigger = useRef<HTMLButtonElement>(null);
   const panel = useRef<HTMLDivElement>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const pointerInside = useRef(false);
   // Escape returns focus to the count without reopening the list.
   const refocusing = useRef(false);
   const panelId = useId();
@@ -114,18 +115,26 @@ export function ChildrenPopover({
       // Hover is a mouse or pen gesture. A touch tap opens through focus and
       // click; its pointer, and the compatibility mouse after it, then "leave",
       // which must not close what the tap opened. Tapping elsewhere blurs it.
-      onPointerEnter={(event) => { if (event.pointerType !== "touch") show(); }}
+      onPointerEnter={(event) => {
+        if (event.pointerType === "touch") return;
+        pointerInside.current = true;
+        show();
+      }}
       onPointerLeave={(event) => {
         if (event.pointerType === "touch") return;
+        pointerInside.current = false;
         cancelClose();
-        closeTimer.current = setTimeout(() => setOpen(false), CLOSE_DELAY);
+        closeTimer.current = setTimeout(() => {
+          if (!wrapper.current?.contains(document.activeElement)) setOpen(false);
+        }, CLOSE_DELAY);
       }}
       onFocus={() => {
         if (refocusing.current) refocusing.current = false;
         else show();
       }}
       onBlur={(event) => {
-        if (!(event.relatedTarget instanceof Node && wrapper.current?.contains(event.relatedTarget))) hide();
+        if (!pointerInside.current &&
+            !(event.relatedTarget instanceof Node && wrapper.current?.contains(event.relatedTarget))) hide();
       }}
       onKeyDown={(event) => {
         if (event.key !== "Escape" || !open) return;
