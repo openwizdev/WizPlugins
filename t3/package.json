@@ -1,0 +1,12 @@
+{
+  "name": "wizbar-t3",
+  "private": true,
+  "type": "module",
+  "description": "WizBar for T3 Code: the fleet board in T3's built-in browser panel",
+  "engines": { "node": ">=24" },
+  "scripts": {
+    "start": "node board/server.ts",
+    "test": "node --test \"board/**/*.test.ts\"",
+    "typecheck": "../wizbar/node_modules/.bin/tsc -p tsconfig.json"
+  }
+}
