@@ -2,7 +2,7 @@
 // WZ19 (#43), V2: hovering or focusing a card's child count lists its children
 // (target picture B). Synthetic rows only: src/fixtures/v3.ts.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { loadPluginApp, renderSlot } from "@get-bb/plugin-sdk/testing/app";
 import type { PluginSidebarThread, PluginSidebarThreadsState } from "@get-bb/plugin-sdk/app";
 import { v3Now, v3Threads } from "./fixtures/v3";
@@ -105,6 +105,32 @@ describe("children on hover (picture B)", () => {
     await screen.findByRole("dialog");
     fireEvent.blur(count, { relatedTarget: document.body });
     await waitFor(() => expect(panel()).toBeNull());
+  });
+
+  it.each(["pointer", "focus"] as const)("keeps the list open when %s leaves first", async (first) => {
+    render();
+    const count = chip("3 children");
+    const outside = screen.getAllByRole("link")[0]!;
+    fireEvent.pointerEnter(count, { pointerType: "mouse" });
+    const list = await screen.findByRole("dialog");
+    const child = within(list).getAllByRole("button", { name: /^Open child/ })[0]!;
+    act(() => child.focus());
+
+    const leave = () => fireEvent.pointerLeave(list, { pointerType: "mouse" });
+    const blur = () => act(() => outside.focus());
+    if (first === "pointer") {
+      leave();
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      expect(panel()).toBe(list);
+      expect(document.activeElement).toBe(child);
+      blur();
+    } else {
+      blur();
+      expect(panel()).toBe(list);
+      leave();
+    }
+    await waitFor(() => expect(panel()).toBeNull());
+    expect(document.activeElement).toBe(outside);
   });
 
   it("clicking a child opens that child; Open parent opens the parent", async () => {
