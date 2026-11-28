@@ -1,0 +1,599 @@
+{
+  "github_defaults": {
+    "repo": "example/forge",
+    "spec": 9001,
+    "ticket": 9101,
+    "record_authors": ["example-bot"],
+    "pull_request": {
+      "repo": "example/forge",
+      "number": 9201,
+      "merged_at": null,
+      "state": "OPEN",
+      "draft": false,
+      "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "read_at": "2030-01-03T13:00:00Z",
+    "default_branch": "main",
+    "issue_state": "OPEN",
+    "required_checks": ["ci"],
+    "title": "Synthetic ticket",
+    "version": "0.2.0"
+  },
+  "wakes": [
+    {
+      "name": "first findings",
+      "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "checks": [
+        {
+          "kind": "check",
+          "repo": "example/forge",
+          "number": 9201,
+          "id": 1005,
+          "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "name": "ci",
+          "result": "pass",
+          "completed_at": "2030-01-03T11:00:00Z"
+        }
+      ],
+      "comments": [
+        {
+          "kind": "comment",
+          "repo": "example/forge",
+          "number": 9101,
+          "id": 1002,
+          "author": "example-bot",
+          "created_at": "2030-01-03T11:00:00Z",
+          "updated_at": "2030-01-03T11:00:00Z",
+          "body": "launch-fleet: start checked, branch builder/9101-synthetic"
+        },
+        {
+          "kind": "comment",
+          "repo": "example/forge",
+          "number": 9201,
+          "id": 1006,
+          "author": "example-bot",
+          "created_at": "2030-01-03T11:00:00Z",
+          "updated_at": "2030-01-03T11:00:00Z",
+          "body": "launch-fleet: review started aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        {
+          "kind": "comment",
+          "repo": "example/forge",
+          "number": 9201,
+          "id": 1008,
+          "author": "example-bot",
+          "created_at": "2030-01-03T11:10:00Z",
+          "updated_at": "2030-01-03T11:10:00Z",
+          "body": "VERDICT: CHANGES at aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        {
+          "kind": "comment",
+          "repo": "example/forge",
+          "number": 9201,
+          "id": 1013,
+          "author": "example-bot",
+          "created_at": "2030-01-03T11:20:00Z",
+          "updated_at": "2030-01-03T11:20:00Z",
+          "body": "launch-fleet: findings sent aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      ],
+      "expected": {
+        "schema": "openwiz.states.v1",
+        "read_at": "2030-01-03T13:00:00Z",
+        "budget": {"limit": 50, "used": 8},
+        "tickets": [
+          {
+            "number": 9101,
+            "spec": 9001,
+            "version": "0.2.0",
+            "title": "Synthetic ticket",
+            "blockers": [],
+            "state": "fix",
+            "problem": {"kind": "failing", "reason": "The current review requests changes."},
+            "pull_request": {"repo": "example/forge", "number": 9201, "merged_at": null}
+          }
+        ],
+        "agents": [
+          {
+            "name": "reviewer-9201-1",
+            "role": "reviewer",
+            "ticket": 9101,
+            "pull_request": {"repo": "example/forge", "number": 9201, "merged_at": null},
+            "state": "fix",
+            "since": "2030-01-03T11:10:00Z",
+            "record": {"kind": "comment", "repo": "example/forge", "number": 9201, "id": 1008}
+          },
+          {
+            "name": "builder-9101",
+            "role": "builder",
+            "ticket": 9101,
+            "pull_request": {"repo": "example/forge", "number": 9201, "merged_at": null},
+            "state": "fix",
+            "since": "2030-01-03T11:10:00Z",
+            "record": {"kind": "comment", "repo": "example/forge", "number": 9201, "id": 1008}
+          }
+        ],
+        "tracks": [{"spec": 9001, "tickets": [9101], "agents": ["reviewer-9201-1", "builder-9101"], "needs_owner": []}],
+        "unavailable": []
+      }
+    },
+    {
+      "name": "same reviewer re-checks next head",
+      "head": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "checks": [
+        {
+          "kind": "check",
+          "repo": "example/forge",
+          "number": 9201,
+          "id": 1020,
+          "head": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "ci",
+          "result": "pass",
+          "completed_at": "2030-01-03T11:30:00Z"
+        }
+      ],
+      "comments": [
+        {
+          "kind": "comment",
+          "repo": "example/forge",
+          "number": 9101,
+          "id": 1002,
+          "author": "example-bot",
+          "created_at": "2030-01-03T11:00:00Z",
+          "updated_at": "2030-01-03T11:00:00Z",
+          "body": "launch-fleet: start checked, branch builder/9101-synthetic"
+        },
+        {
+          "kind": "comment",
+          "repo": "example/forge",
+          "number": 9201,
+          "id": 1006,
+          "author": "example-bot",
+          "created_at": "2030-01-03T11:00:00Z",
+          "updated_at": "2030-01-03T11:00:00Z",
+          "body": "launch-fleet: review started aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        {
+          "kind": "comment",
+          "repo": "example/forge",
+          "number": 9201,
+          "id": 1008,
+          "author": "example-bot",
+          "created_at": "2030-01-03T11:10:00Z",
+          "updated_at": "2030-01-03T11:10:00Z",
+          "body": "VERDICT: CHANGES at aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        {
+          "kind": "comment",
+          "repo": "example/forge",
+          "number": 9201,
+          "id": 1013,
+          "author": "example-bot",
+          "created_at": "2030-01-03T11:20:00Z",
+          "updated_at": "2030-01-03T11:20:00Z",
+          "body": "launch-fleet: findings sent aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        {
+          "kind": "comment",
+          "repo": "example/forge",
+          "number": 9201,
+          "id": 1014,
+          "author": "example-bot",
+          "created_at": "2030-01-03T11:30:00Z",
+          "updated_at": "2030-01-03T11:30:00Z",
+          "body": "launch-fleet: re-check sent bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        }
+      ],
+      "expected": {
+        "schema": "openwiz.states.v1",
+        "read_at": "2030-01-03T13:00:00Z",
+        "budget": {"limit": 50, "used": 8},
+        "tickets": [
+          {
+            "number": 9101,
+            "spec": 9001,
+            "version": "0.2.0",
+            "title": "Synthetic ticket",
+            "blockers": [],
+            "state": "review",
+            "problem": null,
+            "pull_request": {"repo": "example/forge", "number": 9201, "merged_at": null}
+          }
+        ],
+        "agents": [
+          {
+            "name": "reviewer-9201-1",
+            "role": "reviewer",
+            "ticket": 9101,
+            "pull_request": {"repo": "example/forge", "number": 9201, "merged_at": null},
+            "state": "review",
+            "since": "2030-01-03T11:30:00Z",
+            "record": {"kind": "comment", "repo": "example/forge", "number": 9201, "id": 1014}
+          },
+          {
+            "name": "builder-9101",
+            "role": "builder",
+            "ticket": 9101,
+            "pull_request": {"repo": "example/forge", "number": 9201, "merged_at": null},
+            "state": "review",
+            "since": "2030-01-03T11:30:00Z",
+            "record": {"kind": "check", "repo": "example/forge", "number": 9201, "id": 1020}
+          }
+        ],
+        "tracks": [{"spec": 9001, "tickets": [9101], "agents": ["reviewer-9201-1", "builder-9101"], "needs_owner": []}],
+        "unavailable": []
+      }
+    },
+    {
+      "name": "fresh fixer and same reviewer on final check",
+      "head": "cccccccccccccccccccccccccccccccccccccccc",
+      "checks": [
+        {
+          "kind": "check",
+          "repo": "example/forge",
+          "number": 9201,
+          "id": 1021,
+          "head": "cccccccccccccccccccccccccccccccccccccccc",
+          "name": "ci",
+          "result": "pass",
+          "completed_at": "2030-01-03T12:00:00Z"
+        }
+      ],
+      "comments": [
+        {
+          "kind": "comment",
+          "repo": "example/forge",
+          "number": 9101,
+          "id": 1002,
+          "author": "example-bot",
+          "created_at": "2030-01-03T11:00:00Z",
+          "updated_at": "2030-01-03T11:00:00Z",
+          "body": "launch-fleet: start checked, branch builder/9101-synthetic"
+        },
+        {
+          "kind": "comment",
+          "repo": "example/forge",
+          "number": 9201,
+          "id": 1006,
+          "author": "example-bot",
+          "created_at": "2030-01-03T11:00:00Z",
+          "updated_at": "2030-01-03T11:00:00Z",
+          "body": "launch-fleet: review started aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        {
+          "kind": "comment",
+          "repo": "example/forge",
+          "number": 9201,
+          "id": 1008,
+          "author": "example-bot",
+          "created_at": "2030-01-03T11:10:00Z",
+          "updated_at": "2030-01-03T11:10:00Z",
+          "body": "VERDICT: CHANGES at aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        {
+          "kind": "comment",
+          "repo": "example/forge",
+          "number": 9201,
+          "id": 1013,
+          "author": "example-bot",
+          "created_at": "2030-01-03T11:20:00Z",
+          "updated_at": "2030-01-03T11:20:00Z",
+          "body": "launch-fleet: findings sent aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        {
+          "kind": "comment",
+          "repo": "example/forge",
+          "number": 9201,
+          "id": 1014,
+          "author": "example-bot",
+          "created_at": "2030-01-03T11:30:00Z",
+          "updated_at": "2030-01-03T11:30:00Z",
+          "body": "launch-fleet: re-check sent bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        {
+          "kind": "comment",
+          "repo": "example/forge",
+          "number": 9201,
+          "id": 1017,
+          "author": "example-bot",
+          "created_at": "2030-01-03T11:40:00Z",
+          "updated_at": "2030-01-03T11:40:00Z",
+          "body": "VERDICT: CHANGES at bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n\nNext: a fresh, stronger builder fixes R2 once, then one final check."
+        },
+        {
+          "kind": "comment",
+          "repo": "example/forge",
+          "number": 9201,
+          "id": 1015,
+          "author": "example-bot",
+          "created_at": "2030-01-03T11:45:00Z",
+          "updated_at": "2030-01-03T11:50:00Z",
+          "body": "launch-fleet: findings sent bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb: fresh round started, branch builder/9101-synthetic"
+        },
+        {
+          "kind": "comment",
+          "repo": "example/forge",
+          "number": 9201,
+          "id": 1016,
+          "author": "example-bot",
+          "created_at": "2030-01-03T12:00:00Z",
+          "updated_at": "2030-01-03T12:00:00Z",
+          "body": "launch-fleet: re-check sent cccccccccccccccccccccccccccccccccccccccc"
+        }
+      ],
+      "expected": {
+        "schema": "openwiz.states.v1",
+        "read_at": "2030-01-03T13:00:00Z",
+        "budget": {"limit": 50, "used": 8},
+        "tickets": [
+          {
+            "number": 9101,
+            "spec": 9001,
+            "version": "0.2.0",
+            "title": "Synthetic ticket",
+            "blockers": [],
+            "state": "review",
+            "problem": null,
+            "pull_request": {"repo": "example/forge", "number": 9201, "merged_at": null}
+          }
+        ],
+        "agents": [
+          {
+            "name": "reviewer-9201-1",
+            "role": "reviewer",
+            "ticket": 9101,
+            "pull_request": {"repo": "example/forge", "number": 9201, "merged_at": null},
+            "state": "review",
+            "since": "2030-01-03T12:00:00Z",
+            "record": {"kind": "comment", "repo": "example/forge", "number": 9201, "id": 1016}
+          },
+          {
+            "name": "builder-9101",
+            "role": "builder",
+            "ticket": 9101,
+            "pull_request": {"repo": "example/forge", "number": 9201, "merged_at": null},
+            "state": "done",
+            "since": "2030-01-03T11:50:00Z",
+            "record": {"kind": "comment", "repo": "example/forge", "number": 9201, "id": 1015}
+          },
+          {
+            "name": "fixer-9201-2",
+            "role": "fixer",
+            "ticket": 9101,
+            "pull_request": {"repo": "example/forge", "number": 9201, "merged_at": null},
+            "state": "review",
+            "since": "2030-01-03T12:00:00Z",
+            "record": {"kind": "check", "repo": "example/forge", "number": 9201, "id": 1021}
+          }
+        ],
+        "tracks": [{"spec": 9001, "tickets": [9101], "agents": ["reviewer-9201-1", "builder-9101", "fixer-9201-2"], "needs_owner": []}],
+        "unavailable": []
+      }
+    }
+  ],
+  "extra_cases": [
+    {
+      "name": "fresh fix claim is still queued",
+      "head": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "checks": [
+        {
+          "kind": "check",
+          "repo": "example/forge",
+          "number": 9201,
+          "id": 1020,
+          "head": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "ci",
+          "result": "pass",
+          "completed_at": "2030-01-03T11:30:00Z"
+        }
+      ],
+      "comments": [
+        {
+          "kind": "comment",
+          "repo": "example/forge",
+          "number": 9101,
+          "id": 1002,
+          "author": "example-bot",
+          "created_at": "2030-01-03T11:00:00Z",
+          "updated_at": "2030-01-03T11:00:00Z",
+          "body": "launch-fleet: start checked, branch builder/9101-synthetic"
+        },
+        {
+          "kind": "comment",
+          "repo": "example/forge",
+          "number": 9201,
+          "id": 1006,
+          "author": "example-bot",
+          "created_at": "2030-01-03T11:00:00Z",
+          "updated_at": "2030-01-03T11:00:00Z",
+          "body": "launch-fleet: review started aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        {
+          "kind": "comment",
+          "repo": "example/forge",
+          "number": 9201,
+          "id": 1008,
+          "author": "example-bot",
+          "created_at": "2030-01-03T11:10:00Z",
+          "updated_at": "2030-01-03T11:10:00Z",
+          "body": "VERDICT: CHANGES at aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        {
+          "kind": "comment",
+          "repo": "example/forge",
+          "number": 9201,
+          "id": 1013,
+          "author": "example-bot",
+          "created_at": "2030-01-03T11:20:00Z",
+          "updated_at": "2030-01-03T11:20:00Z",
+          "body": "launch-fleet: findings sent aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        {
+          "kind": "comment",
+          "repo": "example/forge",
+          "number": 9201,
+          "id": 1014,
+          "author": "example-bot",
+          "created_at": "2030-01-03T11:30:00Z",
+          "updated_at": "2030-01-03T11:30:00Z",
+          "body": "launch-fleet: re-check sent bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        {
+          "kind": "comment",
+          "repo": "example/forge",
+          "number": 9201,
+          "id": 1017,
+          "author": "example-bot",
+          "created_at": "2030-01-03T11:40:00Z",
+          "updated_at": "2030-01-03T11:40:00Z",
+          "body": "VERDICT: CHANGES at bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n\nNext: a fresh, stronger builder fixes R2 once, then one final check."
+        },
+        {
+          "kind": "comment",
+          "repo": "example/forge",
+          "number": 9201,
+          "id": 1015,
+          "author": "example-bot",
+          "created_at": "2030-01-03T11:45:00Z",
+          "updated_at": "2030-01-03T11:45:00Z",
+          "body": "launch-fleet: fresh starting bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        }
+      ],
+      "expected": {
+        "schema": "openwiz.states.v1",
+        "read_at": "2030-01-03T13:00:00Z",
+        "budget": {"limit": 50, "used": 8},
+        "tickets": [
+          {
+            "number": 9101,
+            "spec": 9001,
+            "version": "0.2.0",
+            "title": "Synthetic ticket",
+            "blockers": [],
+            "state": "fix",
+            "problem": {"kind": "failing", "reason": "The current review requests changes."},
+            "pull_request": {"repo": "example/forge", "number": 9201, "merged_at": null}
+          }
+        ],
+        "agents": [
+          {
+            "name": "builder-9101",
+            "role": "builder",
+            "ticket": 9101,
+            "pull_request": {"repo": "example/forge", "number": 9201, "merged_at": null},
+            "state": "fix",
+            "since": "2030-01-03T11:40:00Z",
+            "record": {"kind": "comment", "repo": "example/forge", "number": 9201, "id": 1017}
+          },
+          {
+            "name": "reviewer-9201-1",
+            "role": "reviewer",
+            "ticket": 9101,
+            "pull_request": {"repo": "example/forge", "number": 9201, "merged_at": null},
+            "state": "fix",
+            "since": "2030-01-03T11:40:00Z",
+            "record": {"kind": "comment", "repo": "example/forge", "number": 9201, "id": 1017}
+          },
+          {
+            "name": "fixer-9201-2",
+            "role": "fixer",
+            "ticket": 9101,
+            "pull_request": {"repo": "example/forge", "number": 9201, "merged_at": null},
+            "state": "queued",
+            "since": "2030-01-03T11:45:00Z",
+            "record": {"kind": "comment", "repo": "example/forge", "number": 9201, "id": 1015}
+          }
+        ],
+        "tracks": [{"spec": 9001, "tickets": [9101], "agents": ["builder-9101", "reviewer-9201-1", "fixer-9201-2"], "needs_owner": []}],
+        "unavailable": []
+      }
+    },
+    {
+      "name": "replacement reviewer gets a new number even at the same head",
+      "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "checks": [
+        {
+          "kind": "check",
+          "repo": "example/forge",
+          "number": 9201,
+          "id": 1005,
+          "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "name": "ci",
+          "result": "pass",
+          "completed_at": "2030-01-03T11:00:00Z"
+        }
+      ],
+      "comments": [
+        {
+          "kind": "comment",
+          "repo": "example/forge",
+          "number": 9201,
+          "id": 1006,
+          "author": "example-bot",
+          "created_at": "2030-01-03T11:00:00Z",
+          "updated_at": "2030-01-03T11:00:00Z",
+          "body": "launch-fleet: review started aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        {
+          "kind": "comment",
+          "repo": "example/forge",
+          "number": 9201,
+          "id": 1010,
+          "author": "example-bot",
+          "created_at": "2030-01-03T12:00:00Z",
+          "updated_at": "2030-01-03T12:00:00Z",
+          "body": "launch-fleet: review given up aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: no verdict"
+        },
+        {
+          "kind": "comment",
+          "repo": "example/forge",
+          "number": 9201,
+          "id": 1018,
+          "author": "example-bot",
+          "created_at": "2030-01-03T12:30:00Z",
+          "updated_at": "2030-01-03T12:30:00Z",
+          "body": "launch-fleet: review started aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      ],
+      "expected": {
+        "schema": "openwiz.states.v1",
+        "read_at": "2030-01-03T13:00:00Z",
+        "budget": {"limit": 50, "used": 8},
+        "tickets": [
+          {
+            "number": 9101,
+            "spec": 9001,
+            "version": "0.2.0",
+            "title": "Synthetic ticket",
+            "blockers": [],
+            "state": "review",
+            "problem": null,
+            "pull_request": {"repo": "example/forge", "number": 9201, "merged_at": null}
+          }
+        ],
+        "agents": [
+          {
+            "name": "reviewer-9201-1",
+            "role": "reviewer",
+            "ticket": 9101,
+            "pull_request": {"repo": "example/forge", "number": 9201, "merged_at": null},
+            "state": "done",
+            "since": "2030-01-03T12:00:00Z",
+            "record": {"kind": "comment", "repo": "example/forge", "number": 9201, "id": 1010}
+          },
+          {
+            "name": "reviewer-9201-2",
+            "role": "reviewer",
+            "ticket": 9101,
+            "pull_request": {"repo": "example/forge", "number": 9201, "merged_at": null},
+            "state": "review",
+            "since": "2030-01-03T12:30:00Z",
+            "record": {"kind": "comment", "repo": "example/forge", "number": 9201, "id": 1018}
+          }
+        ],
+        "tracks": [{"spec": 9001, "tickets": [9101], "agents": ["reviewer-9201-1", "reviewer-9201-2"], "needs_owner": []}],
+        "unavailable": []
+      }
+    }
+  ]
+}
