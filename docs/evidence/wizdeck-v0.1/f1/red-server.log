@@ -1,0 +1,117 @@
+
+ RUN  v4.1.10 wizbar
+
+ ❯ |bb-plugin-wizbar| src/deck/fleet/fleet-server.test.ts (6 tests | 6 failed) 229ms
+     × two consumers share one work-link read per 60-second interval 58ms
+     × returns only the selected factory's repositories 41ms
+     × keeps last-good links stale through a rate limit and waits for its reset 42ms
+     × keeps a bounded read's known links with its gap, never complete 31ms
+     × never returns the token in a work-link failure 26ms
+     × stops reading when the backend is disposed 30ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/fleet/fleet-server.test.ts > fleet work links in the shared cache > two consumers share one work-link read per 60-second interval
+AssertionError: expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ src/deck/fleet/fleet-server.test.ts:70:27
+     68|     const t = setup();
+     69|     await t.watch("desk-tab"); await t.watch("phone"); await vi.advanc…
+     70|     expect(t.linkCalls()).toHaveLength(1);
+       |                           ^
+     71|     for (let minute = 1; minute <= 2; minute += 1) {
+     72|       await vi.advanceTimersByTimeAsync(30_000);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/fleet/fleet-server.test.ts > fleet work links in the shared cache > returns only the selected factory's repositories
+AssertionError: expected [] to deeply equal [ 'example-org/other-app#52' ]
+
+- Expected
++ Received
+
+- [
+-   "example-org/other-app#52",
+- ]
++ []
+
+ ❯ src/deck/fleet/fleet-server.test.ts:84:79
+     82|     const t = setup(dxSettings([dxFactory, dxOtherFactory]));
+     83|     await t.watch("desk-tab", { projectKey: "other-factory" }); await …
+     84|     expect(heads(await t.watch("desk-tab", { projectKey: "other-factor…
+       |                                                                               ^
+     85|     expect(heads(await t.watch("desk-tab", { projectKey: "sample-facto…
+     86|     await vi.advanceTimersByTimeAsync(0);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/fleet/fleet-server.test.ts > fleet work links in the shared cache > keeps last-good links stale through a rate limit and waits for its reset
+AssertionError: Target cannot be null or undefined.
+ ❯ firstLinks src/deck/fleet/fleet-server.test.ts:59:29
+     57| /** The one configured repository's link view; its absence is itself t…
+     58| function firstLinks(result: DeckWatchResultV1) {
+     59|   expect(result.fleetLinks).toHaveLength(1);
+       |                             ^
+     60|   return result.fleetLinks![0];
+     61| }
+ ❯ src/deck/fleet/fleet-server.test.ts:97:18
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/6]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/fleet/fleet-server.test.ts > fleet work links in the shared cache > keeps a bounded read's known links with its gap, never complete
+AssertionError: Target cannot be null or undefined.
+ ❯ firstLinks src/deck/fleet/fleet-server.test.ts:59:29
+     57| /** The one configured repository's link view; its absence is itself t…
+     58| function firstLinks(result: DeckWatchResultV1) {
+     59|   expect(result.fleetLinks).toHaveLength(1);
+       |                             ^
+     60|   return result.fleetLinks![0];
+     61| }
+ ❯ src/deck/fleet/fleet-server.test.ts:117:18
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/6]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/fleet/fleet-server.test.ts > fleet work links in the shared cache > never returns the token in a work-link failure
+AssertionError: Target cannot be null or undefined.
+ ❯ firstLinks src/deck/fleet/fleet-server.test.ts:59:29
+     57| /** The one configured repository's link view; its absence is itself t…
+     58| function firstLinks(result: DeckWatchResultV1) {
+     59|   expect(result.fleetLinks).toHaveLength(1);
+       |                             ^
+     60|   return result.fleetLinks![0];
+     61| }
+ ❯ src/deck/fleet/fleet-server.test.ts:128:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/6]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/fleet/fleet-server.test.ts > fleet work links in the shared cache > stops reading when the backend is disposed
+AssertionError: expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ src/deck/fleet/fleet-server.test.ts:140:27
+    138|     hosts.splice(hosts.indexOf(t.host), 1);
+    139|     await vi.advanceTimersByTimeAsync(5 * REFRESH_MS);
+    140|     expect(t.linkCalls()).toHaveLength(1);
+       |                           ^
+    141|   });
+    142| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/6]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  6 failed (6)
+   Start at  19:34:06
+   Duration  665ms (transform 199ms, setup 0ms, import 323ms, tests 229ms, environment 0ms)
+

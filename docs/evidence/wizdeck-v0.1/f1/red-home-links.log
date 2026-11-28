@@ -1,0 +1,38 @@
+
+ RUN  v4.1.10 wizbar
+
+ ❯ |bb-plugin-wizbar| src/deck/fleet/FleetViews.test.tsx (8 tests | 1 failed) 652ms
+     × places threads from the backend's fleetLinks and opens that spec's fleet page 25ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/fleet/FleetViews.test.tsx > WizDeck Home live insertion > places threads from the backend's fleetLinks and opens that spec's fleet page
+AssertionError: expected <p role="status" …(1)></p> to be null
+
+- Expected:
+null
+
++ Received:
+<p
+  role="status"
+  style="color: var(--muted-foreground); margin: 0px 0px 6px;"
+>
+  Work links were not sent by the backend, so no thread can be placed under a spec.
+</p>
+
+ ❯ src/deck/fleet/FleetViews.test.tsx:138:67
+    136|     await flush();
+    137|     const fleet = screen.getByRole("region", { name: "Fleet" });
+    138|     expect(within(fleet).queryByText(/Work links were not sent/)).toBe…
+       |                                                                   ^
+    139|     expect(within(fleet).getByText(/4 running · 6 threads/)).toBeTruth…
+    140|     expect(within(fleet).getByText(/2 threads · no verified spec link/…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 7 passed (8)
+   Start at  19:35:00
+   Duration  1.54s (transform 142ms, setup 0ms, import 303ms, tests 652ms, environment 482ms)
+

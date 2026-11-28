@@ -1,0 +1,142 @@
+
+ RUN  v4.1.10 wizbar
+
+ ❯ |bb-plugin-wizbar| src/deck/fleet/fleet.test.ts (21 tests | 1 failed) 28ms
+     × never gives unproved work a spec through its parent or its descendants 7ms
+ ❯ |bb-plugin-wizbar| src/deck/fleet/FleetViews.test.tsx (11 tests | 3 failed) 975ms
+     × receives the backend's fleetLinks but places nothing by branch without per-checkout provenance 39ms
+     × cancels on a manual switch from loading A to B; focus stays on the picker 97ms
+     × focuses its own Home's item when another mounted Home shows the same id 82ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/fleet/FleetViews.test.tsx > WizDeck Home live insertion > receives the backend's fleetLinks but places nothing by branch without per-checkout provenance
+AssertionError: expected <button type="button" …(2)></button> to be null
+
+- Expected:
+null
+
++ Received:
+<button
+  aria-label="View fleet for Search filters for the sample catalogue"
+  style="min-height: 44px; min-width: 44px; padding: 0px 14px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--border); border-radius: 8px; background: transparent; color: var(--foreground); font: inherit; cursor: pointer;"
+  type="button"
+>
+  View
+</button>
+
+ ❯ src/deck/fleet/FleetViews.test.tsx:167:77
+    165|     const fleet = screen.getByRole("region", { name: "Fleet" });
+    166|     expect(within(fleet).queryByText(/Work links were not sent/)).toBe…
+    167|     expect(within(fleet).queryByRole("button", { name: /View fleet for…
+       |                                                                             ^
+    168|     expect(within(fleet).getByText(/no supported source proves which r…
+    169|     expect(within(fleet).getByText(/Unplaced/)).toBeTruthy();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/fleet/FleetViews.test.tsx > R6: a deferred Needs-you focus stays with its factory and its own Home > cancels on a manual switch from loading A to B; focus stays on the picker
+AssertionError: expected <li id="wizdeck-need-n12" …(2)>…(2)</li> to be <select …(1)>…(2)</select> // Object.is equality
+
+- Expected
++ Received
+
+- <select
+-   style="min-height: 44px; min-width: 44px; padding: 0px 10px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--border); border-radius: 8px; background: var(--background); color: var(--foreground); font: inherit; cursor: pointer;"
++ <li
++   id="wizdeck-need-n12"
++   style="display: flex; gap: 12px; align-items: flex-start; padding: 8px 0px; border-bottom: 1px solid var(--border);"
++   tabindex="-1"
+  >
+-   <option
+-     value="sample-factory"
++   <div
++     style="flex: 1 1 0%; min-width: 0px;"
++   >
++     <p
++       style="margin: 0px; font-weight: 600;"
++     >
++       N-12
++        · 
++       Which changelog headline ships?
++     </p>
++     <p
++       style="color: var(--muted-foreground); margin: 2px 0px 0px;"
+      >
+-     sample-factory
+-   </option>
+-   <option
+-     value="other-factory"
++       Options: 
++       Short headline (rec) · Long headline
++     </p>
++   </div>
++   <button
++     style="min-height: 44px; min-width: 44px; padding: 0px 14px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--border); border-radius: 8px; background: transparent; color: var(--foreground); font: inherit; cursor: pointer;"
++     type="button"
+    >
+-     other-factory
+-   </option>
+- </select>
++     Open
++   </button>
++ </li>
+
+ ❯ src/deck/fleet/FleetViews.test.tsx:244:36
+    242|     await flush(); await flush();
+    243|     expect(slot.container.querySelector('[id="wizdeck-need-n12"]')).no…
+    244|     expect(document.activeElement).toBe(picker);
+       |                                    ^
+    245|     expect(other.container.contains(document.activeElement)).toBe(fals…
+    246|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/fleet/FleetViews.test.tsx > R6: a deferred Needs-you focus stays with its factory and its own Home > focuses its own Home's item when another mounted Home shows the same id
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ src/deck/fleet/FleetViews.test.tsx:263:61
+    261|     await flush(); await flush();
+    262|     expect(document.activeElement?.id).toBe("wizdeck-need-n12");
+    263|     expect(slot.container.contains(document.activeElement)).toBe(true);
+       |                                                             ^
+    264|     expect(other.container.contains(document.activeElement)).toBe(fals…
+    265|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  |bb-plugin-wizbar| src/deck/fleet/fleet.test.ts > fleet placement > never gives unproved work a spec through its parent or its descendants
+AssertionError: expected [ 'example-org/sample-app#41', …(1) ] to deeply equal [ null, 'none' ]
+
+- Expected
++ Received
+
+  [
+-   null,
+-   "none",
++   "example-org/sample-app#41",
++   "parent",
+  ]
+
+ ❯ src/deck/fleet/fleet.test.ts:157:43
+    155|     const child = everyRow(m).find((row) => row.id === "thr_child")!;
+    156|     expect(child.link).toMatchObject({ status: "unproved", pullRequest…
+    157|     expect([child.spec, child.placement]).toEqual([null, "none"]);
+       |                                           ^
+    158|     expect(specOfThread(m, "thr_parent")).toBe(SPEC);
+    159|     expect(specOfThread(m, "thr_child")).toBeNull();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  2 failed | 1 passed (3)
+      Tests  4 failed | 37 passed (41)
+   Start at  21:04:22
+   Duration  2.04s (transform 654ms, setup 0ms, import 1.08s, tests 1.64s, environment 521ms)
+
