@@ -1,0 +1,199 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openwiz.dev/contracts/agent-states.v1.schema.json",
+  "title": "OpenWiz states v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "read_at", "budget", "tickets", "agents", "tracks", "unavailable"],
+  "properties": {
+    "schema": {"const": "openwiz.states.v1"},
+    "read_at": {"$ref": "#/$defs/time"},
+    "budget": {"$ref": "#/$defs/budget"},
+    "tickets": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/ticket"}},
+    "agents": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/agent"}},
+    "tracks": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/track"}},
+    "unavailable": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/unavailable"}}
+  },
+  "$defs": {
+    "id": {"type": "integer", "minimum": 1},
+    "time": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\\.[0-9]{1,3})?Z$(?![\\s\\S])"
+    },
+    "line": {
+      "type": "string",
+      "pattern": "^(?=.*\\S)[^\\u0000-\\u001f\\u007f\\u0085\\u2028\\u2029]*$(?![\\s\\S])"
+    },
+    "name": {
+      "type": "string",
+      "pattern": "^(?:builder-[1-9][0-9]*|reviewer-[1-9][0-9]*-[1-9][0-9]*|fixer-[1-9][0-9]*-[1-9][0-9]*|fleet-[1-9][0-9]*)$(?![\\s\\S])"
+    },
+    "repo": {"type": "string", "pattern": "^[A-Za-z0-9-]+/[A-Za-z0-9_.-]+$(?![\\s\\S])"},
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["limit", "used"],
+      "properties": {"limit": {"$ref": "#/$defs/id"}, "used": {"type": "integer", "minimum": 0}}
+    },
+    "pull_request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repo", "number", "merged_at"],
+      "properties": {
+        "repo": {"$ref": "#/$defs/repo"},
+        "number": {"$ref": "#/$defs/id"},
+        "merged_at": {"anyOf": [{"$ref": "#/$defs/time"}, {"type": "null"}]}
+      }
+    },
+    "problem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "reason"],
+      "properties": {
+        "kind": {"enum": ["blocked", "failing", "stale", "held"]},
+        "reason": {"$ref": "#/$defs/line"}
+      }
+    },
+    "ticket": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["number", "spec", "version", "title", "blockers", "state", "problem", "pull_request"],
+      "properties": {
+        "number": {"$ref": "#/$defs/id"},
+        "spec": {"$ref": "#/$defs/id"},
+        "version": {"$ref": "#/$defs/line"},
+        "title": {"$ref": "#/$defs/line"},
+        "blockers": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/id"}},
+        "state": {"enum": ["waiting", "ready", "building", "ci", "review", "fix", "merged", "closed"]},
+        "problem": {"anyOf": [{"$ref": "#/$defs/problem"}, {"type": "null"}]},
+        "pull_request": {"anyOf": [{"$ref": "#/$defs/pull_request"}, {"type": "null"}]}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"state": {"const": "merged"}}},
+          "then": {
+            "properties": {
+              "pull_request": {"type": "object", "properties": {"merged_at": {"$ref": "#/$defs/time"}}}
+            }
+          },
+          "else": {"properties": {"pull_request": {"properties": {"merged_at": {"type": "null"}}}}}
+        }
+      ]
+    },
+    "agent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "role", "ticket", "pull_request", "state", "since", "record"],
+      "properties": {
+        "name": {"$ref": "#/$defs/name"},
+        "role": {"enum": ["builder", "reviewer", "fixer", "fleet"]},
+        "ticket": {"anyOf": [{"$ref": "#/$defs/id"}, {"type": "null"}]},
+        "pull_request": {"anyOf": [{"$ref": "#/$defs/pull_request"}, {"type": "null"}]},
+        "state": {"enum": ["queued", "building", "ci", "review", "fix", "merge", "done"]},
+        "since": {"$ref": "#/$defs/time"},
+        "record": {"$ref": "#/$defs/record"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"role": {"const": "builder"}}},
+          "then": {
+            "properties": {
+              "name": {"pattern": "^builder-[1-9][0-9]*$(?![\\s\\S])"},
+              "ticket": {"$ref": "#/$defs/id"}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"role": {"const": "reviewer"}}},
+          "then": {
+            "properties": {
+              "name": {"pattern": "^reviewer-[1-9][0-9]*-[1-9][0-9]*$(?![\\s\\S])"},
+              "ticket": {"$ref": "#/$defs/id"},
+              "pull_request": {"$ref": "#/$defs/pull_request"}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"role": {"const": "fixer"}}},
+          "then": {
+            "properties": {
+              "name": {"pattern": "^fixer-[1-9][0-9]*-[1-9][0-9]*$(?![\\s\\S])"},
+              "ticket": {"$ref": "#/$defs/id"},
+              "pull_request": {"$ref": "#/$defs/pull_request"}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"role": {"const": "fleet"}}},
+          "then": {
+            "properties": {
+              "name": {"pattern": "^fleet-[1-9][0-9]*$(?![\\s\\S])"},
+              "ticket": {"type": "null"},
+              "pull_request": {"type": "null"}
+            }
+          }
+        }
+      ]
+    },
+    "record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "repo", "number"],
+      "properties": {
+        "kind": {"enum": ["issue", "label", "pull_request", "check", "comment"]},
+        "repo": {"$ref": "#/$defs/repo"},
+        "number": {"$ref": "#/$defs/id"},
+        "id": {"$ref": "#/$defs/id"}
+      },
+      "if": {"properties": {"kind": {"enum": ["label", "check", "comment"]}}},
+      "then": {"required": ["id"]},
+      "else": {"not": {"required": ["id"]}}
+    },
+    "track": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["spec", "tickets", "agents", "needs_owner"],
+      "properties": {
+        "spec": {"$ref": "#/$defs/id"},
+        "tickets": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/id"}},
+        "agents": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/name"}},
+        "needs_owner": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/line"}}
+      }
+    },
+    "unavailable": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "ref", "source", "reason"],
+      "properties": {
+        "kind": {"enum": ["snapshot", "track", "ticket", "agent"]},
+        "ref": {"$ref": "#/$defs/line"},
+        "source": {
+          "enum": ["issues", "labels", "blockers", "pull_requests", "checks", "comments", "needs_owner", "budget"]
+        },
+        "reason": {"$ref": "#/$defs/line"}
+      }
+    },
+    "ping": {
+      "type": "string",
+      "pattern": "^openwiz:ping v1\\nSender: (?:wiz|(?:builder-[1-9][0-9]*|reviewer-[1-9][0-9]*-[1-9][0-9]*|fixer-[1-9][0-9]*-[1-9][0-9]*|fleet-[1-9][0-9]*))\\nTarget: (?:builder-[1-9][0-9]*|reviewer-[1-9][0-9]*-[1-9][0-9]*|fixer-[1-9][0-9]*-[1-9][0-9]*|fleet-[1-9][0-9]*)\\nMessage: (?=[^\\u0000-\\u001f\\u007f\\u0085\\u2028\\u2029]*\\S)[^\\u0000-\\u001f\\u007f\\u0085\\u2028\\u2029]*(?:\\nDelivered: [0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\\.[0-9]{1,3})?Z)?$(?![\\s\\S])",
+      "allOf": [
+        {
+          "not": {
+            "pattern": "\\nMessage: [^\\u0000-\\u001f\\u007f\\u0085\\u2028\\u2029]*(?:\\b[cC][lL][aA][iI][mM](?:[sS]|[eE][dD]|[iI][nN][gG])?\\b|\\b(?:[kK][eE][yY]|[aA][pP][iI][_ -]?[kK][eE][yY]|[pP][aA][sS][sS][wW][oO][rR][dD]|[sS][eE][cC][rR][eE][tT]|[aA][cC][cC][eE][sS][sS][_ -]?[tT][oO][kK][eE][nN]|[tT][oO][kK][eE][nN]|[cC][rR][eE][dD][eE][nN][tT][iI][aA][lL]|[aA][cC][cC][oO][uU][nN][tT]|[lL][oO][gG][iI][nN]|[tT][rR][aA][nN][sS][cC][rR][iI][pP][tT])\\s*[:=]|@[A-Za-z0-9][A-Za-z0-9_-]*|\\b(?:gh[pousr]_|github_pat_|xox[baprs]-|sk-[A-Za-z0-9])|-----BEGIN [A-Z ]*PRIVATE KEY-----|[aA][uU][tT][hH][oO][rR][iI][zZ][aA][tT][iI][oO][nN]\\s*:)"
+          }
+        },
+        {
+          "not": {
+            "pattern": "\\nMessage: [^\\u0000-\\u001f\\u007f\\u0085\\u2028\\u2029]*(?:[lL][aA][uU][nN][cC][hH]-[fF][lL][eE][eE][tT]:|[oO][pP][eE][nN][wW][iI][zZ]:|\\b(?:[sS][tT][aA][rR][tT]|[sS][tT][oO][pP]|[rR][eE][sS][tT][aA][rR][tT]|[rR][eE][sS][uU][mM][eE]|[cC][aA][nN][cC][eE][lL]|[mM][eE][rR][gG][eE]|[aA][pP][pP][rR][oO][vV][eE]|[rR][eE][lL][eE][aA][sS][eE])\\s+(?:work|this (?:ticket|PR|pull request)|(?:the )?(?:builder|reviewer|fixer|fleet)|#\\d+)\\b)"
+          }
+        },
+        {
+          "not": {
+            "pattern": "\\nMessage: *(?:[aA][sS][sS][iI][sS][tT][aA][nN][tT]|[uU][sS][eE][rR]|[sS][yY][sS][tT][eE][mM]|[dD][eE][vV][eE][lL][oO][pP][eE][rR]|[tT][oO][oO][lL])\\s*:"
+          }
+        }
+      ]
+    }
+  }
+}
