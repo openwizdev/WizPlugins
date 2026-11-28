@@ -1,0 +1,27 @@
+$ cd board-core && npm test   # with view.ts and rail.ts
+
+> test
+> node --test "**/*.test.ts"
+
+✔ esc escapes the five HTML characters and nothing else
+✔ an input is data or unavailable with its reason
+✔ a view renders its data escaped, and an unavailable input renders its reason, never zero
+✔ a synthetic view registers as one rail entry and renders through the minimal page
+✔ the rail keeps Needs you, Specs, Agents and Usage, then later views, then the pins
+✔ the rail drops pins that aren't plain web links
+✔ the board opens on Needs you and never on Agents
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+exit 0
+
+$ npm run typecheck   # WizBar's locked TypeScript (@typescript/typescript6 6.0.2)
+
+> typecheck
+> ../wizbar/node_modules/.bin/tsc --noEmit --strict --target ES2022 --lib ES2022 --module NodeNext --moduleResolution NodeNext --allowImportingTsExtensions --erasableSyntaxOnly --skipLibCheck --types node --typeRoots ../wizbar/node_modules/@types *.ts
+
+exit 0

@@ -1,0 +1,30 @@
+$ cd board-core && npm test   # view.ts and rail.ts empty (export {})
+
+> test
+> node --test "**/*.test.ts"
+
+file:///tmp/wp/board-core/view.test.ts:5
+import { createRail, decidedOrder, renderPage } from "./rail.ts";
+         ^^^^^^^^^^
+SyntaxError: The requested module './rail.ts' does not provide an export named 'createRail'
+    at #asyncInstantiate (node:internal/modules/esm/module_job:455:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:553:5)
+    at async node:internal/modules/esm/loader:647:26
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+
+Node.js v24.22.1
+✖ view.test.ts
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+
+✖ failing tests:
+
+test at view.test.ts:1:1
+✖ view.test.ts
+  'test failed'
+exit 1
