@@ -57,6 +57,7 @@ with calls.open("a") as log:
 for command, reply in json.loads(pathlib.Path(os.environ["SYN_PLAN"]).read_text()):
     if args == command:
         if reply is None:
+            print("Synthetic diagnostic from GitHub", file=sys.stderr)
             sys.exit(1)
         print(json.dumps(reply))
         sys.exit(0)
@@ -131,6 +132,10 @@ sys.exit(91)
                         ((ISSUE, self.issue(PR_URL, state="OPEN", reason="REOPENED")),))
         self.check_item(item, "closing pull request readback invalid",
                         ((ISSUE, self.issue("--help")),))
+        self.check_item(item, "closing pull request merge unverified",
+                        ((ISSUE, self.issue(PR_URL)),
+                         (PR, {"url": PR_URL + "0", "state": "MERGED",
+                               "mergedAt": "2031-01-02T03:04:05Z"})))
 
     def test_duplicate_state_fails_closed(self):
         self.put(VALID["drop"])
@@ -143,17 +148,41 @@ sys.exit(91)
             "unresolved": [{"id": VALID["drop"]["id"], "reason": "duplicate JSON field"}],
         })
 
+    def test_mixed_ledger_reports_each_unresolved_id_once(self):
+        self.put(VALID["done-record"])
+        self.record = self.ledger / "second.json"
+        self.put(VALID["done-record"])
+        self.record = self.ledger / "third.json"
+        self.put({**VALID["drop"], "state": None})
+        self.record = self.ledger / "fourth.json"
+        self.put(VALID["reply"])
+        original = {path: path.read_bytes() for path in self.ledger.iterdir()}
+        result = self.run_cli("--json")
+        self.assertEqual((result.returncode, result.stderr), (0, ""))
+        self.assertEqual(json.loads(result.stdout), {
+            "unresolved_count": 2,
+            "unresolved": [
+                {"id": "item-2", "reason": "duplicate ledger item id"},
+                {"id": "item-6", "reason": "expected one closed state"},
+            ],
+        })
+        self.assertEqual({path: path.read_bytes() for path in self.ledger.iterdir()}, original)
+
     def test_count_and_unreadable_store_are_distinct(self):
         self.put({key: value for key, value in VALID["drop"].items() if key != "state"})
         result = self.run_cli()
         self.assertEqual((result.returncode, result.stdout, result.stderr), (0, "1\n", ""))
-        for broken in ("permissions", "malformed JSON", "missing"):
+        for broken in ("permissions", "malformed JSON", "symlink", "missing"):
             with self.subTest(broken=broken):
                 if broken == "permissions":
                     self.record.chmod(0o644)
                 elif broken == "malformed JSON":
                     self.record.chmod(0o600)
                     self.record.write_text("{")
+                elif broken == "symlink":
+                    target = self.root / "elsewhere.json"
+                    self.record.rename(target)
+                    self.record.symlink_to(target)
                 else:
                     self.record.unlink()
                     self.ledger.rmdir()
