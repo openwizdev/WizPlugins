@@ -7,7 +7,7 @@
 
 **Cloudroom plugins for watching an [OpenWiz](https://github.com/openwizdev/OpenWiz) factory.** Optional: OpenWiz 0.1.0 needs no plugin, and these work only in Cloudroom.
 
-**Status:** one plugin, [WizBar](wizbar/README.md). Version 0.7.0 is the release being prepared: the marketplace serves it once the `wizbar/v0.7.0` release tag exists and the registry's WizBar entry has the range `^0.7.0`. Until then it serves 0.6.0.
+**Status:** one plugin, [WizBar](wizbar/README.md). [0.7.0](https://github.com/openwizdev/WizPlugins/releases/tag/wizbar/v0.7.0) is the latest release, and the marketplace listing uses `^0.7.0`. The source on `main` also includes sidebar polish that is not in that release.
 
 ## Quick start
 
@@ -19,9 +19,9 @@ From source: see the [WizBar README](wizbar/README.md).
 
 <img alt="WizBar rendered with synthetic example rows" src="docs/images/wizbar.png" width="300">
 
-WizBar replaces Cloudroom's sidebar with three sections you can reorder: Pinned, Specs and Unread. Each thread is a card with its issue or pull request and its children. Specs shows one row per spec, what needs you first, each ticket a dot: done, building, in review, or needs you; the dot of a ticket whose agent is working breathes unless the ticket is done or in review, and finished or idle specs fold into a Quiet group. Open a spec to see its running builders and reviewers with their model and effort. Unread lists only threads with something new that are not working for a spec, and a "N running" line opens a steady card of the running threads. A small producer keeps the specs file fresh from GitHub. `room-cli wizbar` commands with JSON let agents settle, snooze, mute, pin and move threads, read the running card and the specs, open or close a spec and collapse a section; the sort picker, the section order, the Quiet group and opening the parked shelves have no command.
+WizBar replaces Cloudroom's sidebar thread list with four sections you can reorder: Pinned, Cloud agents, Specs and Yours. Thread cards show a pull request or issue number and a child count when available. Specs shows one row per spec with tickets, with what needs you first by default. Each ticket is a dot that shows its state. The dot of a ticket whose agent is working breathes unless the ticket is done or in review. Finished or long-idle specs with nothing due now fold into a Quiet group. Open a spec to see its running builders and reviewers with their model and effort. Yours keeps eligible active threads whether read or unread, with search, sort and filters. Cloud agents shows GitHub status notes for agents without a matching sidebar thread. An "N running" line opens a steady card of the running threads and live agents seen on GitHub. A small producer keeps the specs and agents files fresh from GitHub. `room-cli wizbar` commands with JSON let agents settle, snooze, mute, pin and move threads, list threads and Cloud agents, read the running card and the specs, open or close a spec, collapse a section and set the composer footer; the saved sorts, the section order, the Quiet group and opening the parked shelves have no command.
 
-(The picture is the real UI rendered with made-up data.)
+(The picture is an earlier render of the real UI with made-up data.)
 
 ## Links
 

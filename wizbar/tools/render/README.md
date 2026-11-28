@@ -9,4 +9,6 @@ npm run build                    # optional, with the desktop build command
 tools/render/shoot.sh /tmp/wizbar-shots 900
 ```
 
-With no plugin build, it uses the installed host stylesheet. It writes `sidebar.png` (the list) and `card.png` (the "N running" card pinned open). Options by environment: `WIZBAR_RENDER_AGENTS` (running spec agents, default 24), `WIZBAR_RENDER_VIEWS` (`sidebar,card`), `WIZBAR_RENDER_SEARCH` (a search query). The test is skipped in the normal `npm test` run unless `WIZBAR_RENDER_OUT` is set. jsdom has no layout, so the footer is placed near the bottom by a stub; animations are paused.
+With no plugin build, it uses the installed host stylesheet. The script
+uses `chromium` on `PATH`; set `CHROMIUM=/path/to/browser` to use another
+Chromium binary. It writes `sidebar.png` (the list) and `card.png` (the "N running" card pinned open). Options by environment: `WIZBAR_RENDER_AGENTS` (running spec agents, default 24), `WIZBAR_RENDER_VIEWS` (`sidebar,card`), `WIZBAR_RENDER_SEARCH` (a search query). The test is skipped in the normal `npm test` run unless `WIZBAR_RENDER_OUT` is set. jsdom has no layout, so the footer is placed near the bottom by a stub; animations are paused.

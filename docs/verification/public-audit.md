@@ -80,7 +80,9 @@ to be the same commit. Neither LICENSE nor the upstream README changed here.
 
 ## Picture and documentation review
 
-`docs/images/wizbar.png` is an unchanged copy of the WZ4 desktop capture:
+For the 2026-11-10 audit, `docs/images/wizbar.png` was an unchanged copy of
+the WZ4 desktop capture. The image on main has since been replaced; this hash
+is for the audited copy:
 SHA-256 `97e625319803d48e00f3227812a2b72350feedc22fee609d733eeedef28b84ed`.
 The builder inspected it: it shows real rendered `ThreadCard`, `SlimRow` and
 Cloud/Local artwork with synthetic example rows and styling. It qualifies here

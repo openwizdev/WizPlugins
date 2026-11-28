@@ -90,7 +90,7 @@ Source: the fleet skills, `plan-graph` and `launch-fleet`, which put it on and t
 
 ## Test commands
 
-The plugin's current scripts in [`wizbar/package.json`](../../wizbar/package.json) (`build`, `test`, `typecheck`). Upstream names no Node version and has no lockfile-install script; the plugin folder has its own `package-lock.json`. A builder runs the red/green proof and the commands its change can affect, then opens the ready pull request.
+Run the plugin's commands from `wizbar/` with Node 24.22.1, as in CI. [`wizbar/package.json`](../../wizbar/package.json) defines the scripts, and `npm ci` installs from `wizbar/package-lock.json`. A builder runs the red/green proof and the commands its change can affect, then opens the ready pull request.
 
 Evidence (red and green runs, screenshots, diffs, review captures) goes in the pull request's description or comments, never in the tree.
 
@@ -98,10 +98,11 @@ Evidence (red and green runs, screenshots, diffs, review captures) goes in the p
 | --- | --- | --- | --- |
 | 1 | `wizbar` | `npm ci` | `wizbar-checks` |
 | 2 | `wizbar` | `npm run typecheck` | `wizbar-checks` |
-| 3 | `wizbar` | `npm test` | `wizbar-checks` |
-| 4 | `wizbar` | `npm run build` | Unverified; execution remains for #9 |
+| 3 | `wizbar` | `npm test -- --maxWorkers=2` | `wizbar-checks` |
+| 4 | `wizbar` | `WIZBAR_REQUIRE_BROWSER=1 npm run test:browser` | `wizbar-checks` |
+| 5 | `wizbar` | `npm run build` | Not run in CI; needs the desktop CLI |
 
-The unchanged upstream plugin files are copied into `wizbar/`; the commands above run from that folder. WZ2 retains identity, SDK and contract preparation. The build script now names `room-cli plugin build .`, authorized by the [WD2 ruling on #7](https://github.com/openwizdev/wizplugins/issues/7#issuecomment-6762540703); execution requires the desktop CLI and remains Unverified. Command 1 is npm's standard install from the folder's lockfile; commands 2 to 4 are the plugin's current scripts.
+WizBar started from the upstream plugin and has changed since the copy. The build script runs `room-cli plugin build .` with the desktop CLI.
 
 Source: [`wizbar/package.json`](../../wizbar/package.json) scripts and [`.github/workflows/wizbar.yml`](../../.github/workflows/wizbar.yml); bounded workers are a workflow argument to the existing test script.
 
@@ -109,11 +110,11 @@ Source: [`wizbar/package.json`](../../wizbar/package.json) scripts and [`.github
 
 | Check | Runs | Required on |
 | --- | --- | --- |
-| `wizbar-checks` | Workflow `WizBar`, job `checks`: lockfile install, typecheck and the full plugin test suite, sequentially in `wizbar/` with at most two test workers | `main`, through the ruleset "CI must pass" |
+| `wizbar-checks` | Workflow `WizBar`, job `checks`: lockfile install, typecheck, plugin tests with at most two workers, and the required Chromium regression, sequentially in `wizbar/` | `main`, through the ruleset "CI must pass" |
 
 The workflow runs for every pull request against `main` and push to `main`, without path filters. Checkout uses the exact pull request head SHA (the pushed SHA on `main`), with read-only repository permissions and no persisted checkout credentials. Node 24.22.1 matches WZ2's verified toolchain. It uses no application secrets, host login/state or private checkout, and adds no live application calls.
 
-**Plugin build: Unverified; desktop command identified.** The [WD2 ruling on #7](https://github.com/openwizdev/wizplugins/issues/7#issuecomment-6762540703) records desktop help for `room-cli plugin build [path]`: it builds into `dist/` without a running server. That is help-text evidence, not an executed build. The package's `build` script is now `room-cli plugin build .`. The CLI available here does not expose `plugin`; neither the legacy executable nor an alias is used.
+**Plugin build: desktop only, not run in CI.** The [WD2 ruling on #7](https://github.com/openwizdev/wizplugins/issues/7#issuecomment-6762540703) records desktop help for `room-cli plugin build [path]`: it builds into `dist/` without a running server. That ruling was help-text evidence. The [v0.5.0 live check](https://github.com/openwizdev/WizPlugins/releases/tag/wizbar/v0.5.0) later built and installed from source. It does not prove a build of the current main.
 
 **Published CI toolchain check, 2026-11-10:** no supported standalone package installation route was found in the sources checked:
 
@@ -124,7 +125,7 @@ The workflow runs for every pull request against `main` and push to `main`, with
 | [`bb-app` 0.49.0 metadata](https://registry.npmjs.org/bb-app/0.49.0) (latest observed) | Exports `bb`, `bb-app`, `bb-server` and `bb-host-daemon`, without a `room-cli` binary; inspecting all 2,476 entries in its published archive found no `room-cli` path. The locked 0.37.0 is unchanged |
 | [`room-cli` 0.0.1 metadata](https://registry.npmjs.org/room-cli/0.0.1) | Unrelated Android Room generator; not Cloudroom tooling |
 
-These checks do not prove that no distribution can exist. They establish no supported published route for this workflow, so CI keeps install/typecheck/tests only, as WD2 permits. No package or desktop app was installed for this investigation. Actual plugin build proof remains for #9; #7 closed on the merge of its CI pull request. Passing `wizbar-checks` proves typecheck and fixture tests only, not build, installation, live behavior or publication readiness.
+The toolchain check above is a dated record, not proof that no distribution can exist. No package or desktop app was installed for that investigation. Passing `wizbar-checks` covers lockfile install, typecheck, fixture tests and the Chromium regression, not a desktop build, plugin installation or live behavior.
 
 **Required since 2026-11-10:** the repository ruleset "CI must pass" requires `wizbar-checks` on the default branch, blocks force pushes and branch deletion, and allows no bypass. Every pull request, docs-only ones included, needs `wizbar-checks` green on its head before it can merge. Run `setup` again when the workflow or required checks change.
 
