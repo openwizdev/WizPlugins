@@ -5,6 +5,8 @@
 
 # WizPlugins
 
+Part of [OpenWiz](https://openwiz.dev), the open source agent factory.
+
 **Cloudroom plugins for watching an [OpenWiz](https://github.com/openwizdev/OpenWiz) factory.** Optional: OpenWiz 0.1.0 needs no plugin, and these work only in Cloudroom.
 
 **Status:** one plugin, [WizBar](wizbar/README.md). Version 0.7.0 is the release being prepared: the marketplace serves it once the `wizbar/v0.7.0` release tag exists and the registry's WizBar entry has the range `^0.7.0`. Until then it serves 0.6.0.
