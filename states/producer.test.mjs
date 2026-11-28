@@ -1,11 +1,15 @@
 import assert from "node:assert/strict";
+import { execFile } from "node:child_process";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
 import { createBudgetedReader, parseFleetSettings } from "./github.mjs";
-import { produceStates } from "./producer.mjs";
+import { parseArgs, produceStates } from "./producer.mjs";
+
+const execFileAsync = promisify(execFile);
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -38,7 +42,7 @@ if (isWrite) {
   process.exit(99);
 }
 const table = JSON.parse(readFileSync(${JSON.stringify(respPath)}, "utf8"));
-const endpoint = args.find((a) => !a.startsWith("-") && a !== "api");
+const endpoint = args.at(-1);
 const hit = table[endpoint];
 if (!hit) {
   process.stderr.write("UNEXPECTED:" + endpoint + "\\n");
@@ -173,6 +177,7 @@ test("produceStates reads synthetic GitHub records within budget, never writes, 
     const dest = path.join(dir, ".openwiz", "states.v1.json");
     const onDisk = JSON.parse(await fs.readFile(dest, "utf8"));
     assert.deepEqual(onDisk, snapshot);
+    assertValidSnapshot(snapshot);
     assert.equal(snapshot.schema, "openwiz.states.v1");
     assert.equal(snapshot.read_at, "2030-01-03T13:00:00Z");
     assert.equal(snapshot.budget.limit, 20);
@@ -212,6 +217,7 @@ test("budget exhaustion stops calls at exact limit and surfaces unfinished reads
       gh: scriptPath,
       now: () => "2030-01-03T13:00:00Z",
     });
+    assertValidSnapshot(snapshot);
     assert.deepEqual(snapshot.budget, { limit: 4, used: 4 });
     const logged = (await fs.readFile(logPath, "utf8")).trim().split("\n");
     assert.equal(logged.length, 4);
@@ -282,6 +288,7 @@ test("unreadable checks and partial pages report unavailable without inventing d
       gh: scriptPath,
       now: () => "2030-01-03T13:00:00Z",
     });
+    assertValidSnapshot(snapshot);
     assert.deepEqual(snapshot.tickets.map((t) => [t.number, t.state]), [[9102, "ready"]]);
     assert.deepEqual(snapshot.unavailable.map((u) => [u.kind, u.ref, u.source]).sort(), [
       ["agent", "builder-9101", "checks"],
@@ -317,6 +324,57 @@ test("partial paginated read fails closed as unavailable instead of returning pa
   });
 });
 
+const RE_TIME = /^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]{1,3})?Z$/;
+const RE_LINE = /^(?=.*\S)[^\u0000-\u001f\u007f\u0085\u2028\u2029]*$/;
+const RE_REPO = /^[A-Za-z0-9-]+\/[A-Za-z0-9_.-]+$/;
+const RE_NAME = /^(?:builder-[1-9][0-9]*|reviewer-[1-9][0-9]*-[1-9][0-9]*|fixer-[1-9][0-9]*-[1-9][0-9]*|fleet-[1-9][0-9]*)$/;
+
+function assertValidSnapshot(snap) {
+  assert.deepEqual(Object.keys(snap).sort(), ["agents", "budget", "read_at", "schema", "tickets", "tracks", "unavailable"]);
+  assert.equal(snap.schema, "openwiz.states.v1");
+  assert.match(snap.read_at, RE_TIME);
+  assert.ok(!Number.isNaN(Date.parse(snap.read_at)));
+  assert.deepEqual(Object.keys(snap.budget).sort(), ["limit", "used"]);
+  assert.ok(Number.isInteger(snap.budget.limit) && snap.budget.limit >= 1);
+  assert.ok(Number.isInteger(snap.budget.used) && snap.budget.used >= 0 && snap.budget.used <= snap.budget.limit);
+  for (const t of snap.tickets) {
+    assert.deepEqual(Object.keys(t).sort(), ["blockers", "number", "problem", "pull_request", "spec", "state", "title", "version"]);
+    assert.ok(["waiting", "ready", "building", "ci", "review", "fix", "merged", "closed"].includes(t.state));
+    assert.match(t.version, RE_LINE);
+    assert.match(t.title, RE_LINE);
+    if (t.problem !== null) {
+      assert.deepEqual(Object.keys(t.problem).sort(), ["kind", "reason"]);
+      assert.ok(["blocked", "failing", "stale", "held"].includes(t.problem.kind));
+      assert.match(t.problem.reason, RE_LINE);
+    }
+    if (t.pull_request !== null) {
+      assert.deepEqual(Object.keys(t.pull_request).sort(), ["merged_at", "number", "repo"]);
+      assert.match(t.pull_request.repo, RE_REPO);
+      if (t.state === "merged") assert.match(t.pull_request.merged_at, RE_TIME);
+      else assert.equal(t.pull_request.merged_at, null);
+    }
+  }
+  for (const a of snap.agents) {
+    assert.deepEqual(Object.keys(a).sort(), ["name", "pull_request", "record", "role", "since", "state", "ticket"]);
+    assert.match(a.name, RE_NAME);
+    assert.match(a.since, RE_TIME);
+    assert.ok(["queued", "building", "ci", "review", "fix", "merge", "done"].includes(a.state));
+    assert.ok(["issue", "label", "pull_request", "check", "comment"].includes(a.record.kind));
+    if (["label", "check", "comment"].includes(a.record.kind)) assert.ok(Number.isInteger(a.record.id) && a.record.id >= 1);
+    else assert.equal("id" in a.record, false);
+  }
+  for (const tr of snap.tracks) {
+    assert.deepEqual(Object.keys(tr).sort(), ["agents", "needs_owner", "spec", "tickets"]);
+  }
+  for (const u of snap.unavailable) {
+    assert.deepEqual(Object.keys(u).sort(), ["kind", "reason", "ref", "source"]);
+    assert.ok(["snapshot", "track", "ticket", "agent"].includes(u.kind));
+    assert.ok(["issues", "labels", "blockers", "pull_requests", "checks", "comments", "needs_owner", "budget"].includes(u.source));
+    assert.match(u.ref, RE_LINE);
+    assert.match(u.reason, RE_LINE);
+  }
+}
+
 test("states/README.md documents every field and carries a valid synthetic example", async () => {
   const readme = await fs.readFile(path.join(here, "README.md"), "utf8");
   for (const field of ["schema", "read_at", "budget", "tickets", "agents", "tracks", "unavailable", "problem", "pull_request", "record", "needs_owner"]) {
@@ -325,9 +383,133 @@ test("states/README.md documents every field and carries a valid synthetic examp
   const match = readme.match(/```json\n([\s\S]*?)\n```/);
   assert.ok(match, "README.md must include a JSON synthetic example");
   const sample = JSON.parse(match[1]);
-  assert.equal(sample.schema, "openwiz.states.v1");
-  assert.ok(Array.isArray(sample.tickets) && sample.tickets.length > 0);
-  assert.ok(Array.isArray(sample.agents) && sample.agents.length > 0);
-  assert.ok(Array.isArray(sample.tracks) && sample.tracks.length > 0);
-  assert.ok(Array.isArray(sample.unavailable));
+  assertValidSnapshot(sample);
+  assert.ok(sample.tickets.length > 0 && sample.agents.length > 0 && sample.tracks.length > 0);
+});
+
+test("parseFleetSettings reads additional public checks and rejects malformed authors", () => {
+  const md = [
+    "## CI checks",
+    "| Check | Runs | Required on |",
+    "| --- | --- | --- |",
+    "| `ci` | all | `main` |",
+    "**Additional public check: `privacy` (O3).**",
+    "## GitHub identity",
+    "| Setting | Value |",
+    "| --- | --- |",
+    "| Record authors | `openwiz[bot]`, `example-owner` |",
+  ].join("\n");
+  const parsed = parseFleetSettings(md, "main");
+  assert.equal(parsed.ok, true);
+  assert.deepEqual(parsed.recordAuthors, ["openwiz[bot]", "example-owner"]);
+  assert.deepEqual(parsed.requiredChecks, ["ci", "privacy"]);
+
+  const bad = parseFleetSettings("## GitHub identity\n| Record authors | bad_login |\n", "main");
+  assert.equal(bad.ok, false);
+});
+
+test("hard blockers require a verified merge or human completion record, and CLI runs end-to-end", async () => {
+  await withSandbox(async (dir) => {
+    const responses = {
+      "repos/example/forge": ok({ default_branch: "main" }),
+      "repos/example/forge/contents/docs/agents/fleet.md?ref=main": ok(fleetMd()),
+      "repos/example/forge/issues?state=all&labels=spec&per_page=100": ok([
+        { number: 9001, title: "0.2.0 spec: synthetic", state: "open", closed_at: null, milestone: { title: "0.2.0" } },
+      ]),
+      "repos/example/forge/issues/9001/comments?per_page=100": ok([]),
+      "repos/example/forge/issues/9001/sub_issues?per_page=100": ok([
+        {
+          number: 9101,
+          title: "Blocked by unmerged closed issue",
+          state: "open",
+          state_reason: null,
+          closed_at: null,
+          milestone: { title: "0.2.0" },
+          labels: [{ name: "ready-for-agent" }],
+          body: "## Links\n\n- #9102 real: needs the merged contract\n",
+        },
+        {
+          number: 9103,
+          title: "Unblocked by human complete blocker",
+          state: "open",
+          state_reason: null,
+          closed_at: null,
+          milestone: { title: "0.2.0" },
+          labels: [{ name: "ready-for-agent" }],
+          body: "## Links\n\n- #9104 real: needs the human live check\n",
+        },
+      ]),
+      "repos/example/forge/pulls?state=all&per_page=100": ok([]),
+      "repos/example/forge/issues/9101/dependencies/blocked_by?per_page=100": ok([
+        { number: 9102, state: "closed", state_reason: "completed", labels: [{ name: "ready-for-agent" }] },
+      ]),
+      "repos/example/forge/issues/9101/comments?per_page=100": ok([]),
+      "repos/example/forge/issues/9101/events?per_page=100": ok([
+        { id: 2001, event: "labeled", label: { name: "ready-for-agent" }, created_at: "2030-01-03T11:00:00Z" },
+      ]),
+      "repos/example/forge/issues/9103/dependencies/blocked_by?per_page=100": ok([
+        { number: 9104, state: "closed", state_reason: "completed", labels: [{ name: "ready-for-human" }] },
+      ]),
+      "repos/example/forge/issues/9103/comments?per_page=100": ok([]),
+      "repos/example/forge/issues/9104/comments?per_page=100": ok([
+        { id: 2002, user: { login: "example-bot" }, created_at: "2030-01-03T10:00:00Z", updated_at: "2030-01-03T10:00:00Z", body: "launch-fleet: complete: recorded synthetic evidence" },
+      ]),
+      "repos/example/forge/issues/9103/events?per_page=100": ok([
+        { id: 2003, event: "labeled", label: { name: "ready-for-agent" }, created_at: "2030-01-03T11:00:00Z" },
+      ]),
+    };
+    const { scriptPath } = await writeFakeGh(dir, responses);
+    const { stdout } = await execFileAsync(process.execPath, [
+      path.join(here, "producer.mjs"),
+      "--home", dir,
+      "--repo", "example/forge",
+      "--version", "0.2.0",
+      "--budget", "30",
+      "--gh", scriptPath,
+    ]);
+    assert.match(stdout, /wrote \.openwiz\/states\.v1\.json/);
+    const snap = JSON.parse(await fs.readFile(path.join(dir, ".openwiz", "states.v1.json"), "utf8"));
+    assertValidSnapshot(snap);
+    const t9101 = snap.tickets.find((t) => t.number === 9101);
+    const t9103 = snap.tickets.find((t) => t.number === 9103);
+    assert.equal(t9101.state, "waiting");
+    assert.equal(t9101.problem.kind, "blocked");
+    assert.equal(t9103.state, "ready");
+    assert.equal(t9103.problem, null);
+    assert.equal(snap.agents.find((a) => a.name === "builder-9103")?.record.id, 2003);
+  });
+});
+
+test("parseArgs refuses invalid repo, invalid budget, and unknown flags", () => {
+  assert.throws(() => parseArgs([]), /--repo/);
+  assert.throws(() => parseArgs(["--repo", "bad"]), /--repo/);
+  assert.throws(() => parseArgs(["--repo", "example/forge", "--budget", "0"]), /--budget/);
+  assert.throws(() => parseArgs(["--repo", "example/forge", "--unknown"]), /Unknown argument/);
+});
+
+test("atomic write failure preserves previous states.v1.json and leaves no temp file", async (t) => {
+  await withSandbox(async (dir) => {
+    const destDir = path.join(dir, ".openwiz");
+    await fs.mkdir(destDir, { recursive: true });
+    const dest = path.join(destDir, "states.v1.json");
+    const previous = '{"schema":"openwiz.states.v1","previous":true}\n';
+    await fs.writeFile(dest, previous, "utf8");
+
+    const responses = {
+      "repos/example/forge": ok({ default_branch: "main" }),
+      "repos/example/forge/contents/docs/agents/fleet.md?ref=main": ok(fleetMd()),
+      "repos/example/forge/issues?state=all&labels=spec&per_page=100": ok([]),
+      "repos/example/forge/pulls?state=all&per_page=100": ok([]),
+    };
+    const { scriptPath } = await writeFakeGh(dir, responses);
+    t.mock.method(fs, "rename", async () => {
+      throw new Error("simulated rename failure");
+    });
+    await assert.rejects(
+      () => produceStates({ home: dir, repo: "example/forge", budget: 10, gh: scriptPath, now: () => "2030-01-03T13:00:00Z" }),
+      /simulated rename failure/,
+    );
+    assert.equal(await fs.readFile(dest, "utf8"), previous);
+    assert.deepEqual(await fs.readdir(destDir), ["states.v1.json"]);
+  });
 });
