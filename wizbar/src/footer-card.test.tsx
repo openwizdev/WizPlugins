@@ -3,7 +3,11 @@
 // sections 7 and 8). No bolt; "N running" counts threads only, with a matrix
 // mark; its hover card shows exactly the `wizbar stats --json` data for the
 // same rows and pins on click. Every row is synthetic (src/fixtures/v4.ts).
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { accessSync, constants, readdirSync } from "node:fs";
+import { delimiter, join } from "node:path";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { chromium, type Browser, type Locator, type Page } from "playwright-core";
+import { createServer, type InlineConfig, type Plugin, type ViteDevServer } from "vite";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { loadPluginApp, renderSlot } from "@get-bb/plugin-sdk/testing/app";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
@@ -767,4 +771,431 @@ describe("R1 (#172): the open card updates in place, with no flashing", () => {
     expect(counter().getAttribute("aria-label")).toBe("8 running, 1 waiting on you");
     expect(counter().hasAttribute("data-stale")).toBe(false);
   });
+});
+
+const reachabilityRoot = [process.cwd(), join(process.cwd(), "wizbar")].find((dir) => {
+  try {
+    accessSync(join(dir, "src/FooterCounter.tsx"));
+    return true;
+  } catch {
+    return false;
+  }
+});
+if (!reachabilityRoot) throw new Error("WizBar root not found");
+const reachabilityThreads = 50;
+const reachabilityViewport = { width: 350, height: 480 };
+const reachabilityMissingBrowser = "No Chromium or Chrome found. Install Chromium with Playwright or set CHROMIUM_PATH.";
+
+function findReachabilityBrowser(
+  env: NodeJS.ProcessEnv = process.env,
+  canExecute: (path: string) => boolean = (path) => {
+    try {
+      accessSync(path, constants.X_OK);
+      return true;
+    } catch {
+      return false;
+    }
+  },
+): string | undefined {
+  const fromPlaywright = (() => {
+    try {
+      return [chromium.executablePath()];
+    } catch {
+      return [];
+    }
+  })();
+  const candidates = env.CHROMIUM_PATH ? [env.CHROMIUM_PATH] : [
+    ...fromPlaywright,
+    ...(env.PATH ?? "").split(delimiter).filter(Boolean).flatMap((dir) =>
+      ["google-chrome", "google-chrome-stable", "chromium", "chromium-browser"].map((name) => join(dir, name))),
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    "/Applications/Chromium.app/Contents/MacOS/Chromium",
+  ];
+  return candidates.find(canExecute);
+}
+
+function resolveReachabilityBrowser(
+  env: NodeJS.ProcessEnv = process.env,
+  canExecute?: (path: string) => boolean,
+): { status: "ready"; executablePath: string } | { status: "skip"; reason: string } {
+  const executablePath = findReachabilityBrowser(env, canExecute);
+  if (executablePath) return { status: "ready", executablePath };
+  if (env.WIZBAR_REQUIRE_BROWSER === "1") throw new Error(reachabilityMissingBrowser);
+  return { status: "skip", reason: reachabilityMissingBrowser };
+}
+
+function hasVisiblePaint(color: string): boolean {
+  const value = color.trim().toLowerCase();
+  if (!value || value === "transparent" || value === "none") return false;
+  const slash = value.match(/\/\s*([+-]?(?:\d+\.?\d*|\.\d+)(%)?)\s*\)\s*$/);
+  if (slash) {
+    const alpha = Number.parseFloat(slash[1]!);
+    return Number.isFinite(alpha) && alpha > 0;
+  }
+  const commaAlpha = value.match(/^(?:rgba?|hsla?)\([^,]+,[^,]+,[^,]+,\s*([+-]?(?:\d+\.?\d*|\.\d+)(%)?)\s*\)$/);
+  if (commaAlpha) {
+    const alpha = Number.parseFloat(commaAlpha[1]!);
+    return Number.isFinite(alpha) && alpha > 0;
+  }
+  const hex = value.match(/^#([0-9a-f]{4}|[0-9a-f]{8})$/);
+  if (hex) {
+    const alpha = hex[1]!.length === 4 ? hex[1]!.slice(3) : hex[1]!.slice(6);
+    return Number.parseInt(alpha, 16) > 0;
+  }
+  return true;
+}
+
+function splitTopLevelCommas(value: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let start = 0;
+  for (let i = 0; i < value.length; i++) {
+    const ch = value[i];
+    if (ch === "(") depth++;
+    else if (ch === ")" && depth > 0) depth--;
+    else if (ch === "," && depth === 0) {
+      parts.push(value.slice(start, i));
+      start = i + 1;
+    }
+  }
+  parts.push(value.slice(start));
+  return parts;
+}
+
+interface FocusIndicatorStyle {
+  outlineStyle: string;
+  outlineWidth: string;
+  outlineColor: string;
+  boxShadow: string;
+  color: string;
+}
+
+function hasVisibleFocusIndicator(style: FocusIndicatorStyle): boolean {
+  const outlineVisible = style.outlineStyle !== "none"
+    && style.outlineStyle !== "hidden"
+    && Number.parseFloat(style.outlineWidth) > 0
+    && hasVisiblePaint(style.outlineColor);
+  if (outlineVisible) return true;
+  if (!style.boxShadow || style.boxShadow === "none") return false;
+  return splitTopLevelCommas(style.boxShadow).some((layer) => {
+    const trimmed = layer.trim();
+    if (!trimmed || trimmed === "none") return false;
+    const lengths = trimmed.match(/(?:^|\s)[+-]?(?:\d+\.?\d*|\.\d+)px(?=\s|$)/g) ?? [];
+    if (!lengths.some((length) => Math.abs(Number.parseFloat(length)) > 0)) return false;
+    const paint = trimmed
+      .replace(/(?:^|\s)(?:inset|[+-]?(?:\d+\.?\d*|\.\d+)px)(?=\s|$)/gi, " ")
+      .trim();
+    return hasVisiblePaint(paint || style.color);
+  });
+}
+
+const reachabilityBrowserPath = findReachabilityBrowser();
+const reachabilityBrowserRequired = process.env.WIZBAR_REQUIRE_BROWSER === "1";
+if (!reachabilityBrowserPath && !reachabilityBrowserRequired) {
+  process.stderr.write(`Skipping WizBar running-card browser regression. ${reachabilityMissingBrowser}\n`);
+}
+
+function reachabilityEntry(stylesheet: string): string {
+  return `
+import hostStyles from ${JSON.stringify(stylesheet)};
+import { createElement } from "react";
+import { renderSlot } from "@get-bb/plugin-sdk/testing/app";
+import { FooterCounter } from "./src/FooterCounter";
+import { v4SpecsFile, v4Threads } from "./src/fixtures/v4";
+
+const link = document.createElement("link");
+link.rel = "stylesheet";
+link.href = hostStyles;
+document.head.append(link);
+await new Promise((resolve, reject) => {
+  link.onload = () => resolve(undefined);
+  link.onerror = () => reject(new Error("host stylesheet failed"));
+});
+
+const now = Date.now();
+const base = v4Threads[0];
+const threads = Array.from({ length: ${reachabilityThreads} }, (_, index) => {
+  const title = "Sample thread " + (index + 1);
+  return {
+    ...base,
+    id: "sample-" + (index + 1),
+    title,
+    displayTitle: title,
+    runtimeStatus: "active",
+    status: "active",
+    hasPendingInteraction: false,
+    providerId: "codex",
+    parentThreadId: null,
+    createdAt: now - ${reachabilityThreads} + index,
+    updatedAt: now,
+  };
+});
+const specs = { ...v4SpecsFile, generatedAt: new Date(now).toISOString(), specs: [] };
+const binding = JSON.stringify([{
+  projectKey: "sample-factory",
+  cloudroomProjectId: "sample-project",
+  repositories: ["example/sample-plans"],
+  home: { hostId: "sample-host", rootPath: "/synthetic/sample" },
+  orchestratorThreadId: "sample-orchestrator",
+  statusWriterLogin: "sample-user",
+}]);
+
+renderSlot({
+  component: () => createElement(
+    "aside",
+    { className: "flex h-screen min-h-0 flex-col bg-sidebar text-foreground" },
+    createElement("div", { className: "min-h-0 flex-1" }),
+    createElement(FooterCounter, { className: "shrink-0 border-t border-sidebar-border px-3 py-1" }),
+  ),
+}, {}, {
+  pluginId: "running-card-reachability",
+  sidebarThreads: { status: "ready", threads },
+  settings: { wizdeckFactories: binding, specsSort: "newest" },
+  rpc: {
+    specsFile: () => ({ kind: "content", text: JSON.stringify(specs) }),
+    cardModels: () => ({ source: "none", items: [] }),
+  },
+});
+`;
+}
+
+function reachabilityPlugin(entry: string): Plugin {
+  const virtual = "virtual:running-card-reachability";
+  const resolved = `\0${virtual}`;
+  return {
+    name: "running-card-reachability",
+    resolveId(id) {
+      if (id === virtual || id === `/${virtual}`) return resolved;
+    },
+    load(id) {
+      if (id === resolved) return entry;
+    },
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        if (req.url?.split("?")[0] !== "/running-card-reachability.html") {
+          next();
+          return;
+        }
+        res.setHeader("content-type", "text/html; charset=utf-8");
+        res.end(`<!doctype html><html lang="en" class="dark"><meta charset="utf-8"><title>Running card reachability</title><body style="margin:0"><script type="module" src="/${virtual}"></script></body></html>`);
+      });
+    },
+  };
+}
+
+describe("B39: reachability regression guards", () => {
+  it("skips when no browser is installed locally, and fails when WIZBAR_REQUIRE_BROWSER=1", () => {
+    const never = () => false;
+    expect(resolveReachabilityBrowser({ PATH: "" }, never)).toEqual({
+      status: "skip",
+      reason: reachabilityMissingBrowser,
+    });
+    expect(() => resolveReachabilityBrowser({ PATH: "", WIZBAR_REQUIRE_BROWSER: "1" }, never))
+      .toThrow(reachabilityMissingBrowser);
+    expect(resolveReachabilityBrowser({ CHROMIUM_PATH: "/synthetic/chrome" }, (p) => p === "/synthetic/chrome")).toEqual({
+      status: "ready",
+      executablePath: "/synthetic/chrome",
+    });
+  });
+
+  it("rejects transparent outlines and transparent box-shadows as focus indicators", () => {
+    const base: FocusIndicatorStyle = {
+      outlineStyle: "none",
+      outlineWidth: "0px",
+      outlineColor: "rgba(0, 0, 0, 0)",
+      boxShadow: "none",
+      color: "rgb(255, 255, 255)",
+    };
+    expect(hasVisibleFocusIndicator({ ...base, outlineStyle: "solid", outlineWidth: "1px", outlineColor: "transparent" })).toBe(false);
+    expect(hasVisibleFocusIndicator({ ...base, outlineStyle: "solid", outlineWidth: "1px", outlineColor: "rgba(0, 0, 0, 0)" })).toBe(false);
+    expect(hasVisibleFocusIndicator({ ...base, outlineStyle: "solid", outlineWidth: "1px", outlineColor: "oklab(0.7 0 0 / 0)" })).toBe(false);
+    expect(hasVisibleFocusIndicator({ ...base, boxShadow: "rgba(0, 0, 0, 0) 0px 0px 0px 1px inset" })).toBe(false);
+    expect(hasVisibleFocusIndicator({ ...base, boxShadow: "oklch(0.7 0.1 240 / 0%) 0px 0px 0px 1px inset" })).toBe(false);
+    expect(hasVisibleFocusIndicator({ ...base, outlineStyle: "solid", outlineWidth: "1px", outlineColor: "rgb(255, 255, 255)" })).toBe(true);
+    expect(hasVisibleFocusIndicator({
+      ...base,
+      boxShadow: "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgb(161, 161, 170) 0px 0px 0px 1px inset",
+    })).toBe(true);
+    expect(hasVisibleFocusIndicator({
+      ...base,
+      boxShadow: "rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0.7 0 0 / 0.5) 0px 0px 0px 1px inset",
+    })).toBe(true);
+  });
+});
+
+describe("B39: the running card stays reachable in a browser", () => {
+  let server: ViteDevServer | undefined;
+  let browser: Browser | undefined;
+  let url: string;
+
+  beforeAll(async () => {
+    const resolved = resolveReachabilityBrowser();
+    if (resolved.status === "skip") return;
+    const assets = join(reachabilityRoot, "node_modules/bb-app/app/dist/assets");
+    const css = readdirSync(assets).find((name) => /^index-.*\.css$/.test(name));
+    if (!css) throw new Error("host stylesheet missing");
+    const inline: InlineConfig = {
+      configFile: false,
+      root: reachabilityRoot,
+      logLevel: "error",
+      plugins: [reachabilityPlugin(reachabilityEntry(`/node_modules/bb-app/app/dist/assets/${css}?url`))],
+      server: { host: "127.0.0.1", port: 0 },
+    };
+    server = await createServer(inline);
+    await server.listen();
+    const local = server.resolvedUrls?.local[0];
+    if (!local) throw new Error("browser regression server has no local url");
+    url = new URL("/running-card-reachability.html", local).href;
+    browser = await chromium.launch({
+      executablePath: resolved.executablePath,
+      args: ["--no-sandbox", "--disable-dev-shm-usage"],
+    });
+  }, 30_000);
+
+  afterAll(async () => {
+    await browser?.close();
+    await server?.close();
+  });
+
+  beforeEach(() => {
+    vi.useRealTimers();
+  });
+
+  async function openPage(): Promise<Page> {
+    if (!browser) throw new Error(reachabilityMissingBrowser);
+    const page = await browser.newPage({ viewport: reachabilityViewport, reducedMotion: "reduce" });
+    await page.goto(url);
+    await page.getByRole("button", { name: "50 running" }).waitFor();
+    return page;
+  }
+
+  async function readListEdge(list: Locator, edge: "start" | "end") {
+    return list.evaluate((node, which) => {
+      const rows = [...node.querySelectorAll("[data-thread]")];
+      const first = rows[0];
+      const last = rows.at(-1);
+      const target = which === "start" ? first : last;
+      const rect = target?.getBoundingClientRect();
+      const port = node.getBoundingClientRect();
+      const panel = node.closest('[aria-label="Running threads"]')?.getBoundingClientRect();
+      const whole = (box: DOMRect | undefined, item: DOMRect | undefined) => Boolean(
+        box && item && item.top >= box.top - 0.5 && item.bottom <= box.bottom + 0.5
+          && item.left >= box.left - 0.5 && item.right <= box.right + 0.5,
+      );
+      const inView = (item: DOMRect | undefined) => Boolean(
+        item && item.height > 0 && item.top >= -0.5 && item.bottom <= window.innerHeight + 0.5,
+      );
+      return {
+        count: rows.length,
+        id: target?.getAttribute("data-thread") ?? "",
+        scrollTop: node.scrollTop,
+        atTop: node.scrollTop === 0,
+        atBottom: node.scrollHeight - node.clientHeight - node.scrollTop < 1,
+        overflow: node.scrollHeight > node.clientHeight + 1,
+        inList: whole(port, rect),
+        inViewport: inView(rect),
+        otherInList: whole(port, which === "start" ? last?.getBoundingClientRect() : first?.getBoundingClientRect()),
+        cardInside: Boolean(panel && panel.top >= -0.5 && panel.bottom <= window.innerHeight + 0.5 && panel.height > 0),
+      };
+    }, edge);
+  }
+
+  it.skipIf(!reachabilityBrowserPath && !reachabilityBrowserRequired)(
+    "moves the pointer across the old gap, tabs to a computed focus ring, and scrolls the first and last of 50 threads",
+    async () => {
+      const page = await openPage();
+      try {
+        const trigger = page.getByRole("button", { name: "50 running" });
+        const card = page.getByRole("region", { name: "Running threads" });
+        await trigger.hover();
+        await card.waitFor();
+        const start = await trigger.boundingBox();
+        const panel = await card.boundingBox();
+        expect(start && panel && panel.y + panel.height <= start.y + 0.5).toBe(true);
+        await page.mouse.move(start!.x + start!.width / 2, panel!.y + panel!.height - 2, { steps: 24 });
+        expect(await card.isVisible(), "pointer can cross the gap").toBe(true);
+        await page.mouse.move(2, panel!.y + panel!.height / 2);
+        expect(await card.isVisible(), "leaving the card closes the unpinned card").toBe(false);
+
+        await page.keyboard.press("Tab");
+        expect(await trigger.evaluate((node) => node === document.activeElement)).toBe(true);
+        await page.keyboard.press("Tab");
+        const focus = await card.evaluate((node) => {
+          const focused = document.activeElement;
+          if (!(focused instanceof HTMLElement)) {
+            return {
+              inCard: false,
+              outlineStyle: "none",
+              outlineWidth: "0px",
+              outlineColor: "rgba(0, 0, 0, 0)",
+              boxShadow: "none",
+              color: "rgba(0, 0, 0, 0)",
+            };
+          }
+          const style = getComputedStyle(focused);
+          return {
+            inCard: node.contains(focused) && focused.matches(":focus-visible"),
+            outlineStyle: style.outlineStyle,
+            outlineWidth: style.outlineWidth,
+            outlineColor: style.outlineColor,
+            boxShadow: style.boxShadow,
+            color: style.color,
+          };
+        });
+        expect({ inCard: focus.inCard, visible: hasVisibleFocusIndicator(focus) }).toEqual({
+          inCard: true,
+          visible: true,
+        });
+        expect(await card.isVisible()).toBe(true);
+
+        const list = card.locator('[aria-label="Threads"]');
+        const top = await readListEdge(list, "start");
+        expect(top).toMatchObject({
+          count: 50,
+          atTop: true,
+          atBottom: false,
+          overflow: true,
+          inList: true,
+          inViewport: true,
+          otherInList: false,
+          cardInside: true,
+        });
+
+        await list.hover();
+        await page.mouse.wheel(0, 10_000);
+        await expect.poll(async () => (await readListEdge(list, "end")).atBottom).toBe(true);
+        const bottom = await readListEdge(list, "end");
+        expect(bottom.scrollTop).toBeGreaterThan(0);
+        expect(bottom).toMatchObject({
+          count: 50,
+          atTop: false,
+          atBottom: true,
+          overflow: true,
+          inList: true,
+          inViewport: true,
+          otherInList: false,
+          cardInside: true,
+        });
+        expect(top.id).not.toBe(bottom.id);
+
+        await page.mouse.wheel(0, -10_000);
+        await expect.poll(async () => (await readListEdge(list, "start")).atTop).toBe(true);
+        const backAtTop = await readListEdge(list, "start");
+        expect(backAtTop).toMatchObject({
+          count: 50,
+          id: top.id,
+          atTop: true,
+          atBottom: false,
+          overflow: true,
+          inList: true,
+          inViewport: true,
+          otherInList: false,
+          cardInside: true,
+        });
+      } finally {
+        await page.close();
+      }
+    },
+    30_000,
+  );
 });
