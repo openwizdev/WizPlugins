@@ -130,9 +130,20 @@ test("rejects invalid destination or unserialized contents without touching the 
   await withTempDir(async (dir) => {
     const dest = path.join(dir, "feed.v1.json");
     await assert.rejects(() => publishFeed("", "{}"), TypeError);
+    await assert.rejects(() => publishFeed(".", "{}"), TypeError);
+    await assert.rejects(() => publishFeed("..", "{}"), TypeError);
     await assert.rejects(() => publishFeed(path.join(dir, "bad\0name"), "{}"), TypeError);
     await assert.rejects(() => publishFeed(dest, { not: "serialized" }), TypeError);
     await assert.rejects(() => publishFeed(dest, null), TypeError);
     assert.deepEqual(await fs.readdir(dir), []);
+  });
+});
+
+test("real OS rename failure over an existing directory surfaces the error and leaves no temp file", async () => {
+  await withTempDir(async (dir) => {
+    const destDir = path.join(dir, "occupied");
+    await fs.mkdir(destDir);
+    await assert.rejects(() => publishFeed(destDir, '{"schema":"openwiz.feed.v1"}\n'));
+    assert.deepEqual(await fs.readdir(dir), ["occupied"]);
   });
 });
