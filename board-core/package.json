@@ -1,0 +1,11 @@
+{
+  "name": "wizbar-board-core",
+  "private": true,
+  "type": "module",
+  "description": "WizBar's board core: the view interface every board view is written against, and the rail that lists them",
+  "engines": { "node": ">=24" },
+  "scripts": {
+    "test": "node --test \"**/*.test.ts\"",
+    "typecheck": "../wizbar/node_modules/.bin/tsc --noEmit --strict --target ES2022 --lib ES2022 --module NodeNext --moduleResolution NodeNext --allowImportingTsExtensions --erasableSyntaxOnly --skipLibCheck --types node --typeRoots ../wizbar/node_modules/@types *.ts"
+  }
+}
