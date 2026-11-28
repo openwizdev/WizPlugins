@@ -3,7 +3,7 @@
   "version": "0.7.0",
   "type": "module",
   "description": "An agent-first sidebar for fleets of agent threads: a Yours section that keeps every thread you started, with search, sort and filters; cloud agents the desktop does not list, from GitHub; specs sorted by what needs you; a running card that lists every running thread; drag to pin; and a wizbar CLI with JSON.",
-  "license": "MIT",
+  "license": "Apache-2.0 AND MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/openwizdev/WizPlugins.git",

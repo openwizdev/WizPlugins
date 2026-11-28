@@ -452,7 +452,12 @@ Derived from Sawyer Hood's T3 Sidebar, copied from `plugins/t3sidebar` at commit
 with a fresh history and adds its own changes after the copy.
 [Upstream source](https://github.com/SawyerHood/sawyer-plugins/tree/d3424f24e2cebe91da4e72cb38feb023da808922/plugins/t3sidebar).
 
-The MIT licences retain Sawyer Hood's original notice at the repository root
-and Michael Yong's original plugin notice in this folder. The root licence adds
-the WizBar notice. See the [root LICENSE](../LICENSE), [plugin LICENSE](LICENSE)
-and [public privacy and attribution audit](../docs/verification/public-audit.md).
+New OpenWiz contributions are licensed under the Apache License, Version 2.0
+(see the [root LICENSE](../LICENSE) and [NOTICE](../NOTICE)). Parts derived
+from those upstream projects remain under the MIT License. Sawyer Hood's
+original notice, copyright line and permission text, is in
+[THIRD_PARTY_LICENSES/LICENSE-MIT-sawyer-hood](../THIRD_PARTY_LICENSES/LICENSE-MIT-sawyer-hood).
+Michael Yong's original plugin notice stays in [LICENSE](LICENSE) and is also
+kept in
+[THIRD_PARTY_LICENSES/LICENSE-MIT-michael-yong](../THIRD_PARTY_LICENSES/LICENSE-MIT-michael-yong).
+See the [public privacy and attribution audit](../docs/verification/public-audit.md).
