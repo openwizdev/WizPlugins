@@ -218,12 +218,12 @@ The matrix status idea is credited to Conductor's workspace status matrix
 
 ## What v0.3 added
 
-- **Cards.** The third line shows the issue or pull request as a link and a
-  child count, hidden at zero. The pull request comes from the host's sidebar
-  state. With no host issue field, the issue number is parsed from a
-  `room/<N>-…` branch name and shown only when it parses. The branch shows on
-  hover only. Model and effort are omitted until the host exposes them; nothing
-  is shown in their place. Cloud rows currently carry no branch or pull request
+- **Cards.** The third line can show the issue number and, when available, a
+  link to its pull request. The child count is hidden at zero. The pull request
+  comes from the host's sidebar state. With no host issue field, WizBar parses
+  the issue number from a `room/<N>-…` branch name and shows it when parsing
+  succeeds. The branch shows on hover only. Model and effort are omitted until
+  the host exposes them. Cloud rows currently carry no branch or pull request
   in the observed host data, so they show no link.
 - **Children.** Hover or focus the child count to list the children with
   status, title and age, in spawn order; click one to open it, or open the
@@ -351,7 +351,10 @@ failure never hides the others, and gives exit 1.
   thread to the active list, where Yours applies its usual rules;
   `unmute` undoes it. See the
   [mute contract](contracts/mute.v1.md).
-- `pin` and `unpin` print `{"results":[{"threadId","ok":true,"pinned":true}]}`.
+- `pin` and `unpin` report the resulting `pinned` boolean for each successful
+  thread. For example, a successful `unpin --json` returns
+  `{"results":[{"threadId":"example-thread","ok":true,"pinned":false}]}`.
+  A successful `pin` returns the same shape with `pinned` set to `true`.
   Pinning a pinned thread, or unpinning an unpinned one, succeeds and changes
   nothing.
 
