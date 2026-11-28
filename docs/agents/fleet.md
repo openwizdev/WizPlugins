@@ -10,11 +10,11 @@ One per ticket. It builds its ticket on its own branch, and never reviews or mer
 
 | Setting | Value | `room-cli thread spawn` flag |
 | --- | --- | --- |
-| Harness | Codex | `--provider codex` |
-| Model | Sol 6.1 | `--model gpt-6.1-sol` |
-| Effort | High | `--reasoning-level high` |
+| Harness | Claude Code | `--provider claude-code` |
+| Model | Opus 5.5 | `--model claude-opus-5-5` |
+| Effort | Medium | `--reasoning-level medium` |
 
-Source: Jake, 2026-11-10 (CX1): while Claude is unavailable, every new builder uses Codex Sol 6.1, High ([private record](https://github.com/jparker2006/ClosedWiz/issues/325#issuecomment-6759733342)). No Claude thread starts until Jake restores it. Codex uses the default service tier, with no fast mode.
+Source: Jake, 2026-11-19 (J255): builders are Claude Code, Opus 5.5, Medium ([private record](https://github.com/jparker2006/ClosedWiz/issues/3065#issuecomment-7031528626)). This replaces the 2026-11-10 CX1 assignment of Codex Sol 6.1, High, while Claude was unavailable ([private record](https://github.com/jparker2006/ClosedWiz/issues/325#issuecomment-6759733342)). Codex uses the default service tier, with no fast mode.
 
 ## Builder for small tickets
 
@@ -22,35 +22,35 @@ Tickets with an exact `polish`, `huntr` or `proposal` label use this table; ever
 
 | Setting | Value | `room-cli thread spawn` flag |
 | --- | --- | --- |
-| Harness | Codex | `--provider codex` |
-| Model | Sol 6.1 | `--model gpt-6.1-sol` |
-| Effort | High | `--reasoning-level high` |
+| Harness | Claude Code | `--provider claude-code` |
+| Model | Opus 5.5 | `--model claude-opus-5-5` |
+| Effort | Medium | `--reasoning-level medium` |
 
-Source: Jake, 2026-11-10 (CX1): the same Codex Sol 6.1, High builder applies to every new ticket while Claude is unavailable ([private record](https://github.com/jparker2006/ClosedWiz/issues/325#issuecomment-6759733342)).
+Source: Jake, 2026-11-19 (J255): the small-ticket builder follows the builder, Claude Code, Opus 5.5, Medium ([private record](https://github.com/jparker2006/ClosedWiz/issues/3065#issuecomment-7031528626)). This replaces the 2026-11-10 CX1 line that used Codex Sol 6.1, High, for every new ticket while Claude was unavailable ([private record](https://github.com/jparker2006/ClosedWiz/issues/325#issuecomment-6759733342)).
 
 ## Reviewer for Claude-built
 
-One per pull request, in a fresh thread that never built or helped build it. It reviews the exact head and never edits. While Claude is unavailable, the temporary Codex assignment below applies; every other review and merge safeguard remains in force.
+One per pull request, in a fresh thread that never built or helped build it. It reviews the exact head and never edits.
 
 | Setting | Value | `room-cli thread spawn` flag |
 | --- | --- | --- |
 | Harness | Codex | `--provider codex` |
-| Model | Sol 6.1 | `--model gpt-6.1-sol` |
-| Effort | High | `--reasoning-level high` |
+| Model | Sol 6.2 | `--model gpt-6.2-sol` |
+| Effort | Medium | `--reasoning-level medium` |
 
-Source: Jake, 2026-11-10 (CX1): new reviews use Codex Sol 6.1, XHigh, independently on the exact head while Claude is unavailable ([private record](https://github.com/jparker2006/ClosedWiz/issues/325#issuecomment-6759733342)). Jake, 2026-11-10: new reviewers use Sol 6.1 at High effort, like builders ([private record](https://github.com/jparker2006/ClosedWiz/issues/325#issuecomment-6763080255)).
+Source: Jake, 2026-11-19 (J255): the reviewer of a Claude-built pull request is Codex, Sol 6.2, Medium ([private record](https://github.com/jparker2006/ClosedWiz/issues/3065#issuecomment-7031528626)). This replaces the 2026-11-10 CX1 temporary Codex Sol 6.1 assignment while Claude was unavailable ([private record](https://github.com/jparker2006/ClosedWiz/issues/325#issuecomment-6759733342)).
 
 ## Reviewer for GPT-built
 
-Use the verified builder's provider, from its branch-matching `start checked` record and that exact thread's provider read. Unknown or conflicting family waits. New GPT-built reviews use a fresh Codex thread that never built or helped build the pull request. A review stopped by Claude's usage limit restarts on Codex with its branch and records preserved.
+Use the verified builder's provider, from its branch-matching `start checked` record and that exact thread's provider read. Unknown or conflicting family waits. The review is a fresh thread that never built or helped build the pull request.
 
 | Setting | Value | `room-cli thread spawn` flag |
 | --- | --- | --- |
-| Harness | Codex | `--provider codex` |
-| Model | Sol 6.1 | `--model gpt-6.1-sol` |
-| Effort | High | `--reasoning-level high` |
+| Harness | Claude Code | `--provider claude-code` |
+| Model | Opus 5.5 | `--model claude-opus-5-5` |
+| Effort | Medium | `--reasoning-level medium` |
 
-Source: Jake, 2026-11-10 (CX1): while Claude is unavailable, reviews do not wait for Claude; fresh Codex Sol 6.1, XHigh reviewers review the exact head, and GPT-built pull requests receive `gpt-reviewed` for a later Claude re-check ([private record](https://github.com/jparker2006/ClosedWiz/issues/325#issuecomment-6759733342)). Jake, 2026-11-10: new reviewers use Sol 6.1 at High effort, like builders ([private record](https://github.com/jparker2006/ClosedWiz/issues/325#issuecomment-6763080255)). All other review rules and the M1 base rule below stay unchanged.
+Source: Jake, 2026-11-19 (J255): a GPT-built review uses the other family, Claude Code, Opus 5.5, Medium ([private record](https://github.com/jparker2006/ClosedWiz/issues/3065#issuecomment-7031528626)). This replaces the 2026-11-10 CX1 line that kept those reviews on Codex and marked them `gpt-reviewed` for a later Claude re-check ([private record](https://github.com/jparker2006/ClosedWiz/issues/325#issuecomment-6759733342)). All other review rules and the M1 base rule below stay unchanged.
 
 ## Builder helpers
 
@@ -58,11 +58,11 @@ Cheap helpers a builder starts for searches and chores; the builder keeps every 
 
 | Setting | Value | `room-cli thread spawn` flag |
 | --- | --- | --- |
-| Harness | Codex | `--provider codex` |
-| Model | Terra 6.1 | `--model gpt-6.1-terra` |
+| Harness | Claude Code | `--provider claude-code` |
+| Model | Haiku 5.5 | `--model claude-haiku-5-5` |
 | Effort | High | `--reasoning-level high` |
 
-Source: Jake, 2026-11-10 (CX1): builder helpers use Codex Terra 6.1, High ([private record](https://github.com/jparker2006/ClosedWiz/issues/325#issuecomment-6759733342)).
+Source: Jake, 2026-11-05: a Claude builder's helpers are Claude Code, Haiku 5.5, High ([private record](https://github.com/jparker2006/ClosedWiz/issues/1275#issuecomment-6704671951)). A Codex builder's helpers are Codex, Sol 6.1, High; Jake, 2026-11-06, supersedes Terra ([private record](https://github.com/jparker2006/ClosedWiz/issues/1275#issuecomment-6704671951)). This replaces the 2026-11-10 CX1 Terra row ([private record](https://github.com/jparker2006/ClosedWiz/issues/325#issuecomment-6759733342)).
 
 ## Reviewer helpers
 
@@ -71,10 +71,10 @@ Helpers a reviewer starts to check one part each; the reviewer keeps every judgm
 | Setting | Value | `room-cli thread spawn` flag |
 | --- | --- | --- |
 | Harness | Codex | `--provider codex` |
-| Model | Terra 6.1 | `--model gpt-6.1-terra` |
+| Model | Sol 6.1 | `--model gpt-6.1-sol` |
 | Effort | High | `--reasoning-level high` |
 
-Source: Jake, 2026-11-10 (CX1): new helpers use Codex Terra 6.1, High while Claude is unavailable ([private record](https://github.com/jparker2006/ClosedWiz/issues/325#issuecomment-6759733342)). The reviewer keeps the judgment and remains independent of the build.
+Source: Jake, 2026-11-06: reviewers of Claude-built pull requests use Codex, Sol 6.1, High helpers, which supersedes Terra ([private record](https://github.com/jparker2006/ClosedWiz/issues/1275#issuecomment-6704671951)). Reviewers of GPT-built pull requests use Claude Code, Haiku 5.5, High, so the review stays in another family (Jake, 2026-11-05; [private record](https://github.com/jparker2006/ClosedWiz/issues/1275#issuecomment-6704671951)). This replaces the 2026-11-10 CX1 Terra row while Claude was unavailable ([private record](https://github.com/jparker2006/ClosedWiz/issues/325#issuecomment-6759733342)). The reviewer keeps the judgment and remains independent of the build.
 
 ## Labels
 
